@@ -1,0 +1,15 @@
+version: '2'
+services:
+  sendmate-webclient:
+    upgrade_strategy:
+      start_first: true
+    # health_check:
+    #   healthy_threshold: 2
+    #   response_timeout: 2000
+    #   port: 8080
+    #   unhealthy_threshold: 3
+    #   initializing_timeout: 60000
+    #   interval: 2000
+    #   strategy: recreate
+    #   request_line: 'GET "/collections/stage/health-check" "HTTP/1.1\r\nHost: www.recordbird.com"'
+    #   reinitializing_timeout: 60000
