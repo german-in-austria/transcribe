@@ -41,7 +41,7 @@ interface TliNode extends BasicNode {
   children: never[]
 }
 
-interface TierEvent{
+interface TierEvent {
   start: string
   end: string
   startTime: string
