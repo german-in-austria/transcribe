@@ -42,7 +42,7 @@ import VueFullScreenFileDrop from 'vue-full-screen-file-drop'
 import 'vue-full-screen-file-drop/dist/vue-full-screen-file-drop.css'
 import waveForm from './Waveform.vue'
 import * as parseXML from '@rgrove/parse-xml'
-import parseTranscriptFromTree from '../service/transcript-parser'
+import parseTranscriptFromTree, { ParsedXML } from '../service/transcript-parser'
 
 declare global {
   interface Window {
@@ -54,6 +54,23 @@ declare global {
 
 interface FileReaderEventTarget extends EventTarget {
   result: string
+}
+
+export interface Transcript {
+  name: string
+  audioUrl: string
+  speakers: string[]
+  segments: Array<{
+    id: string
+    startTime: number
+    endTime: number
+  }>
+  speakerEvents: Array<{
+    [key: string]: {
+      tokens: string[]
+    }
+  }>
+
 }
 
 const sampleTranscript = {
@@ -91,13 +108,57 @@ export default class App extends Vue {
   drawer = true
   audioUrl: string|null = null
   audioElement: HTMLAudioElement|null = null
-  transcript: any = null
+  transcript: Transcript|null = null
   file: File
   xmlText: string|null = null
   xml: any = null
 
   isAudio(file: File) {
     return file.type.includes('audio/')
+  }
+
+  transcriptTreeToTranscribable(tree: ParsedXML): any {
+    const segments = _(tree.speakers)
+      .map(x => _.map(x, y => _.map(y.events, z => ({
+        id: `${z.start}-${z.end}`,
+        startTime: Number(z.startTime),
+        endTime: Number(z.endTime)
+      }) )))
+      .flatten()
+      .flatten()
+      .flatten()
+      .uniqBy(x => x.id)
+      .value()
+    const speakers = _(tree.speakers).map((t, v) => v).value()
+    const speakerEvents = _(tree.speakers)
+      // only the first tier for now
+      .map((t, key) => {
+        return _.toArray(t)[0].events.map(e => {
+          return {
+            start: e.start,
+            end: e.end,
+            tokens : e.text !== null ? e.text.trim().split(' ') : [],
+            speaker : key
+          }
+        })
+      })
+      .flatten()
+      .groupBy(e => `${e.start}-${e.end}`)
+      .mapValues(spe => _.keyBy(spe, 'speaker'))
+      .value()
+    console.log(speakerEvents)
+    sampleTranscript.speakerEvents = speakerEvents
+    sampleTranscript.segments = segments
+    sampleTranscript.speakers = speakers
+    console.log(segments)
+    return tree
+    // return {
+    //   name: 'bla',
+    //   audioUrl: sampleTranscript.audioUrl,
+    //   speakers : tree.speakers.map(s => s.display_name),
+    //   segments : tree.speakers.,
+    //   speakerEvents: tree.speakers
+    // }
   }
 
   // TODO: better sanity check.
@@ -117,10 +178,7 @@ export default class App extends Vue {
     } else if (this.isXML(files[0])) {
       const reader = new FileReader()
       reader.onload = (e: Event) => {
-        this.xml = {
-          all: parseXML((e.target as FileReaderEventTarget).result)
-        }
-        this.xml.tli = parseTranscriptFromTree(this.xml.all)
+        this.xml = this.transcriptTreeToTranscribable(parseTranscriptFromTree(parseXML((e.target as FileReaderEventTarget).result)))
       }
       reader.readAsText(files[0])
       console.log('xml')

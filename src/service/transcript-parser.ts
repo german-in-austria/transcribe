@@ -31,36 +31,93 @@ interface TierNode extends BasicNode {
   children: EventNode[] | BasicNode[]
 }
 
-export default function parseTree(xmlTree: BasicNode) {
+interface TliNode extends BasicNode {
+  name: 'tli'
+  attributes: {
+    id: string
+    time: string
+  }
+  type: 'element'
+  children: never[]
+}
+
+interface TierEvent{
+  start: string
+  end: string
+  startTime: string
+  endTime: string
+  text: string
+}
+
+interface Tiers {
+  [key: string]: {
+    category: string
+    display_name: string
+    events: TierEvent[]
+    type: string
+  }
+}
+
+interface Timeline {
+  [key: string]: any
+}
+
+interface Speakers {
+  [key: string]: Tiers
+}
+
+export interface ParsedXML {
+  timeline: Timeline
+  speakers: Speakers
+}
+
+export default function parseTree(xmlTree: BasicNode): ParsedXML {
 
   if (xmlTree.children && xmlTree.children[0] && xmlTree.children[0].children) {
     const basicBody = _(xmlTree.children[0].children).find({ name: 'basic-body' })
     if (basicBody !== undefined) {
       const commonTimeline = _(basicBody.children).find({ name: 'common-timeline' })
-      const tiers = _(basicBody.children).filter({ name: 'tier' }).value() as TierNode[]
+      const tiers = _(basicBody.children).filter((t) => t.name === 'tier').value() as TierNode[]
       if (commonTimeline !== undefined) {
-        return _(tiers)
+
+        const commonTimelineByTli = _(commonTimeline.children)
+          .filter((t) => t.name === 'tli')
+          .keyBy((t: TliNode) => t.attributes.id)
+          .mapValues((t: TliNode) => t.attributes.time)
+          .value()
+
+        const tiersBySpeakers = _(tiers)
           .groupBy(t => t.attributes.speaker)
           .mapValues(speakerTiers => {
             return _(speakerTiers)
               .keyBy(t => t.attributes.id)
               .mapValues(tier => {
                 return {
-                  events: _(tier.children)
-                    .filter(t => t.name === 'event')
-                    .map((t: EventNode) => {
+                  type: tier.attributes.type,
+                  category: tier.attributes.category,
+                  display_name: tier.attributes['display-name'],
+                  events: (tier.children as BasicNode[])
+                    .filter((t): t is EventNode => t.name === 'event')
+                    .map((t) => {
                       return {
                         start: t.attributes.start,
                         end: t.attributes.end,
+                        startTime: String(commonTimelineByTli[t.attributes.start]),
+                        endTime: String(commonTimelineByTli[t.attributes.end]),
                         text: t.children && t.children[0] ? t.children[0].text : null
-                      }
+                      } as TierEvent
                     })
-                    .value()
                 }
               })
               .value()
           })
           .value()
+        return {
+          timeline: commonTimelineByTli,
+          speakers: tiersBySpeakers
+        }
+      } else {
+        throw new Error('cannot parse xml')
       }
     } else {
       throw new Error('cannot parse xml')
