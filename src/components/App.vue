@@ -119,20 +119,20 @@ export default class App extends Vue {
 
   transcriptTreeToTranscribable(tree: ParsedXML): any {
     const segments = _(tree.speakers)
-      .map(x => _.map(x, y => _.map(y.events, z => ({
-        id: `${z.start}-${z.end}`,
-        startTime: Number(z.startTime),
-        endTime: Number(z.endTime)
+      .map(tiers => _.map(tiers, tier => _.map(tier.events, event => ({
+        id: `${event.start}-${event.end}`,
+        startTime: Number(event.startTime),
+        endTime: Number(event.endTime)
       }) )))
       .flatten()
       .flatten()
       .flatten()
-      .uniqBy(x => x.id)
+      .uniqBy(segment => segment.id)
       .value()
     const speakers = _(tree.speakers).map((t, v) => v).value()
     const speakerEvents = _(tree.speakers)
-      // only the first tier for now
       .map((t, key) => {
+        // only the first tier for now
         return _.toArray(t)[0].events.map(e => {
           return {
             start: e.start,
