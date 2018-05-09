@@ -4,14 +4,16 @@
       <v-container fluid fill-height>
         <vue-full-screen-file-drop @drop='onFileDrop'>&nbsp;</vue-full-screen-file-drop>
         <v-layout class="max-width" :align-center="audioElement === null" justify-center>
-          <div v-if="audioElement === null" class="text-xs-center">
+          <div v-if="transcript === null" class="text-xs-center">
             <h1>Drop an audio file here.</h1>
             <p>or, use the <a @click="loadSampleFile" href="#">sample file</a></p>
           </div>
-          <v-flex xs12 v-if="audioElement !== null">
-            <peakjs :transcript="transcript" :audio-element="audioElement" />
+          <v-flex xs12 v-if="transcript !== null">
+            <!-- <peakjs :transcript="transcript" :audio-element="audioElement" /> -->
             <!-- EXPERIMENT -->
-            <!-- <wave-form :data="true" :audio-element="audioElement" /> -->
+            <editor
+              :transcript="transcript"
+              :audio-element="audioElement" />
             <router-view />
             <v-card class="mt-4 help">
               <v-card-title class="pb-0 mb-0" primary-title>
@@ -24,7 +26,7 @@
                 </ul>
               </v-card-text>
             </v-card>
-            <player-bar :audioElement="audioElement" />
+            <player-bar v-if="audioElement" :audioElement="audioElement" />
           </v-flex>
         </v-layout>
       </v-container>
@@ -40,9 +42,9 @@ import peakjs from './Peakjs.vue'
 import playerBar from './PlayerBar.vue'
 import VueFullScreenFileDrop from 'vue-full-screen-file-drop'
 import 'vue-full-screen-file-drop/dist/vue-full-screen-file-drop.css'
-import waveForm from './Waveform.vue'
 import * as parseXML from '@rgrove/parse-xml'
 import parseTranscriptFromTree, { ParsedXML } from '../service/transcript-parser'
+import editor from './Editor.vue'
 
 declare global {
   interface Window {
@@ -56,6 +58,12 @@ interface FileReaderEventTarget extends EventTarget {
   result: string
 }
 
+export interface SpeakerEvent {
+  [key: string]: {
+    tokens: string[]
+  }
+}
+
 export interface Transcript {
   name: string
   audioUrl: string
@@ -65,12 +73,7 @@ export interface Transcript {
     startTime: number
     endTime: number
   }>
-  speakerEvents: Array<{
-    [key: string]: {
-      tokens: string[]
-    }
-  }>
-
+  speakerEvents: _.Dictionary<SpeakerEvent>
 }
 
 const sampleTranscript = {
@@ -98,13 +101,14 @@ const sampleTranscript = {
 
 @Component({
   components : {
-    waveForm,
+    editor,
     peakjs,
     VueFullScreenFileDrop,
     playerBar
   }
 })
 export default class App extends Vue {
+
   drawer = true
   audioUrl: string|null = null
   audioElement: HTMLAudioElement|null = null
@@ -146,7 +150,13 @@ export default class App extends Vue {
       .groupBy(e => `${e.start}-${e.end}`)
       .mapValues(spe => _.keyBy(spe, 'speaker'))
       .value()
-    console.log(speakerEvents)
+    this.transcript = {
+      name: 'test transcript',
+      audioUrl: '',
+      speakerEvents,
+      segments,
+      speakers
+    }
     sampleTranscript.speakerEvents = speakerEvents
     sampleTranscript.segments = segments
     sampleTranscript.speakers = speakers

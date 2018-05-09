@@ -159,7 +159,9 @@ export default class Transcript extends Vue {
   }
   @Watch('audioElement')
   onAudioChange() {
-    this.initPeaks()
+    if (this.audioElement !== null) {
+      this.initPeaks()
+    }
   }
 
   @Watch('seekedSegment')
@@ -223,73 +225,78 @@ export default class Transcript extends Vue {
     this.speakerEvents[segment_id][speaker] = { tokens }
   }
   async initPeaks() {
-    if (this.peaks) {
-      this.peaks.destroy()
-      this.peaks = null
-    }
-    const AudioContext: any = window.webkitAudioContext || window.AudioContext || null
-    console.log(AudioContext)
-    if (AudioContext) {
-      await wait(100)
-      this.peaks = peaks.init({
-        container: this.$refs.peaksContainer,
-        mediaElement: this.audioElement,
-        audioContext: new AudioContext(),
-        keyboard: true,
-        zoomAdapter: 'animated',
-        zoomWaveformColor: 'rgba(0,0,0,0.2)',
-        zoomLevels: this.zoomLevels
-      })
-      window.peaks = this.peaks
-      this.peaks.on('peaks.ready', () => {
-        // init with transcript
-        if (this.transcript) {
-          this.peaks.segments.add(this.transcript.segments.map((x: any) => {
-            x.editable = true
-            return x
-          }))
-          this.speakerEvents = this.transcript.speakerEvents
-          this.speakers = this.transcript.speakers
-          // add segment on double click
-          const zoomContainer = document.querySelector('.zoom-container')
-          console.log(zoomContainer)
-          if (zoomContainer) {
-            zoomContainer.addEventListener('dblclick', (e) => {
-              this.addSegmentAtCurrentPosition()
-            })
-          }
-        }
-        this.segments = this.peaks.segments.getSegments()
-        this.$emit('ready')
-      })
-      this.peaks.on('segments.add', (e: Event) => {
-        // console.log(e)
-      })
-      this.peaks.on('segments.dragged', (e: Event) => {
-        // console.log(e)
-      })
-      // this.peaks.on('user_seek', (e: number) => {
-      //   const i = _(this.segmentsInOrder).findIndex((s) => {
-      //     return s.startTime <= e && s.endTime >= e
-      //   })
-      //   if (i !== undefined) {
-      //     this.seekedSegment = i
-      //   } else {
-      //     this.seekedSegment = null
-      //   }
-      // })
-      this.setZoom(this.currentZoomLevelIndex)
-      this.audioElement.addEventListener('timeupdate', _.debounce(() => {
-        const time = this.audioElement.currentTime
-        const i = _(this.segmentsInOrder).findIndex((s) => {
-          return s.startTime <= time && s.endTime >= time
+    this.speakerEvents = this.transcript.speakerEvents
+    this.speakers = this.transcript.speakers
+    this.segments = this.transcript.segments
+    if (this.audioElement !== null) {
+      if (this.peaks) {
+        this.peaks.destroy()
+        this.peaks = null
+      }
+      const AudioContext: any = window.webkitAudioContext || window.AudioContext || null
+      console.log(AudioContext)
+      if (AudioContext) {
+        await wait(100)
+        console.time('init')
+        this.peaks = peaks.init({
+          container: this.$refs.peaksContainer,
+          mediaElement: this.audioElement,
+          audioContext: new AudioContext(),
+          keyboard: true,
+          zoomAdapter: 'animated',
+          zoomWaveformColor: 'rgba(0,0,0,0.2)',
+          zoomLevels: this.zoomLevels
         })
-        if (i !== undefined) {
-          this.seekedSegment = i
-        } else {
-          this.seekedSegment = null
-        }
-      }, 50))
+        console.time('init')
+        window.peaks = this.peaks
+        this.peaks.on('peaks.ready', () => {
+          // init with transcript
+          if (this.transcript) {
+            this.peaks.segments.add(this.transcript.segments.map((x: any) => {
+              x.editable = true
+              return x
+            }))
+            // add segment on double click
+            const zoomContainer = document.querySelector('.zoom-container')
+            console.log(zoomContainer)
+            if (zoomContainer) {
+              zoomContainer.addEventListener('dblclick', (e) => {
+                this.addSegmentAtCurrentPosition()
+              })
+            }
+          }
+          this.segments = this.peaks.segments.getSegments()
+          this.$emit('ready')
+        })
+        this.peaks.on('segments.add', (e: Event) => {
+          // console.log(e)
+        })
+        this.peaks.on('segments.dragged', (e: Event) => {
+          // console.log(e)
+        })
+        // this.peaks.on('user_seek', (e: number) => {
+        //   const i = _(this.segmentsInOrder).findIndex((s) => {
+        //     return s.startTime <= e && s.endTime >= e
+        //   })
+        //   if (i !== undefined) {
+        //     this.seekedSegment = i
+        //   } else {
+        //     this.seekedSegment = null
+        //   }
+        // })
+        this.setZoom(this.currentZoomLevelIndex)
+        this.audioElement.addEventListener('timeupdate', _.debounce(() => {
+          const time = this.audioElement.currentTime
+          const i = _(this.segmentsInOrder).findIndex((s) => {
+            return s.startTime <= time && s.endTime >= time
+          })
+          if (i !== undefined) {
+            this.seekedSegment = i
+          } else {
+            this.seekedSegment = null
+          }
+        }, 50))
+      }
     }
   }
   async mounted() {
