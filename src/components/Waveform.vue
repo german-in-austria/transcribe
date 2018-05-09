@@ -1,7 +1,7 @@
 <template>
   <div>
     <h1>hello</h1>
-    <div v-if="loading">
+    <div class="wave-form text-xs-center" v-if="loading">
       loading
     </div>
     <div
@@ -12,7 +12,6 @@
       <div
         :style="{ width: totalWidth + 'px' }"
         class="wave-form-inner">
-        <slot />
         <div
           v-for="(x, i) in Array(amountDrawSegments)"
           :style="{
@@ -22,6 +21,7 @@
           :key="i"
           :class="['wave-form-segment', 'draw-segment-'+i]">
         </div>
+        <slot />
       </div>
     </div>
     <v-layout>
@@ -42,17 +42,20 @@
         </v-btn> -->
       </v-flex>
       <v-flex xs2 text-xs-right>
-        <v-slider
-          prepend-icon="zoom_in"
-          color="grey"
-          thumb-color="grey darken-2"
-          hide-details
-          :min="1"
-          :max="zoomLevels.length - 1"
-          :step="1"
-          ticks
-          thumb-label
-          v-model="currentZoomLevelIndex" />
+        <v-btn-toggle>
+          <v-btn
+            :disabled="currentZoomLevelIndex === 0"
+            @click="currentZoomLevelIndex = currentZoomLevelIndex - 1"
+            outline small>
+            <v-icon>remove</v-icon>
+          </v-btn>
+          <v-btn
+            :disabled="currentZoomLevelIndex + 1 === zoomLevels.length"
+            @click="currentZoomLevelIndex = currentZoomLevelIndex + 1"
+            outline small>
+            <v-icon>add</v-icon>
+          </v-btn>
+        </v-btn-toggle>
       </v-flex>
     </v-layout>
   </div>
@@ -88,16 +91,17 @@ export default class Waveform extends Vue {
   drawWidth = 5000 // pixels
   // seconds per drawWidth
   zoomLevels = [
-    640,
-    320,
-    160,
-    80,
-    40,
-    20,
-    10,
-    5,
-    2.5,
-    1.25
+    1024,
+    512,
+    256,
+    128,
+    64,
+    32,
+    16,
+    8,
+    4,
+    2,
+    1,
   ]
   currentZoomLevelIndex = Math.floor(this.zoomLevels.length / 2)
   audioLength = 0
@@ -109,6 +113,7 @@ export default class Waveform extends Vue {
   @Prop() data: boolean
 
   handleScroll(e: Event) {
+    this.$emit('scroll', e)
     if (this.currentlyVisibleWaveFormPiece !== this.visibleWaveFormPiece()) {
       this.currentlyVisibleWaveFormPiece = this.visibleWaveFormPiece()
       console.log('drawing', this.visibleWaveFormPiece())
@@ -128,14 +133,20 @@ export default class Waveform extends Vue {
       const x = await fetch(this.audioElement.src).then(y => y.arrayBuffer())
       console.timeEnd('fetch')
       const context: AudioContext = new ctxClass()
-      console.time('decode')
-      const audioBuffer = await context.decodeAudioData(x)
-      this.audioLength = audioBuffer.duration
-      console.timeEnd('decode')
+      console.time('decode first 10mb')
+      this.audioLength = this.audioElement.duration
+      const audioBuffer = await context.decodeAudioData(x.slice(0, 5 * 1024 * 1024))
+      console.timeEnd('decode first 10mb')
       this.audioBuffer = audioBuffer
       this.loading = false
       this.$nextTick(() => {
         this.drawWaveFormPiece()
+        this.$nextTick(async () => {
+          console.time('decode all')
+          this.audioBuffer = await context.decodeAudioData(x)
+          console.timeEnd('decode all')
+          this.drawWaveFormPiece()
+        })
       })
     }
   }
@@ -184,7 +195,8 @@ export default class Waveform extends Vue {
           totalWidth: this.totalWidth,
           amountDrawSegments: this.amountDrawSegments,
           currentZoomLevel: this.zoomLevels[this.currentZoomLevelIndex],
-          audioLength: this.audioLength
+          audioLength: this.audioLength,
+          drawWidth: this.drawWidth
         })
       }
     }

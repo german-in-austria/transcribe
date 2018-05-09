@@ -9,8 +9,6 @@
             <p>or, use the <a @click="loadSampleFile" href="#">sample file</a></p>
           </div>
           <v-flex xs12 v-if="transcript !== null">
-            <!-- <peakjs :transcript="transcript" :audio-element="audioElement" /> -->
-            <!-- EXPERIMENT -->
             <editor
               :transcript="transcript"
               :audio-element="audioElement" />
@@ -178,23 +176,27 @@ export default class App extends Vue {
 
   onFileDrop(formData: FormData, files: FileList) {
     console.log(files[0].type)
-    if (this.isAudio(files[0])) {
-      const x = URL.createObjectURL(files[0])
-      this.audioUrl = x
-      const y = document.createElement('audio')
-      y.src = x
-      this.audioElement = y
-      console.log(x)
-    } else if (this.isXML(files[0])) {
-      const reader = new FileReader()
-      reader.onload = (e: Event) => {
-        this.xml = this.transcriptTreeToTranscribable(parseTranscriptFromTree(parseXML((e.target as FileReaderEventTarget).result)))
+    _(files).forEach(file => {
+      if (this.isAudio(file)) {
+        const x = URL.createObjectURL(file)
+        this.audioUrl = x
+        const y = document.createElement('audio')
+        y.src = x
+        this.audioElement = y
+        console.log(x)
+      } else if (this.isXML(file)) {
+        const reader = new FileReader()
+        reader.onload = (e: Event) => {
+          // tslint:disable-next-line:max-line-length
+          this.xml = this.transcriptTreeToTranscribable(parseTranscriptFromTree(parseXML((e.target as FileReaderEventTarget).result)))
+        }
+        reader.readAsText(file)
+        console.log('xml')
+      } else {
+        alert('unsupported file type')
+        console.log('unsupported file type', file)
       }
-      reader.readAsText(files[0])
-      console.log('xml')
-    } else {
-      alert('unsupported file type')
-    }
+    })
   }
 
   loadSampleFile() {
