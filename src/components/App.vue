@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <v-content class="main-content" app>
-      <v-container fluid fill-height>
+      <v-container fluid fill-height class="pa-0">
         <vue-full-screen-file-drop @drop='onFileDrop'>&nbsp;</vue-full-screen-file-drop>
         <v-layout class="max-width" :align-center="audioElement === null" justify-center>
           <div v-if="transcript === null" class="text-xs-center">
@@ -24,7 +24,9 @@
                 </ul>
               </v-card-text>
             </v-card>
-            <player-bar v-if="audioElement" :audioElement="audioElement" />
+            <player-bar
+              v-if="audioElement"
+              :audioElement="audioElement" />
           </v-flex>
         </v-layout>
       </v-container>

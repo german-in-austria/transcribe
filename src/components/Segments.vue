@@ -3,7 +3,7 @@
     <div
       :key="key"
       v-for="(segment, key) in segments"
-      @mousedown="selectSegment(key, segment)"
+      @mousedown="selectSegment(segment)"
       @keyup.delete="deleteSegment(key, segment)"
       @dblclick="playSegment(key, segment)"
       :class="{segment: true, selected: selectedSegment === segment.id}"
@@ -11,11 +11,8 @@
         left: Number(segment.startTime) * pixelsPerSecond + 'px',
         width: (Number(segment.endTime) - Number(segment.startTime)) * pixelsPerSecond + 'px'
       }">
-      <v-tooltip>
-        <slot slot="activator" :segment="segment" />
-        <span>{{ speakerEvents[segment.id] }}</span>
-      </v-tooltip>
-      <div slot="activator" class="segment-background"></div>
+      <div slot="activator" class="segment-background" />
+      <slot :segment="segment" />
     </div>
   </div>
 </template>
@@ -39,8 +36,8 @@ export default class Segments extends Vue {
       return this.metadata.totalWidth / this.metadata.audioLength
     }
   }
-  selectSegment(key: number, segment: Segment) {
-    this.$emit('select-segment', key, segment)
+  selectSegment(segment: Segment) {
+    this.$emit('select-segment', segment)
   }
   playSegment(key: number, segment: Segment) {
     this.$emit('play-segment', key, segment)
@@ -57,19 +54,20 @@ export default class Segments extends Vue {
 .segment
   height 100px
   top 50px
-  box-shadow 0 0 10px rgba(0,0,0,.1)
-  border-radius 4px
+  border-radius 8px
   overflow hidden
   background rgba(0, 0, 0, .025)
   position absolute
+  border-right 1px solid rgba(255,255,255,.2)
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.1);
   &.selected
     background transparent
     border: 2px solid cornflowerblue
-    box-shadow 0 0 30px rgba(0,0,0,.2)
+    box-shadow 0 0 40px rgba(0,0,0,.2)
   &:hover:not(.selected)
     background rgba(0,0,0, .05)
   .segment-background
-    background rgba(0,0,0,.1)
+    background rgba(0,0,0,.05)
     position absolute
     left 0
     top 0

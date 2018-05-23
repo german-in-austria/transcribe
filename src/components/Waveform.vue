@@ -1,6 +1,5 @@
 <template>
-  <div>
-    <h1>hello</h1>
+  <div :class="{ disabled: disabled }">
     <div class="wave-form text-xs-center" v-if="loading">
       loading
     </div>
@@ -44,12 +43,14 @@
       <v-flex xs2 text-xs-right>
         <v-btn-toggle>
           <v-btn
+            v-ripple="false"
             :disabled="currentZoomLevelIndex === 0"
             @click="currentZoomLevelIndex = currentZoomLevelIndex - 1"
             outline small>
             <v-icon>remove</v-icon>
           </v-btn>
           <v-btn
+            v-ripple="false"
             :disabled="currentZoomLevelIndex + 1 === zoomLevels.length"
             @click="currentZoomLevelIndex = currentZoomLevelIndex + 1"
             outline small>
@@ -66,6 +67,7 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as drawBuffer from 'draw-wave'
 import * as sliceAudiobuffer from 'audiobuffer-slice'
 import * as _ from 'lodash'
+import { setInterval } from 'timers';
 
 function sliceBuffer(buffer: AudioBuffer, start: number, end: number): Promise<AudioBuffer> {
   return new Promise((resolve, reject) => {
@@ -84,12 +86,17 @@ const ctxClass: any = window.AudioContext
 @Component
 export default class Waveform extends Vue {
 
-  onScroll = _.throttle((e) => this.handleScroll(e), 250)
+  @Prop() audioElement: HTMLAudioElement|null
+  @Prop() audioUrl: string
+  @Prop() scrollToSegment: Segment|null
 
+  onScroll = _.throttle((e) => this.handleScroll(e), 250)
+  disabled = false
   svg: SVGElement|null = null
   audioBuffer: AudioBuffer|null = null
   drawWidth = 5000 // pixels
-  // seconds per drawWidth
+  preRenderSize = 5 * 1024 * 1024
+
   zoomLevels = [
     1024,
     512,
@@ -103,14 +110,11 @@ export default class Waveform extends Vue {
     2,
     1,
   ]
+
   currentZoomLevelIndex = Math.floor(this.zoomLevels.length / 2)
   audioLength = 0
   currentlyVisibleWaveFormPiece = 0
   loading = false
-
-  @Prop() audioElement: HTMLAudioElement|null
-  @Prop() audioUrl: string
-  @Prop() data: boolean
 
   handleScroll(e: Event) {
     this.$emit('scroll', e)
@@ -125,6 +129,22 @@ export default class Waveform extends Vue {
     this.$nextTick(() => this.onAudioElementChange())
   }
 
+  @Watch('scrollToSegment')
+  doScrollToSegment() {
+    const s = this.scrollToSegment
+    if (s !== null) {
+      const container = this.$refs.svgContainer
+      const duration = s.endTime - s.startTime
+      const offset = (s.startTime + duration / 2) * this.pixelsPerSecond
+      if (container instanceof HTMLElement) {
+        const currentOffset = container.scrollLeft
+        container.scrollTo({
+          left: offset - window.innerWidth / 2
+        })
+      }
+    }
+  }
+
   @Watch('audioElement')
   async onAudioElementChange() {
     if (this.audioElement !== null) {
@@ -133,10 +153,12 @@ export default class Waveform extends Vue {
       const x = await fetch(this.audioElement.src).then(y => y.arrayBuffer())
       console.timeEnd('fetch')
       const context: AudioContext = new ctxClass()
-      console.time('decode first 10mb')
+      console.time('decode prerender size (5mb)')
       this.audioLength = this.audioElement.duration
-      const audioBuffer = await context.decodeAudioData(x.slice(0, 5 * 1024 * 1024))
-      console.timeEnd('decode first 10mb')
+      const audioBuffer = await context.decodeAudioData(
+        x.slice(0, this.preRenderSize > x.byteLength ? x.byteLength : this.preRenderSize)
+      )
+      console.timeEnd('decode prerender size (5mb)')
       this.audioBuffer = audioBuffer
       this.loading = false
       this.$nextTick(() => {
@@ -144,8 +166,10 @@ export default class Waveform extends Vue {
         this.$nextTick(async () => {
           console.time('decode all')
           this.audioBuffer = await context.decodeAudioData(x)
+          this.disabled = true
           console.timeEnd('decode all')
-          this.drawWaveFormPiece()
+          await this.drawWaveFormPiece()
+          this.disabled = false
         })
       })
     }
@@ -159,15 +183,21 @@ export default class Waveform extends Vue {
     return this.amountDrawSegments * this.drawWidth
   }
 
-  visibleWaveFormPiece() {
+  visibleWaveFormPiece(): number {
     const el = (this.$refs.svgContainer as HTMLElement)
-    const x = Math.floor((el.scrollLeft + el.clientWidth * 3) / this.drawWidth)
-    return x
+    if (el) {
+      const x = Math.floor((el.scrollLeft + el.clientWidth * 3) / this.drawWidth)
+      return x
+    } else {
+      return 0
+    }
   }
 
   async drawWaveFormPiece() {
     if (this.audioBuffer !== null) {
       const i = this.visibleWaveFormPiece()
+      console.log(this.amountDrawSegments)
+      console.log(this.audioLength)
       const isLast = i + 1 === this.amountDrawSegments
       const secondsPerDrawWidth = this.zoomLevels[this.currentZoomLevelIndex]
       const from = i * secondsPerDrawWidth * 1000
@@ -207,12 +237,25 @@ export default class Waveform extends Vue {
     this.drawWaveFormPiece()
   }
 
+  get pixelsPerSecond() {
+    if ( this.totalWidth !== null && this.audioElement !== null) {
+      return this.totalWidth / this.audioElement.duration
+    } else {
+      return 0
+    }
+  }
+
 }
 </script>
 <style lang="stylus" scoped>
+.disabled
+  cursor progress
+  pointer-events none
+  opacity .5
 .wave-form-segment
   position absolute
 .wave-form
+  position relative
   height 200px
   max-width 100vw
   overflow-x scroll

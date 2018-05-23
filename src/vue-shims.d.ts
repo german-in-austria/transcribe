@@ -8,3 +8,4 @@ declare module 'vuedraggable';
 declare module 'vue-facebook-signin-button';
 declare module 'uuid/v4';
 declare module 'vue-lazyload';
+declare module 'vue-contenteditable-directive';
