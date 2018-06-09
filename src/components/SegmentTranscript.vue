@@ -65,6 +65,7 @@ export default class SegmentEditor extends Vue {
   opacity 1
   &.non-verbal
     background red
+  // OTHER TOKEN TYPES GO HERE
 
 .token-fake-display
   pointer-events none

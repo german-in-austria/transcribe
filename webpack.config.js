@@ -84,7 +84,7 @@ module.exports = {
   },
   devServer: {
     // hot: true,
-    open: true,
+    open: 'Google Chrome',
     quiet: false,
     contentBase: "./dist",
     historyApiFallback: true,

@@ -9,6 +9,7 @@
             <p>or, use the <a @click="loadSampleFile" href="#">sample file</a></p>
           </div>
           <v-flex xs12 v-if="transcript !== null">
+            <h2 class="pa-4">{{ transcript.name }}</h2>
             <editor
               :transcript="transcript"
               :audio-element="audioElement" />
@@ -121,7 +122,7 @@ export default class App extends Vue {
     return file.type.includes('audio/')
   }
 
-  transcriptTreeToTranscribable(tree: ParsedXML): any {
+  transcriptTreeToTranscribable(tree: ParsedXML, name: string): any {
     const segments = _(tree.speakers)
       .map(tiers => _.map(tiers, tier => _.map(tier.events, event => ({
         id: `${event.start}-${event.end}`,
@@ -131,7 +132,8 @@ export default class App extends Vue {
       .flatten()
       .flatten()
       .flatten()
-      .uniqBy(segment => segment.id)
+      .uniqBy(s => s.id)
+      .orderBy(s => s.startTime)
       .value()
     const speakers = _(tree.speakers).map((t, v) => v).value()
     const speakerEvents = _(tree.speakers)
@@ -151,7 +153,7 @@ export default class App extends Vue {
       .mapValues(spe => _.keyBy(spe, 'speaker'))
       .value()
     this.transcript = {
-      name: 'test transcript',
+      name,
       audioUrl: '',
       speakerEvents,
       segments,
@@ -190,7 +192,7 @@ export default class App extends Vue {
         const reader = new FileReader()
         reader.onload = (e: Event) => {
           // tslint:disable-next-line:max-line-length
-          this.xml = this.transcriptTreeToTranscribable(parseTranscriptFromTree(parseXML((e.target as FileReaderEventTarget).result)))
+          this.xml = this.transcriptTreeToTranscribable(parseTranscriptFromTree(parseXML((e.target as FileReaderEventTarget).result)), file.name)
         }
         reader.readAsText(file)
         console.log('xml')

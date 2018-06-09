@@ -1,30 +1,35 @@
 <template>
-  <div @keyup.ctrl.space.stop.prevent="handleSpace">
+  <div>
     <wave-form
       @change-metadata="changeMetadata"
       @scroll="handleScroll"
       :scroll-to-segment="scrollToSegment"
-      :audio-element="audioElement" >
-      <div
-        :style="{
-          transform: 'translateX(' + playHeadLeft + 'px)'
-        }"
-        class="play-head">
+      :audio-element="audioElement">
+      <play-head
+        :playing-segment="playingSegment"
+        :audio-element="audioElement"
+        :metadata="metadata" />
+      <div class="absolute">
+        <segment-box
+          v-for="(segment, key) in visibleSegments"
+          :key="segment.id"
+          :segmentKey="key"
+          @delete-segment="deleteSegment"
+          @select-segment="selectSegment"
+          @select-previous="selectPrevious"
+          @select-next="selectNext"
+          @play-segment="playSegment"
+          :segment="segment"
+          :previous-segment="visibleSegments[key - 1]"
+          :next-segment="visibleSegments[key + 1]"
+          :speaker-events="transcript.speakerEvents"
+          :selected-segment="selectedSegment"
+          :metadata="metadata">
+          <template slot-scope="segment">
+            <!-- inner elements go here -->
+          </template>
+        </segment-box>
       </div>
-      <segments
-        :speaker-events="transcript.speakerEvents"
-        @delete-segment="deleteSegment"
-        @select-segment="selectSegment"
-        @play-segment="playSegment"
-        :selected-segment="selectedSegmentId"
-        :metadata="metadata"
-        :segments="visibleSegments">
-        <template slot-scope="segment">
-          <!-- <div>
-            <v-btn icon class="jump-to" round flat><v-icon>text_fields</v-icon></v-btn>
-          </div> -->
-        </template>
-      </segments>
     </wave-form>
     <!-- <h3 class="text-xs-center">
       <div
@@ -45,7 +50,7 @@
         <div
           v-for="segment in chunk"
           :key="segment.id"
-          :class="['segment', segment.id === selectedSegmentId && 'segment-selected']">
+          :class="['segment', segment.id === selectedSegment.id && 'segment-selected']">
           <div class="time" @dblclick="playSegment(0, segment)" @mousedown="selectAndScrollToSegment(segment)">
             {{ toTime(segment.startTime) }} - {{ toTime(segment.endTime) }}
           </div>
@@ -53,7 +58,7 @@
             class="speaker-segment"
             v-for="(speaker, key) in transcript.speakers"
             :key="key">
-            <segment-editor
+            <segment-transcript
               v-if="
                 transcript.speakerEvents[segment.id] !== undefined &&
                 transcript.speakerEvents[segment.id][speaker] !== undefined &&
@@ -68,11 +73,16 @@
   </div>
 </template>
 <script lang="ts">
+
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+
 import waveForm from './Waveform.vue'
 import { Transcript } from './App.vue'
 import segments from '@components/Segments.vue'
-import segmentEditor from '@components/SegmentEditor.vue'
+import segmentTranscript from '@components/SegmentTranscript.vue'
+import segmentBox from '@components/SegmentBox.vue'
+import playHead from '@components/PlayHead.vue'
+
 import * as _ from 'lodash'
 import * as fns from 'date-fns'
 
@@ -80,20 +90,33 @@ import * as fns from 'date-fns'
   components: {
     waveForm,
     segments,
-    segmentEditor
+    segmentTranscript,
+    playHead,
+    segmentBox
   }
 })
 export default class Editor extends Vue {
 
   @Prop() audioElement: HTMLAudioElement
   @Prop() transcript: Transcript
-  segmentBufferPercent = .025
+  // TODO: percentages are impractical. use pixels
+  segmentBufferPercent = .015
   metadata: any = null
   boundLeft = 0
   boundRight = 10
-  selectedSegmentId: string|null = null
-  playHeadLeft = 0
+  selectedSegment: Segment|null = {id: undefined, startTime: 0, endTime: 0 }
   scrollToSegment: Segment|null = null
+  playingSegment: Segment|null = null
+  segmentPlayingTimeout: any = null
+
+  mounted() {
+    this.audioElement.addEventListener('pause', () => {
+      if (this.segmentPlayingTimeout !== null) {
+        clearTimeout(this.segmentPlayingTimeout)
+        this.segmentPlayingTimeout = null
+      }
+    })
+  }
 
   selectAndScrollToSegment(segment: Segment) {
     this.selectSegment(segment)
@@ -115,18 +138,36 @@ export default class Editor extends Vue {
   }
 
   playSegment(key: number, segment: Segment) {
-    this.audioElement.currentTime = segment.startTime
-    this.audioElement.play()
-    const interval = setInterval(() => {
-      if (this.audioElement.currentTime >= segment.endTime) {
+    this.playingSegment = segment
+    const s = segment
+    const listener = (e: Event) => {
+      console.log(e)
+      const playbackTimeInSeconds = (s.endTime - s.startTime) * (1 / this.audioElement.playbackRate)
+      this.segmentPlayingTimeout = setTimeout(() => {
+        console.log('pausing')
         this.audioElement.pause()
-        clearInterval(interval)
-      }
-    }, 10)
+        console.log('paused')
+        this.audioElement.removeEventListener('play', listener)
+        this.playingSegment = null
+      }, (playbackTimeInSeconds - 0.05) * 1000)
+    }
+    if (this.audioElement !== null) {
+      this.audioElement.currentTime = segment.startTime
+      this.audioElement.addEventListener('play', listener)
+      this.audioElement.play()
+    }
   }
 
   selectSegment(segment: Segment) {
-    this.selectedSegmentId = segment.id || null
+    this.selectedSegment = segment
+  }
+
+  selectPrevious(i: number) {
+    this.selectAndScrollToSegment(this.transcript.segments[i - 1])
+  }
+
+  selectNext(i: number) {
+    this.selectAndScrollToSegment(this.transcript.segments[i + 1])
   }
 
   deleteSegment(key: number, segment: Segment) {
@@ -136,20 +177,13 @@ export default class Editor extends Vue {
 
   get visibleSegments() {
     return _(this.transcript.segments).filter((s) => {
-      return s.startTime > this.boundLeft && s.endTime < this.boundRight
+      return s.startTime >= this.boundLeft && s.endTime <= this.boundRight
     }).value()
   }
 
   changeMetadata(metadata: any) {
     console.log({metadata})
-    this.bindPlayHead()
     this.metadata = metadata
-  }
-
-  bindPlayHead() {
-    this.audioElement.addEventListener('timeupdate', (e) => {
-      this.playHeadLeft = (e.target as any).currentTime * this.pixelsPerSecond
-    })
   }
 
   get chunkedSegments() {
@@ -167,14 +201,6 @@ export default class Editor extends Vue {
 }
 </script>
 <style lang="stylus" scoped>
-.play-head
-  width 3px
-  background red
-  height 100%
-  position absolute
-  top 0
-  bottom 0
-
 .tracks
   white-space nowrap
   overflow-x scroll
