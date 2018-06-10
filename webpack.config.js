@@ -44,6 +44,11 @@ module.exports = {
         }
       },
       {
+        test: /\.worker\.ts$/,
+        loader: 'worker-loader',
+        options: { inline: true }
+      },
+      {
         test: /\.css$/,
         loader: "css-loader"
       },

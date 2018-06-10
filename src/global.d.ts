@@ -3,6 +3,14 @@ declare interface process {
     [key: string]: string
   }
 }
+
+declare module "worker-loader!*" {
+  class WebpackWorker extends Worker {
+    constructor();
+  }
+  export default WebpackWorker
+}
+
 declare module 'vue-input-autowidth'
 declare module 'vue-scrollto' {
   const x: any
@@ -14,3 +22,4 @@ declare module 'draw-wave'
 declare module '@rgrove/parse-xml'
 declare module 'audiobuffer-slice'
 declare module 'vue-scroll'
+declare module 'array-buffer-concat'
