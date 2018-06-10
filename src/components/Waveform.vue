@@ -1,15 +1,64 @@
 <template>
-  <div :class="{ disabled: disabled }">
-    <div class="wave-form text-xs-center" v-if="loading">
-      loading
-    </div>
+  <div :class="{ disabled, loading }">
+    <v-layout>
+      <v-flex xs1 text-xs-center>
+        <div class="pl-2 pr-2 caption grey--text lighten-2">
+          <v-slider
+            class="scale-slider"
+            color="grey"
+            thumb-color="grey darken-2"
+            hide-details
+            :step=".1"
+            :min=".1"
+            :max="4"
+            thumb-label
+            v-model="scaleFactorY" />
+          Scale
+        </div>
+      </v-flex>
+      <v-flex class="text-xs-center" xs10>
+        <slot name="headline" />
+      </v-flex>
+      <v-flex xs1 text-xs-center>
+        <div class="pr-2 pl-2 caption grey--text lighten-2">
+          <v-slider
+            class="scale-slider"
+            @mousedown="startScaleX"
+            @mouseup="endScaleX"
+            color="grey"
+            thumb-color="grey darken-2"
+            hide-details
+            :step=".1"
+            :min="0.1"
+            :max="4"
+            thumb-label
+            v-model="scaleFactorX" />
+          Zoom
+        </div>
+        <!-- <v-btn-toggle>
+          <v-btn
+            v-ripple="false"
+            :disabled="currentZoomLevelIndex === 0"
+            @click="currentZoomLevelIndex = currentZoomLevelIndex - 1"
+            outline small>
+            <v-icon>remove</v-icon>
+          </v-btn>
+          <v-btn
+            v-ripple="false"
+            :disabled="currentZoomLevelIndex + 1 === zoomLevels.length"
+            @click="currentZoomLevelIndex = currentZoomLevelIndex + 1"
+            outline small>
+            <v-icon>add</v-icon>
+          </v-btn>
+        </v-btn-toggle> -->
+      </v-flex>
+    </v-layout>
     <div
-      v-else
       class="wave-form"
       ref="svgContainer"
       @scroll="onScroll">
       <div
-        :style="{ width: totalWidth + 'px' }"
+        :style="stageStyle"
         class="wave-form-inner">
         <div
           v-for="(x, i) in Array(amountDrawSegments)"
@@ -27,13 +76,14 @@
     </div>
     <div class="overview">
       <div
+        class="overview-focus"
         tabindex="-1"
         @mousedown="startDragOverview"
         @mouseup="scrollFromOverview"
         :style="{
-          transform: `translateX(${overviewFocusOffset}px) scaleX(${1 / (this.currentZoomLevelIndex + 1) * 5})`
-        }"
-        class="overview-focus" />
+          transform: `translateX(${overviewFocusOffset}px) scaleX(${1 / scaleFactorX})`,
+        }">
+      </div>
       <div
         @mouseup="scrollFromOverview"
         v-if="overviewSvg !== null && overviewSvg !== undefined"
@@ -41,112 +91,14 @@
         ref="overview"
         class="overview-waveform" />
     </div>
-    <v-layout>
-      <v-flex xs2>
-        <div class="pl-3 caption grey--text lighten-2">
-          <v-slider
-            color="grey"
-            thumb-color="grey darken-2"
-            hide-details
-            :min="1"
-            :max="20"
-            thumb-label
-            v-model="scaleFactorY" />
-          Scale Waveform
-        </div>
-      </v-flex>
-      <v-spacer />
-      <v-flex xs2 text-xs-right>
-        <v-btn-toggle>
-          <v-btn
-            v-ripple="false"
-            :disabled="currentZoomLevelIndex === 0"
-            @click="currentZoomLevelIndex = currentZoomLevelIndex - 1"
-            outline small>
-            <v-icon>remove</v-icon>
-          </v-btn>
-          <v-btn
-            v-ripple="false"
-            :disabled="currentZoomLevelIndex + 1 === zoomLevels.length"
-            @click="currentZoomLevelIndex = currentZoomLevelIndex + 1"
-            outline small>
-            <v-icon>add</v-icon>
-          </v-btn>
-        </v-btn-toggle>
-      </v-flex>
-    </v-layout>
   </div>
 </template>
 
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as drawBuffer from 'draw-wave'
-import * as sliceAudiobuffer from 'audiobuffer-slice'
 import * as _ from 'lodash'
-import { setInterval, setImmediate, setTimeout } from 'timers';
-import * as fileSaver from 'file-saver'
-require('kaitai-struct/KaitaiStream')
-const ogg = require('../service/ogg')
-const concatBuffer = require('array-buffer-concat')
-
-function sliceBuffer(buffer: AudioBuffer, start: number, end: number): Promise<AudioBuffer> {
-  return new Promise((resolve, reject) => {
-    sliceAudiobuffer(buffer, start, end, (err: Error, sliced: AudioBuffer) => {
-      if (err) {
-        reject(err)
-      } else {
-        resolve(sliced)
-      }
-    })
-  })
-}
-
-interface OggIndex {
-  pages: Array<{ byteOffset: number, granulePosition: number, timestamp: number }>
-  headers: Array<{ byteOffset: number }>
-}
-
-function readU4le(dataView: DataView, i: number) {
-  const v = dataView.getUint32(i, true)
-  return v
-};
-
-function readU8le(dataView: DataView, i: number) {
-  const v1 = readU4le(dataView, i)
-  const v2 = readU4le(dataView, i + 4)
-  return 0x100000000 * v2 + v1
-};
-
-function getOggIndex(buffer: ArrayBuffer): OggIndex {
-
-  const pages: OggIndex['pages'] = []
-  const headers: OggIndex['headers'] = []
-
-  const uint8Array = new Uint8Array(buffer)
-  const dataView = new DataView(buffer)
-  const sampleRate = (() => {
-    // that’s where the 32 bit integer sits
-    const chunk = buffer.slice(40, 48)
-    const view = new Uint32Array(chunk)
-    return view[0]
-  })()
-  uint8Array.forEach((v, i, l) => {
-    if (l[i]     === 79 &&
-        l[1 + 1] === 103 &&
-        l[i + 2] === 103 &&
-        l[i + 3] === 83 ) {
-      const byteOffset = i
-      const granulePosition = readU8le(dataView, i + 6)
-      const timestamp = granulePosition / sampleRate
-      if (granulePosition === 0) {
-        headers.push({ byteOffset })
-      } else {
-        pages.push({ byteOffset, granulePosition, timestamp })
-      }
-    }
-  })
-  return { headers, pages }
-}
+import audio, { OggIndex } from '../service/audio'
 
 async function callWhenReady<T>(cb: () => T)  {
   return new Promise((resolve, reject) => {
@@ -161,8 +113,6 @@ async function callWhenReady<T>(cb: () => T)  {
   }) as Promise<T>
 }
 
-const ctxClass: any = window.AudioContext
-
 @Component
 export default class Waveform extends Vue {
 
@@ -172,14 +122,10 @@ export default class Waveform extends Vue {
 
   onScroll = _.throttle((e) => this.handleScroll(e), 250)
   disabled = false
-  svg: SVGElement|null|undefined = null
-  oggBuffer: ArrayBuffer|null   = null
-  audioBuffer: AudioBuffer|null = null
   drawWidth = 5000 // pixels
-  preRenderSize = 5 * 1024 * 1024 // bytes
   overviewFocusOffset = 0
-  isDraggingOverview = false
   scaleFactorY = 1
+  scaleFactorX = 1
   zoomLevels = [
     1024,
     512,
@@ -199,23 +145,48 @@ export default class Waveform extends Vue {
   currentlyVisibleWaveFormPiece = 0
   loading = false
   overviewSvg = localStorage.getItem('overview-svg') || null
-  oggPages: OggIndex['pages'] = []
-  oggHeaders: OggIndex['headers'] = []
-  context: AudioContext = new ctxClass()
 
   handleScroll(e: Event) {
     this.$emit('scroll', e)
     if (this.currentlyVisibleWaveFormPiece !== this.visibleWaveFormPiece()) {
       this.currentlyVisibleWaveFormPiece = this.visibleWaveFormPiece()
-      console.log({ now_drawing: this.visibleWaveFormPiece() })
-      // callWhenReady(() => this.drawWaveFormPiece())
-      this.drawWaveFormPiece()
+      this.drawWaveFormPiece(this.currentlyVisibleWaveFormPiece)
+      // TODO: this is very crude. it makes it take twice the time.
+      if (this.currentlyVisibleWaveFormPiece - 1 >= 0) {
+        this.drawWaveFormPiece(this.currentlyVisibleWaveFormPiece - 1)
+      }
     }
     const w = this.$refs.svgContainer
     const o = this.$refs.overview
     if (w instanceof HTMLElement && o instanceof HTMLElement) {
       // tslint:disable-next-line:max-line-length
       this.overviewFocusOffset = w.scrollLeft / w.scrollWidth * o.clientWidth
+      localStorage.setItem('scrollPos', String(w.scrollLeft))
+    }
+  }
+
+  startScaleX(e: MouseEvent) {
+    console.log(e)
+  }
+
+  endScaleX(e: MouseEvent) {
+    console.log(e)
+  }
+
+  // @Watch('scaleFactorX')
+  // onScaleFactorXChange() {
+  //   const c = this.$refs.svgContainer
+  //   if (c instanceof HTMLElement) {
+  //     c.scrollLeft
+  //   }
+  // }
+
+  get stageStyle() {
+    const c = this.$refs.svgContainer
+    return {
+      width: this.totalWidth + 'px',
+      transformOrigin: c instanceof HTMLElement ? `${c.scrollLeft + c.clientWidth / 2}px` : 0,
+      transform: `scaleX(${this.scaleFactorX})`
     }
   }
 
@@ -225,24 +196,31 @@ export default class Waveform extends Vue {
 
   startDragOverview(e: MouseEvent) {
     document.addEventListener('mousemove', this.onDragOverview)
+    document.addEventListener('mouseup', this.scrollFromOverview)
   }
   onDragOverview(e: MouseEvent) {
     this.overviewFocusOffset = e.pageX - this.currentZoomLevelIndex * 10 / 2
   }
   scrollFromOverview(e: MouseEvent) {
     document.removeEventListener('mousemove', this.onDragOverview)
+    document.removeEventListener('mouseup', this.scrollFromOverview)
+    this.overviewFocusOffset = e.pageX - this.currentZoomLevelIndex * 10 / 2
+    // callWhenReady(() => {
     const o = this.$refs.overview
     if (o instanceof HTMLElement) {
       const x = (e.pageX - 25) / o.clientWidth
       this.doScrollToPercentage(x)
     }
+    // })
   }
 
   doScrollToPercentage(percentage: number) {
     const el = this.$refs.svgContainer
     if (el instanceof HTMLDivElement) {
-      el.scrollTo({
-        left: el.scrollWidth * percentage
+      requestAnimationFrame(() => {
+        el.scrollTo({
+          left: el.scrollWidth * percentage
+        })
       })
     }
   }
@@ -268,91 +246,29 @@ export default class Waveform extends Vue {
     if (this.audioElement !== null) {
       this.loading = true
       console.time('fetch')
-      this.oggBuffer = await (await fetch(this.audioElement.src)).arrayBuffer()
+      audio.store.oggBuffer = await (await fetch(this.audioElement.src)).arrayBuffer()
       console.timeEnd('fetch')
       // Decode first batch
       this.audioLength = this.audioElement.duration
-      const oggIndex = getOggIndex(this.oggBuffer)
-      this.oggPages = oggIndex.pages
-      this.oggHeaders = oggIndex.headers
-      console.log(this.oggPages)
-      console.time('decode prerender size (5mb)')
-      const audioBuffer = await callWhenReady(() => this.context.decodeAudioData(
-        // concatBuffer(x.slice(data.pages[0].pos, data.pages[1].pos - 1), x.slice(y1, y2))
-        concatBuffer(
-          // Headers
-          (this.oggBuffer as ArrayBuffer).slice(this.oggHeaders[0].byteOffset, this.oggPages[0].byteOffset),
-          // Actual Pages
-          (this.oggBuffer as ArrayBuffer).slice(this.oggPages[0].byteOffset, this.oggPages[1000].byteOffset))
-        // x.slice(0, this.preRenderSize > x.byteLength ? x.byteLength : this.preRenderSize)
-      ))
-      console.timeEnd('decode prerender size (5mb)')
-      this.audioBuffer = audioBuffer
-      console.log(this.audioBuffer.sampleRate)
+      const oggIndex = audio.getOggIndex(audio.store.oggBuffer)
+      audio.store.oggPages = oggIndex.pages
+      audio.store.oggHeaders = oggIndex.headers
+      await callWhenReady(() => this.drawWaveFormPiece(0))
       this.loading = false
-      await callWhenReady(() => this.drawWaveFormPiece())
-
-      console.time('2 decodings')
-      const buffers = await Promise.all([
-        this.decodeBufferSegment(500, 620),
-        this.decodeBufferSegment(620, 620 + 120)
-      ])
-      console.timeEnd('2 decodings')
-      // Decode the rest
-      // console.time('decode all')
-      // this.audioBuffer = await callWhenReady(() => context.decodeAudioData(this.oggBuffer as ArrayBuffer))
-      // this.disabled = true
-      // await callWhenReady(() => this.drawWaveFormPiece())
-      // if (this.overviewSvg === null) {
-      //   await callWhenReady(() => this.drawOverviewWaveform())
-      // }
-      // this.disabled = false
-      // console.timeEnd('decode all')
-    }
-  }
-
-  findPages(from: number, to: number) {
-    console.time('find pages')
-    const pages = this.oggPages
-    const countPages = pages.length
-    let i = 0
-    let startPage: any = null
-    let endPage: any = null
-    // some timestamps are just to f*ing big.
-    const errorTimestampTooBig = Math.pow(10, 6)
-    while (i <= countPages) {
-      if (startPage === null && pages[i].timestamp >= from && pages[i].timestamp < errorTimestampTooBig) {
-        console.log({ i1: i })
-        startPage = pages[i]
+      const scrollLeft = localStorage.getItem('scrollPos')
+      const el = this.$refs.svgContainer
+      if (scrollLeft !== null && el instanceof HTMLElement) {
+        el.scrollTo({
+          left : Number(scrollLeft)
+        })
       }
-      if (endPage === null && pages[i].timestamp >= to && pages[i].timestamp < errorTimestampTooBig) {
-        console.log({ i2: i })
-        endPage = pages[i]
-        break
-      }
-      i++
-    }
-    console.log({startPage, endPage})
-    console.timeEnd('find pages')
-    return {startPage, endPage}
-  }
-
-  // in seconds
-  async decodeBufferSegment(from: number, to: number) {
-    if (this.oggBuffer !== null) {
-      const { startPage, endPage } = this.findPages(from, to)
-      const headerBuffer   = this.oggBuffer.slice(this.oggHeaders[0].byteOffset, this.oggPages[0].byteOffset)
-      const contentBuffer  = this.oggBuffer.slice(startPage.byteOffset, endPage.byteOffset)
-      const combinedBuffer = concatBuffer(headerBuffer, contentBuffer)
-      const decodedBuffer  = await this.context.decodeAudioData(combinedBuffer)
-      return decodedBuffer
     }
   }
 
   playBuffer(buffer: AudioBuffer, start = 0, offset?: number, duration?: number) {
-    const src = this.context.createBufferSource()
+    const src = audio.store.audioContext.createBufferSource()
     src.buffer = buffer
-    src.connect(this.context.destination)
+    src.connect(audio.store.audioContext.destination)
     src.start(0, offset, duration)
   }
 
@@ -375,43 +291,36 @@ export default class Waveform extends Vue {
   }
 
   async drawOverviewWaveform() {
-    const width = this.$el.clientWidth
-    console.time('render overview')
-    const svg = await callWhenReady(() => drawBuffer.svg(this.audioBuffer, width, 45, '#ccc')) as SVGElement
-    this.overviewSvg = svg.outerHTML
-    if (this.overviewSvg !== null) {
-      localStorage.setItem('overview-svg', this.overviewSvg)
-    }
-    console.timeEnd('render overview')
+    // const width = this.$el.clientWidth
+    // console.time('render overview')
+    // const svg = await callWhenReady(() => drawBuffer.svg(this.audioBuffer, width, 45, '#ccc')) as SVGElement
+    // this.overviewSvg = svg.outerHTML
+    // if (this.overviewSvg !== null) {
+    //   localStorage.setItem('overview-svg', this.overviewSvg)
+    // }
+    // console.timeEnd('render overview')
   }
 
-  async drawWaveFormPiece() {
-    if (this.audioBuffer !== null) {
-      const i = this.visibleWaveFormPiece()
-      console.log({number_of_segments: this.amountDrawSegments})
-      console.log({audio_length: this.audioLength})
-      const isLast = i + 1 === this.amountDrawSegments
-      const secondsPerDrawWidth = this.zoomLevels[this.currentZoomLevelIndex]
-      const from = i * secondsPerDrawWidth * 1000
-      const to = isLast ? this.audioLength * 1000 : from + secondsPerDrawWidth * 1000
-      console.time('slicing')
-      const slicedBuffer = await sliceBuffer(this.audioBuffer, from, to)
-      console.timeEnd('slicing')
-      console.time('drawBuffer')
-      this.svg = await callWhenReady(() => drawBuffer.svg(
+  async drawWaveFormPiece(i: number) {
+    console.log({ now_drawing: i })
+    const isLast = i + 1 === this.amountDrawSegments
+    const secondsPerDrawWidth = this.zoomLevels[this.currentZoomLevelIndex]
+    const from = i * secondsPerDrawWidth
+    const to = isLast ? this.audioLength : from + secondsPerDrawWidth
+    const slicedBuffer = await audio.decodeBufferSegment(from, to)
+    if (slicedBuffer !== undefined) {
+      const svg = audio.drawWave(
         slicedBuffer,
         isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth,
-        200,
-        '#ccc'
-      ))
-      console.timeEnd('drawBuffer')
+        200
+      )
       if (this.$refs.svgContainer instanceof HTMLElement) {
-        console.time('render')
         const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
-        el.innerHTML = '';
-        el.appendChild((this.svg as Node))
-        el.classList.add('show')
+        console.time('render')
+      // requestAnimationFrame(async () => {
+        el.innerHTML = svg
         console.timeEnd('render')
+        el.classList.add('show')
         await callWhenReady(() => {
           this.$emit('change-metadata', {
             totalWidth: this.totalWidth,
@@ -421,13 +330,14 @@ export default class Waveform extends Vue {
             drawWidth: this.drawWidth
           })
         })
+      // })
       }
     }
   }
 
   @Watch('currentZoomLevelIndex')
   onZoom() {
-    this.drawWaveFormPiece()
+    this.drawWaveFormPiece(this.currentlyVisibleWaveFormPiece)
   }
 
   get pixelsPerSecond() {
@@ -443,12 +353,14 @@ export default class Waveform extends Vue {
 <style lang="stylus">
 .overview-waveform
   svg
-    margin 0 auto
+    opacity .5
+    pointer-events none
 </style>
 <style lang="stylus" scoped>
 .disabled
+.loading
   cursor progress
-  pointer-events none
+  // pointer-events none
   opacity .5
 .wave-form-segment
   position absolute
@@ -458,11 +370,22 @@ export default class Waveform extends Vue {
     border-top 1px dashed #ddd
     width 100%
 .wave-form
+  margin-top -20px
   position relative
   height 200px
   max-width 100vw
   overflow-x scroll
+  overflow-y hidden
+  &::-webkit-scrollbar
+  &::-webkit-scrollbar-button
+  &::-webkit-scrollbar-track
+  &::-webkit-scrollbar-track-piece
+  &::-webkit-scrollbar-thumb
+  &::-webkit-scrollbar-corner
+  &::-webkit-resizer
+    opacity 0
   .wave-form-inner
+    transition .5s transform
     height 200px
     position relative
     .wave-form-segment
@@ -472,19 +395,21 @@ export default class Waveform extends Vue {
         transform scaleY(1.2)
         opacity 1
 .overview
+  top -15px
   height 45px
   position relative
 .overview-waveform
-  background #f4f4f4
-  svg
-    margin 0 auto
-.overview-focus
   background rgba(0,0,0,.1)
+
+.overview-focus
+  background rgba(0,0,0,.4)
   height 100%
   width 50px
   position absolute
   &:focus
     outline 0
-    background rgba(0,0,100,.1)
+    background rgba(255,255,255,.2)
 
+.scale-slider
+  padding-right 5px
 </style>
