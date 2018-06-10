@@ -21,7 +21,7 @@
             <v-icon v-else x-large>pause_circle_outline</v-icon>
           </v-btn>
           <div class="current-time">
-            {{ currentTime.toFixed(2) }}
+            {{ toTime(currentTime) }}
           </div>
         </v-flex>
         <v-flex text-xs-left xs2>
@@ -55,6 +55,7 @@ export default class PlayerBar extends Vue {
   currentTime = this.audioElement.currentTime
   playbackRate = 100
   volume = 100
+
   playPause(e: Event) {
     if (this.isPaused) {
       this.audioElement.play()
@@ -67,12 +68,18 @@ export default class PlayerBar extends Vue {
   onPlaybackRateChange(rate: number) {
     this.setPlaybackRate(rate)
   }
+
   setPlaybackRate(rate: number) {
     this.audioElement.playbackRate = rate / 100
   }
+
   @Watch('volume')
   onVolumeChange(volume: number) {
     this.audioElement.volume = volume / 100
+  }
+
+  toTime(time: number) {
+    return new Date(time * 1000).toISOString().substr(11, 12)
   }
 
   mounted() {
@@ -95,16 +102,17 @@ export default class PlayerBar extends Vue {
   right: 0
   bottom: 0
   height: 100px
-  text-align: center
-  background: #f4f4f4
+  text-align center
+  background #383838
 
 .play-button
   margin-top: -5px
 
 .current-time
+  font-size 110%
   display: block
   width: 185px
-  background: rgba(0,0,0,.075)
+  background: rgba(0,0,0,.15)
   margin: 0 auto
   border-radius: 1em
 

@@ -5,6 +5,11 @@
       @scroll="handleScroll"
       :scroll-to-segment="scrollToSegment"
       :audio-element="audioElement">
+      <h3
+        slot="headline"
+        class="pa-4 transcript-title">
+          {{ transcript.name }}
+      </h3>
       <play-head
         :playing-segment="playingSegment"
         :audio-element="audioElement"
@@ -100,7 +105,7 @@ export default class Editor extends Vue {
   @Prop() audioElement: HTMLAudioElement
   @Prop() transcript: Transcript
   // TODO: percentages are impractical. use pixels
-  segmentBufferPercent = .015
+  segmentBufferPercent = .02
   metadata: any = null
   boundLeft = 0
   boundRight = 10
@@ -201,15 +206,31 @@ export default class Editor extends Vue {
 }
 </script>
 <style lang="stylus" scoped>
+.transcript-title
+  font-weight 300
+  opacity .5
 .tracks
   white-space nowrap
   overflow-x scroll
   padding 10px 40px 20px 40px
+  &::-webkit-scrollbar
+  &::-webkit-scrollbar-button
+  &::-webkit-scrollbar-track
+  &::-webkit-scrollbar-track-piece
+    opacity 0
+  &::-webkit-scrollbar-thumb
+    background-color rgba(255,255,255,.4)
+    border-radius 5px
+    border 3px solid transparent
+    border-radius 9px
+    background-clip content-box
+  // &::-webkit-scrollbar-corner
+  // &::-webkit-resizer
 
 .segment
   display inline-block
   vertical-align top
-  border-right 1px solid #ddd
+  border-right 1px solid rgba(255,255,255,.1)
   padding 0 6px
   color #444
 
@@ -218,7 +239,7 @@ export default class Editor extends Vue {
   .token-type-indicator
     opacity 1
   .time
-    color #333
+    color #ddd
 
 .speaker-segment
   display block
@@ -230,7 +251,7 @@ export default class Editor extends Vue {
 .time
   cursor default
   font-size 85%
-  color #ccc
+  color #aaa
   text-align center
 
 .jump-to

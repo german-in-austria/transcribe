@@ -7,17 +7,17 @@
     @keyup.left.stop.prevent="selectPrevious(segmentKey)"
     @keyup.space.stop.prevent="playSegment(segmentKey, segment)"
     tabindex="-1"
-    :class="[ 'segment', selectedSegment.id === segment.id ? 'selected' : '' ]"
+    :class="[ 'segment', isSelected ? 'selected' : '' ]"
     :style="style">
     <div class="segment-background" />
     <slot :segment="segment" />
     <resizer
-      v-if="selectedSegment.id === segment.id"
+      v-if="isSelected"
       @resize="throttledResizeLeft"
       :elsize="width"
       side="left"/>
     <resizer
-      v-if="selectedSegment.id === segment.id"
+      v-if="isSelected"
       @resize="throttledResizeRight"
       :elsize="width"
       side="right"/>
@@ -46,12 +46,18 @@ export default class SegmentBox extends Vue {
 
   throttledResizeRight = _.throttle((n: number, o: number) => this.onResizeRight(n, o), 25)
   throttledResizeLeft  = _.throttle((n: number, o: number) => this.onResizeLeft(n, o), 25)
+  isSelected = false
 
   get style(): any {
     return {
         transform: `translateX(${this.offset}px)`,
         width: this.width + 'px'
     }
+  }
+  @Watch('selectedSegment')
+  selectedSegmentChange() {
+    console.log('hello')
+    this.isSelected = this.selectedSegment !== null && this.selectedSegment.id === this.segment.id
   }
   get width(): number {
     return (Number(this.segment.endTime) - Number(this.segment.startTime)) * this.pixelsPerSecond
@@ -118,12 +124,12 @@ export default class SegmentBox extends Vue {
 .segment
   height 100px
   top 50px
-  border-radius 8px
+  border-radius 10px
   overflow hidden
   background rgba(0, 0, 0, .025)
   position absolute
-  border-right 1px solid rgba(255,255,255,.2)
-  box-shadow inset 0 0 0 1px rgba(0,0,0,.1)
+  border-top 1px solid rgba(255,255,255,.2)
+  border-right 1px solid rgba(255,255,255,.1)
   transition background .3s
   outline 0
   will-change width left
@@ -131,11 +137,11 @@ export default class SegmentBox extends Vue {
   &.selected, &:focus
     background transparent
     border: 2px solid cornflowerblue
-    box-shadow 0 0 40px rgba(0,0,0,.2)
+    box-shadow 0 0 50px rgba(0,0,0,.4)
   &:hover:not(.selected)
     background rgba(0,0,0, .05)
   .segment-background
-    background rgba(0,0,0,.05)
+    background rgba(0,0,0,.2)
     position absolute
     left 0
     top 0

@@ -6,10 +6,11 @@
         v-for="(token, i) in localTokens"
         :key="i">
         {{ token }}&nbsp;
-        <div :class="['token-type-indicator', tokenTypeFromToken(token)]" />
+        <div :class="['token-type-indicator', tokenTypeFromToken(token), focused && 'focused']" />
       </div>
     </div>
     <div
+      @focus="focused = true"
       @blur="updateLabelText"
       v-contenteditable:segmentText="true"
       class="tokens-input segment-text">
@@ -28,6 +29,7 @@ export default class SegmentEditor extends Vue {
 
   @Prop() tokens: string[]
   localTokens = this.tokens.slice()
+  focused = false
 
   tokenTypeFromToken(token: string) {
     return token.startsWith('((') ? 'non-verbal' : ''
@@ -46,6 +48,7 @@ export default class SegmentEditor extends Vue {
   }
 
   updateLabelText(e: Event) {
+    this.focused = false
     const tokens = ((e.target as HTMLDivElement).textContent || '').split(' ')
     this.$emit('updateSpeakerEvent', tokens)
   }
@@ -62,7 +65,10 @@ export default class SegmentEditor extends Vue {
   height 3px
   border-radius 2px
   margin 1px 3px 3px 0px
-  opacity 1
+  opacity .5
+  transition .25s opacity
+  &.focused
+    opacity 1
   &.non-verbal
     background red
   // OTHER TOKEN TYPES GO HERE
@@ -74,12 +80,14 @@ export default class SegmentEditor extends Vue {
     display inline-block
     color transparent
 
-
 .tokens-input
+  tokens-input
   outline 0
+  color #ccc
+  transition .5s color
   &:focus
-    color #000
-    background #f4f4f4
+    outline 0
+    color white
 
 .segment-text
   padding 1px

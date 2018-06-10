@@ -1,20 +1,19 @@
 <template>
-  <v-app>
+  <v-app dark>
     <v-content class="main-content" app>
       <v-container fluid fill-height class="pa-0">
         <vue-full-screen-file-drop @drop='onFileDrop'>&nbsp;</vue-full-screen-file-drop>
-        <v-layout class="max-width" :align-center="audioElement === null" justify-center>
+        <v-layout class="max-width" :align-center="audioElement === null || transcript === null" justify-center>
           <div v-if="transcript === null" class="text-xs-center">
             <h1>Drop an audio file here.</h1>
             <p>or, use the <a @click="loadSampleFile" href="#">sample file</a></p>
           </div>
           <v-flex xs12 v-if="transcript !== null">
-            <h2 class="pa-4">{{ transcript.name }}</h2>
             <editor
               :transcript="transcript"
               :audio-element="audioElement" />
             <router-view />
-            <v-card class="mt-4 help">
+            <!-- <v-card class="mt-4 help">
               <v-card-title class="pb-0 mb-0" primary-title>
                 <h4 class="headline mb-0">Tips & Shortcuts</h4>
               </v-card-title>
@@ -24,7 +23,7 @@
                   <li>Press Ctrl+Space to play the current segment</li>
                 </ul>
               </v-card-text>
-            </v-card>
+            </v-card> -->
             <player-bar
               v-if="audioElement"
               :audioElement="audioElement" />
@@ -119,7 +118,7 @@ export default class App extends Vue {
   xml: any = null
 
   isAudio(file: File) {
-    return file.type.includes('audio/')
+    return file.name.includes('.ogg') || file.type.includes('/ogg')
   }
 
   transcriptTreeToTranscribable(tree: ParsedXML, name: string): any {
@@ -181,6 +180,7 @@ export default class App extends Vue {
   onFileDrop(formData: FormData, files: FileList) {
     console.log(files[0].type)
     _(files).forEach(file => {
+      console.log(JSON.stringify(file))
       if (this.isAudio(file)) {
         const x = URL.createObjectURL(file)
         this.audioUrl = x
