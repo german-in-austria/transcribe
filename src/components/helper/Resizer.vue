@@ -33,9 +33,6 @@ module.exports =
     "side":
       type: String
       default: "right"
-    "elsize":
-      type: Number
-      required: true
   computed:
     horizontal: ->
       return @side == "left" or @side == "right"
@@ -119,7 +116,7 @@ module.exports =
       if @size > val
         @size = val
   data: ->
-    size : this.elsize
+    size : @defaultSize
 </script>
 <style>
   .resize-handle{

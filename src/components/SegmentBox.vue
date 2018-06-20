@@ -2,36 +2,40 @@
   <div
     @mousedown="selectSegment(segment)"
     @dblclick="playSegment(segmentKey, segment)"
-    @keyup.delete="deleteSegment(segmentKey, segment)"
-    @keyup.right.stop.prevent="selectNext(segmentKey)"
-    @keyup.left.stop.prevent="selectPrevious(segmentKey)"
-    @keyup.space.stop.prevent="playSegment(segmentKey, segment)"
+    @keydown.delete="deleteSegment(segmentKey, segment)"
+    @keydown.right.stop.prevent="selectNext(segmentKey)"
+    @keydown.left.stop.prevent="selectPrevious(segmentKey)"
+    @keydown.space.stop.prevent="playSegment(segmentKey, segment)"
     tabindex="-1"
     :class="[ 'segment', isSelected ? 'selected' : '' ]"
     :style="style">
-    <div class="segment-background" />
     <slot :segment="segment" />
-    <resizer
-      v-if="isSelected"
-      @resize="throttledResizeLeft"
-      :elsize="width"
-      side="left"/>
-    <resizer
-      v-if="isSelected"
-      @resize="throttledResizeRight"
-      :elsize="width"
-      side="right"/>
+    <resize-parent
+      class="resizer"
+      resizing-class="resizing"
+      @resize-end="onResizeEnd"
+      :parent-min-width="12"
+      left
+    />
+    <resize-parent
+      class="resizer"
+      resizing-class="resizing"
+      @resize-end="onResizeEnd"
+      :parent-min-width="12"
+      right
+    />
   </div>
 </template>
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch, Provide } from 'vue-property-decorator'
-import { SpeakerEvent } from '@components/App.vue';
+import { SpeakerEvent } from '@components/App.vue'
 import Resizer from '@components/helper/Resizer.vue'
+import ResizeParent from '@components/helper/ResizeParent.vue'
 import * as _ from 'lodash'
 @Component({
   components: {
-    Resizer
+    ResizeParent
   }
 })
 export default class SegmentBox extends Vue {
@@ -44,14 +48,17 @@ export default class SegmentBox extends Vue {
   @Prop() metadata: any
   @Prop() segmentKey: any
 
-  throttledResizeRight = _.throttle((n: number, o: number) => this.onResizeRight(n, o), 25)
-  throttledResizeLeft  = _.throttle((n: number, o: number) => this.onResizeLeft(n, o), 25)
   isSelected = false
 
   get style(): any {
     return {
-        transform: `translateX(${this.offset}px)`,
+        left: `${ this.offset }px`,
         width: this.width + 'px'
+    }
+  }
+  get maxSize() {
+    if (this.previousSegment !== undefined && this.nextSegment !== undefined) {
+      return (this.nextSegment.startTime - this.previousSegment.endTime) * this.pixelsPerSecond
     }
   }
   @Watch('selectedSegment')
@@ -67,7 +74,7 @@ export default class SegmentBox extends Vue {
   }
   get pixelsPerSecond() {
     if ( this.metadata !== null) {
-      return this.metadata.totalWidth / this.metadata.audioLength
+      return this.metadata.pixelsPerSecond
     } else {
       return 0
     }
@@ -87,64 +94,45 @@ export default class SegmentBox extends Vue {
   deleteSegment(key: number, segment: Segment) {
     this.$emit('delete-segment', key, segment)
   }
-  onResizeRight(w: number, oldW: number) {
-    if (this.selectedSegment !== null) {
-      const newDuration = w / this.pixelsPerSecond
-      const oldDuration = oldW / this.pixelsPerSecond
-      const difference = newDuration - oldDuration
-      const newEndTime = this.segment.endTime + difference
-      const rightBoundary = this.nextSegment === undefined ? Infinity : this.nextSegment.startTime
-      console.log({w, newEndTime, rightBoundary})
-      if (w > 0 && newEndTime <= rightBoundary) {
-        this.segment.endTime = Number(newEndTime.toFixed(10))
-      } else {
-        this.segment.endTime = Number(rightBoundary.toFixed(10))
-      }
+  onResizeEnd(e: any) {
+    console.log(e)
+    this.segment.startTime = e.current.left / this.pixelsPerSecond
+    this.segment.endTime = e.current.right / this.pixelsPerSecond
+    if (this.nextSegment !== undefined) {
+      this.nextSegment.startTime = e.next.left / this.pixelsPerSecond
+    }
+    if (this.previousSegment !== undefined) {
+      this.previousSegment.endTime = e.previous.right / this.pixelsPerSecond
+      console.log(this.segment.startTime, this.previousSegment.endTime)
     }
   }
-  onResizeLeft(w: number, oldW: number) {
-    if (this.selectedSegment !== null) {
-      const newDuration = w / this.pixelsPerSecond
-      const oldDuration = oldW / this.pixelsPerSecond
-      const difference = oldDuration - newDuration
-      const newStartTime = this.segment.startTime + difference
-      const leftBoundary = this.previousSegment === undefined ? 0 : this.previousSegment.endTime
-      console.log({w, newStartTime, leftBoundary})
-      if (w > 0 && newStartTime >= leftBoundary) {
-        this.segment.startTime = Number(newStartTime.toFixed(10))
-      } else {
-        this.segment.startTime = Number(leftBoundary.toFixed(10))
-      }
-    }
-  }
-
 }
 </script>
 <style lang="stylus" scoped>
 .segment
+  min-width 12px
   height 100px
   top 50px
   border-radius 10px
   overflow hidden
-  background rgba(0, 0, 0, .025)
+  background rgba(0,0,0,.2)
   position absolute
-  border-top 1px solid rgba(255,255,255,.2)
-  border-right 1px solid rgba(255,255,255,.1)
+  border-top 1px solid rgba(255,255,255,.3)
+  border-right 1px solid rgba(255,255,255,.2)
   transition background .3s
   outline 0
   will-change width left
   transform-origin 0 0
+  user-select none
   &.selected, &:focus
-    background transparent
+    z-index 99
     border: 2px solid cornflowerblue
     box-shadow 0 0 50px rgba(0,0,0,.4)
   &:hover:not(.selected)
-    background rgba(0,0,0, .05)
-  .segment-background
-    background rgba(0,0,0,.2)
-    position absolute
-    left 0
-    top 0
-    right 0
-    bottom 0
+    background rgba(0,0,0,.3)
+  .resizer
+    transition .25s opacity
+    opacity 0
+  &:hover:not(.resizing) .resizer
+    opacity 1
 </style>

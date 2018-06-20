@@ -45,6 +45,7 @@ import 'vue-full-screen-file-drop/dist/vue-full-screen-file-drop.css'
 import * as parseXML from '@rgrove/parse-xml'
 import parseTranscriptFromTree, { ParsedXML } from '../service/transcript-parser'
 import editor from './Editor.vue'
+import audio from '../service/audio'
 
 declare global {
   interface Window {
@@ -186,6 +187,11 @@ export default class App extends Vue {
         this.audioUrl = x
         const y = document.createElement('audio')
         y.src = x
+        const reader = new FileReader()
+        reader.readAsArrayBuffer(file)
+        reader.onload = function() {
+          audio.store.oggBuffer = this.result
+        }
         this.audioElement = y
         console.log(x)
       } else if (this.isXML(file)) {

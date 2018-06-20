@@ -65,7 +65,7 @@ export default class SegmentEditor extends Vue {
   height 3px
   border-radius 2px
   margin 1px 3px 3px 0px
-  opacity .5
+  opacity .25
   transition .25s opacity
   &.focused
     opacity 1

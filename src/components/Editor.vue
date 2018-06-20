@@ -3,6 +3,7 @@
     <wave-form
       @change-metadata="changeMetadata"
       @scroll="handleScroll"
+      @scrub="(e) => playHeadPos = e.x"
       :scroll-to-segment="scrollToSegment"
       :audio-element="audioElement">
       <h3
@@ -11,6 +12,7 @@
           {{ transcript.name }}
       </h3>
       <play-head
+        :pos-x="playHeadPos"
         :playing-segment="playingSegment"
         :audio-element="audioElement"
         :metadata="metadata" />
@@ -36,17 +38,17 @@
         </segment-box>
       </div>
     </wave-form>
-    <!-- <h3 class="text-xs-center">
+    <h3 class="text-xs-center">
       <div
-        v-for="(speaker, key) in transcript.speakerEvents[selectedSegmentId]"
+        v-for="(speaker, key) in transcript.speakerEvents[selectedSegment.id]"
         :key="key"
-        v-if="selectedSegmentId !== null">
+        v-if="selectedSegment !== null">
         <span>{{ key }}: </span>
         <span :key="key" v-for="(token, key) in speaker.tokens">
           {{ token }}
         </span>
       </div>
-    </h3> -->
+    </h3>
     <div v-if="transcript.segments && transcript.speakers && transcript.speakerEvents" class="tracks">
       <div
         v-for="(chunk, i) in chunkedSegments"
@@ -90,6 +92,7 @@ import playHead from '@components/PlayHead.vue'
 
 import * as _ from 'lodash'
 import * as fns from 'date-fns'
+import audio from '../service/audio'
 
 @Component({
   components: {
@@ -113,6 +116,7 @@ export default class Editor extends Vue {
   scrollToSegment: Segment|null = null
   playingSegment: Segment|null = null
   segmentPlayingTimeout: any = null
+  playHeadPos = 0
 
   mounted() {
     this.audioElement.addEventListener('pause', () => {
@@ -121,6 +125,10 @@ export default class Editor extends Vue {
         this.segmentPlayingTimeout = null
       }
     })
+  }
+
+  setPlayHeadPos(e: {x: number}) {
+    this.playHeadPos = e.x
   }
 
   selectAndScrollToSegment(segment: Segment) {
@@ -135,32 +143,52 @@ export default class Editor extends Vue {
   }
 
   handleScroll(e: Event) {
-    const el = (e.target as HTMLElement)
-    const scrollFactorLeft = el.scrollLeft / el.scrollWidth
-    const scrollFactorRight = (el.scrollLeft + el.clientWidth) / el.scrollWidth
-    this.boundLeft = this.audioElement.duration * (scrollFactorLeft - this.segmentBufferPercent),
-    this.boundRight = this.audioElement.duration * (scrollFactorRight + this.segmentBufferPercent)
+    if (this.playingSegment === null) {
+      requestAnimationFrame(() => {
+        const el = (e.target as HTMLElement)
+        const scrollFactorLeft = el.scrollLeft / el.scrollWidth
+        const scrollFactorRight = (el.scrollLeft + el.clientWidth) / el.scrollWidth
+        this.boundLeft = this.audioElement.duration * (scrollFactorLeft - this.segmentBufferPercent),
+        this.boundRight = this.audioElement.duration * (scrollFactorRight + this.segmentBufferPercent)
+      })
+    }
   }
 
-  playSegment(key: number, segment: Segment) {
-    this.playingSegment = segment
-    const s = segment
-    const listener = (e: Event) => {
-      console.log(e)
-      const playbackTimeInSeconds = (s.endTime - s.startTime) * (1 / this.audioElement.playbackRate)
-      this.segmentPlayingTimeout = setTimeout(() => {
-        console.log('pausing')
-        this.audioElement.pause()
-        console.log('paused')
-        this.audioElement.removeEventListener('play', listener)
-        this.playingSegment = null
-      }, (playbackTimeInSeconds - 0.05) * 1000)
+  playBuffer(buffer: AudioBuffer, start = 0, offset?: number, duration?: number) {
+    const src = audio.store.audioContext.createBufferSource()
+    src.buffer = buffer
+    src.connect(audio.store.audioContext.destination)
+    src.start(0, offset, duration)
+    return src
+  }
+
+  async playSegment(key: number, segment: Segment) {
+    this.playingSegment = null
+    const buffer = await audio.decodeBufferSegment(segment.startTime, segment.endTime)
+    if (buffer !== undefined) {
+      requestAnimationFrame(() => {
+        this.playingSegment = segment
+        this.playBuffer(buffer).addEventListener('ended', (e: Event) => {
+          this.playingSegment = null
+        })
+      })
     }
-    if (this.audioElement !== null) {
-      this.audioElement.currentTime = segment.startTime
-      this.audioElement.addEventListener('play', listener)
-      this.audioElement.play()
-    }
+    // const listener = (e: Event) => {
+    //   console.log(e)
+    //   const playbackTimeInSeconds = (s.endTime - s.startTime) * (1 / this.audioElement.playbackRate)
+    //   this.segmentPlayingTimeout = setTimeout(() => {
+    //     console.log('pausing')
+    //     this.audioElement.pause()
+    //     console.log('paused')
+    //     this.audioElement.removeEventListener('play', listener)
+    //     this.playingSegment = null
+    //   }, (playbackTimeInSeconds - 0.05) * 1000)
+    // }
+    // if (this.audioElement !== null) {
+    //   this.audioElement.currentTime = segment.startTime
+    //   this.audioElement.addEventListener('play', listener)
+    //   this.audioElement.play()
+    // }
   }
 
   selectSegment(segment: Segment) {
@@ -196,8 +224,8 @@ export default class Editor extends Vue {
   }
 
   get pixelsPerSecond() {
-    if ( this.metadata.totalWidth !== null) {
-      return this.metadata.totalWidth / this.audioElement.duration
+    if ( this.metadata !== null) {
+      return this.metadata.pixelsPerSecond
     } else {
       return 0
     }

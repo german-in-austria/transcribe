@@ -57,7 +57,7 @@ export default class Segments extends Vue {
 
   get pixelsPerSecond() {
     if ( this.metadata !== null) {
-      return this.metadata.totalWidth / this.metadata.audioLength
+      return this.metadata.pixelsPerSecond
     } else {
       return 0
     }

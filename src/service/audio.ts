@@ -19,9 +19,10 @@ const ctxClass: any = (window as any).AudioContext || (window as any).webkitAudi
 
 // store
 const audioContext: AudioContext = new ctxClass()
-const oggBuffer  = null as ArrayBuffer|null
+const oggBuffer = null as ArrayBuffer|null
 let oggPages   = [] as OggIndex['pages']
 let oggHeaders = [] as OggIndex['headers']
+let oggLength: number|null = null
 
 function readU4le(dataView: DataView, i: number) {
   return dataView.getUint32(i, true)
@@ -51,10 +52,10 @@ function getOggIndex(buffer: ArrayBuffer): OggIndex {
   const l = uint8Array
   for (let i = 0; i < length; i ++) {
     if (
-      l[i]     === 79 &&
-      l[1 + 1] === 103 &&
-      l[i + 2] === 103 &&
-      l[i + 3] === 83
+      l[i]     === 79 &&    // O
+      l[1 + 1] === 103 &&   // g
+      l[i + 2] === 103 &&   // g
+      l[i + 3] === 83       // s
     ) {
       const byteOffset = i
       const granulePosition = readU8le(dataView, i + 6)
@@ -69,6 +70,8 @@ function getOggIndex(buffer: ArrayBuffer): OggIndex {
   // uint8Array.forEach((v, i, l) => {
   // })
   console.timeEnd('indexing ogg')
+  oggLength = pages[pages.length - 1].timestamp
+  console.log({oggLength})
   oggPages = pages
   oggHeaders = headers
   return { headers, pages }
@@ -129,18 +132,16 @@ function findOggPages(from: number, to: number) {
   return {startPage, endPage}
 }
 
-function drawWave(buffer: AudioBuffer, width: number, height: number) {
-  // based on drawwave.js
+function drawWave(buffer: AudioBuffer, width: number, height: number,  color = '#ccc', channel = 0) {
+  // based on drawWave.js
   console.time('draw wave')
   const svgStart = `
-    <svg viewBox="0 0 ${ width } ${ height }" width="${width}" height="${height}" style="display:block;">
-      <path fill="#fff" d="`
+    <svg viewBox="0 0 ${ width } ${ height }" height="${ height }" style="display:block;">
+      <path fill="${ color }" d="`
   let upperHalf = ''
   let lowerHalf = ''
   const svgEnd = '"/></svg>'
-  const chanData = buffer.getChannelData(0)
-  console.log('chanData.length', chanData.length)
-  console.log('width', width)
+  const chanData = buffer.getChannelData(channel)
   const step = Math.ceil( chanData.length / width )
   const amp = height / 2
   for (let i = 0; i < width; i++) {
@@ -166,12 +167,18 @@ function drawWave(buffer: AudioBuffer, width: number, height: number) {
 async function decodeBufferSegment(from: number, to: number) {
   if (audio.store.oggBuffer !== null) {
     console.time('decode buffer segment ' + from)
-    const { startPage, endPage } = findOggPages(from, to)
-    const headerBuffer   = audio.store.oggBuffer.slice(oggHeaders[0].byteOffset, oggPages[0].byteOffset)
-    const contentBuffer  = audio.store.oggBuffer.slice(startPage.byteOffset, endPage.byteOffset)
-    const combinedBuffer = audio.concatBuffer(headerBuffer, contentBuffer)
-    const decodedBuffer  = await audioContext.decodeAudioData(combinedBuffer)
+    // TODO: this is could possible be solved a little better.
+    const { startPage, endPage } = findOggPages(from, to + 1)
+    // TODO: WHY IS THERE STILL AN OFFSET OF .2?
+    const overflowStart    = Math.max(0, from - startPage.timestamp + .2)
+    console.log({overflowStart, actualDuration: to - from})
+    const headerBuffer    = audio.store.oggBuffer.slice(oggHeaders[0].byteOffset, oggPages[0].byteOffset)
+    const contentBuffer   = audio.store.oggBuffer.slice(startPage.byteOffset, endPage.byteOffset)
+    const combinedBuffer  = audio.concatBuffer(headerBuffer, contentBuffer)
+    const decodedBuffer   = await audioContext.decodeAudioData(combinedBuffer)
+    const slicedBuffer    = await sliceBuffer(decodedBuffer, overflowStart * 1000, (to - from + overflowStart) * 1000)
     console.timeEnd('decode buffer segment ' + from)
+    console.log({slicedDuration: slicedBuffer.duration})
     // console.time('copy to worker ' + from)
     // const frameCount = audioContext.sampleRate * 2 * (to - from)
     // const myArrayBuffer = audioContext.createBuffer(2, frameCount, audioContext.sampleRate)
@@ -181,7 +188,7 @@ async function decodeBufferSegment(from: number, to: number) {
     // worker.postMessage({b: anotherArray})
     // console.timeEnd('copy to worker ' + from)
     // drawWave(decodedBuffer, 5000, 200)
-    return decodedBuffer
+    return slicedBuffer
   }
 }
 

@@ -3,7 +3,7 @@
     class="play-head"
     :style="{
       transition: transition,
-      transform: `translateX(${left})`
+      transform: `translateX(${left}px)`
     }">
   </div>
 </template>
@@ -18,8 +18,9 @@ export default class PlayHead extends Vue {
   @Prop() metadata: any
   @Prop() playingSegment: Segment|null
   @Prop() audioElement: HTMLAudioElement
+  @Prop() posX: number
 
-  left = '0px'
+  left = 10
   transition = 'unset'
 
   @Watch('playingSegment')
@@ -28,30 +29,26 @@ export default class PlayHead extends Vue {
     if (s !== null) {
       this.transition = 'unset'
       const playbackTimeInSeconds = (s.endTime - s.startTime) * (1 / this.audioElement.playbackRate)
-      setTimeout(() => {
-        this.left = s.startTime * this.pixelsPerSecond + 'px'
-        setTimeout(() => {
+      requestAnimationFrame(() => {
+        this.left = s.startTime * this.pixelsPerSecond
+        requestAnimationFrame(() => {
           this.transition = `transform ${playbackTimeInSeconds}s linear`
-          this.left = s.endTime * this.pixelsPerSecond + 'px'
-          // setTimeout(() => {
-          //   console.log('ME!')
-          //   this.transition = 'unset'
-          // }, playbackTimeInSeconds * 1000)
-        }, 2)
-      }, 2)
+          this.left = s.endTime * this.pixelsPerSecond
+        })
+      })
     } else {
       this.transition = 'unset'
-      this.left = this.audioElement.currentTime * this.pixelsPerSecond + 'px'
-      console.log('YOU!!')
-      setTimeout(() => {
-        this.left = this.audioElement.currentTime * this.pixelsPerSecond + 'px'
-      }, 2)
     }
   }
 
+  @Watch('posX')
+  moveToPos() {
+    this.left = this.posX
+  }
+
   get pixelsPerSecond() {
-    if ( this.metadata.totalWidth !== null && this.audioElement !== null) {
-      return this.metadata.totalWidth / this.audioElement.duration
+    if ( this.metadata !== null) {
+      return this.metadata.pixelsPerSecond
     } else {
       return 0
     }
@@ -61,8 +58,8 @@ export default class PlayHead extends Vue {
 </script>
 <style lang="stylus" scoped>
 .play-head
-  width 3px
-  background red
+  width 1px
+  background white
   height 100%
   position absolute
   top 0
