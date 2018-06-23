@@ -19,10 +19,13 @@ const ctxClass: any = (window as any).AudioContext || (window as any).webkitAudi
 
 // store
 const audioContext: AudioContext = new ctxClass()
-const oggBuffer = null as ArrayBuffer|null
+const uint8Buffer = new Uint8Array(0)
+const oggBuffer = uint8Buffer.buffer
+
 let oggPages   = [] as OggIndex['pages']
 let oggHeaders = [] as OggIndex['headers']
 let oggLength: number|null = null
+let sampleRate: number|null = null
 
 function readU4le(dataView: DataView, i: number) {
   return dataView.getUint32(i, true)
@@ -34,6 +37,36 @@ function readU8le(dataView: DataView, i: number) {
   return 0x100000000 * v2 + v1
 }
 
+function getOggHeaderBuffer(buffer: ArrayBuffer): ArrayBuffer|null {
+  const b = new Uint8Array(buffer)
+  const v = new DataView(buffer)
+  const l = b.length
+  let headerStart: number|null = null
+  let headerEnd: number|null = null
+  for (let i = 0; i < l; i ++) {
+    if (
+      b[i]     === 79 &&    // O
+      b[i + 1] === 103 &&   // g
+      b[i + 2] === 103 &&   // g
+      b[i + 3] === 83       // s
+    ) {
+      console.log('page found')
+      const granulePosition = readU8le(v, i + 6)
+      if (granulePosition === 0 && headerStart === null) {
+        headerStart = i
+      } else if (granulePosition !== 0 && headerEnd === null) {
+        headerEnd = i
+        break;
+      }
+    }
+  }
+  if (headerStart !== null && headerEnd !== null) {
+    return buffer.slice(headerStart, headerEnd)
+  } else {
+    return null
+  }
+}
+
 function getOggIndex(buffer: ArrayBuffer): OggIndex {
 
   console.time('indexing ogg')
@@ -43,23 +76,28 @@ function getOggIndex(buffer: ArrayBuffer): OggIndex {
   const uint8Array = new Uint8Array(buffer)
   const length = uint8Array.length
   const dataView = new DataView(buffer)
-  const sampleRate = (() => {
-    // that’s where the 32 bit integer sits
-    const chunk = buffer.slice(40, 48)
-    const view = new Uint32Array(chunk)
-    return view[0]
+  const rate = (() => {
+    if (sampleRate === null) {
+      // that’s where the 32 bit integer sits
+      const chunk = buffer.slice(40, 48)
+      const view = new Uint32Array(chunk)
+      sampleRate = view[0]
+      return view[0]
+    } else {
+      return sampleRate
+    }
   })()
   const l = uint8Array
   for (let i = 0; i < length; i ++) {
     if (
       l[i]     === 79 &&    // O
-      l[1 + 1] === 103 &&   // g
+      l[i + 1] === 103 &&   // g
       l[i + 2] === 103 &&   // g
       l[i + 3] === 83       // s
     ) {
       const byteOffset = i
       const granulePosition = readU8le(dataView, i + 6)
-      const timestamp = granulePosition / sampleRate
+      const timestamp = granulePosition / rate
       if (granulePosition === 0) {
         headers.push({ byteOffset })
       } else {
@@ -67,10 +105,8 @@ function getOggIndex(buffer: ArrayBuffer): OggIndex {
       }
     }
   }
-  // uint8Array.forEach((v, i, l) => {
-  // })
   console.timeEnd('indexing ogg')
-  oggLength = pages[pages.length - 1].timestamp
+  oggLength = (pages[pages.length - 1] || { timestamp: 0 }).timestamp
   console.log({oggLength})
   oggPages = pages
   oggHeaders = headers
@@ -164,45 +200,51 @@ function drawWave(buffer: AudioBuffer, width: number, height: number,  color = '
   return svgStart + upperHalf + lowerHalf + 'Z' + svgEnd
 }
 
-async function decodeBufferSegment(from: number, to: number) {
-  if (audio.store.oggBuffer !== null) {
-    console.time('decode buffer segment ' + from)
-    // TODO: this is could possible be solved a little better.
-    const { startPage, endPage } = findOggPages(from, to + 1)
-    // TODO: WHY IS THERE STILL AN OFFSET OF .2?
-    const overflowStart    = Math.max(0, from - startPage.timestamp + .2)
-    console.log({overflowStart, actualDuration: to - from})
-    const headerBuffer    = audio.store.oggBuffer.slice(oggHeaders[0].byteOffset, oggPages[0].byteOffset)
-    const contentBuffer   = audio.store.oggBuffer.slice(startPage.byteOffset, endPage.byteOffset)
-    const combinedBuffer  = audio.concatBuffer(headerBuffer, contentBuffer)
-    const decodedBuffer   = await audioContext.decodeAudioData(combinedBuffer)
-    const slicedBuffer    = await sliceBuffer(decodedBuffer, overflowStart * 1000, (to - from + overflowStart) * 1000)
-    console.timeEnd('decode buffer segment ' + from)
-    console.log({slicedDuration: slicedBuffer.duration})
-    // console.time('copy to worker ' + from)
-    // const frameCount = audioContext.sampleRate * 2 * (to - from)
-    // const myArrayBuffer = audioContext.createBuffer(2, frameCount, audioContext.sampleRate)
-    // console.log({myArrayBuffer})
-    // const anotherArray = new Float32Array(decodedBuffer.length)
-    // myArrayBuffer.copyFromChannel(anotherArray, 1)
-    // worker.postMessage({b: anotherArray})
-    // console.timeEnd('copy to worker ' + from)
-    // drawWave(decodedBuffer, 5000, 200)
-    return slicedBuffer
-  }
+async function decodeBufferSegment(fromByte: number, toByte: number, buffer: ArrayBuffer): Promise<AudioBuffer> {
+  console.log('uint8Buffer.buffer.byteLength', uint8Buffer.buffer.byteLength)
+  const headerBuffer    = getOggHeaderBuffer(buffer)
+  const contentBuffer   = buffer.slice(fromByte, toByte)
+  const combinedBuffer  = concatBuffer(headerBuffer, contentBuffer)
+  const decodedBuffer   = await audioContext.decodeAudioData(combinedBuffer)
+  return decodedBuffer
+}
+
+async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuffer) {
+  console.time('decode buffer segment ' + from)
+  // TODO: this is could possible be solved a little better.
+  const { startPage, endPage } = findOggPages(from, to + 1)
+  // TODO: WHY IS THERE STILL AN OFFSET OF .2?
+  const overflowStart    = Math.max(0, from - startPage.timestamp + .2)
+  const decodedBuffer   = await decodeBufferSegment(startPage.byteOffset, endPage.byteOffset, buffer)
+  const slicedBuffer    = await sliceBuffer(decodedBuffer, overflowStart * 1000, (to - from + overflowStart) * 1000)
+  console.timeEnd('decode buffer segment ' + from)
+  console.log({slicedDuration: slicedBuffer.duration})
+  // console.time('copy to worker ' + from)
+  // const frameCount = audioContext.sampleRate * 2 * (to - from)
+  // const myArrayBuffer = audioContext.createBuffer(2, frameCount, audioContext.sampleRate)
+  // console.log({myArrayBuffer})
+  // const anotherArray = new Float32Array(decodedBuffer.length)
+  // myArrayBuffer.copyFromChannel(anotherArray, 1)
+  // worker.postMessage({b: anotherArray})
+  // console.timeEnd('copy to worker ' + from)
+  // drawWave(decodedBuffer, 5000, 200)
+  return slicedBuffer
 }
 
 const audio = {
   store : {
+    uint8Buffer,
     oggBuffer,
     oggHeaders,
     oggPages,
     audioContext
   },
   getOggIndex,
+  getOggHeaderBuffer,
   sliceBuffer,
   concatBuffer,
   decodeBufferSegment,
+  decodeBufferTimeSlice,
   drawWave
 }
 

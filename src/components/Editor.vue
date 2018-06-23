@@ -164,14 +164,20 @@ export default class Editor extends Vue {
 
   async playSegment(key: number, segment: Segment) {
     this.playingSegment = null
-    const buffer = await audio.decodeBufferSegment(segment.startTime, segment.endTime)
-    if (buffer !== undefined) {
-      requestAnimationFrame(() => {
-        this.playingSegment = segment
-        this.playBuffer(buffer).addEventListener('ended', (e: Event) => {
-          this.playingSegment = null
+    if (audio.store.uint8Buffer.byteLength > 0) {
+      const buffer = await audio.decodeBufferTimeSlice(
+        segment.startTime,
+        segment.endTime,
+        audio.store.uint8Buffer.buffer
+      )
+      if (buffer !== undefined) {
+        requestAnimationFrame(() => {
+          this.playingSegment = segment
+          this.playBuffer(buffer).addEventListener('ended', (e: Event) => {
+            this.playingSegment = null
+          })
         })
-      })
+      }
     }
     // const listener = (e: Event) => {
     //   console.log(e)

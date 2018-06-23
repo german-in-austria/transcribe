@@ -99,6 +99,7 @@ import * as _ from 'lodash'
 import audio, { OggIndex } from '../service/audio'
 import util from '../service/util'
 import * as Queue from 'simple-promise-queue'
+import audioState from 'state/audio';
 
 const queue = new Queue({
   concurrency: 1,
@@ -326,7 +327,50 @@ export default class Waveform extends Vue {
     if (this.audioElement !== null) {
       this.loading = true
       console.time('fetch')
-      audio.store.oggBuffer = await (await fetch(this.audioElement.src)).arrayBuffer()
+      const x = await fetch(this.audioElement.src)
+      .then(res => {
+        // TODO: STREAM / FACTOR OUT
+        let preBuffer = new Uint8Array(0)
+        if (res.body instanceof ReadableStream) {
+          const reader = res.body.getReader()
+          reader.read().then(async function process(chunk: {value: Uint8Array, done: boolean}): Promise<any> {
+            if (chunk.value.buffer instanceof ArrayBuffer) {
+              if (preBuffer.byteLength < 1024 * 1024) {
+                preBuffer = util.concatUint8Array(preBuffer, chunk.value)
+              } else {
+                audio.store.uint8Buffer = util.concatUint8Array(audio.store.uint8Buffer, preBuffer)
+                console.log('audio.store.uint8Buffer.l', audio.store.uint8Buffer.buffer.byteLength)
+                const {headers, pages} = audio.getOggIndex(preBuffer.buffer)
+                // reset buffer
+                preBuffer = new Uint8Array(0)
+                if (pages.length > 0) {
+                  const firstPage = pages[0]
+                  const lastPage = pages[pages.length - 1]
+                  if (firstPage && lastPage && audio.store.uint8Buffer.byteLength > 0) {
+                    audio.decodeBufferSegment(
+                      firstPage.byteOffset,
+                      lastPage.byteOffset,
+                      audio.store.uint8Buffer.buffer
+                    )
+                    .then(a => {
+                      const svg = audio.drawWave(a, 200, 50)
+                      console.log(svg)
+                    })
+                  }
+                }
+              }
+              // if (headers.length) {
+              //   audio.store.oggHeaders = headers
+              // }
+            }
+            return reader.read().then(process)
+          })
+        }
+        return res
+      })
+
+      // console.log(await x.text())
+      audio.store.oggBuffer = await x.arrayBuffer()
       console.timeEnd('fetch')
       // Decode first batch
       this.audioLength = this.audioElement.duration
@@ -409,13 +453,12 @@ export default class Waveform extends Vue {
   }
 
   async drawWaveFormPiece(i: number) {
-    console.log({ now_drawing: i })
     const isLast = i + 1 === this.amountDrawSegments
     const secondsPerDrawWidth = this.drawWidth / this.pixelsPerSecond
     const from = i * secondsPerDrawWidth
     const to = isLast ? this.audioLength : from + secondsPerDrawWidth
-    const slicedBuffer = await audio.decodeBufferSegment(from, to)
-    if (slicedBuffer !== undefined) {
+    if (audio.store.uint8Buffer.byteLength > 0) {
+      const slicedBuffer = await audio.decodeBufferTimeSlice(from, to, audio.store.oggBuffer)
       console.log({ from, to, duration: to - from })
       console.log(slicedBuffer.duration)
       const svg = audio.drawWave(

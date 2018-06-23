@@ -164,13 +164,6 @@ export default class App extends Vue {
     sampleTranscript.speakers = speakers
     console.log(segments)
     return tree
-    // return {
-    //   name: 'bla',
-    //   audioUrl: sampleTranscript.audioUrl,
-    //   speakers : tree.speakers.map(s => s.display_name),
-    //   segments : tree.speakers.,
-    //   speakerEvents: tree.speakers
-    // }
   }
 
   // TODO: better sanity check.
@@ -217,7 +210,9 @@ export default class App extends Vue {
   }
 
   async mounted() {
-    console.log('mounted')
+    const y = document.createElement('audio')
+    y.src = 'http://localhost:8081/0025_NECK_jungII_m_INT.ogg'
+    this.audioElement = y
   }
 }
 </script>
