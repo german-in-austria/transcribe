@@ -181,27 +181,24 @@ export default class App extends Vue {
     return file.type.includes('/xml') || file.name.includes('.exb')
   }
 
+  loadUrl(url: string) {
+    this.audioUrl = url
+    const el = document.createElement('audio')
+    el.src = url
+    this.audioElement = el
+  }
+
   onFileDrop(formData: FormData, files: FileList) {
     console.log(files[0].type)
     _(files).forEach(file => {
       console.log(JSON.stringify(file))
       if (this.isAudio(file)) {
-        const x = URL.createObjectURL(file)
-        this.audioUrl = x
-        const y = document.createElement('audio')
-        y.src = x
-        const reader = new FileReader()
-        reader.readAsArrayBuffer(file)
-        reader.onload = function() {
-          audio.store.oggBuffer = this.result
-        }
-        this.audioElement = y
-        // initialize with empty transcript,
+        const url = URL.createObjectURL(file)
+        this.loadUrl(url)
         // if there is none.
         if (this.transcript === null) {
           this.transcript = this.emptyTranscript
         }
-        console.log(x)
       } else if (this.isXML(file)) {
         const reader = new FileReader()
         reader.onload = (e: Event) => {
@@ -225,6 +222,7 @@ export default class App extends Vue {
   }
 
   async mounted() {
+    // this.loadUrl('http://localhost:8081/0025_NECK_jungII_m_INT.ogg')
     console.log('mounted')
   }
 }
