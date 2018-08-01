@@ -1,5 +1,20 @@
 <template>
   <div>
+    <v-layout>
+      <v-flex xs1 />
+      <v-flex>
+        <h3 class="pa-4 transcript-title text-xs-center">
+          {{ transcript.name || 'Untitled Transcript' }}
+        </h3>
+      </v-flex>
+      <v-flex xs1 align-content-center justify-center>
+        <v-spacer></v-spacer>
+        <v-btn @click.stop="showSettings = true" icon flat>
+          <v-icon>settings</v-icon>
+        </v-btn>
+      </v-flex>
+      <settings @close="showSettings = false" :show="showSettings" />
+    </v-layout>
     <wave-form
       tabindex="-1"
       @keyup.native="handleKey"
@@ -9,11 +24,6 @@
       :height="300"
       :scroll-to-segment="scrollToSegment"
       :audio-element="audioElement">
-      <h3
-        slot="headline"
-        class="pa-4 transcript-title">
-          {{ transcript.name || 'Untitled Transcript' }}
-      </h3>
       <play-head
         :playing-segment="playingSegment"
         :audio-element="audioElement"
@@ -145,6 +155,7 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 
 import waveForm from './Waveform.vue'
+import Settings from './Settings.vue'
 import { Transcript } from './App.vue'
 import segments from '@components/Segments.vue'
 import segmentTranscript from '@components/SegmentTranscript.vue'
@@ -157,6 +168,7 @@ import audio from '../service/audio'
 @Component({
   components: {
     waveForm,
+    Settings,
     segments,
     segmentTranscript,
     playHead,
@@ -177,7 +189,7 @@ export default class Editor extends Vue {
   playingSegment: Segment|null = null
   segmentPlayingTimeout: any = null
   playHeadPos = 0
-
+  showSettings = false
   showMenu = false
   menuX = 0
   menuY = 0
