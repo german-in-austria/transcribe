@@ -34,25 +34,9 @@
     </v-layout>
     <div
       class="wave-form"
+      :style="{height: `${height}px`}"
       ref="svgContainer"
       @scroll="onScroll">
-      <div
-        :style="stageStyle"
-        class="wave-form-inner">
-        <div
-          @mousedown="startDrag"
-          v-for="(x, i) in Array(amountDrawSegments)"
-          :style="{
-            transform: `scaleY(${scaleFactorY})`,
-            left: drawWidth * i + 'px',
-            width: i + 1 < amountDrawSegments ? drawWidth + 'px' : 'auto'
-          }"
-          :key="i"
-          :class="['wave-form-segment', 'draw-segment-'+i]">
-          <div class="wave-form-placeholder" />
-        </div>
-        <slot />
-      </div>
       <div class="second-marker-row">
         <div
           v-for="i in visibleSeconds"
@@ -65,8 +49,26 @@
             {{ toTime(i) }}
         </div>
       </div>
+      <div
+        :style="stageStyle"
+        class="wave-form-inner">
+        <div
+          v-for="(x, i) in Array(amountDrawSegments)"
+          :style="{
+            transform: `scaleY(${scaleFactorY})`,
+            left: drawWidth * i + 'px',
+            width: i + 1 < amountDrawSegments ? drawWidth + 'px' : 'auto',
+            height: height + 'px'
+          }"
+          :key="i"
+          @dblclick.stop="addSegmentAt"
+          :class="['wave-form-segment', 'draw-segment-'+i]">
+          <div class="wave-form-placeholder" />
+        </div>
+        <slot />
+      </div>
     </div>
-    <div class="overview">
+    <div class="overview" :style="{height: overviewHeight + 'px'}">
       <div
         @mousedown="startDragOverview"
         v-if="overviewSvg !== null && overviewSvg !== undefined"
@@ -125,7 +127,7 @@ export default class Waveform extends Vue {
   @Prop() audioElement: HTMLAudioElement|null
   @Prop() audioUrl: string
   @Prop() scrollToSegment: Segment|null
-
+  @Prop({ default: 200 }) height: number
   // config
   drawDistance = 5000 // pixels in both directions from the center of the viewport (left and right)
   initialPixelsPerSecond = 150
@@ -141,6 +143,7 @@ export default class Waveform extends Vue {
   startScaleXFactor = 1
   transitionOverviewThumb = true
   overviewThumbWidth = 0
+  overviewHeight = 60
   visibleSeconds: number[] = []
   // this is only used DURING scaling, then reset to 1
   intermediateScaleFactorX: number|null = null
@@ -149,31 +152,21 @@ export default class Waveform extends Vue {
   renderedWaveFormPieces: number[] = []
   totalWidth = this.audioLength * this.pixelsPerSecond
 
-  onScroll = _.throttle((e) => this.handleScroll(e), 250)
+  onScroll = _.throttle((e) => this.handleScroll(e), 350)
 
   // get drawDistance(): number {
   //   return Math.max(5000 * this.scaleFactorX, this.$el.clientWidth)
   // }
 
-  emitScrub(x: number) {
-    const posX = (this.$refs.svgContainer as HTMLElement).scrollLeft + x
-    this.$emit('scrub', { x: posX })
-  }
-
-  startDrag(e: MouseEvent) {
-    this.emitScrub(e.pageX)
-    document.addEventListener('mousemove', this.drag)
-    document.addEventListener('mouseup', this.endDrag)
-  }
-
-  drag(e: MouseEvent) {
-    this.emitScrub(e.pageX)
-  }
-
-  endDrag(e: MouseEvent) {
-    this.emitScrub(e.pageX)
-    document.removeEventListener('mousemove', this.drag)
-    document.removeEventListener('mouseup', this.endDrag)
+  addSegmentAt(e: MouseEvent) {
+    const c = this.$refs.svgContainer as HTMLDivElement
+    console.log(
+      c.scrollWidth,
+      c.scrollLeft,
+      e.pageX
+    )
+    this.$emit('add-segment', (c.scrollLeft + e.pageX) / this.pixelsPerSecond)
+    console.log(e)
   }
 
   get drawWidth(): number {
@@ -226,6 +219,10 @@ export default class Waveform extends Vue {
     })
   }
 
+  clearRenderCache() {
+    this.renderedWaveFormPieces = []
+  }
+
   startScaleX(e: MouseEvent) {
     this.isScalingX = true
     this.startScaleXFactor = this.scaleFactorX
@@ -233,10 +230,14 @@ export default class Waveform extends Vue {
   }
   @Watch('scaleFactorX')
   onChangeScaleFactorX(current: number) {
-    // console.log((this.$refs.svgContainer as HTMLElement).scrollWidth)
     this.intermediateScaleFactorX = current / this.startScaleXFactor
+    this.endScaleX()
   }
-  endScaleX(e: MouseEvent) {
+  @Watch('height')
+  onChangeHeight() {
+    this.clearRenderCache()
+  }
+  endScaleX() {
     this.isScalingX = false
     document.removeEventListener('mouseup', this.endScaleX)
     const el = (this.$refs.svgContainer as HTMLElement)
@@ -246,7 +247,7 @@ export default class Waveform extends Vue {
     requestAnimationFrame(() => {
       this.pixelsPerSecond = this.initialPixelsPerSecond * this.scaleFactorX
       // clear cache
-      this.renderedWaveFormPieces = []
+      this.clearRenderCache()
       this.doMaybeRerender()
       this.doScrollToPercentage(oldCenterPercent)
       this.totalWidth = this.audioLength * this.pixelsPerSecond
@@ -259,12 +260,12 @@ export default class Waveform extends Vue {
         drawWidth: this.drawWidth
       })
     })
-    console.log('end', e)
   }
 
   get stageStyle() {
     const c = this.$refs.svgContainer
     return {
+      height: this.height + 'px',
       width: this.totalWidth + 'px',
       transformOrigin: c instanceof HTMLElement ? `${c.scrollLeft + c.clientWidth / 2}px` : 0,
       transform: `scaleX(${this.isScalingX ? this.intermediateScaleFactorX : 1})`,
@@ -447,7 +448,7 @@ export default class Waveform extends Vue {
       console.time('decode overview')
       const audioBuffer = await audio.store.audioContext.decodeAudioData(buffer)
       console.timeEnd('decode overview')
-      this.overviewSvg = audio.drawWave(audioBuffer, width, 45, '#111')
+      this.overviewSvg = audio.drawWave(audioBuffer, width, this.overviewHeight, '#111')
       localStorage.setItem('overview-svg', this.overviewSvg)
     }
   }
@@ -464,14 +465,14 @@ export default class Waveform extends Vue {
       const svg = audio.drawWave(
         slicedBuffer,
         isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth,
-        200,
+        this.height,
         '#fb7676',
         0
       )
       const svg2 = audio.drawWave(
         slicedBuffer,
         isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth,
-        200,
+        this.height,
         '#69c',
         1
       )
@@ -521,7 +522,6 @@ export default class Waveform extends Vue {
 .wave-form-segment
   transform-origin center
   position absolute
-  height 200px
   overflow hidden
   .wave-form-placeholder
     position absolute
@@ -529,9 +529,8 @@ export default class Waveform extends Vue {
     border-top 1px dashed #ddd
     width 100%
 .wave-form
-  margin-top -20px
+  margin-top 0px
   position relative
-  height 200px
   max-width 100vw
   overflow-x scroll
   overflow-y hidden
@@ -546,7 +545,6 @@ export default class Waveform extends Vue {
   .wave-form-inner
     transition .5s transform
     overflow-y hidden
-    height 200px
     position relative
     .wave-form-segment
       opacity 0
@@ -556,8 +554,8 @@ export default class Waveform extends Vue {
 .overview
   overflow-y hidden
   top -15px
-  height 45px
   position relative
+  border-top 1px solid rgba(0,0,0,.1) 
 
 .overview-thumb
   top 0
@@ -572,7 +570,7 @@ export default class Waveform extends Vue {
 .second-marker
   min-width: 1px;
   height: 10px;
-  bottom: 12.5px;
+  top: 32.5px;
   position: absolute;
   border-left: 1px solid #6f6f6f;
   user-select none

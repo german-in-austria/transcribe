@@ -2,28 +2,28 @@
   <v-app dark>
     <v-content class="main-content" app>
       <v-container fluid fill-height class="pa-0">
-        <vue-full-screen-file-drop @drop='onFileDrop'>&nbsp;</vue-full-screen-file-drop>
-        <v-layout class="max-width" :align-center="audioElement === null || transcript === null" justify-center>
-          <div v-if="transcript === null" class="text-xs-center">
+        <vue-full-screen-file-drop
+          class="file-dropper"
+          @drop='onFileDrop'>
+          &nbsp;
+        </vue-full-screen-file-drop>
+        <v-layout
+          class="max-width"
+          :align-center="audioElement === null || transcript === null"
+          justify-center>
+          <div
+            v-if="transcript === null"
+            class="text-xs-center">
             <h1>Drop an audio file here.</h1>
             <p>or, use the <a @click="loadSampleFile" href="#">sample file</a></p>
           </div>
-          <v-flex xs12 v-if="transcript !== null">
+          <v-flex
+            xs12
+            v-if="transcript !== null">
             <editor
               :transcript="transcript"
               :audio-element="audioElement" />
             <router-view />
-            <!-- <v-card class="mt-4 help">
-              <v-card-title class="pb-0 mb-0" primary-title>
-                <h4 class="headline mb-0">Tips & Shortcuts</h4>
-              </v-card-title>
-              <v-card-text class="mt-0 ml-3 mr-3">
-                <ul>
-                  <li>Double Click the waveform to add a segment in-place.</li>
-                  <li>Press Ctrl+Space to play the current segment</li>
-                </ul>
-              </v-card-text>
-            </v-card> -->
             <player-bar
               v-if="audioElement"
               :audioElement="audioElement" />
@@ -69,11 +69,7 @@ export interface Transcript {
   name: string
   audioUrl: string
   speakers: string[]
-  segments: Array<{
-    id: string
-    startTime: number
-    endTime: number
-  }>
+  segments: Segment[]
   speakerEvents: _.Dictionary<SpeakerEvent>
 }
 
@@ -114,9 +110,16 @@ export default class App extends Vue {
   audioUrl: string|null = null
   audioElement: HTMLAudioElement|null = null
   transcript: Transcript|null = null
-  file: File
   xmlText: string|null = null
   xml: any = null
+
+  emptyTranscript = {
+    name: '',
+    audioUrl: this.audioUrl || '',
+    speakers: [],
+    segments : [],
+    speakerEvents: {}
+  }
 
   isAudio(file: File) {
     return file.name.includes('.ogg') || file.type.includes('/ogg')
@@ -186,6 +189,11 @@ export default class App extends Vue {
           audio.store.oggBuffer = this.result
         }
         this.audioElement = y
+        // initialize with empty transcript,
+        // if there is none.
+        if (this.transcript === null) {
+          this.transcript = this.emptyTranscript
+        }
         console.log(x)
       } else if (this.isXML(file)) {
         const reader = new FileReader()
@@ -226,5 +234,8 @@ export default class App extends Vue {
   background transparent
   box-shadow none
   font-weight: 300
+}
+.file-dropper{
+  position: absolute;
 }
 </style>

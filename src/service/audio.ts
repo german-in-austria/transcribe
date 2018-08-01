@@ -1,6 +1,8 @@
 
 import * as sliceAudiobuffer from 'audiobuffer-slice'
 import * as concatBuffer from 'array-buffer-concat'
+import * as audioBufferToWav from 'audiobuffer-to-wav'
+
 // import dummysvg from './dummysvg'
 // import Worker from './waveform.worker'
 
@@ -239,6 +241,7 @@ const audio = {
     oggPages,
     audioContext
   },
+  audioBufferToWav,
   getOggIndex,
   getOggHeaderBuffer,
   sliceBuffer,
