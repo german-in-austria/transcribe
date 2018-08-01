@@ -101,7 +101,6 @@ import * as _ from 'lodash'
 import audio, { OggIndex } from '../service/audio'
 import util from '../service/util'
 import * as Queue from 'simple-promise-queue'
-import audioState from 'state/audio';
 
 const queue = new Queue({
   concurrency: 1,
@@ -344,25 +343,22 @@ export default class Waveform extends Vue {
                 const {headers, pages} = audio.getOggIndex(preBuffer.buffer)
                 // reset buffer
                 preBuffer = new Uint8Array(0)
+                if (headers.length) {
+                  audio.store.oggHeaders = headers
+                }
                 if (pages.length > 0) {
                   const firstPage = pages[0]
                   const lastPage = pages[pages.length - 1]
                   if (firstPage && lastPage && audio.store.uint8Buffer.byteLength > 0) {
-                    audio.decodeBufferSegment(
+                    const decoded = await audio.decodeBufferSegment(
                       firstPage.byteOffset,
                       lastPage.byteOffset,
                       audio.store.uint8Buffer.buffer
                     )
-                    .then(a => {
-                      const svg = audio.drawWave(a, 200, 50)
-                      console.log(svg)
-                    })
+                    const svg = audio.drawWave(decoded, 200, 50)
                   }
                 }
               }
-              // if (headers.length) {
-              //   audio.store.oggHeaders = headers
-              // }
             }
             return reader.read().then(process)
           })

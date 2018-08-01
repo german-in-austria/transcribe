@@ -254,10 +254,6 @@ export default class Editor extends Vue {
     }
   }
 
-  detuneBy(speed: number): number {
-    return ((1 / speed) - 1) * 1000
-  }
-
   playBuffer(buffer: AudioBuffer, start = 0, offset?: number, duration?: number) {
     const src = audio.store.audioContext.createBufferSource()
     const speed = this.audioElement.playbackRate
