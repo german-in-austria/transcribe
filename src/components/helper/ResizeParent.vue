@@ -151,23 +151,34 @@ export default class ResizeParent extends Vue {
     document.removeEventListener('mouseup', this.endDrag)
     document.removeEventListener('keyup', this.cancelDrag)
     document.body.style.cursor = this.startCursor
-    this.next.classList.remove(this.resizingClass)
-    this.previous.classList.remove(this.resizingClass)
+    if (this.next instanceof HTMLElement) {
+      this.next.classList.remove(this.resizingClass)
+    }
+    if (this.previous instanceof HTMLElement) {
+      this.previous.classList.remove(this.resizingClass)
+    }
     this.parent.classList.remove(this.resizingClass)
     this.resetState()
-    // TODO: implement
     this.$emit('resize-end', {
       current: {
         left: this.parent.offsetLeft,
         right: this.parent.offsetLeft + this.parent.offsetWidth
       },
       next: {
-        left: this.next.offsetLeft,
-        right: this.next.offsetLeft + this.next.offsetWidth
+        left: this.next instanceof HTMLElement
+          ? this.next.offsetLeft
+          : null,
+        right: this.next instanceof HTMLElement
+          ? this.next.offsetLeft + this.next.offsetWidth
+          : null
       },
       previous: {
-        left: this.previous.offsetLeft,
-        right: this.previous.offsetLeft + this.previous.offsetWidth
+        left: this.previous instanceof HTMLElement
+          ? this.previous.offsetLeft
+          : null,
+        right: this.previous instanceof HTMLElement
+          ? this.previous.offsetLeft + this.previous.offsetWidth
+          : null
       }
     })
   }
@@ -189,11 +200,15 @@ export default class ResizeParent extends Vue {
     }
   }
   getGeometry(n: HTMLElement) {
-    return {
-      width: n.offsetWidth,
-      height: n.offsetHeight,
-      offsetX: n.offsetLeft,
-      offsetY: n.offsetTop
+    if (n instanceof HTMLElement) {
+      return {
+        width: n.offsetWidth,
+        height: n.offsetHeight,
+        offsetX: n.offsetLeft,
+        offsetY: n.offsetTop
+      }
+    } else {
+      return null
     }
   }
   startDrag(e: MouseEvent) {
@@ -203,11 +218,19 @@ export default class ResizeParent extends Vue {
     this.parentStartGeometry = this.getGeometry(this.parent)
     this.previousStartGeometry = this.getGeometry(this.previous)
     this.nextStartGeometry = this.getGeometry(this.next)
-    this.rightMax = this.nextStartGeometry.offsetX + this.nextStartGeometry.width - this.parentMinWidth
-    this.leftMin = this.previousStartGeometry.offsetX + this.parentMinWidth
+    this.rightMax = this.nextStartGeometry === null
+      ? Infinity
+      : this.nextStartGeometry.offsetX + this.nextStartGeometry.width - this.parentMinWidth
+    this.leftMin = this.previousStartGeometry === null
+      ? 0
+      : this.previousStartGeometry.offsetX + this.parentMinWidth
     requestAnimationFrame(() => {
-      this.next.classList.add(this.resizingClass)
-      this.previous.classList.add(this.resizingClass)
+      if (this.next instanceof HTMLElement) {
+        this.next.classList.add(this.resizingClass)
+      }
+      if (this.previous instanceof HTMLElement) {
+        this.previous.classList.add(this.resizingClass)
+      }
       this.parent.classList.add(this.resizingClass)
       document.body.style.cursor = this.cursor
       document.addEventListener('mousemove', this.drag)

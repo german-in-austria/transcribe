@@ -1,10 +1,16 @@
 <template>
-  <div
-    class="play-head"
-    :style="{
-      transition: transition,
-      transform: `translateX(${left}px)`
-    }">
+  <div>
+    <div
+      class="play-head"
+      :style="{
+        transition: transition,
+        transform: `translateX(${ left }px)`
+      }">
+    </div>
+    <div
+      @mousedown="startDrag"
+      ref="stage"
+      class="play-head-stage" />
   </div>
 </template>
 <script lang="ts">
@@ -42,10 +48,13 @@ export default class PlayHead extends Vue {
   }
 
   @Watch('posX')
-  moveToPos() {
+  moveToPos(posX: number) {
     this.left = this.posX
   }
 
+  log(e: any) {
+    console.log(e)
+  }
   get pixelsPerSecond() {
     if ( this.metadata !== null) {
       return this.metadata.pixelsPerSecond
@@ -53,6 +62,25 @@ export default class PlayHead extends Vue {
       return 0
     }
   }
+
+  startDrag(e: MouseEvent) {
+    document.addEventListener('mousemove', this.drag)
+    document.addEventListener('mouseup', this.endDrag)
+  }
+
+  drag(e: MouseEvent) {
+    if (e.target === this.$refs.stage as HTMLElement) {
+      this.left = e.layerX
+    }
+  }
+
+  endDrag(e: MouseEvent) {
+    this.left = e.layerX
+    this.$emit('change-position', e.layerX / this.metadata.pixelsPerSecond)
+    document.removeEventListener('mousemove', this.drag)
+    document.removeEventListener('mouseup', this.endDrag)
+  }
+
 
 }
 </script>
@@ -64,4 +92,10 @@ export default class PlayHead extends Vue {
   position absolute
   top 0
   bottom 0
+.play-head-stage
+  position absolute
+  left 0
+  right 0
+  top 0
+  height 50px
 </style>

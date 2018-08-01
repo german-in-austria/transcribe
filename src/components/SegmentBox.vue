@@ -111,8 +111,8 @@ export default class SegmentBox extends Vue {
 <style lang="stylus" scoped>
 .segment
   min-width 12px
-  height 100px
-  top 50px
+  height 150px
+  top 75px
   border-radius 10px
   overflow hidden
   background rgba(0,0,0,.2)
@@ -135,4 +135,5 @@ export default class SegmentBox extends Vue {
     opacity 0
   &:hover:not(.resizing) .resizer
     opacity 1
+
 </style>

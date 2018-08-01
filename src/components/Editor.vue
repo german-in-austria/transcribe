@@ -1,31 +1,36 @@
 <template>
   <div>
     <wave-form
+      tabindex="-1"
+      @keyup.native="handleKey"
       @change-metadata="changeMetadata"
       @scroll="handleScroll"
-      @scrub="(e) => playHeadPos = e.x"
+      @add-segment="addSegment"
+      :height="300"
       :scroll-to-segment="scrollToSegment"
       :audio-element="audioElement">
       <h3
         slot="headline"
         class="pa-4 transcript-title">
-          {{ transcript.name }}
+          {{ transcript.name || 'Untitled Transcript' }}
       </h3>
       <play-head
-        :pos-x="playHeadPos"
         :playing-segment="playingSegment"
         :audio-element="audioElement"
+        @change-position="scrub"
         :metadata="metadata" />
       <div class="absolute">
         <segment-box
           v-for="(segment, key) in visibleSegments"
           :key="segment.id"
           :segmentKey="key"
+          @contextmenu.native.stop.prevent="doShowMenu"
           @delete-segment="deleteSegment"
           @select-segment="selectSegment"
           @select-previous="selectPrevious"
           @select-next="selectNext"
           @play-segment="playSegment"
+          @split-segment="splitSegment"
           :segment="segment"
           :previous-segment="visibleSegments[key - 1]"
           :next-segment="visibleSegments[key + 1]"
@@ -36,9 +41,62 @@
             <!-- inner elements go here -->
           </template>
         </segment-box>
+        <v-menu
+          min-width="150"
+          lazy
+          v-model="showMenu"
+          :position-x="menuX"
+          :position-y="menuY"
+          absolute
+          offset-y>
+          <v-list class="context-menu-list" dense>
+            <v-list-tile
+              @click="playSegment(0, selectedSegment)">
+              <v-list-tile-content>
+                <v-list-tile-title>Play</v-list-tile-title>
+              </v-list-tile-content>
+              <v-list-tile-action>
+                &#9251;
+              </v-list-tile-action>
+            </v-list-tile>
+            <v-list-tile
+              @click="splitSegmentFromMenu(0, selectedSegment)">
+              <v-list-tile-content>
+                <v-list-tile-title>Split</v-list-tile-title>
+              </v-list-tile-content>
+              <v-list-tile-action>
+                ⌘S
+              </v-list-tile-action>
+            </v-list-tile>
+            <v-list-tile
+              @click="() => null">
+              <v-list-tile-content>
+                <v-list-tile-title>Show Transcript</v-list-tile-title>
+              </v-list-tile-content>
+              <v-list-tile-action>
+                ⌘&#9166;
+              </v-list-tile-action>
+            </v-list-tile>
+            <v-list-tile
+              disabled
+              @click="() => null">
+              <v-list-tile-title>Show Spectrogram…</v-list-tile-title>
+            </v-list-tile>
+            <v-divider />
+            <v-list-tile
+              @click="deleteSegment(0, selectedSegment)">
+              <v-list-tile-content>
+                <v-list-tile-title>Delete</v-list-tile-title>
+              </v-list-tile-content>
+              <v-list-tile-action>
+                &larr;
+              </v-list-tile-action>
+            </v-list-tile>
+          </v-list>
+        </v-menu>
       </div>
     </wave-form>
-    <h3 class="text-xs-center">
+    <!-- <h3 class="text-xs-center">
       <div
         v-for="(speaker, key) in transcript.speakerEvents[selectedSegment.id]"
         :key="key"
@@ -48,8 +106,11 @@
           {{ token }}
         </span>
       </div>
-    </h3>
-    <div v-if="transcript.segments && transcript.speakers && transcript.speakerEvents" class="tracks">
+    </h3> -->
+    <div v-if="
+      transcript.segments &&
+      transcript.speakers &&
+      transcript.speakerEvents" class="tracks">
       <div
         v-for="(chunk, i) in chunkedSegments"
         :key="i"
@@ -89,7 +150,6 @@ import segments from '@components/Segments.vue'
 import segmentTranscript from '@components/SegmentTranscript.vue'
 import segmentBox from '@components/SegmentBox.vue'
 import playHead from '@components/PlayHead.vue'
-
 import * as _ from 'lodash'
 import * as fns from 'date-fns'
 import audio from '../service/audio'
@@ -118,6 +178,33 @@ export default class Editor extends Vue {
   segmentPlayingTimeout: any = null
   playHeadPos = 0
 
+  showMenu = false
+  menuX = 0
+  menuY = 0
+  layerX = 0 // this is used for splitting
+
+  doShowMenu(e: MouseEvent) {
+    console.log(e)
+    // this is used for splitting
+    this.layerX = e.layerX
+    this.menuX = e.x
+    this.menuY = e.y
+    this.showMenu = true
+  }
+
+  splitSegmentFromMenu(segmentKey: number, segment: Segment) {
+    const splitAt = this.layerX / this.pixelsPerSecond
+    this.splitSegment(segmentKey, segment, splitAt)
+  }
+
+  handleKey(e: KeyboardEvent) {
+    console.log(e.key)
+    if (e.key === 'c') {
+      console.log(this.metadata.pixelsPerSecond, this.playHeadPos)
+      console.log('cut!')
+    }
+  }
+
   mounted() {
     this.audioElement.addEventListener('pause', () => {
       if (this.segmentPlayingTimeout !== null) {
@@ -127,8 +214,9 @@ export default class Editor extends Vue {
     })
   }
 
-  setPlayHeadPos(e: {x: number}) {
-    this.playHeadPos = e.x
+  scrub(time: number) {
+    this.playHeadPos = time
+    this.audioElement.currentTime = time
   }
 
   selectAndScrollToSegment(segment: Segment) {
@@ -154,12 +242,29 @@ export default class Editor extends Vue {
     }
   }
 
+  detuneBy(speed: number): number {
+    return ((1 / speed) - 1) * 1000
+  }
+
   playBuffer(buffer: AudioBuffer, start = 0, offset?: number, duration?: number) {
     const src = audio.store.audioContext.createBufferSource()
-    src.buffer = buffer
-    src.connect(audio.store.audioContext.destination)
-    src.start(0, offset, duration)
-    return src
+    const speed = this.audioElement.playbackRate
+    if (speed !== 1) {
+      const x = document.createElement('audio')
+      const wav = audio.audioBufferToWav(buffer)
+      const blob = new Blob([new Uint8Array(wav)])
+      x.src = URL.createObjectURL(blob)
+      x.playbackRate = speed
+      x.crossOrigin = 'anonymous'
+      x.play()
+      // TODO: remove audio element
+      return src
+    } else {
+      src.buffer = buffer
+      src.connect(audio.store.audioContext.destination)
+      src.start(0, offset, duration)
+      return src
+    }
   }
 
   async playSegment(key: number, segment: Segment) {
@@ -203,15 +308,41 @@ export default class Editor extends Vue {
     this.selectAndScrollToSegment(this.transcript.segments[i + 1])
   }
 
+  addSegment(atTime: number) {
+    const newSegment: Segment = {
+      startTime: atTime,
+      endTime: atTime + 1,
+      labelText: '',
+      id: _.uniqueId('user-segment-')
+    }
+    this.transcript.segments.push(newSegment)
+  }
+
   deleteSegment(key: number, segment: Segment) {
     const i = _(this.transcript.segments).findIndex(s => s.id === segment.id)
     this.transcript.segments.splice(i, 1)
   }
 
+  splitSegment(key: number, segment: Segment, splitAt: number) {
+    const i = _(this.transcript.segments).findIndex(s => s.id === segment.id)
+    const oldEndTime = segment.endTime
+    const newSegment: Segment = {
+      startTime: segment.startTime + splitAt,
+      endTime: oldEndTime,
+      labelText: segment.labelText,
+      id: _.uniqueId('user-segment-')
+    }
+    segment.endTime = segment.startTime + splitAt
+    this.transcript.segments.splice(i + 1, 0, newSegment)
+  }
+
   get visibleSegments() {
-    return _(this.transcript.segments).filter((s) => {
-      return s.startTime >= this.boundLeft && s.endTime <= this.boundRight
-    }).value()
+    return _(this.transcript.segments)
+      .filter((s) => {
+        return s.startTime >= this.boundLeft && s.endTime <= this.boundRight
+      })
+      .sortBy('startTime')
+      .value()
   }
 
   changeMetadata(metadata: any) {
@@ -287,4 +418,9 @@ export default class Editor extends Vue {
   positon absolute
   top 5px
   right 5px
+
+.context-menu-list
+  color #b7b7b7
+  a
+    cursor default !important
 </style>
