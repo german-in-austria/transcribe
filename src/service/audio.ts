@@ -28,15 +28,16 @@ let oggPages   = [] as OggIndex['pages']
 let oggHeaders = [] as OggIndex['headers']
 let oggLength: number|null = null
 let sampleRate: number|null = null
+const isBufferComplete = false
 
 function readU4le(dataView: DataView, i: number) {
-  return dataView.getUint32(i, true)
+  return dataView.byteLength > i + 32 ? dataView.getUint32(i, true) : null
 }
 
 function readU8le(dataView: DataView, i: number) {
   const v1 = readU4le(dataView, i)
   const v2 = readU4le(dataView, i + 4)
-  return 0x100000000 * v2 + v1
+  return v1 !== null && v2 !== null ? 0x100000000 * v2 + v1 : null
 }
 
 function getOggHeaderBuffer(buffer: ArrayBuffer): ArrayBuffer|null {
@@ -54,9 +55,13 @@ function getOggHeaderBuffer(buffer: ArrayBuffer): ArrayBuffer|null {
     ) {
       console.log('page found')
       const granulePosition = readU8le(v, i + 6)
+      if (granulePosition === null) {
+        headerStart = null
+        break
+      }
       if (granulePosition === 0 && headerStart === null) {
         headerStart = i
-      } else if (granulePosition !== 0 && headerEnd === null) {
+      } else if (granulePosition > 0 && headerEnd === null) {
         headerEnd = i
         break;
       }
@@ -69,6 +74,18 @@ function getOggHeaderBuffer(buffer: ArrayBuffer): ArrayBuffer|null {
   }
 }
 
+function getSampleRate(buffer: ArrayBuffer): number {
+  if (sampleRate === null) {
+    // that’s where the 32 bit integer sits
+    const chunk = buffer.slice(40, 48)
+    const view = new Uint32Array(chunk)
+    sampleRate = view[0]
+    return view[0]
+  } else {
+    return sampleRate
+  }
+}
+
 function getOggIndex(buffer: ArrayBuffer): OggIndex {
 
   console.time('indexing ogg')
@@ -78,17 +95,7 @@ function getOggIndex(buffer: ArrayBuffer): OggIndex {
   const uint8Array = new Uint8Array(buffer)
   const length = uint8Array.length
   const dataView = new DataView(buffer)
-  const rate = (() => {
-    if (sampleRate === null) {
-      // that’s where the 32 bit integer sits
-      const chunk = buffer.slice(40, 48)
-      const view = new Uint32Array(chunk)
-      sampleRate = view[0]
-      return view[0]
-    } else {
-      return sampleRate
-    }
-  })()
+  const rate = getSampleRate(buffer)
   const l = uint8Array
   for (let i = 0; i < length; i ++) {
     if (
@@ -99,11 +106,15 @@ function getOggIndex(buffer: ArrayBuffer): OggIndex {
     ) {
       const byteOffset = i
       const granulePosition = readU8le(dataView, i + 6)
-      const timestamp = granulePosition / rate
-      if (granulePosition === 0) {
-        headers.push({ byteOffset })
+      if (granulePosition === null) {
+        break;
       } else {
-        pages.push({ byteOffset, granulePosition, timestamp })
+        const timestamp = granulePosition / rate
+        if (granulePosition === 0) {
+          headers.push({ byteOffset })
+        } else {
+          pages.push({ byteOffset, granulePosition, timestamp })
+        }
       }
     }
   }
@@ -173,9 +184,8 @@ function findOggPages(from: number, to: number) {
 function drawWave(buffer: AudioBuffer, width: number, height: number,  color = '#ccc', channel = 0) {
   // based on drawWave.js
   console.time('draw wave')
-  const svgStart = `
-    <svg viewBox="0 0 ${ width } ${ height }" height="${ height }" style="display:block;">
-      <path fill="${ color }" d="`
+  // tslint:disable-next-line:max-line-length
+  const svgStart = `<svg viewBox="0 0 ${ width.toFixed(0) } ${ height }" height="${ height }" width="${ width.toFixed(0) }"><path fill="${ color }" d="`
   let upperHalf = ''
   let lowerHalf = ''
   const svgEnd = '"/></svg>'
@@ -202,8 +212,8 @@ function drawWave(buffer: AudioBuffer, width: number, height: number,  color = '
   return svgStart + upperHalf + lowerHalf + 'Z' + svgEnd
 }
 
+// tslint:disable-next-line:max-line-length
 async function decodeBufferSegment(fromByte: number, toByte: number, buffer: ArrayBuffer): Promise<AudioBuffer> {
-  console.log('uint8Buffer.buffer.byteLength', uint8Buffer.buffer.byteLength)
   const headerBuffer    = getOggHeaderBuffer(buffer)
   const contentBuffer   = buffer.slice(fromByte, toByte)
   const combinedBuffer  = concatBuffer(headerBuffer, contentBuffer)
@@ -239,8 +249,10 @@ const audio = {
     oggBuffer,
     oggHeaders,
     oggPages,
-    audioContext
+    audioContext,
+    isBufferComplete
   },
+  getSampleRate,
   audioBufferToWav,
   getOggIndex,
   getOggHeaderBuffer,
