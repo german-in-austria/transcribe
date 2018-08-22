@@ -22,7 +22,7 @@ const ctxClass: any = (window as any).AudioContext || (window as any).webkitAudi
 // store
 const audioContext: AudioContext = new ctxClass()
 const uint8Buffer = new Uint8Array(0)
-const oggBuffer = uint8Buffer.buffer
+// const oggBuffer = uint8Buffer.buffer
 
 let oggPages   = [] as OggIndex['pages']
 let oggHeaders = [] as OggIndex['headers']
@@ -40,6 +40,13 @@ function readU8le(dataView: DataView, i: number) {
   return v1 !== null && v2 !== null ? 0x100000000 * v2 + v1 : null
 }
 
+function getOggNominalBitrate(buffer: ArrayBuffer): number {
+  // that’s where the 32 bit integer sits
+  const chunk = buffer.slice(48, 52)
+  const dataView = new DataView(chunk).getInt32(0, true)
+  return dataView
+}
+
 function getOggHeaderBuffer(buffer: ArrayBuffer): ArrayBuffer|null {
   const b = new Uint8Array(buffer)
   const v = new DataView(buffer)
@@ -53,7 +60,6 @@ function getOggHeaderBuffer(buffer: ArrayBuffer): ArrayBuffer|null {
       b[i + 2] === 103 &&   // g
       b[i + 3] === 83       // s
     ) {
-      console.log('page found')
       const granulePosition = readU8le(v, i + 6)
       if (granulePosition === null) {
         headerStart = null
@@ -74,7 +80,7 @@ function getOggHeaderBuffer(buffer: ArrayBuffer): ArrayBuffer|null {
   }
 }
 
-function getSampleRate(buffer: ArrayBuffer): number {
+function getOggSampleRate(buffer: ArrayBuffer): number {
   if (sampleRate === null) {
     // that’s where the 32 bit integer sits
     const chunk = buffer.slice(40, 48)
@@ -95,7 +101,7 @@ function getOggIndex(buffer: ArrayBuffer): OggIndex {
   const uint8Array = new Uint8Array(buffer)
   const length = uint8Array.length
   const dataView = new DataView(buffer)
-  const rate = getSampleRate(buffer)
+  const rate = getOggSampleRate(buffer)
   const l = uint8Array
   for (let i = 0; i < length; i ++) {
     if (
@@ -138,7 +144,7 @@ function sliceBuffer(buffer: AudioBuffer, start: number, end: number): Promise<A
   })
 }
 
-function findOggPages(from: number, to: number) {
+function findOggPages(from: number, to: number, pages: OggIndex['pages']) {
 
   console.time('find pages')
   // some timestamps are just too big.
@@ -146,7 +152,6 @@ function findOggPages(from: number, to: number) {
   // rudimentary error correction.
   const errorTimestampTooBig = Math.pow(10, 6) // 1 million seconds
 
-  const pages = oggPages
   const countPages = pages.length
   let startPage: any = null
   let endPage: any = null
@@ -178,17 +183,15 @@ function findOggPages(from: number, to: number) {
     i++
   }
   console.timeEnd('find pages')
+  console.log({startPage, endPage})
   return {startPage, endPage}
 }
 
-function drawWave(buffer: AudioBuffer, width: number, height: number,  color = '#ccc', channel = 0) {
+function drawWavePath(buffer: AudioBuffer, width: number, height: number, channel = 0, offsetLeft = 0) {
   // based on drawWave.js
   console.time('draw wave')
-  // tslint:disable-next-line:max-line-length
-  const svgStart = `<svg viewBox="0 0 ${ width.toFixed(0) } ${ height }" height="${ height }" width="${ width.toFixed(0) }"><path fill="${ color }" d="`
   let upperHalf = ''
   let lowerHalf = ''
-  const svgEnd = '"/></svg>'
   const chanData = buffer.getChannelData(channel)
   const step = Math.ceil( chanData.length / width )
   const amp = height / 2
@@ -204,12 +207,18 @@ function drawWave(buffer: AudioBuffer, width: number, height: number,  color = '
         max = datum
       }
     }
-    // tslint:disable-next-line:max-line-length
-    upperHalf = upperHalf + `${ i === 0 ? 'M' : 'L' } ${ i } ${ (1 + min) * amp } `
-    lowerHalf = `L ${ i } ${ Math.max(1, (max - min) * amp) + ((1 + min) * amp) } ` + lowerHalf
+    upperHalf = upperHalf + `${ i === 0 ? 'M' : 'L' } ${ i + offsetLeft } ${ (1 + min) * amp } `
+    lowerHalf = `L ${ i + offsetLeft } ${ Math.max(1, (max - min) * amp) + ((1 + min) * amp) } ` + lowerHalf
   }
   console.timeEnd('draw wave')
-  return svgStart + upperHalf + lowerHalf + 'Z' + svgEnd
+  return upperHalf + lowerHalf + 'Z'
+}
+
+function drawWave(buffer: AudioBuffer, width: number, height: number,  color = '#ccc', channel = 0) {
+  // tslint:disable-next-line:max-line-length
+  const svgStart = `<svg viewBox="0 0 ${ width.toFixed(0) } ${ height }" height="${ height }" width="${ width.toFixed(0) }"><path fill="${ color }" d="`
+  const svgEnd = '" /></svg>'
+  return svgStart + drawWavePath(buffer, width, height, channel) + svgEnd
 }
 
 // tslint:disable-next-line:max-line-length
@@ -221,10 +230,22 @@ async function decodeBufferSegment(fromByte: number, toByte: number, buffer: Arr
   return decodedBuffer
 }
 
-async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuffer) {
+async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuffer, createIndex = false) {
   console.time('decode buffer segment ' + from)
   // TODO: this is could possible be solved a little better.
-  const { startPage, endPage } = findOggPages(from, to + 1)
+  let startPage
+  let endPage
+  if (createIndex) {
+    const adHocIndex = getOggIndex(buffer).pages
+    console.log({adHocIndex})
+    const pages = findOggPages(from, to + 1, adHocIndex)
+    startPage = pages.startPage
+    endPage = pages.endPage
+  } else {
+    const pages = findOggPages(from, to + 1, oggPages)
+    startPage = pages.startPage
+    endPage = pages.endPage
+  }
   // TODO: WHY IS THERE STILL AN OFFSET OF .2?
   const overflowStart    = Math.max(0, from - startPage.timestamp + .2)
   const decodedBuffer   = await decodeBufferSegment(startPage.byteOffset, endPage.byteOffset, buffer)
@@ -246,13 +267,14 @@ async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuff
 const audio = {
   store : {
     uint8Buffer,
-    oggBuffer,
+    // oggBuffer,
     oggHeaders,
     oggPages,
     audioContext,
     isBufferComplete
   },
-  getSampleRate,
+  getOggSampleRate,
+  getOggNominalBitrate,
   audioBufferToWav,
   getOggIndex,
   getOggHeaderBuffer,
@@ -260,7 +282,10 @@ const audio = {
   concatBuffer,
   decodeBufferSegment,
   decodeBufferTimeSlice,
-  drawWave
+  drawWave,
+  drawWavePath
 }
+;
+(window as any)._audio = audio
 
 export default audio
