@@ -17,6 +17,7 @@
     </v-layout>
     <wave-form
       tabindex="-1"
+      class="no-outline"
       @keyup.native="handleKey"
       @change-metadata="changeMetadata"
       @scroll="handleScroll"
@@ -365,7 +366,7 @@ export default class Editor extends Vue {
   }
 
   get chunkedSegments() {
-    return [_(this.transcript.segments).chunk(250).value()[0]]
+    return _(this.transcript.segments).chunk(250).value()
   }
 
   get pixelsPerSecond() {
