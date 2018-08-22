@@ -185,9 +185,9 @@ export default class App extends Vue {
         y.src = x
         const reader = new FileReader()
         reader.readAsArrayBuffer(file)
-        reader.onload = function() {
-          audio.store.oggBuffer = this.result
-        }
+        // reader.onload = function() {
+        //   audio.store.oggBuffer = this.result
+        // }
         this.audioElement = y
         // initialize with empty transcript,
         // if there is none.
