@@ -1,6 +1,7 @@
 <template>
   <v-dialog
     lazy
+    :transition="false"
     scrollable
     @input="$event === false && $emit('close')"
     :value="show"
@@ -9,13 +10,13 @@
       <v-card-title class="headline">Settings</v-card-title>
       <v-card-text>
         <v-tabs v-model="activeTab">
-          <v-tab ripple>
+          <v-tab>
             Application
           </v-tab>
-          <v-tab ripple>
+          <v-tab>
             Transcript
           </v-tab>
-          <v-tab ripple>
+          <v-tab>
             Shortcuts
           </v-tab>
           <v-tab-item v-for="n in 2" :key="n">
