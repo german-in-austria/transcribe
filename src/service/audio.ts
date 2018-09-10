@@ -24,11 +24,12 @@ const audioContext: AudioContext = new ctxClass()
 const uint8Buffer = new Uint8Array(0)
 // const oggBuffer = uint8Buffer.buffer
 
-let oggPages   = [] as OggIndex['pages']
-let oggHeaders = [] as OggIndex['headers']
-let oggLength: number|null = null
-let sampleRate: number|null = null
-const isBufferComplete = false
+const isLocalFile             = false
+let   oggPages                = [] as OggIndex['pages']
+let   oggHeaders              = [] as OggIndex['headers']
+let   oggLength: number|null  = null
+let   sampleRate: number|null = null
+const isBufferComplete        = false
 
 function readU4le(dataView: DataView, i: number) {
   return dataView.byteLength > i + 32 ? dataView.getUint32(i, true) : null
@@ -126,13 +127,16 @@ function getOggIndex(buffer: ArrayBuffer): OggIndex {
   }
   console.timeEnd('indexing ogg')
   oggLength = (pages[pages.length - 1] || { timestamp: 0 }).timestamp
-  console.log({oggLength})
-  oggPages = pages
-  oggHeaders = headers
   return { headers, pages }
 }
 
-function sliceBuffer(buffer: AudioBuffer, start: number, end: number): Promise<AudioBuffer> {
+function cacheOggIndex(buffer: ArrayBuffer) {
+  const {pages, headers} = getOggIndex(buffer)
+  oggHeaders = headers
+  oggPages = pages
+}
+
+function sliceAudioBuffer(buffer: AudioBuffer, start: number, end: number): Promise<AudioBuffer> {
   return new Promise((resolve, reject) => {
     sliceAudiobuffer(buffer, start, end, (err: Error, sliced: AudioBuffer) => {
       if (err) {
@@ -165,7 +169,7 @@ function findOggPages(from: number, to: number, pages: OggIndex['pages']) {
     if (
       startPage === null &&
       pages[i + 1] &&
-      pages[i + 1].timestamp > from &&
+      pages[i + 1].timestamp >= from &&
       pages[i + 1].timestamp < errorTimestampTooBig
     ) {
       startPage = pages[i]
@@ -237,19 +241,28 @@ async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuff
   let endPage
   if (createIndex) {
     const adHocIndex = getOggIndex(buffer).pages
-    console.log({adHocIndex})
     const pages = findOggPages(from, to + 1, adHocIndex)
     startPage = pages.startPage
     endPage = pages.endPage
   } else {
+    console.log({oggPages})
     const pages = findOggPages(from, to + 1, oggPages)
     startPage = pages.startPage
     endPage = pages.endPage
   }
   // TODO: WHY IS THERE STILL AN OFFSET OF .2?
   const overflowStart    = Math.max(0, from - startPage.timestamp + .2)
+  console.log({
+    pageDuration: endPage.timestamp - startPage.timestamp,
+    start: overflowStart,
+    end: to - from + overflowStart,
+    duration: to - from
+  })
+  console.log('bytes', endPage.byteOffset - startPage.byteOffset)
   const decodedBuffer   = await decodeBufferSegment(startPage.byteOffset, endPage.byteOffset, buffer)
-  const slicedBuffer    = await sliceBuffer(decodedBuffer, overflowStart * 1000, (to - from + overflowStart) * 1000)
+  console.log('decoded buffer duration', decodedBuffer.duration)
+  // tslint:disable-next-line:max-line-length
+  const slicedBuffer    = await sliceAudioBuffer(decodedBuffer, overflowStart * 1000, (to - from + overflowStart) * 1000)
   console.timeEnd('decode buffer segment ' + from)
   console.log({slicedDuration: slicedBuffer.duration})
   // console.time('copy to worker ' + from)
@@ -267,18 +280,19 @@ async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuff
 const audio = {
   store : {
     uint8Buffer,
-    // oggBuffer,
+    isLocalFile,
     oggHeaders,
     oggPages,
     audioContext,
     isBufferComplete
   },
+  cacheOggIndex,
   getOggSampleRate,
   getOggNominalBitrate,
   audioBufferToWav,
   getOggIndex,
   getOggHeaderBuffer,
-  sliceBuffer,
+  sliceAudioBuffer,
   concatBuffer,
   decodeBufferSegment,
   decodeBufferTimeSlice,
