@@ -185,9 +185,10 @@ export default class App extends Vue {
         y.src = x
         const reader = new FileReader()
         reader.readAsArrayBuffer(file)
-        // reader.onload = function() {
-        //   audio.store.oggBuffer = this.result
-        // }
+        reader.onload = function() {
+          audio.store.isLocalFile = true
+          audio.store.uint8Buffer = new Uint8Array(this.result as ArrayBuffer)
+        }
         this.audioElement = y
         // initialize with empty transcript,
         // if there is none.
@@ -213,8 +214,10 @@ export default class App extends Vue {
   loadSampleFile() {
     this.transcript = sampleTranscript
     const y = document.createElement('audio')
-    y.src = sampleTranscript.audioUrl
-    this.audioElement = y
+    y.src = 'http://localhost:8081/0025_NECK_jungII_m_INT.ogg'
+    y.addEventListener('durationchange', (e) => {
+      this.audioElement = y
+    })
   }
 
   async mounted() {

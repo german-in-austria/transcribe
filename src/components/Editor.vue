@@ -13,7 +13,13 @@
           <v-icon>settings</v-icon>
         </v-btn>
       </v-flex>
-      <settings @close="showSettings = false" :show="showSettings" />
+      <settings v-if="showSettings" @close="showSettings = false" :show="showSettings" />
+      <spectogram
+        v-if="isSpectogramVisible"
+        @close="isSpectogramVisible = false"
+        :show="isSpectogramVisible"
+        :segment="spectogramSegment"
+      />
     </v-layout>
     <wave-form
       tabindex="-1"
@@ -89,8 +95,7 @@
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
-              disabled
-              @click="() => null">
+              @click="showSpectogram(selectedSegment)">
               <v-list-tile-title>Show Spectrogram…</v-list-tile-title>
             </v-list-tile>
             <v-divider />
@@ -156,7 +161,8 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 
 import waveForm from './Waveform.vue'
-import Settings from './Settings.vue'
+import settings from './Settings.vue'
+import spectogram from './Spectogram.vue'
 import { Transcript } from './App.vue'
 import segments from '@components/Segments.vue'
 import segmentTranscript from '@components/SegmentTranscript.vue'
@@ -169,7 +175,8 @@ import audio from '../service/audio'
 @Component({
   components: {
     waveForm,
-    Settings,
+    settings,
+    spectogram,
     segments,
     segmentTranscript,
     playHead,
@@ -189,6 +196,10 @@ export default class Editor extends Vue {
   scrollToSegment: Segment|null = null
   playingSegment: Segment|null = null
   segmentPlayingTimeout: any = null
+
+  isSpectogramVisible = false
+  spectogramSegment: Segment|null = null
+
   playHeadPos = 0
   showSettings = false
   showMenu = false
@@ -208,6 +219,11 @@ export default class Editor extends Vue {
   splitSegmentFromMenu(segmentKey: number, segment: Segment) {
     const splitAt = this.layerX / this.pixelsPerSecond
     this.splitSegment(segmentKey, segment, splitAt)
+  }
+
+  showSpectogram(segment: Segment) {
+    this.isSpectogramVisible = true
+    this.spectogramSegment = segment
   }
 
   handleKey(e: KeyboardEvent) {
