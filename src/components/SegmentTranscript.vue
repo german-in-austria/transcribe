@@ -61,14 +61,10 @@ export default class SegmentEditor extends Vue {
   position relative
 
 .token-type-indicator
-  background cornflowerblue
+  background #6699CC
   height 3px
   border-radius 2px
   margin 1px 3px 3px 0px
-  opacity .25
-  transition .25s opacity
-  &.focused
-    opacity 1
   &.non-verbal
     background red
   // OTHER TOKEN TYPES GO HERE
