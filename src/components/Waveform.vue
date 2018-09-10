@@ -198,7 +198,7 @@ export default class Waveform extends Vue {
     const w = this.$refs.svgContainer
     const o = this.$refs.overview
     if (w instanceof HTMLElement && o instanceof HTMLElement) {
-      this.overviewThumbWidth = Math.max(w.clientWidth / w.scrollWidth * o.clientWidth, 5)
+      this.overviewThumbWidth = Math.max(w.clientWidth / w.scrollWidth * o.clientWidth, 10)
       this.overviewThumbOffset = (
         (w.scrollLeft + w.clientWidth) / w.scrollWidth * (o.clientWidth - this.overviewThumbWidth)
       )
@@ -615,7 +615,8 @@ export default class Waveform extends Vue {
 
 .overview-thumb
   top 0
-  background rgba(255,255,255,.2)
+  z-index -1
+  background rgba(0,0,0,.5)
   height 100%
   width 50px
   position absolute
