@@ -125,7 +125,7 @@ export default class SegmentBox extends Vue {
   transform-origin 0 0
   user-select none
   &.selected, &:focus
-    z-index 99
+    z-index 1
     border: 2px solid cornflowerblue
     box-shadow 0 0 50px rgba(0,0,0,.4)
   &:hover:not(.selected)
