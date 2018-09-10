@@ -144,10 +144,10 @@ export default class App extends Vue {
         // only the first tier for now
         return _.toArray(t)[0].events.map(e => {
           return {
-            start: e.start,
-            end: e.end,
+            start  : e.start,
+            end    : e.end,
             tokens : e.text !== null ? e.text.trim().split(' ') : [],
-            speaker : key
+            speaker: key
           }
         })
       })
@@ -211,19 +211,16 @@ export default class App extends Vue {
     })
   }
 
-  loadSampleFile() {
-    this.transcript = sampleTranscript
+  async loadSampleFile() {
+    // tslint:disable-next-line:max-line-length
+    const xmlString = await (await fetch('https://transcribe.dioe.at/files/0025_NECK_jungII_m_INT_vollständig.exb')).text()
+    // tslint:disable-next-line:max-line-length
+    this.transcriptTreeToTranscribable(parseTranscriptFromTree(parseXML(xmlString)), 'NECK_jungII_m_INT')
     const y = document.createElement('audio')
-    y.src = 'http://localhost:8081/0025_NECK_jungII_m_INT.ogg'
+    y.src = 'https://transcribe.dioe.at/files/0025_NECK_jungII_m_INT.ogg'
     y.addEventListener('durationchange', (e) => {
       this.audioElement = y
     })
-  }
-
-  async mounted() {
-    const y = document.createElement('audio')
-    y.src = 'http://localhost:8081/0025_NECK_jungII_m_INT.ogg'
-    this.audioElement = y
   }
 }
 </script>
