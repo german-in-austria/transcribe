@@ -180,7 +180,7 @@ export default class Waveform extends Vue {
     if (settings.emulateHorizontalScrolling === true) {
       const c = this.$refs.svgContainer
       if (c instanceof HTMLElement) {
-        c.scrollLeft = c.scrollLeft + e.deltaY
+        c.scrollLeft = c.scrollLeft + e.deltaY / (e.shiftKey === true ? 10 : 1)
       }
     }
   }

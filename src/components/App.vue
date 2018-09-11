@@ -1,5 +1,5 @@
 <template>
-  <v-app dark>
+  <v-app :dark="settings.darkMode">
     <v-content class="main-content" app>
       <v-container fluid fill-height class="pa-0">
         <vue-full-screen-file-drop
@@ -45,6 +45,7 @@ import * as parseXML from '@rgrove/parse-xml'
 import parseTranscriptFromTree, { ParsedXML } from '../service/transcript-parser'
 import editor from './Editor.vue'
 import audio from '../service/audio'
+import settings from '../store/settings'
 
 declare global {
   interface Window {
@@ -121,7 +122,7 @@ export default class App extends Vue {
   transcript: Transcript|null = null
   xmlText: string|null = null
   xml: any = null
-
+  settings = settings
   emptyTranscript = {
     name: '',
     audioUrl: this.audioUrl || '',

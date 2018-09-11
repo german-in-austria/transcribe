@@ -1,5 +1,5 @@
 <template>
-  <div class="playerbar">
+  <div :style="theme" class="playerbar">
     <v-container>
       <v-layout row justify-space-between class="">
         <v-flex text-xs-left xs2>
@@ -45,6 +45,7 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import settings from '@store/settings'
 
 @Component
 export default class PlayerBar extends Vue {
@@ -55,6 +56,7 @@ export default class PlayerBar extends Vue {
   currentTime = this.audioElement.currentTime
   playbackRate = 100
   volume = 100
+  settings = settings
 
   playPause(e: Event) {
     if (this.isPaused) {
@@ -82,6 +84,14 @@ export default class PlayerBar extends Vue {
     return new Date(time * 1000).toISOString().substr(11, 12)
   }
 
+  get theme() {
+    if (this.settings.darkMode) {
+      return { background: '#383838' }
+    } else {
+      return { background: '#efefef' }
+    }
+  }
+
   mounted() {
     this.audioElement.addEventListener('play', () => {
       this.isPaused = false
@@ -103,7 +113,6 @@ export default class PlayerBar extends Vue {
   bottom: 0
   height: 100px
   text-align center
-  background #383838
 
 .play-button
   margin-top: -5px

@@ -22,9 +22,15 @@
           <v-tab-item>
             <v-list>
               <v-list-tile>
-                <v-list-tile-title>Emulate Horizontal Mousewheel scrolling</v-list-tile-title>
+                <v-list-tile-title>Mousewheel scrolls horizontally</v-list-tile-title>
                 <v-list-tile-action>
                   <v-switch v-model="settings.emulateHorizontalScrolling" />
+                </v-list-tile-action>
+              </v-list-tile>
+              <v-list-tile>
+                <v-list-tile-title>Dark Theme</v-list-tile-title>
+                <v-list-tile-action>
+                  <v-switch v-model="settings.darkMode" />
                 </v-list-tile-action>
               </v-list-tile>
             </v-list>

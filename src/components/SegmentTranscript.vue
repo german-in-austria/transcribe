@@ -13,6 +13,7 @@
       @focus="focused = true"
       @blur="updateLabelText"
       v-contenteditable:segmentText="true"
+      :style="textStyle"
       class="tokens-input segment-text">
     </div>
   </div>
@@ -22,6 +23,8 @@
 
 import contenteditableDirective from 'vue-contenteditable-directive'
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import settings from '../store/settings'
+
 Vue.use(contenteditableDirective)
 
 @Component
@@ -30,6 +33,7 @@ export default class SegmentEditor extends Vue {
   @Prop() tokens: string[]
   localTokens = this.tokens.slice()
   focused = false
+  settings = settings
 
   tokenTypeFromToken(token: string) {
     return token.startsWith('((') ? 'non-verbal' : ''
@@ -51,6 +55,18 @@ export default class SegmentEditor extends Vue {
     this.focused = false
     const tokens = ((e.target as HTMLDivElement).textContent || '').split(' ')
     this.$emit('updateSpeakerEvent', tokens)
+  }
+
+  get textStyle() {
+    if (this.settings.darkMode === true) {
+      return {
+        color: 'white'
+      }
+    } else {
+      return {
+        color: '#333'
+      }
+    }
   }
 
 }
@@ -79,11 +95,11 @@ export default class SegmentEditor extends Vue {
 .tokens-input
   tokens-input
   outline 0
-  color #ccc
+  opacity .7
   transition .5s color
   &:focus
     outline 0
-    color white
+    opacity 1
 
 .segment-text
   padding 1px

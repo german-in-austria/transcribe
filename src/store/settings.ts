@@ -1,5 +1,7 @@
 
 export interface Settings {
+  emulateHorizontalScrolling: boolean,
+  darkMode: boolean,
   keyboardShortcuts: {
     [s: string]: {
       modifier: string
@@ -7,11 +9,11 @@ export interface Settings {
       name: string
       description: string
     }
-  },
-  emulateHorizontalScrolling: boolean
+  }
 }
 
 const settings: Settings = {
+  darkMode: true,
   emulateHorizontalScrolling: true,
   keyboardShortcuts: {
     split: {
