@@ -21,17 +21,10 @@ export default {
     }
     return a
   },
-  concatUint8Array(...arrays: Uint8Array[]) {
-    let totalLength = 0
-    for (const arr of arrays) {
-      totalLength += arr.length
-    }
-    const result = new Uint8Array(totalLength)
-    let offset = 0
-    for (const arr of arrays) {
-      result.set(arr, offset)
-      offset += arr.length
-    }
-    return result
+  concatUint8Array(first: Uint8Array, second: Uint8Array) {
+    const arr = new Uint8Array(first.length + second.length)
+    arr.set(first, 0)
+    arr.set(second, first.length)
+    return arr
   }
 }
