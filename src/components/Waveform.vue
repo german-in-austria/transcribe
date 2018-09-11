@@ -7,7 +7,7 @@
         </label>
         <select name="scaleFactorY" class="ml-2 no-outline" style="font-size: 90%" v-model="scaleFactorY">
           <option
-            v-for="(v, i) in [.1, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4]"
+            v-for="(v, i) in zoomLevels"
             :value="v"
             :key="i">
             {{ v }}x
@@ -23,7 +23,7 @@
         </span>
         <select class="ml-2 no-outline" style="font-size: 90%" v-model="scaleFactorX">
           <option
-            v-for="(v, i) in [.1, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4]"
+            v-for="(v, i) in zoomLevels"
             :value="v"
             :key="i">
             {{ v }}x
@@ -137,6 +137,7 @@ export default class Waveform extends Vue {
   @Prop() scrollToSegment: Segment|null
   @Prop({ default: 200 }) height: number
   // config
+  zoomLevels = [.1, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4]
   drawDistance = 5000 // pixels in both directions from the center of the viewport (left and right)
   initialPixelsPerSecond = 150
   overviewSvgWidth = 500
@@ -453,18 +454,18 @@ export default class Waveform extends Vue {
     return util.range(startPiece, endPiece)
   }
 
-  drawOverviewWaveformPiece(startTime: number, endTime: number, audioBuffer: AudioBuffer) {
+  async drawOverviewWaveformPiece(startTime: number, endTime: number, audioBuffer: AudioBuffer) {
     const totalDuration = this.audioLength
     const width = (endTime - startTime) * (this.overviewSvgWidth / totalDuration)
     const left = (startTime) * (this.overviewSvgWidth / totalDuration)
-    this.overviewSvgs.push({
-      channel: 0,
-      path: audio.drawWavePath(audioBuffer, width, this.overviewHeight, 0, left)
-    })
-    this.overviewSvgs.push({
-      channel: 1,
-      path: audio.drawWavePath(audioBuffer, width, this.overviewHeight, 1, left)
-    })
+    const [svg1, svg2] = await Promise.all([
+      audio.drawWavePathAsync(audioBuffer, width, this.overviewHeight, 0, left),
+      await audio.drawWavePathAsync(audioBuffer, width, this.overviewHeight, 1, left)
+    ])
+    this.overviewSvgs = this.overviewSvgs.concat([
+      { channel: 0, path: svg1 },
+      { channel: 1, path: svg2 }
+    ])
   }
 
   async drawWaveFormPiece(i: number) {
@@ -496,28 +497,17 @@ export default class Waveform extends Vue {
       )
     }
     console.log({ from, to, duration: to - from })
-    console.log(slicedBuffer.duration)
-    const svg = audio.drawWave(
-      slicedBuffer,
-      isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth,
-      this.height,
-      '#fb7676',
-      0
-    )
-    const svg2 = audio.drawWave(
-      slicedBuffer,
-      isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth,
-      this.height,
-      '#69c',
-      1
-    )
+    const width = isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth
+    const [svg1, svg2] = await Promise.all([
+      audio.drawWave(slicedBuffer, width, this.height, '#fb7676', 0),
+      audio.drawWave(slicedBuffer, width, this.height, '#69c', 1)
+    ])
     if (this.$refs.svgContainer instanceof HTMLElement) {
       const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
       console.time('render')
     // requestAnimationFrame(async () => {
-      el.innerHTML = svg + svg2
+      el.innerHTML = svg1 + svg2
       console.timeEnd('render')
-      el.classList.add('show')
       requestAnimationFrame(() => {
         this.$emit('change-metadata', {
           totalWidth: this.totalWidth,
@@ -568,11 +558,6 @@ export default class Waveform extends Vue {
   transform-origin center
   position absolute
   overflow hidden
-  .wave-form-placeholder
-    position absolute
-    top 100px
-    border-top 1px dashed #ddd
-    width 100%
 .wave-form
   margin-top 0px
   position relative
@@ -593,8 +578,12 @@ export default class Waveform extends Vue {
     position relative
     .wave-form-segment
       opacity 0
-      &.show
-        opacity 1
+      animation fadeIn
+      -webkit-animation fadeIn ease-in 1
+      animation-fill-mode forwards
+      -webkit-animation-duration 1s
+      -moz-animation-duration 1s
+      animation-duration 1s
 
 .overview
   opacity .4

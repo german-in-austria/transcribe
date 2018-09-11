@@ -6,7 +6,7 @@
         "strictPropertyInitialization": false,
         "noImplicitAny": true,
         "module": "es2015",
-        "lib": ["es2015", "dom"],
+        "lib": ["webworker", "es2015", "dom"],
         "moduleResolution": "node",
         "target": "es5",
         "experimentalDecorators": true,

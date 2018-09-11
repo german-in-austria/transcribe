@@ -3,7 +3,10 @@ declare interface process {
     [key: string]: string
   }
 }
-
+declare module "file-loader?name=[name].js!*" {
+  const value: string;
+  export = value;
+}
 declare module "worker-loader!*" {
   class WebpackWorker extends Worker {
     constructor();
@@ -17,8 +20,8 @@ declare module 'vue-scrollto' {
   export default x
 }
 declare module 'vue-full-screen-file-drop'
-declare module 'peaks.js'
 declare module 'draw-wave'
+declare module 'promise-worker'
 declare module '@rgrove/parse-xml'
 declare module 'audiobuffer-slice'
 declare module 'simple-promise-queue'

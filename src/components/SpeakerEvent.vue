@@ -13,20 +13,6 @@
 
 <script lang="ts">
 
-declare global {
-  interface Segment {
-    color?: string
-    editable?: boolean
-    startTime: number
-    endTime: number
-    id?: string
-    labelText?: string
-  }
-  interface SegmentMetadata {
-    tokens: string[]
-  }
-}
-
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as uuid from 'uuid/v4'
 

@@ -1,37 +1,29 @@
-const ctx: Worker = self as any;
 
+const registerPromiseWorker = require('promise-worker/register')
 // Post data to parent thread
-ctx.postMessage({ foo: 'foo' });
-
-// Respond to message from parent thread
-ctx.addEventListener('message', (event: any) => {
-  const arr = []
-  if (event.data && event.data.b) {
-    const data = event.data.b
-    console.log(data)
-    const step = Math.ceil( data.length / 1000 )
-    console.log(step)
-    const amp  = 200 / 2
-    for (let i = 0; i < 1000; i++) {
-      let min = 1.0
-      let max = -1.0
-      for (let j = 0; j < step; j++) {
-        const datum = data[(i * step) + j]
-        if (datum < min) {
-          min = datum
-        }
-        if (datum > max) {
-          max = datum
-        }
+registerPromiseWorker((message: { buffer: ArrayBuffer, width: number, height: number, offsetLeft: number }) => {
+  let upperHalf = ''
+  let lowerHalf = ''
+  const chanData = new Float32Array(message.buffer)
+  const step = Math.ceil( chanData.length / message.width )
+  const amp = message.height / 2
+  console.time('draw wave 1')
+  for (let i = 0; i < message.width; i++) {
+    let min = 1.0
+    let max = -1.0
+    for (let j = 0; j < step; j++) {
+      const datum = chanData[(i * step) + j]
+      if (datum < min) {
+        min = datum
       }
-      arr.push([i, (1 + min) * amp, Math.max(1, (max - min) * amp)])
+      if (datum > max) {
+        max = datum
+      }
     }
-    ctx.postMessage({
-      waveform: arr
-    })
+    upperHalf = upperHalf + `${ i === 0 ? 'M' : 'L' } ${ i + message.offsetLeft } ${ (1 + min) * amp } `
+    lowerHalf = `L ${ i + message.offsetLeft } ${ Math.max(1, (max - min) * amp) + ((1 + min) * amp) } ` + lowerHalf
   }
+  console.timeEnd('draw wave 1')
+  return upperHalf + lowerHalf + 'Z'
 })
-
-// this is to trick TS into thinking
-// that this is a proper module.
-export default Worker || null
+export default null as any

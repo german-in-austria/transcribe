@@ -38,7 +38,6 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
-import peakjs from './Peakjs.vue'
 import playerBar from './PlayerBar.vue'
 import VueFullScreenFileDrop from 'vue-full-screen-file-drop'
 import 'vue-full-screen-file-drop/dist/vue-full-screen-file-drop.css'
@@ -52,6 +51,17 @@ declare global {
     AudioContext: AudioContext
     webkitAudioContext: AudioContext
     peaks: any
+  }
+  interface Segment {
+    color?: string
+    editable?: boolean
+    startTime: number
+    endTime: number
+    id?: string
+    labelText?: string
+  }
+  interface SegmentMetadata {
+    tokens: string[]
   }
 }
 
@@ -99,7 +109,6 @@ const sampleTranscript = {
 @Component({
   components : {
     editor,
-    peakjs,
     VueFullScreenFileDrop,
     playerBar
   }

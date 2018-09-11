@@ -3,14 +3,10 @@ import * as sliceAudiobuffer from 'audiobuffer-slice'
 import * as concatBuffer from 'array-buffer-concat'
 import * as audioBufferToWav from 'audiobuffer-to-wav'
 
-// import dummysvg from './dummysvg'
-// import Worker from './waveform.worker'
-
-// const worker = new Worker('bla')
-
-// worker.onmessage = (event: any) => {
-//   console.log('from worker', event.data.waveform)
-// }
+import * as PromiseWorker from 'promise-worker'
+import Worker from './waveform.worker'
+const worker = new Worker('')
+const promiseWorker = new PromiseWorker(worker)
 
 export interface OggIndex {
   pages: Array<{ byteOffset: number, granulePosition: number, timestamp: number }>
@@ -191,14 +187,25 @@ function findOggPages(from: number, to: number, pages: OggIndex['pages']) {
   return {startPage, endPage}
 }
 
+async function drawWavePathAsync(buffer: AudioBuffer, width: number, height: number, channel = 0, offsetLeft = 0) {
+  const b = buffer.getChannelData(channel).buffer
+  const p = await promiseWorker.postMessage({
+    buffer: b,
+    width,
+    height,
+    offsetLeft
+  }, [ b ])
+  return p
+}
+
 function drawWavePath(buffer: AudioBuffer, width: number, height: number, channel = 0, offsetLeft = 0) {
   // based on drawWave.js
-  console.time('draw wave')
   let upperHalf = ''
   let lowerHalf = ''
   const chanData = buffer.getChannelData(channel)
   const step = Math.ceil( chanData.length / width )
   const amp = height / 2
+  console.time('draw wave')
   for (let i = 0; i < width; i++) {
     let min = 1.0
     let max = -1.0
@@ -218,11 +225,11 @@ function drawWavePath(buffer: AudioBuffer, width: number, height: number, channe
   return upperHalf + lowerHalf + 'Z'
 }
 
-function drawWave(buffer: AudioBuffer, width: number, height: number,  color = '#ccc', channel = 0) {
+async function drawWave(buffer: AudioBuffer, width: number, height: number,  color = '#ccc', channel = 0) {
   // tslint:disable-next-line:max-line-length
   const svgStart = `<svg viewBox="0 0 ${ width.toFixed(0) } ${ height }" height="${ height }" width="${ width.toFixed(0) }"><path fill="${ color }" d="`
   const svgEnd = '" /></svg>'
-  return svgStart + drawWavePath(buffer, width, height, channel) + svgEnd
+  return svgStart + await drawWavePathAsync(buffer, width, height, channel) + svgEnd
 }
 
 // tslint:disable-next-line:max-line-length
@@ -297,7 +304,8 @@ const audio = {
   decodeBufferSegment,
   decodeBufferTimeSlice,
   drawWave,
-  drawWavePath
+  drawWavePath,
+  drawWavePathAsync
 }
 ;
 (window as any)._audio = audio

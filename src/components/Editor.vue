@@ -112,48 +112,12 @@
         </v-menu>
       </div>
     </wave-form>
-    <!-- <h3 class="text-xs-center">
-      <div
-        v-for="(speaker, key) in transcript.speakerEvents[selectedSegment.id]"
-        :key="key"
-        v-if="selectedSegment !== null">
-        <span>{{ key }}: </span>
-        <span :key="key" v-for="(token, key) in speaker.tokens">
-          {{ token }}
-        </span>
-      </div>
-    </h3> -->
-    <div v-if="
-      transcript.segments &&
-      transcript.speakers &&
-      transcript.speakerEvents" class="tracks">
-      <div
-        v-for="(chunk, i) in chunkedSegments"
-        :key="i"
-        class="segment-chunk">
-        <div
-          v-for="segment in chunk"
-          :key="segment.id"
-          :class="['segment', segment.id === selectedSegment.id && 'segment-selected']">
-          <div class="time" @dblclick="playSegment(0, segment)" @mousedown="selectAndScrollToSegment(segment)">
-            {{ toTime(segment.startTime) }} - {{ toTime(segment.endTime) }}
-          </div>
-          <div
-            class="speaker-segment"
-            v-for="(speaker, key) in transcript.speakers"
-            :key="key">
-            <segment-transcript
-              v-if="
-                transcript.speakerEvents[segment.id] !== undefined &&
-                transcript.speakerEvents[segment.id][speaker] !== undefined &&
-                transcript.speakerEvents[segment.id][speaker].tokens !== undefined"
-              class="tokens"
-              :tokens="transcript.speakerEvents[segment.id][speaker].tokens"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
+    <transcript-editor
+      @play-segment="playSegment"
+      @select-segment="selectSegment"
+      @scroll-to-segment="(s) => scrollToSegment = s"
+      :selected-segment="selectedSegment"
+      :transcript="transcript"/>
   </div>
 </template>
 <script lang="ts">
@@ -164,8 +128,7 @@ import waveForm from './Waveform.vue'
 import settings from './Settings.vue'
 import spectogram from './Spectogram.vue'
 import { Transcript } from './App.vue'
-import segments from '@components/Segments.vue'
-import segmentTranscript from '@components/SegmentTranscript.vue'
+import transcriptEditor from '@components/TranscriptEditor.vue'
 import segmentBox from '@components/SegmentBox.vue'
 import playHead from '@components/PlayHead.vue'
 import * as _ from 'lodash'
@@ -175,10 +138,9 @@ import audio from '../service/audio'
 @Component({
   components: {
     waveForm,
+    transcriptEditor,
     settings,
     spectogram,
-    segments,
-    segmentTranscript,
     playHead,
     segmentBox
   }
@@ -235,12 +197,14 @@ export default class Editor extends Vue {
   }
 
   mounted() {
-    this.audioElement.addEventListener('pause', () => {
-      if (this.segmentPlayingTimeout !== null) {
-        clearTimeout(this.segmentPlayingTimeout)
-        this.segmentPlayingTimeout = null
-      }
-    })
+    if (this.audioElement instanceof HTMLAudioElement) {
+      this.audioElement.addEventListener('pause', () => {
+        if (this.segmentPlayingTimeout !== null) {
+          clearTimeout(this.segmentPlayingTimeout)
+          this.segmentPlayingTimeout = null
+        }
+      })
+    }
   }
 
   scrub(time: number) {
@@ -253,10 +217,6 @@ export default class Editor extends Vue {
     this.$nextTick(() => {
       this.scrollToSegment = segment
     })
-  }
-
-  toTime(time: number) {
-    return new Date(time * 1000).toISOString().substr(11, 8)
   }
 
   handleScroll(e: Event) {
@@ -381,10 +341,6 @@ export default class Editor extends Vue {
     this.metadata = metadata
   }
 
-  get chunkedSegments() {
-    return _(this.transcript.segments).chunk(250).value()
-  }
-
   get pixelsPerSecond() {
     if ( this.metadata !== null) {
       return this.metadata.pixelsPerSecond
@@ -416,33 +372,6 @@ export default class Editor extends Vue {
     background-clip content-box
   // &::-webkit-scrollbar-corner
   // &::-webkit-resizer
-
-.segment
-  display inline-block
-  vertical-align top
-  border-right 1px solid rgba(255,255,255,.1)
-  padding 0 6px
-  color #444
-
-.segment-selected
-  color #000
-  .token-type-indicator
-    opacity 1
-  .time
-    color #ddd
-
-.speaker-segment
-  display block
-  min-height 2em
-
-.segment-chunk
-  display inline-block
-
-.time
-  cursor default
-  font-size 85%
-  color #aaa
-  text-align center
 
 .jump-to
   opacity 0
