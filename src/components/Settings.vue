@@ -38,7 +38,13 @@
           <v-tab-item>
             <v-list>
               <v-list-tile>
-                <v-list-tile-title>Emulate Horizontal Mousewheel scrolling</v-list-tile-title>
+                <v-list-tile-title>Test</v-list-tile-title>
+                <v-list-tile-action>
+                  <v-switch />
+                </v-list-tile-action>
+              </v-list-tile>
+              <v-list-tile>
+                <v-list-tile-title>Test</v-list-tile-title>
                 <v-list-tile-action>
                   <v-switch />
                 </v-list-tile-action>
@@ -70,7 +76,7 @@
           </v-tab-item>
         </v-tabs>
       </v-card-text>
-      <v-card-actions>
+      <!-- <v-card-actions>
         <v-spacer></v-spacer>
         <v-btn
           color="grey lighten-1"
@@ -84,7 +90,7 @@
           @click="$emit('close')">
           Save
         </v-btn>
-      </v-card-actions>
+      </v-card-actions> -->
     </v-card>
   </v-dialog>
 </template>

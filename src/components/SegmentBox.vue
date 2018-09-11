@@ -91,8 +91,8 @@ export default class SegmentBox extends Vue {
   playSegment(key: number, segment: Segment) {
     this.$emit('play-segment', key, segment)
   }
-  deleteSegment(key: number, segment: Segment) {
-    this.$emit('delete-segment', key, segment)
+  deleteSegment(segment: Segment) {
+    this.$emit('delete-segment', segment)
   }
   onResizeEnd(e: any) {
     console.log(e)

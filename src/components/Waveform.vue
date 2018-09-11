@@ -179,7 +179,8 @@ export default class Waveform extends Vue {
   onMousewheel(e: MouseWheelEvent) {
     if (settings.emulateHorizontalScrolling === true) {
       const c = this.$refs.svgContainer
-      if (c instanceof HTMLElement) {
+      if (c instanceof HTMLElement && e.deltaY !== 0) {
+        e.preventDefault()
         c.scrollLeft = c.scrollLeft + e.deltaY / (e.shiftKey === true ? 10 : 1)
       }
     }

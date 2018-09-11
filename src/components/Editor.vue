@@ -47,7 +47,6 @@
           @select-previous="selectPrevious"
           @select-next="selectNext"
           @play-segment="playSegment"
-          @split-segment="splitSegment"
           :segment="segment"
           :previous-segment="visibleSegments[key - 1]"
           :next-segment="visibleSegments[key + 1]"
@@ -100,7 +99,7 @@
             </v-list-tile>
             <v-divider />
             <v-list-tile
-              @click="deleteSegment(0, selectedSegment)">
+              @click="deleteSegment(selectedSegment)">
               <v-list-tile-content>
                 <v-list-tile-title>Delete</v-list-tile-title>
               </v-list-tile-content>
@@ -178,9 +177,9 @@ export default class Editor extends Vue {
     this.showMenu = true
   }
 
-  splitSegmentFromMenu(segmentKey: number, segment: Segment) {
+  splitSegmentFromMenu(segment: Segment) {
     const splitAt = this.layerX / this.pixelsPerSecond
-    this.splitSegment(segmentKey, segment, splitAt)
+    this.splitSegment(segment, splitAt)
   }
 
   showSpectogram(segment: Segment) {
@@ -189,10 +188,21 @@ export default class Editor extends Vue {
   }
 
   handleKey(e: KeyboardEvent) {
-    console.log(e.key)
+    console.log(e.key, this.playHeadPos)
     if (e.key === 'c') {
-      console.log(this.metadata.pixelsPerSecond, this.playHeadPos)
-      console.log('cut!')
+      const segment = this.findSegmentAt(this.playHeadPos)
+      console.log(segment)
+      if (segment === undefined) {
+        const s = this.addSegment(this.playHeadPos)
+        this.$nextTick(() => this.selectSegment(s))
+      } else {
+        const splitAt = this.playHeadPos - segment.startTime
+        this.splitSegment(segment, splitAt)
+      }
+    } else if (e.key === 'Backspace') {
+      if (this.selectedSegment !== null) {
+        this.deleteSegment(this.selectedSegment)
+      }
     }
   }
 
@@ -269,22 +279,6 @@ export default class Editor extends Vue {
         })
       }
     }
-    // const listener = (e: Event) => {
-    //   console.log(e)
-    //   const playbackTimeInSeconds = (s.endTime - s.startTime) * (1 / this.audioElement.playbackRate)
-    //   this.segmentPlayingTimeout = setTimeout(() => {
-    //     console.log('pausing')
-    //     this.audioElement.pause()
-    //     console.log('paused')
-    //     this.audioElement.removeEventListener('play', listener)
-    //     this.playingSegment = null
-    //   }, (playbackTimeInSeconds - 0.05) * 1000)
-    // }
-    // if (this.audioElement !== null) {
-    //   this.audioElement.currentTime = segment.startTime
-    //   this.audioElement.addEventListener('play', listener)
-    //   this.audioElement.play()
-    // }
   }
 
   selectSegment(segment: Segment) {
@@ -307,14 +301,15 @@ export default class Editor extends Vue {
       id: _.uniqueId('user-segment-')
     }
     this.transcript.segments.push(newSegment)
+    return newSegment
   }
 
-  deleteSegment(key: number, segment: Segment) {
+  deleteSegment(segment: Segment) {
     const i = _(this.transcript.segments).findIndex(s => s.id === segment.id)
     this.transcript.segments.splice(i, 1)
   }
 
-  splitSegment(key: number, segment: Segment, splitAt: number) {
+  splitSegment(segment: Segment, splitAt: number): Segment[] {
     const i = _(this.transcript.segments).findIndex(s => s.id === segment.id)
     const oldEndTime = segment.endTime
     const newSegment: Segment = {
@@ -325,6 +320,13 @@ export default class Editor extends Vue {
     }
     segment.endTime = segment.startTime + splitAt
     this.transcript.segments.splice(i + 1, 0, newSegment)
+    return [ segment, newSegment ]
+  }
+
+  findSegmentAt(seconds: number): Segment|undefined {
+    return _(this.transcript.segments).find((s) => {
+      return s.startTime <= seconds && s.endTime >= seconds
+    })
   }
 
   get visibleSegments() {
