@@ -1,8 +1,9 @@
 <template>
-  <div v-if="
-    transcript.segments &&
-    transcript.speakers &&
-    transcript.speakerEvents" class="tracks">
+  <div
+    @mousewheel="onMousewheel"
+    ref="tracks"
+    class="tracks"
+    v-if="transcript.segments && transcript.speakers && transcript.speakerEvents">
     <div
       v-for="(chunk, i) in chunkedSegments"
       :key="i"
@@ -31,10 +32,13 @@
     </div>
   </div>
 </template>
+
 <script lang="ts">
+
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import { Transcript } from '@components/App.vue'
 import segmentTranscript from '@components/SegmentTranscript.vue'
+import settings from '@store/settings'
 
 @Component({
   components: {
@@ -45,12 +49,23 @@ export default class TranscriptEditor extends Vue {
   @Prop() transcript: Transcript
   @Prop() selectedSegment: Segment
   chunkedSegments: Segment[][] = [ this.transcript.segments.slice(0, 400) ]
+
   toTime(time: number) {
     return new Date(time * 1000).toISOString().substr(11, 8)
   }
+
   selectAndScrollToSegment(segment: Segment) {
     this.$emit('select-segment', segment)
     this.$emit('scroll-to-segment', segment)
+  }
+
+  onMousewheel(e: MouseWheelEvent) {
+    if (settings.emulateHorizontalScrolling === true) {
+      const c = this.$refs.tracks
+      if (c instanceof HTMLElement) {
+        c.scrollLeft = c.scrollLeft + e.deltaY / (e.shiftKey === true ? 10 : 1)
+      }
+    }
   }
 }
 </script>
