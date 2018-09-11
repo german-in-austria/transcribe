@@ -35,6 +35,7 @@
       class="wave-form"
       :style="{height: `${height}px`, width: `${totalWidth}px`}"
       ref="svgContainer"
+      @mousewheel="onMousewheel"
       @scroll="onScroll">
       <div class="second-marker-row">
         <div
@@ -105,6 +106,7 @@
 
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import settings from '../store/settings'
 import * as drawBuffer from 'draw-wave'
 import * as _ from 'lodash'
 import audio, { OggIndex } from '../service/audio'
@@ -137,7 +139,7 @@ export default class Waveform extends Vue {
   @Prop() scrollToSegment: Segment|null
   @Prop({ default: 200 }) height: number
   // config
-  zoomLevels = [.1, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4]
+  zoomLevels = [.25, .5, .75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4]
   drawDistance = 5000 // pixels in both directions from the center of the viewport (left and right)
   initialPixelsPerSecond = 150
   overviewSvgWidth = 500
@@ -172,6 +174,15 @@ export default class Waveform extends Vue {
     )
     this.$emit('add-segment', (c.scrollLeft + e.pageX) / this.pixelsPerSecond)
     console.log(e)
+  }
+
+  onMousewheel(e: MouseWheelEvent) {
+    if (settings.emulateHorizontalScrolling === true) {
+      const c = this.$refs.svgContainer
+      if (c instanceof HTMLElement) {
+        c.scrollLeft = c.scrollLeft + e.deltaY
+      }
+    }
   }
 
   get drawWidth(): number {
@@ -532,16 +543,6 @@ export default class Waveform extends Vue {
 .overview-waveform
   z-index -1
   white-space nowrap
-  svg
-    path
-      transform translateZ(0)
-      opacity 0
-      animation fadeIn
-      -webkit-animation fadeIn ease-in 1
-      animation-fill-mode forwards
-      -webkit-animation-duration 1s
-      -moz-animation-duration 1s
-      animation-duration 1s
 
 .wave-form-inner
   svg
@@ -650,6 +651,9 @@ export default class Waveform extends Vue {
   span
     display inline-block
     margin 9px
+
+select
+  background #303030
 
 input[type=range]
   -webkit-appearance none

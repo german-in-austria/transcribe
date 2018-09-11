@@ -7,10 +7,12 @@ export interface Settings {
       name: string
       description: string
     }
-  }
+  },
+  emulateHorizontalScrolling: boolean
 }
 
 const settings: Settings = {
+  emulateHorizontalScrolling: true,
   keyboardShortcuts: {
     split: {
       modifier: 'meta',

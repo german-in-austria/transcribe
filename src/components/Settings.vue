@@ -19,10 +19,20 @@
           <v-tab>
             Shortcuts
           </v-tab>
-          <v-tab-item v-for="n in 2" :key="n">
+          <v-tab-item>
             <v-list>
-              <v-list-tile v-for="n in 10" :key="n">
-                <v-list-tile-title>Option {{n}}</v-list-tile-title>
+              <v-list-tile>
+                <v-list-tile-title>Emulate Horizontal Mousewheel scrolling</v-list-tile-title>
+                <v-list-tile-action>
+                  <v-switch v-model="settings.emulateHorizontalScrolling" />
+                </v-list-tile-action>
+              </v-list-tile>
+            </v-list>
+          </v-tab-item>
+          <v-tab-item>
+            <v-list>
+              <v-list-tile>
+                <v-list-tile-title>Emulate Horizontal Mousewheel scrolling</v-list-tile-title>
                 <v-list-tile-action>
                   <v-switch />
                 </v-list-tile-action>
