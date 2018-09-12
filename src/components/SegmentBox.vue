@@ -1,11 +1,11 @@
 <template>
   <div
     @mousedown="selectSegment(segment)"
-    @dblclick="playSegment(segmentKey, segment)"
-    @keydown.delete="deleteSegment(segmentKey, segment)"
+    @dblclick="playSegment(segment)"
+    @keydown.delete="deleteSegment(segment)"
     @keydown.right.stop.prevent="selectNext(segmentKey)"
     @keydown.left.stop.prevent="selectPrevious(segmentKey)"
-    @keydown.space.stop.prevent="playSegment(segmentKey, segment)"
+    @keydown.space.stop.prevent="playSegment(segment)"
     tabindex="-1"
     :class="[ 'segment', isSelected ? 'selected' : '' ]"
     :style="style">

@@ -188,7 +188,7 @@ export default class Editor extends Vue {
   }
 
   handleKey(e: KeyboardEvent) {
-    console.log(e.key, this.playHeadPos)
+    console.log(this.playHeadPos)
     if (e.key === 'c') {
       const segment = this.findSegmentAt(this.playHeadPos)
       console.log(segment)
@@ -265,6 +265,7 @@ export default class Editor extends Vue {
   async playSegment(segment: Segment) {
     this.playingSegment = null
     if (audio.store.uint8Buffer.byteLength > 0) {
+      console.log(segment)
       const buffer = await audio.decodeBufferTimeSlice(
         segment.startTime,
         segment.endTime,
