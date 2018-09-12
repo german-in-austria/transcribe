@@ -202,7 +202,7 @@ export default class Waveform extends Vue {
   }
 
   updateSecondsMarkers() {
-    const [left, right] = this.getRenderBoundaries()
+    const [left, right] = this.getRenderBoundaries(10000)
     const [startSecond, endSecond] = [Math.floor(left / this.pixelsPerSecond), Math.floor(right / this.pixelsPerSecond)]
     this.visibleSeconds = util.range(Math.max(startSecond, 0), Math.min(endSecond, this.audioLength))
   }
@@ -448,12 +448,12 @@ export default class Waveform extends Vue {
     return Math.ceil(this.audioLength * this.pixelsPerSecond / this.drawWidth)
   }
 
-  getRenderBoundaries(): number[] {
+  getRenderBoundaries(distance = this.drawDistance): number[] {
     const el = this.$refs.svgContainer
     if (el instanceof HTMLElement) {
       return [
-        Math.floor((el.scrollLeft + el.clientWidth / 2 - this.drawDistance / 2)),
-        Math.floor((el.scrollLeft + el.clientWidth / 2 + this.drawDistance / 2))
+        Math.floor((el.scrollLeft + el.clientWidth / 2 - distance / 2)),
+        Math.floor((el.scrollLeft + el.clientWidth / 2 + distance / 2))
       ]
     } else {
       return [0, 0]
