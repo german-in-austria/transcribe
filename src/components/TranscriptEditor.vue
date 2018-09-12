@@ -12,7 +12,7 @@
         v-for="segment in chunk"
         :key="segment.id"
         :class="['segment', segment.id === selectedSegment.id && 'segment-selected']">
-        <div class="time" @dblclick="$emit('play-segment', 0, segment)" @mousedown="selectAndScrollToSegment(segment)">
+        <div class="time" @dblclick="$emit('play-segment', segment)" @mousedown="selectAndScrollToSegment(segment)">
           {{ toTime(segment.startTime) }} - {{ toTime(segment.endTime) }}
         </div>
         <div

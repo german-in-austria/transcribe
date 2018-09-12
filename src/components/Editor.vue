@@ -67,7 +67,7 @@
           offset-y>
           <v-list class="context-menu-list" dense>
             <v-list-tile
-              @click="playSegment(0, selectedSegment)">
+              @click="playSegment(selectedSegment)">
               <v-list-tile-content>
                 <v-list-tile-title>Play</v-list-tile-title>
               </v-list-tile-content>
@@ -76,7 +76,7 @@
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
-              @click="splitSegmentFromMenu(0, selectedSegment)">
+              @click="splitSegmentFromMenu(selectedSegment)">
               <v-list-tile-content>
                 <v-list-tile-title>Split</v-list-tile-title>
               </v-list-tile-content>
@@ -149,7 +149,7 @@ export default class Editor extends Vue {
   @Prop() audioElement: HTMLAudioElement
   @Prop() transcript: Transcript
   // TODO: percentages are impractical. use pixels
-  segmentBufferPercent = .02
+  segmentBufferPercent = .01
   metadata: any = null
   boundLeft = 0
   boundRight = 10
@@ -262,7 +262,7 @@ export default class Editor extends Vue {
     }
   }
 
-  async playSegment(key: number, segment: Segment) {
+  async playSegment(segment: Segment) {
     this.playingSegment = null
     if (audio.store.uint8Buffer.byteLength > 0) {
       const buffer = await audio.decodeBufferTimeSlice(
