@@ -11,6 +11,7 @@
     :style="style">
     <slot :segment="segment" />
     <resize-parent
+      v-if="isSelected"
       class="resizer"
       resizing-class="resizing"
       @resize-end="onResizeEnd"
@@ -18,6 +19,7 @@
       left
     />
     <resize-parent
+      v-if="isSelected"
       class="resizer"
       resizing-class="resizing"
       @resize-end="onResizeEnd"
@@ -52,7 +54,7 @@ export default class SegmentBox extends Vue {
 
   get style(): any {
     return {
-        left: `${ this.offset }px`,
+        left: this.offset + 'px',
         width: this.width + 'px'
     }
   }

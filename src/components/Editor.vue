@@ -233,8 +233,11 @@ export default class Editor extends Vue {
     if (this.playingSegment === null) {
       requestAnimationFrame(() => {
         const el = (e.target as HTMLElement)
-        const scrollFactorLeft = el.scrollLeft / el.scrollWidth
-        const scrollFactorRight = (el.scrollLeft + el.clientWidth) / el.scrollWidth
+        const w = el.scrollWidth
+        const l = el.scrollLeft
+        const cw = el.clientWidth
+        const scrollFactorLeft = l / w
+        const scrollFactorRight = (l + cw) / w
         this.boundLeft = this.audioElement.duration * (scrollFactorLeft - this.segmentBufferPercent),
         this.boundRight = this.audioElement.duration * (scrollFactorRight + this.segmentBufferPercent)
       })
@@ -360,7 +363,7 @@ export default class Editor extends Vue {
   opacity .5
 .tracks
   white-space nowrap
-  overflow-x scroll
+  overflow-x hidden
   padding 10px 40px 20px 40px
   &::-webkit-scrollbar
   &::-webkit-scrollbar-button
