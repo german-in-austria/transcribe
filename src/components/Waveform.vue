@@ -68,10 +68,12 @@
         <slot />
       </div>
     </div>
-    <div class="overview" :style="{height: overviewHeight + 'px'}">
+    <div
+      @mousemove="moveOverviewCrossAndTime"
+      class="overview"
+      :style="{height: overviewHeight + 'px'}">
       <div
         @mousedown="startDragOverview"
-        v-if="overviewSvgs.length > 0"
         ref="overview"
         class="overview-waveform">
         <svg
@@ -80,12 +82,6 @@
           :width="overviewSvgWidth"
           style="width: 100%"
           height="60">
-          <path
-            v-for="(svg, i) in overviewSvgs"
-            :key="i"
-            :fill="svg.channel == 0 ? '#FB7676' : '#69C'"
-            :d="svg.path"
-          />
         </svg>
       </div>
       <div
@@ -98,8 +94,15 @@
           transform: `translateX(${ overviewThumbOffset }px)`,
           width: `${ overviewThumbWidth }px`,
           transition: transitionOverviewThumb ? '.25s' : 'unset'
-        }">
-      </div>
+        }" />
+      <div
+        class="overview-cross"
+        ref="overviewCross"
+      />
+      <div
+        class="overview-time"
+        ref="overviewTime"
+      />
     </div>
   </div>
 </template>
@@ -159,7 +162,6 @@ export default class Waveform extends Vue {
   audioLength = 0
   metadata: any = {}
 
-  overviewSvgs: Array<{channel: number, path: string}> = []
   renderedWaveFormPieces: number[] = []
   totalWidth = this.audioLength * this.pixelsPerSecond
 
@@ -179,11 +181,17 @@ export default class Waveform extends Vue {
   onMousewheel(e: MouseWheelEvent) {
     if (settings.emulateHorizontalScrolling === true) {
       const c = this.$refs.svgContainer
-      if (c instanceof HTMLElement && e.deltaY !== 0) {
+      if (c instanceof HTMLElement) {
         e.preventDefault()
-        c.scrollLeft = c.scrollLeft + e.deltaY / (e.shiftKey === true ? 10 : 1)
+        c.scrollLeft = c.scrollLeft + (e.deltaY) / (e.shiftKey === true ? 10 : 1)
       }
     }
+  }
+
+  moveOverviewCrossAndTime(e: MouseEvent) {
+    requestAnimationFrame(() => {
+      (this.$refs.overviewCross as HTMLElement).style.transform = `translateX(${e.pageX}px)`
+    })
   }
 
   get drawWidth(): number {
@@ -472,12 +480,16 @@ export default class Waveform extends Vue {
     const left = (startTime) * (this.overviewSvgWidth / totalDuration)
     const [svg1, svg2] = await Promise.all([
       audio.drawWavePathAsync(audioBuffer, width, this.overviewHeight, 0, left),
-      await audio.drawWavePathAsync(audioBuffer, width, this.overviewHeight, 1, left)
+      audio.drawWavePathAsync(audioBuffer, width, this.overviewHeight, 1, left)
     ])
-    this.overviewSvgs = this.overviewSvgs.concat([
-      { channel: 0, path: svg1 },
-      { channel: 1, path: svg2 }
-    ])
+    requestAnimationFrame(() => {
+      const el = (this.$el.querySelector('.overview-waveform svg') as HTMLElement);
+      el.innerHTML = `
+        ${el.innerHTML}
+        <path fill="#FB7676" d="${svg1}"/>
+        <path fill="#69C" d="${svg2}" />
+      `
+    })
   }
 
   async drawWaveFormPiece(i: number) {
@@ -607,13 +619,26 @@ export default class Waveform extends Vue {
 .overview-thumb
   top 0
   z-index -1
-  background rgba(0,0,0,.5)
+  background rgba(0,0,0,1)
   height 100%
   width 50px
   position absolute
   transition .25s transform
   &:focus
     outline 0
+
+.overview:hover .overview-cross
+  opacity 1
+
+.overview-cross
+  opacity 0
+  pointer-events none
+  top 0
+  z-index 1
+  background white
+  height 100%
+  width 1px
+  position absolute
 
 .second-marker
   min-width: 1px;

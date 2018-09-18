@@ -1,107 +1,69 @@
 <template>
-  <div class="segment-editor">
-    <div class="token-fake-display segment-text">
-      <div
-        class="token"
-        v-for="(token, i) in localTokens"
-        :key="i">
-        {{ token }}&nbsp;
-        <div :class="['token-type-indicator', tokenTypeFromToken(token), focused && 'focused']" />
-      </div>
+  <div>
+    <div class="time" @dblclick="$emit('play-segment', segment)" @mousedown="selectAndScrollToSegment(segment)">
+      {{ toTime(segment.startTime) }} - {{ toTime(segment.endTime) }}
     </div>
     <div
-      @focus="focused = true"
-      @blur="updateLabelText"
-      v-contenteditable:segmentText="true"
-      :style="textStyle"
-      class="tokens-input segment-text">
+      class="speaker-segment"
+      v-for="(speaker, key) in speakers"
+      :key="key">
+      <speaker-segment-transcript
+        v-if="
+          speakerEvent !== undefined &&
+          speakerEvent[speaker] !== undefined &&
+          speakerEvent[speaker].tokens !== undefined"
+        class="tokens"
+        :tokens="speakerEvent[speaker].tokens"
+      />
     </div>
   </div>
 </template>
-
 <script lang="ts">
-
-import contenteditableDirective from 'vue-contenteditable-directive'
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import settings from '../store/settings'
+import SpeakerSegmentTranscript from '@components/SpeakerSegmentTranscript.vue'
+import { SpeakerEvent } from '@components/App.vue'
 
-Vue.use(contenteditableDirective)
+@Component({
+  components: {
+    SpeakerSegmentTranscript
+  }
+})
+export default class SegmentTranscript extends Vue {
 
-@Component
-export default class SegmentEditor extends Vue {
+  @Prop() segment: Segment
+  @Prop() speakers: any[]
+  @Prop() speakerEvent: SpeakerEvent
 
-  @Prop() tokens: string[]
-  localTokens = this.tokens.slice()
-  focused = false
-  settings = settings
+  offsetWidth = 0
 
-  tokenTypeFromToken(token: string) {
-    return token.startsWith('((') ? 'non-verbal' : ''
+  mounted() {
+    this.offsetWidth = this.$el.offsetWidth + 1
+    this.$emit('element-render', this.offsetWidth)
   }
 
-  get segmentText() {
-    return this.localTokens ? this.localTokens.join(' ') : ''
+  beforeDestroy() {
+    this.$emit('element-unrender', this.offsetWidth)
   }
 
-  set segmentText(newVal: string) {
-    this.localTokens = newVal.split(' ')
+  emitDimensions() {
+    requestAnimationFrame(() => {
+      this.offsetWidth = this.$el.offsetWidth + 1
+    })
   }
 
-  updateLocalTokens(e: Event) {
-    this.localTokens = ((e.target as HTMLDivElement).textContent || '').split(' ')
+  toTime(time: number) {
+    return new Date(time * 1000).toISOString().substr(11, 8)
   }
-
-  updateLabelText(e: Event) {
-    this.focused = false
-    const tokens = ((e.target as HTMLDivElement).textContent || '').split(' ')
-    this.$emit('updateSpeakerEvent', tokens)
+  selectAndScrollToSegment(segment: Segment) {
+    this.$emit('select-segment', segment)
+    this.$emit('scroll-to-segment', segment)
   }
-
-  get textStyle() {
-    if (this.settings.darkMode === true) {
-      return {
-        color: 'white'
-      }
-    } else {
-      return {
-        color: '#333'
-      }
-    }
-  }
-
 }
 </script>
-
 <style lang="stylus" scoped>
-.segment-editor
-  position relative
-
-.token-type-indicator
-  background #6699CC
-  height 3px
-  border-radius 2px
-  margin 1px 3px 3px 0px
-  &.non-verbal
-    background red
-  // OTHER TOKEN TYPES GO HERE
-
-.token-fake-display
-  pointer-events none
-  position absolute
-  .token
-    display inline-block
-    color transparent
-
-.tokens-input
-  tokens-input
-  outline 0
-  opacity .7
-  transition .5s color
-  &:focus
-    outline 0
-    opacity 1
-
-.segment-text
-  padding 1px
-
+.time
+  cursor default
+  font-size 85%
+  color #aaa
+  text-align center
 </style>

@@ -4,30 +4,20 @@
     ref="tracks"
     class="tracks"
     v-if="transcript.segments && transcript.speakers && transcript.speakerEvents">
-    <div
-      v-for="(chunk, i) in chunkedSegments"
-      :key="i"
-      class="segment-chunk">
-      <div
-        v-for="segment in chunk"
+    <div :style="{transform: `translateX(${innerLeft}px)`}" ref="inner" class="transcript-segments-inner">
+      <segment-transcript
+        v-for="(segment, i) in visibleSegments"
         :key="segment.id"
-        :class="['segment', segment.id === selectedSegment.id && 'segment-selected']">
-        <div class="time" @dblclick="$emit('play-segment', segment)" @mousedown="selectAndScrollToSegment(segment)">
-          {{ toTime(segment.startTime) }} - {{ toTime(segment.endTime) }}
-        </div>
-        <div
-          class="speaker-segment"
-          v-for="(speaker, key) in transcript.speakers"
-          :key="key">
-          <segment-transcript
-            v-if="
-              transcript.speakerEvents[segment.id] !== undefined &&
-              transcript.speakerEvents[segment.id][speaker] !== undefined &&
-              transcript.speakerEvents[segment.id][speaker].tokens !== undefined"
-            class="tokens"
-            :tokens="transcript.speakerEvents[segment.id][speaker].tokens"
-          />
-        </div>
+        @select-segment="(e) => $emit('select-segment', e)"
+        @scroll-to-segment="(e) => $emit('scroll-to-segment', e)"
+        @play-segment="(e) => $emit('play-segment', e)"
+        @element-unrender="(width) => handleUnrender(width, i, segment.id)"
+        @element-render="(width) => handleRender(width, i, segment.id)"
+        :segment="segment"
+        :speaker-event="transcript.speakerEvents[segment.id]"
+        :speakers="transcript.speakers"
+        :class="['segment', segment.id === selectedSegment.id && 'segment-selected']"
+      />
       </div>
     </div>
   </div>
@@ -37,46 +27,108 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import { Transcript } from '@components/App.vue'
-import segmentTranscript from '@components/SegmentTranscript.vue'
+import SegmentTranscript from '@components/SegmentTranscript.vue'
 import settings from '@store/settings'
+import * as _ from 'lodash'
+
+const defaultLimit = 20
+let outerWidth = 0
 
 @Component({
   components: {
-    segmentTranscript
+    SegmentTranscript
   }
 })
 export default class TranscriptEditor extends Vue {
+
   @Prop() transcript: Transcript
   @Prop() selectedSegment: Segment
-  chunkedSegments: Segment[][] = [ this.transcript.segments.slice(0, 400) ]
 
-  toTime(time: number) {
-    return new Date(time * 1000).toISOString().substr(11, 8)
+  innerLeft = 0
+  currentOffset = 0
+  lastScrollLeft = 0
+  visibleSegments = this.transcript.segments.slice(0, defaultLimit)
+  throttledRenderer = _.throttle(this.updateList, 60)
+
+  mounted() {
+    outerWidth = this.$el.clientWidth
   }
 
-  selectAndScrollToSegment(segment: Segment) {
-    this.$emit('select-segment', segment)
-    this.$emit('scroll-to-segment', segment)
+  handleRender(width: number, index: number, segment_id: string) {
+    if (index === 0) {
+      console.log('rendered leftmost item', width, segment_id)
+      this.innerLeft = this.innerLeft - width
+    // RIGHT
+    } else if (index === this.visibleSegments.length - 1) {
+      console.log('rendered rightmost item', width, segment_id)
+      // this.innerLeft = this.innerLeft + width
+    }
+  }
+  handleUnrender(width: number, index: number, segment_id: string) {
+    // LEFTMOST ITEM
+    if (index === 0) {
+      console.log('unrendered leftmost item', width, segment_id)
+      this.innerLeft = this.innerLeft + width // padding
+    // RIGHT
+    } else if (index === this.visibleSegments.length - 1) {
+      console.log('unrendered rightmost item', width, segment_id)
+      // console.log('unrendered rightmost item', width)
+      // this.innerLeft = this.innerLeft - width // padding
+    }
+  }
+
+  updateList(leftToRight: boolean) {
+    if (leftToRight) {
+      if (this.innerLeft <= -1500 && this.currentOffset + defaultLimit + 1 < this.transcript.segments.length) {
+        this.visibleSegments.push(this.transcript.segments[this.currentOffset + defaultLimit + 1])
+        const unrendered = this.visibleSegments.shift()
+        this.currentOffset = this.currentOffset + 1
+        console.log('left to right')
+      }
+    } else {
+      if (this.innerLeft >= -200 && this.currentOffset > 0) {
+        this.visibleSegments.unshift(this.transcript.segments[this.currentOffset - 1])
+        const unrendered = this.visibleSegments.pop()
+        this.currentOffset = this.currentOffset - 1
+        console.log('right to left')
+      }
+    }
+    // WAIT FOR THE ELEMENT TO RENDER,
+    // AND RENDER THE NEXT IF NECESSARY.
+    // RECURSION
+    // TODO: USE TRAMPLINE?
+    this.$nextTick(() => {
+      requestAnimationFrame(() => {
+        if (
+          (this.innerLeft <= -1500 || this.innerLeft >= -200)
+          && (this.currentOffset > 0 && this.currentOffset + defaultLimit + 1 < this.transcript.segments.length)
+        ) {
+          this.updateList(leftToRight)
+        }
+      })
+    })
   }
 
   onMousewheel(e: MouseWheelEvent) {
-    if (settings.emulateHorizontalScrolling === true) {
-      const c = this.$refs.tracks
-      if (c instanceof HTMLElement) {
-        c.scrollLeft = c.scrollLeft + e.deltaY / (e.shiftKey === true ? 10 : 1)
-      }
-    }
+    e.preventDefault()
+    this.lastScrollLeft = this.innerLeft
+    this.innerLeft = this.innerLeft - (e.deltaX || e.deltaY) / (e.shiftKey === true ? 10 : 1)
+    this.throttledRenderer(this.innerLeft <= this.lastScrollLeft)
+    this.lastScrollLeft = this.innerLeft
   }
 }
 </script>
 
 <style lang="stylus" scoped>
+.tracks
+  width 100%
 .segment
   display inline-block
   vertical-align top
   border-right 1px solid rgba(255,255,255,.1)
   padding 0 6px
   color #444
+
 
 .segment-selected
   color #000
@@ -91,11 +143,5 @@ export default class TranscriptEditor extends Vue {
 
 .segment-chunk
   display inline-block
-
-.time
-  cursor default
-  font-size 85%
-  color #aaa
-  text-align center
 
 </style>

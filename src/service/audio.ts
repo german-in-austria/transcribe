@@ -187,7 +187,8 @@ function findOggPages(from: number, to: number, pages: OggIndex['pages']) {
   return {startPage, endPage}
 }
 
-async function drawWavePathAsync(buffer: AudioBuffer, width: number, height: number, channel = 0, offsetLeft = 0) {
+// tslint:disable-next-line:max-line-length
+async function drawWavePathAsync(buffer: AudioBuffer, width: number, height: number, channel = 0, offsetLeft = 0): Promise<string> {
   const b = buffer.getChannelData(channel).buffer
   const p = await promiseWorker.postMessage({
     buffer: b,
