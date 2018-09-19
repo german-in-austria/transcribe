@@ -4,7 +4,7 @@
     ref="tracks"
     class="tracks"
     v-if="transcript.segments && transcript.speakers && transcript.speakerEvents">
-    <div :style="{transform: `translateX(${innerLeft}px)`}" ref="inner" class="transcript-segments-inner">
+    <div :style="{transform: `translateX(${ innerLeft }px)`}" ref="inner" class="transcript-segments-inner">
       <segment-transcript
         v-for="(segment, i) in visibleSegments"
         :key="segment.id"
@@ -49,29 +49,35 @@ export default class TranscriptEditor extends Vue {
   lastScrollLeft = 0
   visibleSegments = this.transcript.segments.slice(this.currentIndex, this.currentIndex + defaultLimit)
   throttledRenderer = _.throttle(this.updateList, 60)
+  throttledEmitter = _.throttle(this.emitScroll, 60)
 
   mounted() {
     outerWidth = this.$el.clientWidth
+    this.emitScroll()
+  }
+
+  emitScroll() {
+    this.$emit('scroll', this.visibleSegments[Math.floor(this.visibleSegments.length / 2)].startTime)
   }
 
   handleRender(width: number, index: number, segment_id: string) {
     if (index === 0) {
-      console.log('rendered leftmost item', width, segment_id)
+      // console.log('rendered leftmost item', width, segment_id)
       this.innerLeft = this.innerLeft - width
     // RIGHT
     } else if (index === this.visibleSegments.length - 1) {
-      console.log('rendered rightmost item', width, segment_id)
+      // console.log('rendered rightmost item', width, segment_id)
       // this.innerLeft = this.innerLeft + width
     }
   }
   handleUnrender(width: number, index: number, segment_id: string) {
     // LEFTMOST ITEM
     if (index === 0) {
-      console.log('unrendered leftmost item', width, segment_id)
+      // console.log('unrendered leftmost item', width, segment_id)
       this.innerLeft = this.innerLeft + width // padding
     // RIGHT
     } else if (index === this.visibleSegments.length - 1) {
-      console.log('unrendered rightmost item', width, segment_id)
+      // console.log('unrendered rightmost item', width, segment_id)
       // console.log('unrendered rightmost item', width)
       // this.innerLeft = this.innerLeft - width // padding
     }
@@ -79,18 +85,21 @@ export default class TranscriptEditor extends Vue {
 
   updateList(leftToRight: boolean) {
     if (leftToRight) {
+      // SCROLL LEFT TO RIGHT
       if (this.innerLeft <= -1500 && this.currentIndex + defaultLimit + 1 < this.transcript.segments.length) {
         this.visibleSegments.push(this.transcript.segments[this.currentIndex + defaultLimit + 1])
         const unrendered = this.visibleSegments.shift()
         this.currentIndex = this.currentIndex + 1
-        console.log('left to right')
+        // this.throttledEmitter()
+        this.emitScroll()
       }
     } else {
+      // SCROLL RIGHT TO LEFT
       if (this.innerLeft >= -200 && this.currentIndex > 0) {
         this.visibleSegments.unshift(this.transcript.segments[this.currentIndex - 1])
         const unrendered = this.visibleSegments.pop()
         this.currentIndex = this.currentIndex - 1
-        console.log('right to left')
+        this.emitScroll()
       }
     }
     // WAIT FOR THE ELEMENT TO RENDER,

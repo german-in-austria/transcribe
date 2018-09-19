@@ -47,7 +47,7 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import { Transcript } from '@components/App.vue'
 import * as _ from 'lodash'
 @Component
-export default class  extends Vue {
+export default class Search extends Vue {
   @Prop() transcript: Transcript
   @Prop({ default: false }) show: boolean
   searchTerm = ''

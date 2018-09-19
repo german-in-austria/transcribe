@@ -1,7 +1,7 @@
 <template>
   <div>
     <v-toolbar class="elevation-0" fixed app>
-      <v-toolbar-title>{{ transcript.name || 'Untitled Transcript' }}</v-toolbar-title>
+      <div>{{ transcript.name || 'Untitled Transcript' }}</div>
       <v-spacer></v-spacer>
       <v-btn @click.stop="showSearch = true" icon flat>
         <v-icon>search</v-icon>
@@ -62,13 +62,11 @@
           :speaker-events="transcript.speakerEvents"
           :selected-segment="selectedSegment"
           :metadata="metadata">
-          <template slot-scope="segment">
-            <!-- inner elements go here -->
-          </template>
         </segment-box>
         <v-menu
           min-width="150"
           lazy
+          transition="none"
           v-model="showMenu"
           :position-x="menuX"
           :position-y="menuY"
@@ -120,7 +118,15 @@
         </v-menu>
       </div>
     </wave-form>
+
+    <div ref="transcriptScrollbar" class="transcript-scrollbar">
+      <triangle
+        up
+        class="transcript-scrollhandle"
+        ref="transcriptScrollhandle" />
+    </div>
     <transcript-editor
+      @scroll="handleTranscriptScroll"
       @play-segment="playSegment"
       @select-segment="selectSegment"
       @scroll-to-segment="(s) => scrollToSegment = s"
@@ -140,6 +146,7 @@ import search from './Search.vue'
 import { Transcript } from './App.vue'
 import transcriptEditor from '@components/TranscriptEditor.vue'
 import segmentBox from '@components/SegmentBox.vue'
+import triangle from '@components/Triangle.vue'
 import playHead from '@components/PlayHead.vue'
 import * as _ from 'lodash'
 import * as fns from 'date-fns'
@@ -153,7 +160,8 @@ import audio from '../service/audio'
     spectogram,
     playHead,
     segmentBox,
-    search
+    search,
+    triangle
   }
 })
 export default class Editor extends Vue {
@@ -181,6 +189,15 @@ export default class Editor extends Vue {
   menuX = 0
   menuY = 0
   layerX = 0 // this is used for splitting
+
+  handleTranscriptScroll(e: number) {
+    const i = (this.$refs.transcriptScrollhandle as Vue).$el
+    const o = this.$refs.transcriptScrollbar as HTMLElement
+    requestAnimationFrame(() => {
+      const pixels = e / this.audioElement.duration * o.clientWidth
+      i.style.transform = `translateX(${ pixels }px)`
+    })
+  }
 
   doShowMenu(e: MouseEvent) {
     console.log(e)
@@ -392,6 +409,11 @@ export default class Editor extends Vue {
     background-clip content-box
   // &::-webkit-scrollbar-corner
   // &::-webkit-resizer
+
+.transcript-scrollbar
+  top -15px
+  position relative
+  height 20px
 
 .jump-to
   opacity 0

@@ -84,15 +84,14 @@
           height="60">
         </svg>
       </div>
-      <div
+      <triangle
+        down
         class="overview-thumb"
-        ref="overviewThumb"
         tabindex="-1"
         @mousedown="startDragOverview"
         @mouseup="scrollFromOverview"
         :style="{
           transform: `translateX(${ overviewThumbOffset }px)`,
-          width: `${ overviewThumbWidth }px`,
           transition: transitionOverviewThumb ? '.25s' : 'unset'
         }" />
       <div
@@ -102,7 +101,7 @@
       <div
         class="overview-time"
         ref="overviewTime"
-        :style="{ width: overviewTimeWidth }"
+        :style="{ width: overviewTimeWidth + 'px' }"
       />
     </div>
   </div>
@@ -111,6 +110,7 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
+import triangle from '@components/Triangle'
 import * as drawBuffer from 'draw-wave'
 import * as _ from 'lodash'
 import audio, { OggIndex } from '../service/audio'
@@ -122,7 +122,11 @@ const queue = new Queue({
   autoStart: true
 })
 
-@Component
+@Component({
+  components: {
+    triangle
+  }
+})
 export default class Waveform extends Vue {
 
   @Prop() audioElement: HTMLAudioElement|null
@@ -133,8 +137,8 @@ export default class Waveform extends Vue {
   zoomLevels = [.25, .5, .75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4]
   drawDistance = 5000 // pixels in both directions from the center of the viewport (left and right)
   initialPixelsPerSecond = 150
-  overviewSvgWidth = 2000
-  overviewTimeWidth = 50
+  overviewSvgWidth = 1500
+  overviewTimeWidth = 70
   // state
   pixelsPerSecond = this.initialPixelsPerSecond
   disabled = false
@@ -223,11 +227,13 @@ export default class Waveform extends Vue {
     const w = this.$refs.svgContainer
     const o = this.$refs.overview
     if (w instanceof HTMLElement && o instanceof HTMLElement) {
-      this.overviewThumbWidth = Math.max(w.clientWidth / w.scrollWidth * o.clientWidth, 10)
-      this.overviewThumbOffset = (
-        (w.scrollLeft + w.clientWidth) / w.scrollWidth * (o.clientWidth - this.overviewThumbWidth)
-      )
-      localStorage.setItem('scrollPos', String(w.scrollLeft))
+      requestAnimationFrame(() => {
+        this.overviewThumbWidth = Math.max(w.clientWidth / w.scrollWidth * o.clientWidth, 10)
+        this.overviewThumbOffset = (
+          (w.scrollLeft + w.clientWidth) / w.scrollWidth * o.clientWidth
+        )
+        localStorage.setItem('scrollPos', String(w.scrollLeft))
+      })
     }
   }
 
@@ -603,14 +609,8 @@ export default class Waveform extends Vue {
       animation-duration 1s
 
 .overview
-  opacity .4
-  overflow-y hidden
-  top -15px
   position relative
-  transition .25s opacity
-  &:hover
-    opacity .7
-
+  
 .fade-slow-enter-active, .fade-leave-active 
   transition opacity 3.5s
 
@@ -619,11 +619,7 @@ export default class Waveform extends Vue {
 
 .overview-thumb
   top 0
-  z-index -1
-  background rgba(0,0,0,1)
-  height 100%
-  width 50px
-  position absolute
+  z-index 1
   transition .25s transform
   &:focus
     outline 0
@@ -637,10 +633,10 @@ export default class Waveform extends Vue {
   transition opacity .5s
   opacity 0
   pointer-events none
-  top 20px
+  top 00px
   z-index 1
   background #ccc
-  height 100%
+  height 80%
   width 1px
   position absolute
 
@@ -650,11 +646,12 @@ export default class Waveform extends Vue {
   position absolute
   color #ccc
   z-index 2
-  top 0px
+  top -25px
   font-size 80%
-  font-weight bold
   text-align center
-  width 50px
+  background rgba(0,0,0,.2)
+  border-radius 10px
+  line-height 20px
 
 .second-marker
   min-width: 1px;

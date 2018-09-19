@@ -69,13 +69,11 @@ export default class PlayHead extends Vue {
   }
 
   drag(e: MouseEvent) {
-    if (e.target === this.$refs.stage as HTMLElement) {
-      this.left = e.layerX
-    }
+    this.left = e.pageX
   }
 
   endDrag(e: MouseEvent) {
-    this.left = e.layerX
+    this.left = e.pageX
     this.$emit('change-position', e.layerX / this.metadata.pixelsPerSecond)
     document.removeEventListener('mousemove', this.drag)
     document.removeEventListener('mouseup', this.endDrag)
