@@ -4,9 +4,11 @@ import * as concatBuffer from 'array-buffer-concat'
 import * as audioBufferToWav from 'audiobuffer-to-wav'
 
 import * as PromiseWorker from 'promise-worker'
-import Worker from './waveform.worker'
-const worker = new Worker('')
-const promiseWorker = new PromiseWorker(worker)
+import WaveformWorker from './waveform.worker'
+const waveformWorker = new PromiseWorker(new WaveformWorker(''))
+
+import OggIndexWorker from './oggindex.worker'
+const oggIndexWorker = new PromiseWorker(new OggIndexWorker(''))
 
 export interface OggIndex {
   pages: Array<{ byteOffset: number, granulePosition: number, timestamp: number }>
@@ -31,7 +33,7 @@ function readU4le(dataView: DataView, i: number) {
   return dataView.byteLength > i + 32 ? dataView.getUint32(i, true) : null
 }
 
-function readU8le(dataView: DataView, i: number) {
+export function readU8le(dataView: DataView, i: number) {
   const v1 = readU4le(dataView, i)
   const v2 = readU4le(dataView, i + 4)
   return v1 !== null && v2 !== null ? 0x100000000 * v2 + v1 : null
@@ -77,7 +79,7 @@ function getOggHeaderBuffer(buffer: ArrayBuffer): ArrayBuffer|null {
   }
 }
 
-function getOggSampleRate(buffer: ArrayBuffer): number {
+export function getOggSampleRate(buffer: ArrayBuffer): number {
   if (sampleRate === null) {
     // that’s where the 32 bit integer sits
     const chunk = buffer.slice(40, 48)
@@ -87,6 +89,13 @@ function getOggSampleRate(buffer: ArrayBuffer): number {
   } else {
     return sampleRate
   }
+}
+
+async function getOggIndexAsync(buffer: ArrayBuffer): Promise<OggIndex> {
+  const m = await oggIndexWorker.postMessage({ buffer }, [ buffer ])
+  oggLength = m.oggLength
+  console.log(m)
+  return m.oggIndex
 }
 
 function getOggIndex(buffer: ArrayBuffer): OggIndex {
@@ -190,7 +199,7 @@ function findOggPages(from: number, to: number, pages: OggIndex['pages']) {
 // tslint:disable-next-line:max-line-length
 async function drawWavePathAsync(buffer: AudioBuffer, width: number, height: number, channel = 0, offsetLeft = 0): Promise<string> {
   const b = buffer.getChannelData(channel).buffer
-  const p = await promiseWorker.postMessage({
+  const p = await waveformWorker.postMessage({
     buffer: b,
     width,
     height,
@@ -248,7 +257,7 @@ async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuff
   let startPage
   let endPage
   if (createIndex) {
-    const adHocIndex = getOggIndex(buffer).pages
+    const adHocIndex = (await getOggIndexAsync(buffer)).pages
     const pages = findOggPages(from, to + 1, adHocIndex)
     startPage = pages.startPage
     endPage = pages.endPage
@@ -259,7 +268,7 @@ async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuff
     endPage = pages.endPage
   }
   // TODO: WHY IS THERE STILL AN OFFSET OF .2?
-  const overflowStart    = Math.max(0, from - startPage.timestamp + .2)
+  const overflowStart = Math.max(0, from - startPage.timestamp + .2)
   console.log({
     pageDuration: endPage.timestamp - startPage.timestamp,
     start: overflowStart,
@@ -267,21 +276,12 @@ async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuff
     duration: to - from
   })
   console.log('bytes', endPage.byteOffset - startPage.byteOffset)
-  const decodedBuffer   = await decodeBufferSegment(startPage.byteOffset, endPage.byteOffset, buffer)
+  const decodedBuffer = await decodeBufferSegment(startPage.byteOffset, endPage.byteOffset, buffer)
   console.log('decoded buffer duration', decodedBuffer.duration)
   // tslint:disable-next-line:max-line-length
-  const slicedBuffer    = await sliceAudioBuffer(decodedBuffer, overflowStart * 1000, (to - from + overflowStart) * 1000)
+  const slicedBuffer = await sliceAudioBuffer(decodedBuffer, overflowStart * 1000, (to - from + overflowStart) * 1000)
   console.timeEnd('decode buffer segment ' + from)
   console.log({slicedDuration: slicedBuffer.duration})
-  // console.time('copy to worker ' + from)
-  // const frameCount = audioContext.sampleRate * 2 * (to - from)
-  // const myArrayBuffer = audioContext.createBuffer(2, frameCount, audioContext.sampleRate)
-  // console.log({myArrayBuffer})
-  // const anotherArray = new Float32Array(decodedBuffer.length)
-  // myArrayBuffer.copyFromChannel(anotherArray, 1)
-  // worker.postMessage({b: anotherArray})
-  // console.timeEnd('copy to worker ' + from)
-  // drawWave(decodedBuffer, 5000, 200)
   return slicedBuffer
 }
 
@@ -299,6 +299,7 @@ const audio = {
   getOggNominalBitrate,
   audioBufferToWav,
   getOggIndex,
+  getOggIndexAsync,
   getOggHeaderBuffer,
   sliceAudioBuffer,
   concatBuffer,

@@ -7,7 +7,7 @@ registerPromiseWorker((message: { buffer: ArrayBuffer, width: number, height: nu
   const chanData = new Float32Array(message.buffer)
   const step = Math.ceil( chanData.length / message.width )
   const amp = message.height / 2
-  console.time('draw wave 1')
+  console.time('draw wave async')
   for (let i = 0; i < message.width; i++) {
     let min = 1.0
     let max = -1.0
@@ -23,7 +23,7 @@ registerPromiseWorker((message: { buffer: ArrayBuffer, width: number, height: nu
     upperHalf = upperHalf + `${ i === 0 ? 'M' : 'L' } ${ i + message.offsetLeft } ${ (1 + min) * amp } `
     lowerHalf = `L ${ i + message.offsetLeft } ${ Math.max(1, (max - min) * amp) + ((1 + min) * amp) } ` + lowerHalf
   }
-  console.timeEnd('draw wave 1')
+  console.timeEnd('draw wave async')
   return upperHalf + lowerHalf + 'Z'
 })
 export default null as any

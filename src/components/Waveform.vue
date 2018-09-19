@@ -1,7 +1,7 @@
 <template>
   <div :class="{ disabled, loading }">
-    <v-layout style="position: relative;">
-      <v-flex class="pl-2" xs2 text-xs-center>
+    <v-layout class="pa-3" style="position: relative;">
+      <v-flex xs2 text-xs-left>
         <label for="scaleFactorY" class="caption grey--text lighten-2">
           Scale
         </label>
@@ -17,7 +17,7 @@
       <v-flex class="text-xs-center" xs10>
         <slot name="headline" />
       </v-flex>
-      <v-flex class="pr-2" xs2 text-xs-center>
+      <v-flex xs2 text-xs-right>
         <span class="caption grey--text lighten-2">
           Zoom
         </span>
@@ -102,6 +102,7 @@
       <div
         class="overview-time"
         ref="overviewTime"
+        :style="{ width: overviewTimeWidth }"
       />
     </div>
   </div>
@@ -121,19 +122,6 @@ const queue = new Queue({
   autoStart: true
 })
 
-async function callWhenReady<T>(cb: () => T)  {
-  return new Promise((resolve, reject) => {
-    setTimeout(async () => {
-      try {
-        const res = await cb()
-        resolve(res)
-      } catch (e) {
-        reject(e)
-      }
-    }, 2)
-  }) as Promise<T>
-}
-
 @Component
 export default class Waveform extends Vue {
 
@@ -145,7 +133,8 @@ export default class Waveform extends Vue {
   zoomLevels = [.25, .5, .75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4]
   drawDistance = 5000 // pixels in both directions from the center of the viewport (left and right)
   initialPixelsPerSecond = 150
-  overviewSvgWidth = 500
+  overviewSvgWidth = 2000
+  overviewTimeWidth = 50
   // state
   pixelsPerSecond = this.initialPixelsPerSecond
   disabled = false
@@ -189,9 +178,24 @@ export default class Waveform extends Vue {
   }
 
   moveOverviewCrossAndTime(e: MouseEvent) {
-    requestAnimationFrame(() => {
-      (this.$refs.overviewCross as HTMLElement).style.transform = `translateX(${e.pageX}px)`
-    })
+    const o = this.$refs.overview
+    const t = this.$refs.overviewTime
+    const c = this.$refs.overviewCross
+    if (o instanceof HTMLElement && t instanceof HTMLElement && c instanceof HTMLElement) {
+      requestAnimationFrame(() => {
+        const w = o.clientWidth
+        const secondsIn = this.audioLength / w * e.pageX
+        const offsetT = Math.min(
+          Math.max(e.pageX - this.overviewTimeWidth / 2, 0),
+          w - this.overviewTimeWidth
+        )
+        requestAnimationFrame(() => {
+          t.innerHTML = this.toTime(secondsIn)
+          t.style.transform = `translateX(${offsetT}px)`
+          c.style.transform = `translateX(${e.pageX}px)`
+        })
+      })
+    }
   }
 
   get drawWidth(): number {
@@ -357,7 +361,7 @@ export default class Waveform extends Vue {
       const sampleRate         = audio.getOggSampleRate(bufferFirstSlice)
       const bitRate            = audio.getOggNominalBitrate(bufferFirstSlice)
       const headerBuffer       = audio.getOggHeaderBuffer(bufferFirstSlice)
-      const { headers, pages } = audio.getOggIndex(bufferFirstSlice)
+      const { headers, pages } = await audio.getOggIndexAsync(bufferFirstSlice)
       console.log(bitRate)
       return {
         sampleRate,
@@ -393,7 +397,6 @@ export default class Waveform extends Vue {
               left : Number(scrollLeft)
             })
           }
-          // await callWhenReady(() => that.drawWaveFormPiece(0))
           let preBuffer = new Uint8Array(0)
           if (res.body instanceof ReadableStream) {
             const reader = res.body.getReader()
@@ -401,10 +404,10 @@ export default class Waveform extends Vue {
             reader.read().then(async function process(chunk: {value: Uint8Array, done: boolean}): Promise<any> {
               if (chunk.done === false) {
                 if (chunk.value && chunk.value.buffer instanceof ArrayBuffer) {
-                  preBuffer = util.concatUint8Array(preBuffer, chunk.value)
+                  preBuffer = await util.concatUint8ArrayAsync(preBuffer, chunk.value)
                   if (preBuffer.byteLength > 2048 * 1024) {
-                    audio.store.uint8Buffer = util.concatUint8Array(audio.store.uint8Buffer, preBuffer)
-                    const {headers, pages} = audio.getOggIndex(preBuffer.buffer)
+                    audio.store.uint8Buffer = await util.concatUint8ArrayAsync(audio.store.uint8Buffer, preBuffer)
+                    const {headers, pages} = await audio.getOggIndexAsync(preBuffer.buffer)
                     preBuffer = new Uint8Array(0)
                     // reset buffer
                     console.log(audio.store.uint8Buffer.byteLength, 'bytes loaded')
@@ -511,7 +514,7 @@ export default class Waveform extends Vue {
         headers: { Range: `bytes=${startByte}-${endByte}`}
       })).arrayBuffer()
       console.timeEnd('buffer segment download')
-      const { pages } = audio.getOggIndex(buffer)
+      const { pages } = await audio.getOggIndexAsync(buffer)
       const trimmedBuffer = buffer.slice(pages[0].byteOffset, pages[pages.length - 1].byteOffset)
       slicedBuffer = await audio.decodeBufferTimeSlice(
         from,
@@ -527,12 +530,12 @@ export default class Waveform extends Vue {
       audio.drawWave(slicedBuffer, width, this.height, '#69c', 1)
     ])
     if (this.$refs.svgContainer instanceof HTMLElement) {
-      const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
-      console.time('render')
-    // requestAnimationFrame(async () => {
-      el.innerHTML = svg1 + svg2
-      console.timeEnd('render')
       requestAnimationFrame(() => {
+        const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
+        console.time('render')
+      // requestAnimationFrame(async () => {
+        el.innerHTML = svg1 + svg2
+        console.timeEnd('render')
         this.$emit('change-metadata', {
           totalWidth: this.totalWidth,
           amountDrawSegments: this.amountDrawSegments,
@@ -602,10 +605,8 @@ export default class Waveform extends Vue {
 .overview
   opacity .4
   overflow-y hidden
-  filter greyscale()
   top -15px
   position relative
-  border-top 1px solid rgba(0,0,0,.1)
   transition .25s opacity
   &:hover
     opacity .7
@@ -627,18 +628,33 @@ export default class Waveform extends Vue {
   &:focus
     outline 0
 
-.overview:hover .overview-cross
-  opacity 1
+.overview:hover
+  .overview-cross
+  .overview-time
+    opacity 1
 
 .overview-cross
+  transition opacity .5s
   opacity 0
   pointer-events none
-  top 0
+  top 20px
   z-index 1
-  background white
+  background #ccc
   height 100%
   width 1px
   position absolute
+
+.overview-time
+  pointer-events none
+  opacity 0
+  position absolute
+  color #ccc
+  z-index 2
+  top 0px
+  font-size 80%
+  font-weight bold
+  text-align center
+  width 50px
 
 .second-marker
   min-width: 1px;

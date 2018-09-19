@@ -1,6 +1,55 @@
 <template>
   <v-app :dark="settings.darkMode">
-    <v-content class="main-content" app>
+    <v-navigation-drawer
+      v-model="drawer"
+      right
+      app>
+      <v-tabs height="64" grow v-model="activeTab">
+        <v-tab ripple>History</v-tab>
+        <v-tab ripple>Versions</v-tab>
+        <v-tab-item>
+          <v-list dense>
+            <v-list-tile @click="">
+              <v-list-tile-action>
+                <v-icon>home</v-icon>
+              </v-list-tile-action>
+              <v-list-tile-content>
+                <v-list-tile-title>Home</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+            <v-list-tile @click="">
+              <v-list-tile-action>
+                <v-icon>contact_mail</v-icon>
+              </v-list-tile-action>
+              <v-list-tile-content>
+                <v-list-tile-title>Contact</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+          </v-list>
+        </v-tab-item>
+        <v-tab-item>
+          <v-list dense>
+            <v-list-tile @click="">
+              <v-list-tile-action>
+                <v-icon>home</v-icon>
+              </v-list-tile-action>
+              <v-list-tile-content>
+                <v-list-tile-title>Home</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+            <v-list-tile @click="">
+              <v-list-tile-action>
+                <v-icon>contact_mail</v-icon>
+              </v-list-tile-action>
+              <v-list-tile-content>
+                <v-list-tile-title>Contact</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+          </v-list>
+        </v-tab-item>
+      </v-tabs>
+    </v-navigation-drawer>
+    <v-content class="main-content">
       <v-container fluid fill-height class="pa-0">
         <vue-full-screen-file-drop
           class="file-dropper"
@@ -21,6 +70,7 @@
             xs12
             v-if="transcript !== null">
             <editor
+              @toggle-drawer="e => drawer = !drawer"
               :transcript="transcript"
               :audio-element="audioElement" />
             <router-view />
@@ -116,7 +166,8 @@ const sampleTranscript = {
 })
 export default class App extends Vue {
 
-  drawer = true
+  drawer = false
+  activeTab = 0
   audioUrl: string|null = null
   audioElement: HTMLAudioElement|null = null
   transcript: Transcript|null = null

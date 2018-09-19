@@ -17,6 +17,7 @@
     "name": "Arni & Tom"
   },
   "dependencies": {
+    "@mdi/font": "^2.7.94",
     "@rgrove/parse-xml": "^1.1.1",
     "@tweenjs/tween.js": "^17.2.0",
     "@types/facebook-js-sdk": "^2.8.3",

@@ -41,3 +41,11 @@ img[lazy=loaded] {
 .no-outline{
   outline: 0;
 }
+.bold{
+  font-weight: bold;
+}
+.dialog{
+  border-radius: 10px;
+  align-self: baseline;
+  max-height: 400px;
+}

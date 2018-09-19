@@ -1,5 +1,10 @@
 type PrimitiveOrNone = number|null|undefined|string
 
+import * as PromiseWorker from 'promise-worker'
+import Worker from './buffer-concat.worker'
+const worker = new Worker('')
+const promiseWorker = new PromiseWorker(worker)
+
 export default {
   findAllNotIn<T extends PrimitiveOrNone>(base: T[], find: T[]): T[] {
     const l = find.length
@@ -20,6 +25,12 @@ export default {
       a.push(i)
     }
     return a
+  },
+  async concatUint8ArrayAsync(first: Uint8Array, second: Uint8Array): Promise<Uint8Array> {
+    return await promiseWorker.postMessage({
+      first   : first.buffer,
+      second : second.buffer
+    }, [ first.buffer, second.buffer ])
   },
   concatUint8Array(first: Uint8Array, second: Uint8Array) {
     const arr = new Uint8Array(first.length + second.length)

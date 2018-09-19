@@ -45,9 +45,9 @@ export default class TranscriptEditor extends Vue {
   @Prop() selectedSegment: Segment
 
   innerLeft = 0
-  currentOffset = 0
+  currentIndex = 1500
   lastScrollLeft = 0
-  visibleSegments = this.transcript.segments.slice(0, defaultLimit)
+  visibleSegments = this.transcript.segments.slice(this.currentIndex, this.currentIndex + defaultLimit)
   throttledRenderer = _.throttle(this.updateList, 60)
 
   mounted() {
@@ -79,29 +79,29 @@ export default class TranscriptEditor extends Vue {
 
   updateList(leftToRight: boolean) {
     if (leftToRight) {
-      if (this.innerLeft <= -1500 && this.currentOffset + defaultLimit + 1 < this.transcript.segments.length) {
-        this.visibleSegments.push(this.transcript.segments[this.currentOffset + defaultLimit + 1])
+      if (this.innerLeft <= -1500 && this.currentIndex + defaultLimit + 1 < this.transcript.segments.length) {
+        this.visibleSegments.push(this.transcript.segments[this.currentIndex + defaultLimit + 1])
         const unrendered = this.visibleSegments.shift()
-        this.currentOffset = this.currentOffset + 1
+        this.currentIndex = this.currentIndex + 1
         console.log('left to right')
       }
     } else {
-      if (this.innerLeft >= -200 && this.currentOffset > 0) {
-        this.visibleSegments.unshift(this.transcript.segments[this.currentOffset - 1])
+      if (this.innerLeft >= -200 && this.currentIndex > 0) {
+        this.visibleSegments.unshift(this.transcript.segments[this.currentIndex - 1])
         const unrendered = this.visibleSegments.pop()
-        this.currentOffset = this.currentOffset - 1
+        this.currentIndex = this.currentIndex - 1
         console.log('right to left')
       }
     }
     // WAIT FOR THE ELEMENT TO RENDER,
     // AND RENDER THE NEXT IF NECESSARY.
     // RECURSION
-    // TODO: USE TRAMPLINE?
+    // TODO: USE TRAMPLINE? THIS COULD BE HEAVY ON THE STACK/HEAP
     this.$nextTick(() => {
       requestAnimationFrame(() => {
         if (
           (this.innerLeft <= -1500 || this.innerLeft >= -200)
-          && (this.currentOffset > 0 && this.currentOffset + defaultLimit + 1 < this.transcript.segments.length)
+          && (this.currentIndex > 0 && this.currentIndex + defaultLimit + 1 < this.transcript.segments.length)
         ) {
           this.updateList(leftToRight)
         }

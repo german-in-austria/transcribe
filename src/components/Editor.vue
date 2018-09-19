@@ -1,26 +1,33 @@
 <template>
   <div>
-    <v-layout>
-      <v-flex xs1 />
-      <v-flex>
-        <h3 class="pa-4 transcript-title text-xs-center">
-          {{ transcript.name || 'Untitled Transcript' }}
-        </h3>
-      </v-flex>
-      <v-flex xs1 align-content-center justify-center>
-        <v-spacer></v-spacer>
-        <v-btn @click.stop="showSettings = true" icon flat>
-          <v-icon>settings</v-icon>
-        </v-btn>
-      </v-flex>
-      <settings v-if="showSettings" @close="showSettings = false" :show="showSettings" />
-      <spectogram
-        v-if="isSpectogramVisible"
-        @close="isSpectogramVisible = false"
-        :show="isSpectogramVisible"
-        :segment="spectogramSegment"
-      />
-    </v-layout>
+    <v-toolbar class="elevation-0" fixed app>
+      <v-toolbar-title>{{ transcript.name || 'Untitled Transcript' }}</v-toolbar-title>
+      <v-spacer></v-spacer>
+      <v-btn @click.stop="showSearch = true" icon flat>
+        <v-icon>search</v-icon>
+      </v-btn>
+      <v-btn @click.stop="showSettings = true" icon flat>
+        <v-icon>settings</v-icon>
+      </v-btn>
+      <v-btn class="mr-4" @click.stop="$emit('toggle-drawer')" icon flat>
+        <v-icon>history</v-icon>
+      </v-btn>
+    </v-toolbar>
+    <search
+      :transcript="transcript"
+      v-if="showSearch"
+      @close="showSearch = false"
+      :show="showSearch" />
+    <settings-view
+      v-if="showSettings" 
+      @close="showSettings = false"
+      :show="showSettings" />
+    <spectogram
+      v-if="isSpectogramVisible"
+      @close="isSpectogramVisible = false"
+      :show="isSpectogramVisible"
+      :segment="spectogramSegment"
+    />
     <wave-form
       tabindex="-1"
       class="no-outline"
@@ -36,7 +43,9 @@
         :audio-element="audioElement"
         @change-position="scrub"
         :metadata="metadata" />
-      <div class="absolute">
+      <div
+        v-if="settings.showSegmentBoxes"
+        class="absolute">
         <segment-box
           v-for="(segment, key) in visibleSegments"
           :key="segment.id"
@@ -124,8 +133,10 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 
 import waveForm from './Waveform.vue'
-import settings from './Settings.vue'
+import settingsView from './Settings.vue'
+import settings from '../store/settings'
 import spectogram from './Spectogram.vue'
+import search from './Search.vue'
 import { Transcript } from './App.vue'
 import transcriptEditor from '@components/TranscriptEditor.vue'
 import segmentBox from '@components/SegmentBox.vue'
@@ -138,10 +149,11 @@ import audio from '../service/audio'
   components: {
     waveForm,
     transcriptEditor,
-    settings,
+    settingsView,
     spectogram,
     playHead,
-    segmentBox
+    segmentBox,
+    search
   }
 })
 export default class Editor extends Vue {
@@ -161,8 +173,10 @@ export default class Editor extends Vue {
   isSpectogramVisible = false
   spectogramSegment: Segment|null = null
 
+  settings = settings
   playHeadPos = 0
   showSettings = false
+  showSearch = false
   showMenu = false
   menuX = 0
   menuY = 0

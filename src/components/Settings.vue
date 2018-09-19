@@ -7,9 +7,8 @@
     :value="show"
     max-width="700">
     <v-card>
-      <v-card-title class="headline">Settings</v-card-title>
-      <v-card-text>
-        <v-tabs v-model="activeTab">
+      <v-card-text class="pa-0">
+        <v-tabs grow height="64" v-model="activeTab">
           <v-tab>
             Application
           </v-tab>
@@ -31,6 +30,12 @@
                 <v-list-tile-title>Dark Theme</v-list-tile-title>
                 <v-list-tile-action>
                   <v-switch v-model="settings.darkMode" />
+                </v-list-tile-action>
+              </v-list-tile>
+              <v-list-tile>
+                <v-list-tile-title>Show Segments on Audio Wave</v-list-tile-title>
+                <v-list-tile-action>
+                  <v-switch v-model="settings.showSegmentBoxes" />
                 </v-list-tile-action>
               </v-list-tile>
             </v-list>
@@ -76,21 +81,6 @@
           </v-tab-item>
         </v-tabs>
       </v-card-text>
-      <!-- <v-card-actions>
-        <v-spacer></v-spacer>
-        <v-btn
-          color="grey lighten-1"
-          flat="flat"
-          @click="$emit('close')">
-          Cancel
-        </v-btn>
-        <v-btn
-          color="green darken-1"
-          flat="flat"
-          @click="$emit('close')">
-          Save
-        </v-btn>
-      </v-card-actions> -->
     </v-card>
   </v-dialog>
 </template>
@@ -107,16 +97,18 @@ export default class Settings extends Vue {
   }
 }
 </script>
-<style lang="scss" scoped>
-.no-flex-direction{
+<style lang="stylus" scoped>
+.no-flex-direction
   flex-direction: unset
-}
-select.keyboard-shortcut{
-  -webkit-appearance: none;
-  background: rgba(0,0,0,.1);
-  margin-right: .5em;
-  padding: .15em .7em;
-  font-size: 90%;
-  outline: 0;
-}
+
+.tabs__items
+  padding: 2em
+
+select.keyboard-shortcut
+  -webkit-appearance none
+  background rgba(0,0,0,.1)
+  margin-right .5em
+  padding .15em .7em
+  font-size 90%
+  outline 0
 </style>
