@@ -131,8 +131,9 @@ export default class Waveform extends Vue {
 
   @Prop() audioElement: HTMLAudioElement|null
   @Prop() audioUrl: string
-  @Prop() scrollToSegment: Segment|null
+  @Prop({ default: null }) scrollToSegment: Segment|null
   @Prop({ default: 200 }) height: number
+  @Prop({ default: null }) scrollToSecond: number|null
   // config
   zoomLevels = [.25, .5, .75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4]
   drawDistance = 5000 // pixels in both directions from the center of the viewport (left and right)
@@ -330,6 +331,17 @@ export default class Waveform extends Vue {
         el.scrollTo({
           left: el.scrollWidth * percentage
         })
+      })
+    }
+  }
+
+  @Watch('scrollToSecond')
+  doScrollToSecond(newVal: number|null, oldVal: number|null) {
+    const el = this.$refs.svgContainer
+    if (newVal !== null && el instanceof HTMLElement) {
+      const left = this.pixelsPerSecond * newVal
+      requestAnimationFrame(() => {
+        el.scrollTo({ left })
       })
     }
   }

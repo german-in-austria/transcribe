@@ -1,5 +1,6 @@
 
 export interface Settings {
+  lockScroll: boolean,
   emulateHorizontalScrolling: boolean,
   darkMode: boolean,
   showSegmentBoxes: boolean,
@@ -14,6 +15,7 @@ export interface Settings {
 }
 
 const settings: Settings = {
+  lockScroll: true,
   darkMode: true,
   emulateHorizontalScrolling: true,
   showSegmentBoxes: true,

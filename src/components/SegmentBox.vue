@@ -8,7 +8,7 @@
     @keydown.space.stop.prevent="playSegment(segment)"
     tabindex="-1"
     :class="[ 'segment', isSelected ? 'selected' : '' ]"
-    :style="style">
+    :style="{ left: offset + 'px', width: width + 'px' }">
     <slot :segment="segment" />
     <resize-parent
       v-if="isSelected"
@@ -47,22 +47,11 @@ export default class SegmentBox extends Vue {
   @Prop() nextSegment?: Segment
   @Prop() speakerEvents: SpeakerEvent[]
   @Prop() selectedSegment: Segment|null
-  @Prop() metadata: any
+  @Prop() pixelsPerSecond: number
   @Prop() segmentKey: any
 
   isSelected = false
 
-  get style(): any {
-    return {
-        left: this.offset + 'px',
-        width: this.width + 'px'
-    }
-  }
-  get maxSize() {
-    if (this.previousSegment !== undefined && this.nextSegment !== undefined) {
-      return (this.nextSegment.startTime - this.previousSegment.endTime) * this.pixelsPerSecond
-    }
-  }
   @Watch('selectedSegment')
   selectedSegmentChange() {
     console.log('hello')
@@ -73,13 +62,6 @@ export default class SegmentBox extends Vue {
   }
   get offset(): number {
     return Number(this.segment.startTime) * this.pixelsPerSecond
-  }
-  get pixelsPerSecond() {
-    if ( this.metadata !== null) {
-      return this.metadata.pixelsPerSecond
-    } else {
-      return 0
-    }
   }
   selectNext(i: number) {
     this.$emit('select-next', i)

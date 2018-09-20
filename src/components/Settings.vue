@@ -27,6 +27,12 @@
                 </v-list-tile-action>
               </v-list-tile>
               <v-list-tile>
+                <v-list-tile-title>Synchronize Scroll Position</v-list-tile-title>
+                <v-list-tile-action>
+                  <v-switch v-model="settings.lockScroll" />
+                </v-list-tile-action>
+              </v-list-tile>
+              <v-list-tile>
                 <v-list-tile-title>Dark Theme</v-list-tile-title>
                 <v-list-tile-action>
                   <v-switch v-model="settings.darkMode" />
@@ -85,16 +91,15 @@
   </v-dialog>
 </template>
 <script lang="ts">
+
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
+
 @Component
 export default class Settings extends Vue {
   @Prop({ default: false }) show: boolean
   settings = settings
   activeTab = null
-  mounted() {
-    console.log(this.settings)
-  }
 }
 </script>
 <style lang="stylus" scoped>

@@ -37,6 +37,7 @@
       @add-segment="addSegment"
       :height="300"
       :scroll-to-segment="scrollToSegment"
+      :scroll-to-second="scrollToSecond"
       :audio-element="audioElement">
       <play-head
         :playing-segment="playingSegment"
@@ -61,7 +62,7 @@
           :next-segment="visibleSegments[key + 1]"
           :speaker-events="transcript.speakerEvents"
           :selected-segment="selectedSegment"
-          :metadata="metadata">
+          :pixels-per-second="pixelsPerSecond">
         </segment-box>
         <v-menu
           min-width="150"
@@ -171,12 +172,12 @@ export default class Editor extends Vue {
   // TODO: percentages are impractical. use pixels
   segmentBufferPercent = .01
   metadata: any = null
-  boundLeft = 0
-  boundRight = 10
+  visibleSegments: Segment[] = this.transcript.segments.slice(0, 40)
   selectedSegment: Segment|null = {id: undefined, startTime: 0, endTime: 0 }
   scrollToSegment: Segment|null = null
   playingSegment: Segment|null = null
   segmentPlayingTimeout: any = null
+  scrollToSecond: number|null = null
 
   isSpectogramVisible = false
   spectogramSegment: Segment|null = null
@@ -193,6 +194,7 @@ export default class Editor extends Vue {
   handleTranscriptScroll(e: number) {
     const i = (this.$refs.transcriptScrollhandle as Vue).$el
     const o = this.$refs.transcriptScrollbar as HTMLElement
+    this.scrollToSecond = e
     requestAnimationFrame(() => {
       const pixels = e / this.audioElement.duration * o.clientWidth
       i.style.transform = `translateX(${ pixels }px)`
@@ -269,8 +271,14 @@ export default class Editor extends Vue {
         const cw = el.clientWidth
         const scrollFactorLeft = l / w
         const scrollFactorRight = (l + cw) / w
-        this.boundLeft = this.audioElement.duration * (scrollFactorLeft - this.segmentBufferPercent),
-        this.boundRight = this.audioElement.duration * (scrollFactorRight + this.segmentBufferPercent)
+        const boundLeft = this.audioElement.duration * (scrollFactorLeft - this.segmentBufferPercent)
+        const boundRight = this.audioElement.duration * (scrollFactorRight + this.segmentBufferPercent)
+        this.visibleSegments = _(this.transcript.segments)
+          .filter((s) => {
+            return s.startTime >= boundLeft && s.endTime <= boundRight
+          })
+          .sortBy('startTime')
+          .value()
       })
     }
   }
@@ -362,15 +370,6 @@ export default class Editor extends Vue {
     return _(this.transcript.segments).find((s) => {
       return s.startTime <= seconds && s.endTime >= seconds
     })
-  }
-
-  get visibleSegments() {
-    return _(this.transcript.segments)
-      .filter((s) => {
-        return s.startTime >= this.boundLeft && s.endTime <= this.boundRight
-      })
-      .sortBy('startTime')
-      .value()
   }
 
   changeMetadata(metadata: any) {
