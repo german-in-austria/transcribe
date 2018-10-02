@@ -321,6 +321,15 @@ export default class Waveform extends Vue {
 
   @Watch('settings.showSpectograms')
   onChangeVisualizationType(showSpectograms: boolean) {
+    this.resetView()
+  }
+
+  @Watch('settings.useMonoWaveForm')
+  onChangeMonoStereo(mono: boolean) {
+    this.resetView()
+  }
+
+  resetView() {
     this.clearRenderCache()
     this.doMaybeRerender()
   }
@@ -602,17 +611,23 @@ export default class Waveform extends Vue {
         true
       )
     }
-    console.log({ from, to, duration: to - from })
+    // console.log({ from, to, duration: to - from })
     const width = isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth
-    const [svg1, svg2] = await Promise.all([
-      audio.drawWave(slicedBuffer, width, this.height, '#fb7676', 0),
-      audio.drawWave(slicedBuffer, width, this.height, '#69c', 1)
-    ])
+    let svg: string
+    if (this.settings.useMonoWaveForm === true) {
+      svg = await audio.drawWave(slicedBuffer, width, this.height, '#fb7676', undefined, true)
+    } else {
+      const [svg1, svg2] = await Promise.all([
+        audio.drawWave(slicedBuffer, width, this.height, '#fb7676', 0),
+        audio.drawWave(slicedBuffer, width, this.height, '#69c', 1)
+      ])
+      svg = svg1 + svg2
+    }
     if (this.$refs.svgContainer instanceof HTMLElement) {
       requestAnimationFrame(() => {
         const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
         console.time('render')
-        el.innerHTML = svg1 + svg2
+        el.innerHTML = svg
         console.timeEnd('render')
         this.$emit('change-metadata', {
           totalWidth: this.totalWidth,

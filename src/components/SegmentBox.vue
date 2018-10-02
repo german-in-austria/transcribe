@@ -2,7 +2,7 @@
   <div
     @mousedown="selectSegment(segment)"
     @dblclick="playSegment(segment)"
-    @keydown.delete="deleteSegment(segment)"
+    @keydown.meta.enter="$emit('scroll-to-transcript', segment)"
     @keydown.right.stop.prevent="selectNext(segmentKey)"
     @keydown.left.stop.prevent="selectPrevious(segmentKey)"
     @keydown.space.stop.prevent="playSegment(segment)"
@@ -31,9 +31,9 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch, Provide } from 'vue-property-decorator'
-import { SpeakerEvent } from '@components/App.vue'
 import Resizer from '@components/helper/Resizer.vue'
 import ResizeParent from '@components/helper/ResizeParent.vue'
+import { resizeSegment } from '../store/transcript'
 import * as _ from 'lodash'
 @Component({
   components: {
@@ -79,15 +79,16 @@ export default class SegmentBox extends Vue {
     this.$emit('delete-segment', segment)
   }
   onResizeEnd(e: any) {
-    console.log(e)
     this.segment.startTime = e.current.left / this.pixelsPerSecond
     this.segment.endTime = e.current.right / this.pixelsPerSecond
+    resizeSegment(this.segment.id!, this.segment.startTime, this.segment.endTime)
     if (this.nextSegment !== undefined) {
       this.nextSegment.startTime = e.next.left / this.pixelsPerSecond
+      resizeSegment(this.nextSegment.id!, this.nextSegment.startTime, this.nextSegment.endTime)
     }
     if (this.previousSegment !== undefined) {
       this.previousSegment.endTime = e.previous.right / this.pixelsPerSecond
-      console.log(this.segment.startTime, this.previousSegment.endTime)
+      resizeSegment(this.previousSegment.id!, this.previousSegment.startTime, this.previousSegment.endTime)
     }
   }
 }

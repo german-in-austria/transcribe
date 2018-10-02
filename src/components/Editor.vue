@@ -51,6 +51,7 @@
           v-for="(segment, key) in visibleSegments"
           :key="segment.id"
           :segmentKey="key"
+          @scroll-to-transcript="scrollTranscriptToSegment"
           @contextmenu.native.stop.prevent="doShowMenu"
           @delete-segment="deleteSegment"
           @select-segment="selectSegment"
@@ -93,7 +94,7 @@
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
-              @click="() => null">
+              @click="scrollTranscriptToSegment(selectedSegment)">
               <v-list-tile-content>
                 <v-list-tile-title>Show Transcript</v-list-tile-title>
               </v-list-tile-content>
@@ -130,6 +131,7 @@
       @play-segment="playSegment"
       @select-segment="selectSegment"
       @scroll-to-segment="(s) => scrollToSegment = s"
+      :scroll-to-index="scrollTranscriptIndex"
       :selected-segment="selectedSegment"
       :transcript="transcript"/>
   </div>
@@ -143,7 +145,6 @@ import settingsView from './Settings.vue'
 import settings from '../store/settings'
 import spectogram from './Spectogram.vue'
 import search from './Search.vue'
-import { Transcript } from './App.vue'
 import transcriptEditor from '@components/TranscriptEditor.vue'
 import segmentBox from '@components/SegmentBox.vue'
 import triangle from '@components/Triangle.vue'
@@ -151,6 +152,7 @@ import playHead from '@components/PlayHead.vue'
 import * as _ from 'lodash'
 import * as fns from 'date-fns'
 import audio from '../service/audio'
+import transcript, { addSegment, deleteSegment, splitSegment, findSegmentAt } from '../store/transcript'
 
 @Component({
   components: {
@@ -168,15 +170,23 @@ export default class Editor extends Vue {
 
   @Prop() audioElement: HTMLAudioElement
   @Prop() transcript: Transcript
+
+  addSegment = addSegment
+  deleteSegment = deleteSegment
+  splitSegment = splitSegment
+  findSegmentAt = findSegmentAt
+
   // TODO: percentages are impractical. use pixels
   segmentBufferPercent = .01
   metadata: any = null
   visibleSegments: Segment[] = this.transcript.segments.slice(0, 40)
-  selectedSegment: Segment|null = {id: undefined, startTime: 0, endTime: 0 }
+  selectedSegment: Segment|null = {id: 'none', startTime: 0, endTime: 0 }
   scrollToSegment: Segment|null = null
   playingSegment: Segment|null = null
   segmentPlayingTimeout: any = null
   scrollToSecond: number|null = null
+
+  scrollTranscriptIndex: number = 0
 
   isSpectogramVisible = false
   spectogramSegment: Segment|null = null
@@ -202,8 +212,12 @@ export default class Editor extends Vue {
     })
   }
 
+  scrollTranscriptToSegment(segment: Segment) {
+    const i = _(this.transcript.segments).findIndex(s => s.id === segment.id)
+    this.scrollTranscriptIndex = i
+  }
+
   doShowMenu(e: MouseEvent) {
-    console.log(e)
     // this is used for splitting
     this.layerX = e.layerX
     this.menuX = e.x
@@ -228,7 +242,9 @@ export default class Editor extends Vue {
       console.log(segment)
       if (segment === undefined) {
         const s = this.addSegment(this.playHeadPos)
-        this.$nextTick(() => this.selectSegment(s))
+        if (s !== undefined) {
+          this.$nextTick(() => this.selectSegment(s))
+        }
       } else {
         const splitAt = this.playHeadPos - segment.startTime
         this.splitSegment(segment, splitAt)
@@ -336,43 +352,6 @@ export default class Editor extends Vue {
   selectNext(i: number) {
     this.selectAndScrollToSegment(this.transcript.segments[i + 1])
   }
-
-  addSegment(atTime: number) {
-    const newSegment: Segment = {
-      startTime: atTime,
-      endTime: atTime + 1,
-      labelText: '',
-      id: _.uniqueId('user-segment-')
-    }
-    this.transcript.segments.push(newSegment)
-    return newSegment
-  }
-
-  deleteSegment(segment: Segment) {
-    const i = _(this.transcript.segments).findIndex(s => s.id === segment.id)
-    this.transcript.segments.splice(i, 1)
-  }
-
-  splitSegment(segment: Segment, splitAt: number): Segment[] {
-    const i = _(this.transcript.segments).findIndex(s => s.id === segment.id)
-    const oldEndTime = segment.endTime
-    const newSegment: Segment = {
-      startTime: segment.startTime + splitAt,
-      endTime: oldEndTime,
-      labelText: segment.labelText,
-      id: _.uniqueId('user-segment-')
-    }
-    segment.endTime = segment.startTime + splitAt
-    this.transcript.segments.splice(i + 1, 0, newSegment)
-    return [ segment, newSegment ]
-  }
-
-  findSegmentAt(seconds: number): Segment|undefined {
-    return _(this.transcript.segments).find((s) => {
-      return s.startTime <= seconds && s.endTime >= seconds
-    })
-  }
-
   changeMetadata(metadata: any) {
     console.log({metadata})
     this.metadata = metadata

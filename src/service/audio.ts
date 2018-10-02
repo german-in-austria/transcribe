@@ -265,8 +265,20 @@ function sumChannels(first: Float32Array, second: Float32Array): Float32Array {
   return my
 }
 
-async function drawWavePathAsync(buffer: AudioBuffer, width: number, height: number, channel = 0, offsetLeft = 0): Promise<string> {
-  const b = buffer.getChannelData(channel).buffer
+async function drawWavePathAsync(
+  buffer: AudioBuffer,
+  width: number,
+  height: number,
+  channel = 0,
+  offsetLeft = 0,
+  mono = false
+): Promise<string> {
+  let b: ArrayBuffer
+  if (mono === true) {
+    b = sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
+  } else {
+    b = buffer.getChannelData(channel).buffer
+  }
   const p = await waveformWorker.postMessage({
     buffer: b,
     width,
@@ -337,11 +349,18 @@ function drawWavePath(buffer: AudioBuffer, width: number, height: number, channe
   return upperHalf + lowerHalf + 'Z'
 }
 
-async function drawWave(buffer: AudioBuffer, width: number, height: number,  color = '#ccc', channel = 0) {
+async function drawWave(
+  buffer: AudioBuffer,
+  width: number,
+  height: number,
+  color = '#ccc',
+  channel = 0,
+  mono = false
+) {
   // tslint:disable-next-line:max-line-length
   const svgStart = `<svg viewBox="0 0 ${ width.toFixed(0) } ${ height }" height="${ height }" width="${ width.toFixed(0) }"><path fill="${ color }" d="`
   const svgEnd = '" /></svg>'
-  return svgStart + await drawWavePathAsync(buffer, width, height, channel) + svgEnd
+  return svgStart + await drawWavePathAsync(buffer, width, height, channel, 0, mono) + svgEnd
 }
 
 // tslint:disable-next-line:max-line-length

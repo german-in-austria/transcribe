@@ -51,6 +51,12 @@
                   <v-switch v-model="settings.showSpectograms" />
                 </v-list-tile-action>
               </v-list-tile>
+              <v-list-tile>
+                <v-list-tile-title>Use Mono Waveform</v-list-tile-title>
+                <v-list-tile-action>
+                  <v-switch v-model="settings.useMonoWaveForm" />
+                </v-list-tile-action>
+              </v-list-tile>
             </v-list>
           </v-tab-item>
           <v-tab-item>

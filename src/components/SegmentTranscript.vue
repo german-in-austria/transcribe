@@ -8,12 +8,8 @@
       v-for="(speaker, key) in speakers"
       :key="key">
       <speaker-segment-transcript
-        v-if="
-          speakerEvent !== undefined &&
-          speakerEvent[speaker] !== undefined &&
-          speakerEvent[speaker].tokens !== undefined"
         class="tokens"
-        :tokens="speakerEvent[speaker].tokens"
+        :tokens="getTokens(speaker)"
       />
     </div>
   </div>
@@ -21,7 +17,6 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SpeakerSegmentTranscript from '@components/SpeakerSegmentTranscript.vue'
-import { SpeakerEvent } from '@components/App.vue'
 
 @Component({
   components: {
@@ -39,6 +34,14 @@ export default class SegmentTranscript extends Vue {
   mounted() {
     this.offsetWidth = this.$el.offsetWidth + 1
     this.$emit('element-render', this.offsetWidth)
+  }
+
+  getTokens(speaker: string): string[] {
+    if (this.speakerEvent && this.speakerEvent[speaker] && this.speakerEvent[speaker].tokens) {
+      return this.speakerEvent[speaker].tokens
+    } else {
+      return []
+    }
   }
 
   beforeDestroy() {

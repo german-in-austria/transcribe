@@ -5,6 +5,7 @@ export interface Settings {
   darkMode: boolean,
   showSegmentBoxes: boolean,
   showSpectograms: boolean,
+  useMonoWaveForm: boolean,
   keyboardShortcuts: {
     [s: string]: {
       modifier: string
@@ -21,6 +22,7 @@ const settings: Settings = {
   emulateHorizontalScrolling: true,
   showSegmentBoxes: true,
   showSpectograms: false,
+  useMonoWaveForm: false,
   keyboardShortcuts: {
     split: {
       modifier: 'meta',

@@ -4,50 +4,7 @@
       v-model="drawer"
       right
       app>
-      <v-tabs height="64" grow v-model="activeTab">
-        <v-tab ripple>History</v-tab>
-        <v-tab ripple>Versions</v-tab>
-        <v-tab-item>
-          <v-list dense>
-            <v-list-tile @click="">
-              <v-list-tile-action>
-                <v-icon>home</v-icon>
-              </v-list-tile-action>
-              <v-list-tile-content>
-                <v-list-tile-title>Home</v-list-tile-title>
-              </v-list-tile-content>
-            </v-list-tile>
-            <v-list-tile @click="">
-              <v-list-tile-action>
-                <v-icon>contact_mail</v-icon>
-              </v-list-tile-action>
-              <v-list-tile-content>
-                <v-list-tile-title>Contact</v-list-tile-title>
-              </v-list-tile-content>
-            </v-list-tile>
-          </v-list>
-        </v-tab-item>
-        <v-tab-item>
-          <v-list dense>
-            <v-list-tile @click="">
-              <v-list-tile-action>
-                <v-icon>home</v-icon>
-              </v-list-tile-action>
-              <v-list-tile-content>
-                <v-list-tile-title>Home</v-list-tile-title>
-              </v-list-tile-content>
-            </v-list-tile>
-            <v-list-tile @click="">
-              <v-list-tile-action>
-                <v-icon>contact_mail</v-icon>
-              </v-list-tile-action>
-              <v-list-tile-content>
-                <v-list-tile-title>Contact</v-list-tile-title>
-              </v-list-tile-content>
-            </v-list-tile>
-          </v-list>
-        </v-tab-item>
-      </v-tabs>
+      <history />
     </v-navigation-drawer>
     <v-content class="main-content">
       <v-container fluid fill-height class="pa-0">
@@ -89,77 +46,23 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
 import playerBar from './PlayerBar.vue'
-import VueFullScreenFileDrop from 'vue-full-screen-file-drop'
 import 'vue-full-screen-file-drop/dist/vue-full-screen-file-drop.css'
-import * as parseXML from '@rgrove/parse-xml'
-import parseTranscriptFromTree, { ParsedXML } from '../service/transcript-parser'
+import VueFullScreenFileDrop from 'vue-full-screen-file-drop'
 import editor from './Editor.vue'
+import history from './History.vue'
+
 import audio from '../service/audio'
 import settings from '../store/settings'
-
-declare global {
-  interface Window {
-    AudioContext: AudioContext
-    webkitAudioContext: AudioContext
-    peaks: any
-  }
-  interface Segment {
-    color?: string
-    editable?: boolean
-    startTime: number
-    endTime: number
-    id?: string
-    labelText?: string
-  }
-  interface SegmentMetadata {
-    tokens: string[]
-  }
-}
+import transcript, { loadExmeraldaFile } from '../store/transcript'
 
 interface FileReaderEventTarget extends EventTarget {
   result: string
 }
 
-export interface SpeakerEvent {
-  [key: string]: {
-    tokens: string[]
-  }
-}
-
-export interface Transcript {
-  name: string
-  audioUrl: string
-  speakers: string[]
-  segments: Segment[]
-  speakerEvents: _.Dictionary<SpeakerEvent>
-}
-
-const sampleTranscript = {
-  name: 'Thermodynamics',
-  audioUrl: '/static/audio/thermodynamics.ogg',
-  speakers : [ 'HJS', 'MS' ],
-  segments : _(0).range(1000).map((i) => {
-    return {
-      id: String(i),
-      startTime: i + 1,
-      endTime: i + 1 + 0.95
-    }
-  }).value(),
-  speakerEvents : _(_.range(0, 1000)).reduce((m: any, e, i, l) => {
-    m[i] = {
-      HJS : {
-        tokens : [
-          'in', 'this', 'house'
-        ]
-      }
-    }
-    return m
-  }, {})
-}
-
 @Component({
   components : {
     editor,
+    history,
     VueFullScreenFileDrop,
     playerBar
   }
@@ -167,10 +70,9 @@ const sampleTranscript = {
 export default class App extends Vue {
 
   drawer = false
-  activeTab = 0
   audioUrl: string|null = null
   audioElement: HTMLAudioElement|null = null
-  transcript: Transcript|null = null
+  transcript: Transcript|null = transcript
   xmlText: string|null = null
   xml: any = null
   settings = settings
@@ -184,50 +86,6 @@ export default class App extends Vue {
 
   isAudio(file: File) {
     return file.name.includes('.ogg') || file.type.includes('/ogg')
-  }
-
-  transcriptTreeToTranscribable(tree: ParsedXML, name: string): any {
-    const segments = _(tree.speakers)
-      .map(tiers => _.map(tiers, tier => _.map(tier.events, event => ({
-        id: `${event.start}-${event.end}`,
-        startTime: Number(event.startTime),
-        endTime: Number(event.endTime)
-      }) )))
-      .flatten()
-      .flatten()
-      .flatten()
-      .uniqBy(s => s.id)
-      .orderBy(s => s.startTime)
-      .value()
-    const speakers = _(tree.speakers).map((t, v) => v).value()
-    const speakerEvents = _(tree.speakers)
-      .map((t, key) => {
-        // only the first tier for now
-        return _.toArray(t)[0].events.map(e => {
-          return {
-            start  : e.start,
-            end    : e.end,
-            tokens : e.text !== null ? e.text.trim().split(' ') : [],
-            speaker: key
-          }
-        })
-      })
-      .flatten()
-      .groupBy(e => `${e.start}-${e.end}`)
-      .mapValues(spe => _.keyBy(spe, 'speaker'))
-      .value()
-    this.transcript = {
-      name,
-      audioUrl: '',
-      speakerEvents,
-      segments,
-      speakers
-    }
-    sampleTranscript.speakerEvents = speakerEvents
-    sampleTranscript.segments = segments
-    sampleTranscript.speakers = speakers
-    console.log(segments)
-    return tree
   }
 
   // TODO: better sanity check.
@@ -261,7 +119,7 @@ export default class App extends Vue {
         const reader = new FileReader()
         reader.onload = (e: Event) => {
           // tslint:disable-next-line:max-line-length
-          this.xml = this.transcriptTreeToTranscribable(parseTranscriptFromTree(parseXML((e.target as FileReaderEventTarget).result)), file.name)
+          loadExmeraldaFile((e.target as FileReaderEventTarget).result, file.name)
         }
         reader.readAsText(file)
         console.log('xml')
@@ -276,7 +134,8 @@ export default class App extends Vue {
     // tslint:disable-next-line:max-line-length
     const xmlString = await (await fetch('https://transcribe.dioe.at/files/0025_NECK_jungII_m_INT_vollständig.exb')).text()
     // tslint:disable-next-line:max-line-length
-    this.transcriptTreeToTranscribable(parseTranscriptFromTree(parseXML(xmlString)), 'NECK_jungII_m_INT')
+    this.transcript = loadExmeraldaFile('NECK_jungII_m_INT', xmlString)
+
     const y = document.createElement('audio')
     y.src = 'https://transcribe.dioe.at/files/0025_NECK_jungII_m_INT.ogg'
     y.addEventListener('durationchange', (e) => {

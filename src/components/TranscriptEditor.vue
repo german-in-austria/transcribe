@@ -26,7 +26,6 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { Transcript } from '@components/App.vue'
 import SegmentTranscript from '@components/SegmentTranscript.vue'
 import settings from '@store/settings'
 import * as _ from 'lodash'
@@ -43,13 +42,30 @@ export default class TranscriptEditor extends Vue {
 
   @Prop() transcript: Transcript
   @Prop() selectedSegment: Segment
+  @Prop({ default: 0 }) scrollToIndex: number
 
   innerLeft = 0
-  currentIndex = 0
+  currentIndex = this.scrollToIndex
   lastScrollLeft = 0
   visibleSegments = this.transcript.segments.slice(this.currentIndex, this.currentIndex + defaultLimit)
   throttledRenderer = _.throttle(this.updateList, 60)
   throttledEmitter = _.throttle(this.emitScroll, 60)
+
+  @Watch('scrollToIndex')
+  doScrollToSegment(i: number) {
+    // right in the middle
+    this.currentIndex = Math.max(0, i - Math.floor(this.visibleSegments.length / 2))
+    this.visibleSegments = this.transcript.segments.slice(this.currentIndex, this.currentIndex + defaultLimit)
+    this.$nextTick(() => {
+      requestAnimationFrame(() => {
+        const el = this.$el.querySelector('.segment-selected')
+        const c = this.$el
+        if (c instanceof HTMLElement && el instanceof HTMLElement) {
+          this.innerLeft = el.offsetLeft * -1 + c.clientWidth / 2 - el.clientWidth / 2
+        }
+      })
+    })
+  }
 
   mounted() {
     outerWidth = this.$el.clientWidth
@@ -129,6 +145,15 @@ export default class TranscriptEditor extends Vue {
 </script>
 
 <style lang="stylus" scoped>
+
+@keyframes blink-animation
+  50%
+    opacity 0
+
+@-webkit-keyframes blink-animation
+  50%
+    opacity 0
+
 .tracks
   width 100%
 .segment
@@ -140,11 +165,9 @@ export default class TranscriptEditor extends Vue {
 
 
 .segment-selected
-  color #000
-  .token-type-indicator
-    opacity 1
-  .time
-    color #ddd
+  transform translate3d(0,0,0)
+  animation blink-animation .25s 2 forwards
+  -webkit-animation blink-animation .25s 2 forwards
 
 .speaker-segment
   display block
