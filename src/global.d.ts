@@ -1,8 +1,15 @@
+
 declare interface process {
   env : {
     [key: string]: string
   }
 }
+
+declare module "*.wasm" {
+  const value: ArrayBuffer
+  export default value;
+}
+
 declare module "file-loader?name=[name].js!*" {
   const value: string;
   export = value;
@@ -28,3 +35,4 @@ declare module 'simple-promise-queue'
 declare module 'vue-scroll'
 declare module 'array-buffer-concat'
 declare module 'audiobuffer-to-wav'
+declare module 'gradstop'

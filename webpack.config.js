@@ -30,6 +30,10 @@ module.exports = {
   module: {
     rules: [
       {
+        test: /\.wasm$/,
+        loader: 'arraybuffer-loader',
+      },
+      {
         test: /\.vue$/,
         loader: "vue-loader",
         options: {

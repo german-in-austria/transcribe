@@ -32,6 +32,9 @@
             ]
         }
     },
+    "exclude": [
+      "./src/**/wasm"
+    ],
     "include": [
         "./src/**/*"
     ]

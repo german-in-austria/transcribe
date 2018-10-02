@@ -4,6 +4,7 @@ export interface Settings {
   emulateHorizontalScrolling: boolean,
   darkMode: boolean,
   showSegmentBoxes: boolean,
+  showSpectograms: boolean,
   keyboardShortcuts: {
     [s: string]: {
       modifier: string
@@ -15,10 +16,11 @@ export interface Settings {
 }
 
 const settings: Settings = {
-  lockScroll: true,
+  lockScroll: false,
   darkMode: true,
   emulateHorizontalScrolling: true,
   showSegmentBoxes: true,
+  showSpectograms: false,
   keyboardShortcuts: {
     split: {
       modifier: 'meta',

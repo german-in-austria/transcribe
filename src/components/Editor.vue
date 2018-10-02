@@ -118,14 +118,13 @@
           </v-list>
         </v-menu>
       </div>
+      <div slot="overview" ref="transcriptScrollbar" class="transcript-scrollbar">
+        <triangle
+          up
+          class="transcript-scrollhandle"
+          ref="transcriptScrollhandle" />
+      </div>
     </wave-form>
-
-    <div ref="transcriptScrollbar" class="transcript-scrollbar">
-      <triangle
-        up
-        class="transcript-scrollhandle"
-        ref="transcriptScrollhandle" />
-    </div>
     <transcript-editor
       @scroll="handleTranscriptScroll"
       @play-segment="playSegment"
@@ -194,8 +193,10 @@ export default class Editor extends Vue {
   handleTranscriptScroll(e: number) {
     const i = (this.$refs.transcriptScrollhandle as Vue).$el
     const o = this.$refs.transcriptScrollbar as HTMLElement
-    this.scrollToSecond = e
     requestAnimationFrame(() => {
+      if (settings.lockScroll) {
+        this.scrollToSecond = e
+      }
       const pixels = e / this.audioElement.duration * o.clientWidth
       i.style.transform = `translateX(${ pixels }px)`
     })

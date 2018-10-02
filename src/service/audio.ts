@@ -6,9 +6,13 @@ import * as audioBufferToWav from 'audiobuffer-to-wav'
 import * as PromiseWorker from 'promise-worker'
 import WaveformWorker from './waveform.worker'
 const waveformWorker = new PromiseWorker(new WaveformWorker(''))
-
+import GetFrequenciesWorker from './get-frequencies.worker'
+const getFrequenciesWorker = new PromiseWorker(new GetFrequenciesWorker(''))
 import OggIndexWorker from './oggindex.worker'
 const oggIndexWorker = new PromiseWorker(new OggIndexWorker(''))
+// import drawWaveWasm from './wasm/module.untouched.wasm'
+// import getSpectogramWasm from './wasm/module2.untouched.wasm'
+// const loader = require('../lib/as-loader')
 
 export interface OggIndex {
   pages: Array<{ byteOffset: number, granulePosition: number, timestamp: number }>
@@ -196,7 +200,71 @@ function findOggPages(from: number, to: number, pages: OggIndex['pages']) {
   return {startPage, endPage}
 }
 
-// tslint:disable-next-line:max-line-length
+// let spectogramWasmModule: any
+
+// async function drawSpectogramWasm(buffer: AudioBuffer, width: number, height: number): Promise<HTMLCanvasElement> {
+//   if (spectogramWasmModule) {
+//     const b = buffer.getChannelData(0)
+//     const spectogramBuffer = new Uint8Array(width * 512)
+//     const outPtr = spectogramWasmModule.newArray(spectogramBuffer)
+//     const inPtr = spectogramWasmModule.newArray(b)
+//     const p = spectogramWasmModule.getFrequencies(1024, inPtr, b.length, buffer.sampleRate, width, outPtr)
+//     console.log(wasmModule.getArray(Uint8Array, outPtr))
+//     spectogramWasmModule.freeArray(outPtr)
+//     spectogramWasmModule.freeArray(inPtr)
+//     return document.createElement('canvas')
+//   } else {
+//     const module = await WebAssembly.compile(getSpectogramWasm)
+//     spectogramWasmModule = await loader.instantiate(module, {
+//       memory: new WebAssembly.Memory({
+//         initial: 100
+//       }),
+//       env: {
+//         abort: () => { throw new Error('overflow'); },
+//         table: new (window as any).WebAssembly.Table({initial: 0, element: 'anyfunc'})
+//       }
+//     })
+//     console.log(wasmModule)
+//     return drawSpectogramWasm(buffer, width, height)
+//   }
+// }
+
+async function drawSpectogramAsync(buffer: AudioBuffer, width: number, height: number): Promise<HTMLCanvasElement> {
+  const b = sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
+  const [f, i] = await getFrequenciesWorker.postMessage({
+    fftSamples: 1024,
+    buffer: b,
+    length: buffer.length,
+    sampleRate: buffer.sampleRate,
+    width
+  }, [ b ])
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
+
+  const fakeCanvas = document.createElement('canvas')
+  fakeCanvas.width = i.width
+  fakeCanvas.height = i.height;
+  (fakeCanvas.getContext('2d') as CanvasRenderingContext2D).putImageData(i, 0, 0)
+  // ctx.scale(1, height / (i as ImageData).height)
+  ctx.scale(1, height / i.height)
+  ctx.drawImage(fakeCanvas, 0, 0)
+  // const pixels = my.resample(frequenciesData)
+  console.log(f.length)
+  console.log(f[0].length)
+  return canvas
+}
+
+function sumChannels(first: Float32Array, second: Float32Array): Float32Array {
+  const my = new Float32Array(first.length)
+  first.forEach((v: number, i: number) => {
+    my[i] = v + second[i]
+  })
+  return my
+}
+
 async function drawWavePathAsync(buffer: AudioBuffer, width: number, height: number, channel = 0, offsetLeft = 0): Promise<string> {
   const b = buffer.getChannelData(channel).buffer
   const p = await waveformWorker.postMessage({
@@ -207,6 +275,40 @@ async function drawWavePathAsync(buffer: AudioBuffer, width: number, height: num
   }, [ b ])
   return p
 }
+
+// let wasmModule: any
+
+// tslint:disable-next-line:max-line-length
+// async function drawWavePathWasm(buffer: AudioBuffer, width: number, height: number, channel = 0, offsetLeft = 0): Promise<string> {
+//   if (wasmModule) {
+//     const b = buffer.getChannelData(channel)
+//     const waveForm = new Float32Array(width * 2)
+//     // let mem = new Float32Array(asmInstance.exports.memory.buffer)
+//     const ptr = wasmModule.newArray(b)
+//     const ptr2 = wasmModule.newArray(waveForm)
+//     console.log({ptr, ptr2})
+//     console.time('draw wave WASM')
+//     const p = wasmModule.drawWavePath(ptr, ptr2, width, height, offsetLeft)
+//     console.timeEnd('draw wave WASM')
+//     console.log(wasmModule.getArray(Float32Array, ptr2))
+//     wasmModule.freeArray(ptr2)
+//     wasmModule.freeArray(ptr)
+//     return p
+//   } else {
+//     const module = await WebAssembly.compile(drawWaveWasm)
+//     wasmModule = await loader.instantiate(module, {
+//       memory: new WebAssembly.Memory({
+//         initial: 100
+//       }),
+//       env: {
+//         abort: () => { throw new Error('overflow'); },
+//         table: new (window as any).WebAssembly.Table({initial: 0, element: 'anyfunc'})
+//       }
+//     })
+//     console.log(wasmModule)
+//     return drawWavePathWasm(buffer, width, height, channel, offsetLeft)
+//   }
+// }
 
 function drawWavePath(buffer: AudioBuffer, width: number, height: number, channel = 0, offsetLeft = 0) {
   // based on drawWave.js
@@ -307,8 +409,13 @@ const audio = {
   decodeBufferTimeSlice,
   drawWave,
   drawWavePath,
-  drawWavePathAsync
+  drawWavePathAsync,
+  // drawSpectogram,
+  // drawWavePathWasm,
+  drawSpectogramAsync,
+  // drawSpectogramWasm
 }
+
 ;
 (window as any)._audio = audio
 

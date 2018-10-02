@@ -5,6 +5,7 @@
     scrollable
     @input="$event === false && $emit('close')"
     :value="show"
+    content-class="dialog"
     max-width="700">
     <v-card>
       <v-card-text class="pa-0">
@@ -19,7 +20,7 @@
             Shortcuts
           </v-tab>
           <v-tab-item>
-            <v-list>
+            <v-list class="pa-4">
               <v-list-tile>
                 <v-list-tile-title>Mousewheel scrolls horizontally</v-list-tile-title>
                 <v-list-tile-action>
@@ -44,10 +45,16 @@
                   <v-switch v-model="settings.showSegmentBoxes" />
                 </v-list-tile-action>
               </v-list-tile>
+              <v-list-tile>
+                <v-list-tile-title>Show Spectrogram instead of Waveform</v-list-tile-title>
+                <v-list-tile-action>
+                  <v-switch v-model="settings.showSpectograms" />
+                </v-list-tile-action>
+              </v-list-tile>
             </v-list>
           </v-tab-item>
           <v-tab-item>
-            <v-list>
+            <v-list class="pa-4">
               <v-list-tile>
                 <v-list-tile-title>Test</v-list-tile-title>
                 <v-list-tile-action>
@@ -63,7 +70,7 @@
             </v-list>
           </v-tab-item>
           <v-tab-item>
-            <v-list>
+            <v-list class="pa-4">
               <v-list-tile v-for="(e, i) in settings.keyboardShortcuts" :key="i">
                 <v-list-tile-content>
                   <v-list-tile-title>{{ e.name }}</v-list-tile-title>
@@ -105,9 +112,6 @@ export default class Settings extends Vue {
 <style lang="stylus" scoped>
 .no-flex-direction
   flex-direction: unset
-
-.tabs__items
-  padding: 2em
 
 select.keyboard-shortcut
   -webkit-appearance none

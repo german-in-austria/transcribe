@@ -45,7 +45,7 @@ export default class TranscriptEditor extends Vue {
   @Prop() selectedSegment: Segment
 
   innerLeft = 0
-  currentIndex = 1500
+  currentIndex = 0
   lastScrollLeft = 0
   visibleSegments = this.transcript.segments.slice(this.currentIndex, this.currentIndex + defaultLimit)
   throttledRenderer = _.throttle(this.updateList, 60)
