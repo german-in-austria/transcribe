@@ -1,16 +1,3 @@
-
-import gradstop from 'gradstop'
-
-export const gradient = gradstop({
-    stops: 256,
-    inputFormat: 'hex',
-    colorArray: [ '#191919', '#343838', '#1D4877', '#1B8A5A']
-}).map((x: string) => {
-  return x.replace('rgb(', '').replace(')', '').split(', ').map(Number)
-})
-
-console.log({gradient})
-
 export const heatMap = [
   '05000b',
   '05000b',

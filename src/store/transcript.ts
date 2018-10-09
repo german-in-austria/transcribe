@@ -35,8 +35,9 @@ declare global {
 }
 
 interface Action {
-  type: 'RESIZE'|'DELETE'|'CHANGE_TEXT'|'ADD'
+  type: 'RESIZE'|'DELETE'|'CHANGE_TOKENS'|'ADD'
   segment: Segment
+  speakerEvents?: SpeakerEvent[]
 }
 
 let transcript: Transcript|null = null
@@ -91,8 +92,31 @@ export function findSegmentById(id: string) {
   }
 }
 
+export function findSpeakerEventById(id: string): SpeakerEvent|null {
+  if (transcript !== null) {
+    return transcript.speakerEvents[id]
+  } else {
+    return null
+  }
+}
+
 export function loadExmeraldaFile(fileName: string, xml: string) {
   return transcriptTreeToTranscribable(parseTree(parseXML(xml)), fileName)
+}
+
+export function updateSpeakerTokens(segment: Segment, speaker: string, tokens: string[]) {
+  if (transcript !== null) {
+    history.push({
+      type: 'CHANGE_TOKENS',
+      segment: _.clone(segment),
+      speakerEvents: [
+        {
+          [speaker]: _.clone(transcript.speakerEvents[segment.id][speaker])
+        }
+      ]
+    })
+    transcript.speakerEvents[segment.id][speaker].tokens = tokens
+  }
 }
 
 export function resizeSegment(id: string, startTime: number, endTime: number) {
@@ -138,7 +162,7 @@ export function deleteSegment(segment: Segment) {
 
 export function splitSegment(segment: Segment, splitAt: number): Segment[] {
   if (transcript !== null) {
-    const i = _(transcript.segments).findIndex(s => s.id === segment.id)
+    const i = findSegmentById(segment.id)
     const oldEndTime = segment.endTime
     const newSegment: Segment = {
       startTime: segment.startTime + splitAt,

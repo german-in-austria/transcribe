@@ -1,26 +1,37 @@
 <template>
-  <div
-    @mousewheel="onMousewheel"
-    ref="tracks"
-    class="tracks"
-    v-if="transcript.segments && transcript.speakers && transcript.speakerEvents">
-    <div :style="{transform: `translateX(${ innerLeft }px)`}" ref="inner" class="transcript-segments-inner">
-      <segment-transcript
-        v-for="(segment, i) in visibleSegments"
-        :key="segment.id"
-        @select-segment="(e) => $emit('select-segment', e)"
-        @scroll-to-segment="(e) => $emit('scroll-to-segment', e)"
-        @play-segment="(e) => $emit('play-segment', e)"
-        @element-unrender="(width) => handleUnrender(width, i, segment.id)"
-        @element-render="(width) => handleRender(width, i, segment.id)"
-        :segment="segment"
-        :speaker-event="transcript.speakerEvents[segment.id]"
-        :speakers="transcript.speakers"
-        :class="['segment', segment.id === selectedSegment.id && 'segment-selected']"
-      />
+  <v-layout class="">
+    <v-flex :style="theme" class="pt-4 speaker-panel" xs1>
+      <div :key="i" v-for="(speaker, i) in transcript.speakers" class="speaker">
+        <div class="speaker-name">
+          <span class="speaker-triangle">▶</span> {{ speaker }}
+        </div>
       </div>
-    </div>
-  </div>
+    </v-flex>
+    <v-flex class="tracks-outer pt-2">
+      <div
+        @wheel="onMousewheel"
+        ref="tracks"
+        class="tracks"
+        v-if="transcript.segments && transcript.speakers && transcript.speakerEvents">
+        <div :style="{transform: `translateX(${ innerLeft }px)`}" ref="inner" class="transcript-segments-inner">
+          <segment-transcript
+            v-for="(segment, i) in visibleSegments"
+            :key="segment.id"
+            @select-segment="(e) => $emit('select-segment', e)"
+            @scroll-to-segment="(e) => $emit('scroll-to-segment', e)"
+            @play-segment="(e) => $emit('play-segment', e)"
+            @element-unrender="(width) => handleUnrender(width, i, segment.id)"
+            @element-render="(width) => handleRender(width, i, segment.id)"
+            :segment="segment"
+            :speaker-event="transcript.speakerEvents[segment.id]"
+            :speakers="transcript.speakers"
+            :is-selected="segment.id === selectedSegment.id"
+            :class="['segment', segment.id === selectedSegment.id && 'segment-selected']"
+          />
+        </div>
+      </div>
+    </v-flex>
+  </v-layout>
 </template>
 
 <script lang="ts">
@@ -43,7 +54,7 @@ export default class TranscriptEditor extends Vue {
   @Prop() transcript: Transcript
   @Prop() selectedSegment: Segment
   @Prop({ default: 0 }) scrollToIndex: number
-
+  settings = settings
   innerLeft = 0
   currentIndex = this.scrollToIndex
   lastScrollLeft = 0
@@ -62,6 +73,7 @@ export default class TranscriptEditor extends Vue {
         const c = this.$el
         if (c instanceof HTMLElement && el instanceof HTMLElement) {
           this.innerLeft = el.offsetLeft * -1 + c.clientWidth / 2 - el.clientWidth / 2
+          this.emitScroll()
         }
       })
     })
@@ -79,7 +91,7 @@ export default class TranscriptEditor extends Vue {
   handleRender(width: number, index: number, segment_id: string) {
     if (index === 0) {
       // console.log('rendered leftmost item', width, segment_id)
-      this.innerLeft = this.innerLeft - width
+      // this.innerLeft = this.innerLeft - width
     // RIGHT
     } else if (index === this.visibleSegments.length - 1) {
       // console.log('rendered rightmost item', width, segment_id)
@@ -121,7 +133,6 @@ export default class TranscriptEditor extends Vue {
     // WAIT FOR THE ELEMENT TO RENDER,
     // AND RENDER THE NEXT IF NECESSARY.
     // RECURSION
-    // TODO: USE TRAMPLINE? THIS COULD BE HEAVY ON THE STACK/HEAP
     this.$nextTick(() => {
       requestAnimationFrame(() => {
         if (
@@ -141,6 +152,13 @@ export default class TranscriptEditor extends Vue {
     this.throttledRenderer(this.innerLeft <= this.lastScrollLeft)
     this.lastScrollLeft = this.innerLeft
   }
+  get theme() {
+    if (this.settings.darkMode) {
+      return { background: 'rgb(50, 50, 50)' }
+    } else {
+      return { background: '#efefef' }
+    }
+  }
 }
 </script>
 
@@ -154,20 +172,40 @@ export default class TranscriptEditor extends Vue {
   50%
     opacity 0
 
+.tracks-outer
+  white-space nowrap
+
+.speaker-panel
+  z-index 1
+
+.speaker
+  cursor default
+  padding .2em 1em
+  border-radius 1px
+  border-bottom 1px solid rgba(255,255,255,.1)
+  font-weight 300
+  font-size 90%
+  line-height 1.6em
+  &:hover
+    background rgba(0,0,0,0)
+  .speaker-name
+    opacity .7
+    white-space nowrap
+  .speaker-triangle
+    font-size 70%
+    display inline-block
+    vertical-align middle
+    margin-right .2em
+
 .tracks
   width 100%
+
 .segment
   display inline-block
   vertical-align top
   border-right 1px solid rgba(255,255,255,.1)
   padding 0 6px
   color #444
-
-
-.segment-selected
-  transform translate3d(0,0,0)
-  animation blink-animation .25s 2 forwards
-  -webkit-animation blink-animation .25s 2 forwards
 
 .speaker-segment
   display block

@@ -55,6 +55,7 @@
     "uuid": "^3.1.0",
     "vue": "^2.5.2",
     "vue-class-component": "^6.1.1",
+    "vue-color": "^2.6.0",
     "vue-contenteditable-directive": "^1.2.0",
     "vue-full-screen-file-drop": "^1.0.0",
     "vue-input-autowidth": "^1.0.2",

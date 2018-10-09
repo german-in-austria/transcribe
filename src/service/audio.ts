@@ -3,6 +3,7 @@ import * as sliceAudiobuffer from 'audiobuffer-slice'
 import * as concatBuffer from 'array-buffer-concat'
 import * as audioBufferToWav from 'audiobuffer-to-wav'
 
+import settings from '../store/settings'
 import * as PromiseWorker from 'promise-worker'
 import WaveformWorker from './waveform.worker'
 const waveformWorker = new PromiseWorker(new WaveformWorker(''))
@@ -139,8 +140,8 @@ function getOggIndex(buffer: ArrayBuffer): OggIndex {
   return { headers, pages }
 }
 
-function cacheOggIndex(buffer: ArrayBuffer) {
-  const {pages, headers} = getOggIndex(buffer)
+async function cacheOggIndex(buffer: ArrayBuffer) {
+  const {pages, headers} = await getOggIndexAsync(buffer)
   oggHeaders = headers
   oggPages = pages
 }
@@ -236,7 +237,8 @@ async function drawSpectogramAsync(buffer: AudioBuffer, width: number, height: n
     buffer: b,
     length: buffer.length,
     sampleRate: buffer.sampleRate,
-    width
+    width,
+    gradient: settings.spectogramGradient
   }, [ b ])
 
   const canvas = document.createElement('canvas')
@@ -372,13 +374,14 @@ async function decodeBufferSegment(fromByte: number, toByte: number, buffer: Arr
   return decodedBuffer
 }
 
-async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuffer, createIndex = false) {
+async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuffer) {
   console.time('decode buffer segment ' + from)
   // TODO: this is could possible be solved a little better.
   let startPage
   let endPage
-  if (createIndex) {
+  if (oggPages.length === 0) {
     const adHocIndex = (await getOggIndexAsync(buffer)).pages
+    console.log({ adHocIndex })
     const pages = findOggPages(from, to + 1, adHocIndex)
     startPage = pages.startPage
     endPage = pages.endPage
@@ -406,6 +409,37 @@ async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuff
   return slicedBuffer
 }
 
+async function getOrDownloadAudioBuffer(
+  from: number,
+  to: number,
+  fileSize: number,
+  audioLength: number,
+  url: string
+): Promise<AudioBuffer> {
+  try {
+    return await audio.decodeBufferTimeSlice(from, to, audio.store.uint8Buffer.buffer)
+  } catch (e) {
+    console.log(e)
+    const startByte = Math.max(fileSize * (from / audioLength) - 1024 * 1024, 0).toFixed(0)
+    // tslint:disable-next-line:max-line-length
+    const endByte = Math.min(fileSize * (to / audioLength) + 1024 * 1024, fileSize).toFixed(0)
+    console.log('DOWNLOADING AUDIO SEGMENT', {startByte, endByte}, (Number(endByte) - Number(startByte)) / 1024, 'MB')
+    console.time('buffer segment download')
+    const buffer = await (await fetch(url, {
+      headers: { Range: `bytes=${startByte}-${endByte}`}
+    })).arrayBuffer()
+    console.timeEnd('buffer segment download')
+    const { pages } = await audio.getOggIndexAsync(buffer)
+    const headerBuffer = getOggHeaderBuffer(audio.store.uint8Buffer.buffer)
+    const trimmedBuffer = buffer.slice(pages[0].byteOffset, pages[pages.length - 1].byteOffset)
+    return await audio.decodeBufferTimeSlice(
+      from,
+      to,
+      audio.concatBuffer(headerBuffer, trimmedBuffer)
+    )
+  }
+}
+
 const audio = {
   store : {
     uint8Buffer,
@@ -416,10 +450,11 @@ const audio = {
     isBufferComplete
   },
   cacheOggIndex,
+  getOrDownloadAudioBuffer,
   getOggSampleRate,
   getOggNominalBitrate,
   audioBufferToWav,
-  getOggIndex,
+  // getOggIndex,
   getOggIndexAsync,
   getOggHeaderBuffer,
   sliceAudioBuffer,

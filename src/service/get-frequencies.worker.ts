@@ -1,15 +1,15 @@
 const registerPromiseWorker = require('promise-worker/register')
-import { heatMap, gradient } from './heat-map'
+// import { heatMap } from './heat-map'
 
-// tslint:disable:no-bitwise
-const heatMapRgb = heatMap.map((hex) => {
-  const bigint = parseInt(hex, 16)
-  return [
-    (bigint >> 16) & 255,
-    (bigint >> 8) & 255,
-    bigint & 255
-  ]
-})
+// // tslint:disable:no-bitwise
+// const heatMapRgb = heatMap.map((hex) => {
+//   const bigint = parseInt(hex, 16)
+//   return [
+//     (bigint >> 16) & 255,
+//     (bigint >> 8) & 255,
+//     bigint & 255
+//   ]
+// })
 
 interface FFT {
   bufferSize: number
@@ -255,16 +255,17 @@ const FFT = function(this: FFT, bufferSize: number, sampleRate: number, windowFu
   }
 } as any as { new (bufferSize: number, sampleRate: number, windowFunc: string, alpha?: number): FFT }
 
-function makeImage(f: Uint8Array[]) {
+function makeImage(f: Uint8Array[], gradient: number[][]) {
+  console.log({ gradient })
   const image = new ImageData(f.length, f[0].length)
   for (let i = 0; i < image.data.length; i += 4) {
     const j = i / 4
     const x = j % f.length
     const y = Math.floor(j / f.length)
-    image.data[i]     = heatMapRgb[f[x][y]][0]
-    image.data[i + 1] = heatMapRgb[f[x][y]][1]
-    image.data[i + 2] = heatMapRgb[f[x][y]][2]
-    image.data[i + 3] = f[x][y] <= 2 ? 0 : 255
+    image.data[i]     = gradient[f[x][y]][0]
+    image.data[i + 1] = gradient[f[x][y]][1]
+    image.data[i + 2] = gradient[f[x][y]][2]
+    image.data[i + 3] = gradient[f[x][y]][3] * 255
     // image.data[i]     = 255
     // image.data[i + 1] = 255
     // image.data[i + 2] = 255
@@ -324,18 +325,16 @@ function resample(oldMatrix: Uint8Array[], width: number) {
   return newMatrix;
 }
 
-function getFrequencies({fftSamples, buffer, length, sampleRate, width}: {
+function getFrequencies({fftSamples, buffer, length, sampleRate, width, gradient}: {
   fftSamples: number,
   buffer: ArrayBuffer,
   length: number,
   sampleRate: number,
-  width: number
+  width: number,
+  gradient: number[][]
 }) {
   const channelOne = new Float32Array(buffer)
-  const bufferLength = length
   const frequencies = []
-
-  console.log('HELLO FROM GET FREQUENCIES')
 
   if (!channelOne) {
     throw new Error('Web Audio buffer is not available')
@@ -348,10 +347,7 @@ function getFrequencies({fftSamples, buffer, length, sampleRate, width}: {
   let currentOffset = 0
 
   while (currentOffset + fftSamples < length) {
-    const segment = channelOne.slice(
-        currentOffset,
-        currentOffset + fftSamples
-    )
+    const segment = channelOne.slice(currentOffset, currentOffset + fftSamples)
     const spectrum = fft.calculateSpectrum(segment)
     const array = new Uint8Array(fftSamples / 2)
     let j
@@ -362,7 +358,7 @@ function getFrequencies({fftSamples, buffer, length, sampleRate, width}: {
     currentOffset += fftSamples - nOverlap
   }
   // const resampled = resample(frequencies, width)
-  return [frequencies, makeImage(frequencies)]
+  return [frequencies, makeImage(frequencies, gradient)]
 }
 
 registerPromiseWorker(getFrequencies)

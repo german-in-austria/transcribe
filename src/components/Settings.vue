@@ -2,14 +2,13 @@
   <v-dialog
     lazy
     :transition="false"
-    scrollable
     @input="$event === false && $emit('close')"
     :value="show"
     content-class="dialog"
     max-width="700">
     <v-card>
       <v-card-text class="pa-0">
-        <v-tabs grow height="64" v-model="activeTab">
+        <v-tabs class="settings layout fill-height column" grow height="64" v-model="activeTab">
           <v-tab>
             Application
           </v-tab>
@@ -20,7 +19,9 @@
             Shortcuts
           </v-tab>
           <v-tab-item>
-            <v-list class="pa-4">
+            <v-list subheader class="pa-4">
+              <v-subheader>Interaction</v-subheader>
+              <v-divider />
               <v-list-tile>
                 <v-list-tile-title>Mousewheel scrolls horizontally</v-list-tile-title>
                 <v-list-tile-action>
@@ -39,24 +40,47 @@
                   <v-switch v-model="settings.darkMode" />
                 </v-list-tile-action>
               </v-list-tile>
+              <v-subheader>Visualization</v-subheader>
+              <v-divider />
               <v-list-tile>
-                <v-list-tile-title>Show Segments on Audio Wave</v-list-tile-title>
-                <v-list-tile-action>
-                  <v-switch v-model="settings.showSegmentBoxes" />
-                </v-list-tile-action>
+                <v-list-tile-title>Visualization Type</v-list-tile-title>
+                <v-btn-toggle mandatory v-model="settings.showSpectograms">
+                  <v-btn small flat :value="false">Amplitude</v-btn>
+                  <v-btn small flat :value="true">Spectrogram</v-btn>
+                </v-btn-toggle>
               </v-list-tile>
-              <v-list-tile>
-                <v-list-tile-title>Show Spectrogram instead of Waveform</v-list-tile-title>
-                <v-list-tile-action>
-                  <v-switch v-model="settings.showSpectograms" />
-                </v-list-tile-action>
-              </v-list-tile>
-              <v-list-tile>
+              <v-list-tile v-if="!settings.showSpectograms">
                 <v-list-tile-title>Use Mono Waveform</v-list-tile-title>
                 <v-list-tile-action>
                   <v-switch v-model="settings.useMonoWaveForm" />
                 </v-list-tile-action>
               </v-list-tile>
+              <v-list-tile>
+                <v-list-tile-title>Show Segments</v-list-tile-title>
+                <v-list-tile-action>
+                  <v-switch v-model="settings.showSegmentBoxes" />
+                </v-list-tile-action>
+              </v-list-tile>
+              <v-subheader>Spectogram Colors</v-subheader>
+              <v-divider />
+              <div class="pt-3 pb-3 pl-3 pr-5">
+                <v-menu
+                  offset-y
+                  lazy
+                  :close-on-content-click="false"
+                  v-for="(color, i) in settings.spectogramColors"
+                  :key="i">
+                  <v-btn
+                    small
+                    icon
+                    slot="activator"
+                    :style="{background: `rgba(${ color.c.join(', ') })`, border: '1px solid #ccc'}"
+                    dark />
+                  <color-picker
+                    @input="(e) => updateGradient(i, e)"
+                    :value="{ r: color.c[0], g: color.c[1], b: color.c[2], a: color.c[3] }" />
+                </v-menu>
+              </div>
             </v-list>
           </v-tab-item>
           <v-tab-item>
@@ -107,15 +131,35 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
+import { makeGradient } from '../lib/gradient'
+import { Chrome as ColorPicker } from 'vue-color'
 
-@Component
+@Component({
+  components: {
+    ColorPicker
+  }
+})
 export default class Settings extends Vue {
   @Prop({ default: false }) show: boolean
   settings = settings
   activeTab = null
+
+  updateGradient(i: number, c: any) {
+    this.settings.spectogramColors[i].c = [c.rgba.r, c.rgba.g, c.rgba.b, c.rgba.a]
+    console.log(this.settings.spectogramColors[i].c)
+    const g = makeGradient(this.settings.spectogramColors)
+    this.settings.spectogramGradient = g
+  }
 }
 </script>
+<style lang="stylus">
+.settings
+  .tabs__items
+    overflow-y scroll
+</style>
+
 <style lang="stylus" scoped>
+
 .no-flex-direction
   flex-direction: unset
 

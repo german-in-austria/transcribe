@@ -1,6 +1,7 @@
 <template>
   <v-app :dark="settings.darkMode">
     <v-navigation-drawer
+      style="padding: 0"
       v-model="drawer"
       right
       app>
@@ -25,7 +26,7 @@
           </div>
           <v-flex
             xs12
-            v-if="transcript !== null">
+            v-if="transcript !== null && audioElement !== null">
             <editor
               @toggle-drawer="e => drawer = !drawer"
               :transcript="transcript"
@@ -108,7 +109,9 @@ export default class App extends Vue {
           audio.store.isLocalFile = true
           audio.store.uint8Buffer = new Uint8Array(this.result as ArrayBuffer)
         }
-        this.audioElement = y
+        y.addEventListener('durationchange', () => {
+          this.audioElement = y
+        })
         // initialize with empty transcript,
         // if there is none.
         if (this.transcript === null) {

@@ -5,7 +5,7 @@
         <label for="scaleFactorY" class="caption grey--text lighten-2">
           Scale
         </label>
-        <select name="scaleFactorY" class="ml-2 no-outline" style="font-size: 90%" v-model="scaleFactorY">
+        <select name="scaleFactorY" class="ml-2 no-outline" style="padding: .1em .1em 0 1em; font-size: 90%" v-model="scaleFactorY">
           <option
             v-for="(v, i) in zoomLevels"
             :value="v"
@@ -21,7 +21,7 @@
         <span class="caption grey--text lighten-2">
           Zoom
         </span>
-        <select class="ml-2 no-outline" style="font-size: 90%" v-model="scaleFactorX">
+        <select class="ml-2 no-outline" style="padding: .1em .1em 0 1em; font-size: 90%" v-model="scaleFactorX">
           <option
             v-for="(v, i) in zoomLevels"
             :value="v"
@@ -93,7 +93,7 @@
         @mousedown="startDragOverview"
         @mouseup="scrollFromOverview"
         :style="{
-              transform: `translateX(${ overviewThumbOffset }px) translateY(7px)`,
+          transform: `translateX(${ overviewThumbOffset }px) translateY(7px)`,
           transition: transitionOverviewThumb ? '.25s' : 'unset'
         }" />
       <div
@@ -140,7 +140,7 @@ const queue = new Queue({
 })
 export default class Waveform extends Vue {
 
-  @Prop() audioElement: HTMLAudioElement|null
+  @Prop() audioElement: HTMLAudioElement
   @Prop() audioUrl: string
   @Prop({ default: null }) scrollToSegment: Segment|null
   @Prop({ default: 200 }) height: number
@@ -172,6 +172,10 @@ export default class Waveform extends Vue {
 
   onScroll = _.throttle((e) => this.handleScroll(e), 350)
   settings = settings
+
+  mounted() {
+    this.initWithAudio()
+  }
 
   addSegmentAt(e: MouseEvent) {
     const c = this.$refs.svgContainer as HTMLDivElement
@@ -257,32 +261,16 @@ export default class Waveform extends Vue {
     const secondsPerDrawWidth = this.drawWidth / this.pixelsPerSecond
     const from = i * secondsPerDrawWidth
     const to = isLast ? this.audioLength : from + secondsPerDrawWidth
-    let slicedBuffer: AudioBuffer
-    try {
-      slicedBuffer = await audio.decodeBufferTimeSlice(from, to, audio.store.uint8Buffer.buffer)
-    } catch (e) {
-      console.log(e)
-      const startByte = Math.max(this.metadata.fileSize * (from / this.audioLength) - 1024 * 1024, 0).toFixed(0)
-      // tslint:disable-next-line:max-line-length
-      const endByte = Math.min(this.metadata.fileSize * (to / this.audioLength) + 1024 * 1024, this.metadata.fileSize).toFixed(0)
-      console.log({startByte, endByte})
-      console.time('buffer segment download')
-      const buffer = await (await fetch((this.audioElement as any).src, {
-        headers: { Range: `bytes=${startByte}-${endByte}`}
-      })).arrayBuffer()
-      console.timeEnd('buffer segment download')
-      const { pages } = await audio.getOggIndexAsync(buffer)
-      const trimmedBuffer = buffer.slice(pages[0].byteOffset, pages[pages.length - 1].byteOffset)
-      slicedBuffer = await audio.decodeBufferTimeSlice(
-        from,
-        to,
-        audio.concatBuffer(this.metadata.headerBuffer, trimmedBuffer),
-        true
-      )
-    }
+    const buffer = await audio.getOrDownloadAudioBuffer(
+      from,
+      to,
+      this.metadata.fileSize,
+      this.audioLength,
+      this.audioElement.src
+    )
     console.log({ from, to, duration: to - from })
     const width = isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth
-    const c = (await audio.drawSpectogramAsync(slicedBuffer, width, this.height)) as HTMLCanvasElement
+    const c = (await audio.drawSpectogramAsync(buffer, width, this.height)) as HTMLCanvasElement
     const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
     console.time('render')
     el.innerHTML = ''
@@ -577,8 +565,8 @@ export default class Waveform extends Vue {
       const el = (this.$el.querySelector('.overview-waveform svg') as HTMLElement);
       el.innerHTML = `
         ${el.innerHTML}
-        <path fill="#FB7676" d="${svg1}"/>
-        <path fill="#69C" d="${svg2}" />
+        <path fill="${ settings.waveFormColors[0] }" d="${svg1}"/>
+        <path fill="${ settings.waveFormColors[1] }" d="${svg2}" />
       `
     })
   }
@@ -588,38 +576,22 @@ export default class Waveform extends Vue {
     const secondsPerDrawWidth = this.drawWidth / this.pixelsPerSecond
     const from = i * secondsPerDrawWidth
     const to = isLast ? this.audioLength : from + secondsPerDrawWidth
-    let slicedBuffer: AudioBuffer
-    try {
-      slicedBuffer = await audio.decodeBufferTimeSlice(from, to, audio.store.uint8Buffer.buffer)
-    } catch (e) {
-      console.log(e)
-      const startByte = Math.max(this.metadata.fileSize * (from / this.audioLength) - 1024 * 1024, 0).toFixed(0)
-      // tslint:disable-next-line:max-line-length
-      const endByte = Math.min(this.metadata.fileSize * (to / this.audioLength) + 1024 * 1024, this.metadata.fileSize).toFixed(0)
-      console.log({startByte, endByte})
-      console.time('buffer segment download')
-      const buffer = await (await fetch((this.audioElement as any).src, {
-        headers: { Range: `bytes=${startByte}-${endByte}`}
-      })).arrayBuffer()
-      console.timeEnd('buffer segment download')
-      const { pages } = await audio.getOggIndexAsync(buffer)
-      const trimmedBuffer = buffer.slice(pages[0].byteOffset, pages[pages.length - 1].byteOffset)
-      slicedBuffer = await audio.decodeBufferTimeSlice(
-        from,
-        to,
-        audio.concatBuffer(this.metadata.headerBuffer, trimmedBuffer),
-        true
-      )
-    }
+    const buffer = await audio.getOrDownloadAudioBuffer(
+      from,
+      to,
+      this.metadata.fileSize,
+      this.audioLength,
+      this.audioElement.src
+    )
     // console.log({ from, to, duration: to - from })
     const width = isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth
     let svg: string
     if (this.settings.useMonoWaveForm === true) {
-      svg = await audio.drawWave(slicedBuffer, width, this.height, '#fb7676', undefined, true)
+      svg = await audio.drawWave(buffer, width, this.height, settings.waveFormColors[0], undefined, true)
     } else {
       const [svg1, svg2] = await Promise.all([
-        audio.drawWave(slicedBuffer, width, this.height, '#fb7676', 0),
-        audio.drawWave(slicedBuffer, width, this.height, '#69c', 1)
+        audio.drawWave(buffer, width, this.height, settings.waveFormColors[0], 0),
+        audio.drawWave(buffer, width, this.height, settings.waveFormColors[1], 1)
       ])
       svg = svg1 + svg2
     }

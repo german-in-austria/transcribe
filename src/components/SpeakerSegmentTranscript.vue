@@ -24,16 +24,20 @@
 import contenteditableDirective from 'vue-contenteditable-directive'
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
-
+import { updateSpeakerTokens } from '../store/transcript'
 Vue.use(contenteditableDirective)
 
 @Component
 export default class SpeakerSegmentTranscript extends Vue {
 
+  @Prop() segment: Segment
+  @Prop() speaker: string
   @Prop() tokens: string[]
+
   localTokens = this.tokens.slice()
   focused = false
   settings = settings
+  updateSpeakerTokens = updateSpeakerTokens
 
   tokenTypeFromToken(token: string) {
     return token.startsWith('((') ? 'non-verbal' : ''
@@ -54,6 +58,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   updateLabelText(e: Event) {
     this.focused = false
     const tokens = ((e.target as HTMLDivElement).textContent || '').split(' ')
+    updateSpeakerTokens(this.segment, this.speaker, tokens)
     this.$emit('update-speaker-event', tokens)
   }
 

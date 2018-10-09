@@ -31,23 +31,9 @@ export default class Triangle extends Vue {
 </script>
 <style lang="stylus" scoped>
 .transcript-scrollhandle
+  user-select none
   margin-top -15px
   position absolute
   i
     transform translateX(-50%)
-//   position absolute
-//   display inline-block
-//   width 20px
-//   left -10px
-//   height 17px
-//   border-bottom 1px solid rgba(255,255,255,.4)
-//   border-radius 1px
-//   overflow hidden
-//   .inner
-//     border-radius 2px
-//     background rgba(255,255,255,.25)
-//     border 1px solid rgba(255,255,255,.4)
-//     transform-origin center center
-//     width 20px
-//     height 20px
 </style>

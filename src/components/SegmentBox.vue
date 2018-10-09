@@ -9,7 +9,12 @@
     tabindex="-1"
     :class="[ 'segment', isSelected ? 'selected' : '' ]"
     :style="{ left: offset + 'px', width: width + 'px' }">
-    <slot :segment="segment" />
+    <div :style="{ left: width / 2 + 'px' }" class="transcript-tooltip" v-if="isSelected">
+      <div class="inner" :key="i" v-for="(event, i) in getTranscriptSpeakerEvents(segment.id)">
+        {{ event.speaker + ' ' + event.tokens.join(' ') }}
+      </div>
+    </div>
+    <!-- <slot :segment="segment" /> -->
     <resize-parent
       v-if="isSelected"
       class="resizer"
@@ -33,7 +38,7 @@
 import { Vue, Component, Prop, Watch, Provide } from 'vue-property-decorator'
 import Resizer from '@components/helper/Resizer.vue'
 import ResizeParent from '@components/helper/ResizeParent.vue'
-import { resizeSegment } from '../store/transcript'
+import { resizeSegment, findSpeakerEventById } from '../store/transcript'
 import * as _ from 'lodash'
 @Component({
   components: {
@@ -57,6 +62,14 @@ export default class SegmentBox extends Vue {
     console.log('hello')
     this.isSelected = this.selectedSegment !== null && this.selectedSegment.id === this.segment.id
   }
+
+  getTranscriptSpeakerEvents(id: string): SpeakerEvent|null {
+    console.log(id)
+    const e = findSpeakerEventById(id)
+    console.log(e)
+    return e
+  }
+
   get width(): number {
     return (Number(this.segment.endTime) - Number(this.segment.startTime)) * this.pixelsPerSecond
   }
@@ -82,11 +95,11 @@ export default class SegmentBox extends Vue {
     this.segment.startTime = e.current.left / this.pixelsPerSecond
     this.segment.endTime = e.current.right / this.pixelsPerSecond
     resizeSegment(this.segment.id!, this.segment.startTime, this.segment.endTime)
-    if (this.nextSegment !== undefined) {
+    if (e.next !== null && this.nextSegment !== undefined) {
       this.nextSegment.startTime = e.next.left / this.pixelsPerSecond
       resizeSegment(this.nextSegment.id!, this.nextSegment.startTime, this.nextSegment.endTime)
     }
-    if (this.previousSegment !== undefined) {
+    if (e.previous !== null && this.previousSegment !== undefined) {
       this.previousSegment.endTime = e.previous.right / this.pixelsPerSecond
       resizeSegment(this.previousSegment.id!, this.previousSegment.startTime, this.previousSegment.endTime)
     }
@@ -94,17 +107,24 @@ export default class SegmentBox extends Vue {
 }
 </script>
 <style lang="stylus" scoped>
+.transcript-tooltip
+  position absolute
+  top -40px
+  transform translateX(-50%)
+  text-align center
+  .inner
+    font-weight 300
+    white-space nowrap
+
 .segment
   min-width 12px
   height 150px
   top 75px
   border-radius 10px
-  overflow hidden
   background rgba(0,0,0,.2)
   position absolute
   border-top 1px solid rgba(255,255,255,.3)
   border-right 1px solid rgba(255,255,255,.2)
-  transition background .3s
   outline 0
   will-change width left
   transform-origin 0 0

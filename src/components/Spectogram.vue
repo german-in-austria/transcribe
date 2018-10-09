@@ -5,12 +5,10 @@
     scrollable
     @input="$event === false && $emit('close')"
     :value="show"
-    max-width="700">
-    <v-card>
-      <v-card-title class="headline">Spectogram</v-card-title>
-      <v-card-text>
-        <canvas ref="canvas" />
-      </v-card-text>
+    max-width="1200">
+    <v-card class="text-xs-center pt-3" style="background: rgb(30, 0, 30)">
+      <small>Spectogram</small>
+      <v-card-text class="pa-0" ref="canvasContainer"></v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
         <v-btn
@@ -38,12 +36,17 @@ export default class Settings extends Vue {
   @Prop({ default: false }) show: boolean
   @Prop({ required: true }) segment: Segment
   buffer: AudioBuffer
-  mounted() {
-    const audioBuffer = audio.decodeBufferTimeSlice(
+  async mounted() {
+    const slicedBuffer = await audio.decodeBufferTimeSlice(
       this.segment.startTime,
       this.segment.endTime,
       audio.store.uint8Buffer.buffer
     )
+    const width = 1200
+    const c = (await audio.drawSpectogramAsync(slicedBuffer, width, 500)) as HTMLCanvasElement;
+    const cont = (this.$refs.canvasContainer as HTMLElement)
+    cont.innerHTML = ''
+    cont.appendChild(c)
   }
 }
 </script>

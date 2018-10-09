@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="fill-height">
     <v-toolbar class="elevation-0" fixed app>
       <div>{{ transcript.name || 'Untitled Transcript' }}</div>
       <v-spacer></v-spacer>
@@ -257,7 +257,10 @@ export default class Editor extends Vue {
   }
 
   mounted() {
+    console.log('mounted')
+    console.log(this.audioElement)
     if (this.audioElement instanceof HTMLAudioElement) {
+      console.log('inner')
       this.audioElement.addEventListener('pause', () => {
         if (this.segmentPlayingTimeout !== null) {
           clearTimeout(this.segmentPlayingTimeout)
@@ -297,6 +300,9 @@ export default class Editor extends Vue {
           .sortBy('startTime')
           .value()
       })
+    }
+    if (this.showMenu) {
+      this.showMenu = false
     }
   }
 
