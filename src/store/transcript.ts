@@ -186,4 +186,99 @@ export function findSegmentAt(seconds: number): Segment|undefined {
   }
 }
 
+interface ServerTranscript {
+  aTokens: {
+    [token_id: string]: ServerToken
+  }
+  aEvents: ServerEvent[]
+  nNr: number
+  aNr: number
+  aTmNr?: number
+}
+
+interface ServerToken {
+  tr: number // token reihung
+  tt: number // token type
+  sr: number // sequence in sentence
+  t: string // text
+  to: string // text in ortho
+  s: number // sentence id
+  i: number // inf id
+  e: number // event id
+}
+
+interface ServerEvent {
+  pk: number
+  tid: {
+    [speaker_id: string]: number[]
+  }
+  e: string // end
+  s: string // start
+  l: 0
+}
+
+interface TranscriptChunk {
+  tokens: {
+  }
+  events: any[]
+}
+
+function timeToSeconds(time: string) {
+  const chunks = _.map(time.split(':'), Number)
+  return (
+      chunks[0] * 60 * 60 // hours
+    + chunks[1] * 60      // minutes
+    + chunks[2]           // seconds
+  )
+}
+
+function serverTranscriptToLocal(s: ServerTranscript) {
+  return _.map(s.aEvents, (e) => {
+    return {
+      startTime: timeToSeconds(e.s),
+      endTime: timeToSeconds(e.e),
+      speakerEvents: _.mapValues(e.tid, (tokenIds) => {
+        return _.map(tokenIds, (id) => {
+          return {
+            text: s.aTokens[id].t,
+            ortho: s.aTokens[id].to,
+            type: s.aTokens[id].tt
+          }
+        })
+      })
+    }
+  })
+}
+
+export async function getTranscript(
+  id: number,
+  onProgress = (v: number) => v,
+  chunk = 0,
+  buffer: TranscriptChunk[] = [],
+  totalSteps?: number,
+): Promise<TranscriptChunk[]> {
+  try {
+
+    const res = await (await fetch(`https://dissdb.dioe.at/routes/transcript/${ id }/${ chunk }`, {
+      credentials: 'include'
+    })).json() as ServerTranscript
+
+    if (onProgress !== undefined && totalSteps !== undefined) {
+      onProgress(res.aNr / totalSteps)
+    }
+    console.log(serverTranscriptToLocal(res))
+    if (res.nNr > res.aNr)  {
+      return getTranscript(id, onProgress, chunk + 1, buffer.concat({
+        tokens: res.aTokens,
+        events: res.aEvents
+      }), totalSteps || res.aTmNr)
+    } else {
+      return buffer
+    }
+  } catch (e) {
+    console.log(e)
+    return buffer
+  }
+}
+
 export default transcript
