@@ -46,6 +46,7 @@
     "lodash": "^4.17.5",
     "peaks.js": "^0.9.7",
     "promise-worker": "^2.0.0",
+    "promise-worker-transferable": "^1.0.4",
     "pug": "^2.0.3",
     "pug-loader": "^2.4.0",
     "simple-promise-queue": "^0.1.7",

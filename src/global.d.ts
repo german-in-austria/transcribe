@@ -29,6 +29,7 @@ declare module 'vue-scrollto' {
 declare module 'vue-full-screen-file-drop'
 declare module 'draw-wave'
 declare module 'promise-worker'
+declare module 'promise-worker-transferable'
 declare module '@rgrove/parse-xml'
 declare module 'audiobuffer-slice'
 declare module 'simple-promise-queue'

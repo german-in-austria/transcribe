@@ -5,8 +5,11 @@ import * as audioBufferToWav from 'audiobuffer-to-wav'
 
 import settings from '../store/settings'
 import * as PromiseWorker from 'promise-worker'
+import * as PromiseWorkerTransferable from 'promise-worker-transferable'
 import WaveformWorker from './waveform.worker'
-const waveformWorker = new PromiseWorker(new WaveformWorker(''))
+const waveformWorker = new PromiseWorkerTransferable(new WaveformWorker(''))
+// import MultiWorker from '../lib/worker-loader'
+// const waveformWorkerPar = new MultiWorker(new WaveformWorker(''))
 import GetFrequenciesWorker from './get-frequencies.worker'
 const getFrequenciesWorker = new PromiseWorker(new GetFrequenciesWorker(''))
 import OggIndexWorker from './oggindex.worker'
@@ -33,6 +36,7 @@ let   oggHeaders              = [] as OggIndex['headers']
 let   oggLength: number|null  = null
 let   sampleRate: number|null = null
 const isBufferComplete        = false
+let   oggHeaderBuffer: ArrayBuffer|null = null
 
 function readU4le(dataView: DataView, i: number) {
   return dataView.byteLength > i + 32 ? dataView.getUint32(i, true) : null
@@ -97,7 +101,7 @@ export function getOggSampleRate(buffer: ArrayBuffer): number {
 }
 
 async function getOggIndexAsync(buffer: ArrayBuffer): Promise<OggIndex> {
-  const m = await oggIndexWorker.postMessage({ buffer }, [ buffer ])
+  const m = await oggIndexWorker.postMessage({ buffer })
   oggLength = m.oggLength
   console.log(m)
   return m.oggIndex
@@ -253,18 +257,17 @@ async function drawSpectogramAsync(buffer: AudioBuffer, width: number, height: n
   // ctx.scale(1, height / (i as ImageData).height)
   ctx.scale(1, height / i.height)
   ctx.drawImage(fakeCanvas, 0, 0)
-  // const pixels = my.resample(frequenciesData)
   console.log(f.length)
   console.log(f[0].length)
   return canvas
 }
 
 function sumChannels(first: Float32Array, second: Float32Array): Float32Array {
-  const my = new Float32Array(first.length)
+  const sum = new Float32Array(first.length)
   first.forEach((v: number, i: number) => {
-    my[i] = v + second[i]
+    sum[i] = v + second[i]
   })
-  return my
+  return sum
 }
 
 async function drawWavePathAsync(
@@ -275,19 +278,24 @@ async function drawWavePathAsync(
   offsetLeft = 0,
   mono = false
 ): Promise<string> {
-  let b: ArrayBuffer
-  if (mono === true) {
-    b = sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
-  } else {
-    b = buffer.getChannelData(channel).buffer
-  }
-  const p = await waveformWorker.postMessage({
-    buffer: b,
-    width,
-    height,
-    offsetLeft
-  }, [ b ])
-  return p
+  const b = (() => {
+    if (mono === true) {
+      return sumChannels(
+        buffer.getChannelData(0),
+        buffer.getChannelData(1)
+      ).buffer
+    } else {
+      return buffer.getChannelData(channel).buffer
+    }
+  })()
+  return await waveformWorker.postMessage([
+    b,
+    JSON.stringify({
+      width,
+      height,
+      offsetLeft
+    })
+  ], [ b ])
 }
 
 // let wasmModule: any
@@ -409,7 +417,20 @@ async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuff
   return slicedBuffer
 }
 
-async function getOrDownloadAudioBuffer(
+async function getOrFetchHeaderBuffer(url: string): Promise<ArrayBuffer|null> {
+  const kb = 100
+  if (oggHeaderBuffer === null) {
+    console.log('DOWNLOADING HEADER BUFFER')
+    const chunk = await fetch(url, {method: 'GET', headers: { Range: `bytes=0-${ kb * 1024 }`}})
+    const bufferFirstSlice = await chunk.arrayBuffer()
+    oggHeaderBuffer = audio.getOggHeaderBuffer(bufferFirstSlice)
+    return oggHeaderBuffer
+  } else {
+    return oggHeaderBuffer
+  }
+}
+
+async function getOrFetchAudioBuffer(
   from: number,
   to: number,
   fileSize: number,
@@ -420,23 +441,18 @@ async function getOrDownloadAudioBuffer(
     return await audio.decodeBufferTimeSlice(from, to, audio.store.uint8Buffer.buffer)
   } catch (e) {
     console.log(e)
+    const headerBuffer = await getOrFetchHeaderBuffer(url)
     const startByte = Math.max(fileSize * (from / audioLength) - 1024 * 1024, 0).toFixed(0)
-    // tslint:disable-next-line:max-line-length
-    const endByte = Math.min(fileSize * (to / audioLength) + 1024 * 1024, fileSize).toFixed(0)
+    const endByte   = Math.min(fileSize * (to / audioLength) + 1024 * 1024, fileSize).toFixed(0)
     console.log('DOWNLOADING AUDIO SEGMENT', {startByte, endByte}, (Number(endByte) - Number(startByte)) / 1024, 'MB')
     console.time('buffer segment download')
-    const buffer = await (await fetch(url, {
-      headers: { Range: `bytes=${startByte}-${endByte}`}
-    })).arrayBuffer()
+    const buffer = await (await fetch(url, { headers: { Range: `bytes=${startByte}-${endByte}`}})).arrayBuffer()
     console.timeEnd('buffer segment download')
     const { pages } = await audio.getOggIndexAsync(buffer)
-    const headerBuffer = getOggHeaderBuffer(audio.store.uint8Buffer.buffer)
     const trimmedBuffer = buffer.slice(pages[0].byteOffset, pages[pages.length - 1].byteOffset)
-    return await audio.decodeBufferTimeSlice(
-      from,
-      to,
-      audio.concatBuffer(headerBuffer, trimmedBuffer)
-    )
+    console.log({ headerBuffer, trimmedBuffer })
+    const combinedBuffer = audio.concatBuffer(headerBuffer, trimmedBuffer)
+    return await audio.decodeBufferTimeSlice(from, to, combinedBuffer)
   }
 }
 
@@ -444,13 +460,14 @@ const audio = {
   store : {
     uint8Buffer,
     isLocalFile,
+    oggHeaderBuffer,
     oggHeaders,
     oggPages,
     audioContext,
     isBufferComplete
   },
   cacheOggIndex,
-  getOrDownloadAudioBuffer,
+  getOrFetchAudioBuffer,
   getOggSampleRate,
   getOggNominalBitrate,
   audioBufferToWav,
