@@ -2,6 +2,7 @@
   <div>
     <div
       class="play-head"
+      ref="playHead"
       :style="{
         transition: transition,
         transform: `translateX(${ left }px)`
@@ -69,10 +70,9 @@ export default class PlayHead extends Vue {
   }
 
   drag(e: MouseEvent) {
-    // this.left = e.pageX
-    if (e.target === this.$refs.stage as HTMLElement) {
-      this.left = e.layerX
-    }
+    requestAnimationFrame(() => {
+      this.left = e.offsetX
+    })
   }
 
   endDrag(e: MouseEvent) {
@@ -81,7 +81,6 @@ export default class PlayHead extends Vue {
     document.removeEventListener('mousemove', this.drag)
     document.removeEventListener('mouseup', this.endDrag)
   }
-
 
 }
 </script>
@@ -93,10 +92,11 @@ export default class PlayHead extends Vue {
   position absolute
   top 0
   bottom 0
+
 .play-head-stage
   position absolute
   left 0
   right 0
   top 0
-  height 50px
+  height 300px
 </style>
