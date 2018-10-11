@@ -261,7 +261,7 @@ export default class Waveform extends Vue {
     const secondsPerDrawWidth = this.drawWidth / this.pixelsPerSecond
     const from = i * secondsPerDrawWidth
     const to = isLast ? this.audioLength : from + secondsPerDrawWidth
-    const buffer = await audio.getOrDownloadAudioBuffer(
+    const buffer = await audio.getOrFetchAudioBuffer(
       from,
       to,
       this.metadata.fileSize,
@@ -480,10 +480,12 @@ export default class Waveform extends Vue {
             reader.read().then(async function process(chunk: {value: Uint8Array, done: boolean}): Promise<any> {
               if (chunk.done === false) {
                 if (chunk.value && chunk.value.buffer instanceof ArrayBuffer) {
-                  preBuffer = await util.concatUint8ArrayAsync(preBuffer, chunk.value)
+                  [ preBuffer ] = await util.concatUint8ArrayAsync(preBuffer, chunk.value)
                   if (preBuffer.byteLength > 2048 * 1024) {
-                    audio.store.uint8Buffer = await util.concatUint8ArrayAsync(audio.store.uint8Buffer, preBuffer)
+                    // tslint:disable-next-line:max-line-length
                     const {headers, pages} = await audio.getOggIndexAsync(preBuffer.buffer)
+                    const buffers = await util.concatUint8ArrayAsync(audio.store.uint8Buffer, preBuffer)
+                    audio.store.uint8Buffer = buffers[0]
                     preBuffer = new Uint8Array(0)
                     // reset buffer
                     // console.log(audio.store.uint8Buffer.byteLength, 'bytes loaded')
@@ -572,19 +574,21 @@ export default class Waveform extends Vue {
   }
 
   async drawWaveFormPiece(i: number) {
+
     const isLast = i + 1 === this.amountDrawSegments
     const secondsPerDrawWidth = this.drawWidth / this.pixelsPerSecond
     const from = i * secondsPerDrawWidth
     const to = isLast ? this.audioLength : from + secondsPerDrawWidth
-    const buffer = await audio.getOrDownloadAudioBuffer(
+    const width = isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth
+
+    const buffer = await audio.getOrFetchAudioBuffer(
       from,
       to,
       this.metadata.fileSize,
       this.audioLength,
       this.audioElement.src
     )
-    // console.log({ from, to, duration: to - from })
-    const width = isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth
+
     let svg: string
     if (this.settings.useMonoWaveForm === true) {
       svg = await audio.drawWave(buffer, width, this.height, settings.waveFormColors[0], undefined, true)
