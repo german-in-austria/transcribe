@@ -152,7 +152,7 @@ import playHead from '@components/PlayHead.vue'
 import * as _ from 'lodash'
 import * as fns from 'date-fns'
 import audio from '../service/audio'
-import transcript, { addSegment, deleteSegment, splitSegment, findSegmentAt } from '../store/transcript'
+import transcript, { addSegment, deleteSegment, splitSegment, findSegmentAt, getTranscript } from '../store/transcript'
 
 @Component({
   components: {
@@ -259,6 +259,11 @@ export default class Editor extends Vue {
   mounted() {
     console.log('mounted')
     console.log(this.audioElement)
+    const x = getTranscript(1, (v) => {
+      console.log('PROGRESS', v)
+      return v
+    })
+    console.log({x})
     if (this.audioElement instanceof HTMLAudioElement) {
       console.log('inner')
       this.audioElement.addEventListener('pause', () => {
