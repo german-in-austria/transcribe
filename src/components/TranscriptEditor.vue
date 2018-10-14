@@ -1,5 +1,5 @@
 <template>
-  <v-layout class="">
+  <v-layout>
     <v-flex :style="theme" class="pt-4 speaker-panel" xs1>
       <div :key="i" v-for="(speaker, i) in transcript.speakers" class="speaker">
         <div class="speaker-name">
@@ -70,7 +70,7 @@ export default class TranscriptEditor extends Vue {
     this.$nextTick(() => {
       requestAnimationFrame(() => {
         const el = this.$el.querySelector('.segment-selected')
-        const c = this.$el
+        const c = this.$refs.tracks
         if (c instanceof HTMLElement && el instanceof HTMLElement) {
           this.innerLeft = el.offsetLeft * -1 + c.clientWidth / 2 - el.clientWidth / 2
           this.emitScroll()
@@ -80,7 +80,7 @@ export default class TranscriptEditor extends Vue {
   }
 
   mounted() {
-    outerWidth = this.$el.clientWidth
+    outerWidth = (this.$refs.tracks as HTMLElement).clientWidth
     this.emitScroll()
   }
 
@@ -91,7 +91,7 @@ export default class TranscriptEditor extends Vue {
   handleRender(width: number, index: number, segment_id: string) {
     if (index === 0) {
       // console.log('rendered leftmost item', width, segment_id)
-      // this.innerLeft = this.innerLeft - width
+      this.innerLeft = this.innerLeft - width
     // RIGHT
     } else if (index === this.visibleSegments.length - 1) {
       // console.log('rendered rightmost item', width, segment_id)
@@ -102,7 +102,7 @@ export default class TranscriptEditor extends Vue {
     // LEFTMOST ITEM
     if (index === 0) {
       // console.log('unrendered leftmost item', width, segment_id)
-      this.innerLeft = this.innerLeft + width // padding
+      this.innerLeft = this.innerLeft + width
     // RIGHT
     } else if (index === this.visibleSegments.length - 1) {
       // console.log('unrendered rightmost item', width, segment_id)
@@ -118,7 +118,6 @@ export default class TranscriptEditor extends Vue {
         this.visibleSegments.push(this.transcript.segments[this.currentIndex + defaultLimit + 1])
         const unrendered = this.visibleSegments.shift()
         this.currentIndex = this.currentIndex + 1
-        // this.throttledEmitter()
         this.emitScroll()
       }
     } else {
