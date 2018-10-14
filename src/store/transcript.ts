@@ -233,21 +233,32 @@ function timeToSeconds(time: string) {
 }
 
 function serverTranscriptToLocal(s: ServerTranscript) {
-  return _.map(s.aEvents, (e) => {
+  const x = _.map(s.aEvents, (e) => {
     return {
+      event_id: e.pk,
       startTime: timeToSeconds(e.s),
       endTime: timeToSeconds(e.e),
       speakerEvents: _.mapValues(e.tid, (tokenIds) => {
         return _.map(tokenIds, (id) => {
           return {
-            text: s.aTokens[id].t,
-            ortho: s.aTokens[id].to,
-            type: s.aTokens[id].tt
+            id,
+            tiers : {
+              default: {
+                text: s.aTokens[id].t,
+                type: s.aTokens[id].tt
+              },
+              ortho: {
+                // TODO: not "text_in_ortho", but "ortho".
+                ortho: s.aTokens[id].to,
+                type: null
+              }
+            }
           }
         })
       })
     }
   })
+  return x
 }
 
 export async function getTranscript(
