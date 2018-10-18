@@ -21,6 +21,7 @@ declare global {
     name: string
     audioUrl?: string
     speakers: string[]
+    events?: LocalTranscriptEvent[]
     segments: Segment[]
     speakerEvents: _.Dictionary<SpeakerEvent>
   }
@@ -34,6 +35,80 @@ declare global {
   }
 }
 
+interface ServerTranscript {
+  aTokens: {
+    [token_id: string]: ServerToken
+  }
+  aEinzelErhebung?: {
+    af: string
+    d: string
+    dp: string
+    e: number
+    pk: number
+    trId: number
+  }
+  aInformanten?: {
+    [speaker_id: number]: {
+      ka: string // name anonymized
+      k: string // name
+    }
+  }
+  aTranscript?: {
+    n: string // name
+    pk: number
+    ut: string
+  }
+  aEvents: ServerEvent[]
+  nNr: number
+  aNr: number
+  aTmNr?: number
+}
+
+interface ServerToken {
+  tr: number // token reihung
+  tt: number // token type
+  sr: number // sequence in sentence
+  t: string // text
+  to: string // text in ortho
+  s: number // sentence id
+  i: number // inf id
+  e: number // event id
+}
+
+interface ServerEvent {
+  pk: number
+  tid: {
+    [speaker_id: string]: number[]
+  }
+  e: string // end
+  s: string // start
+  l: 0
+}
+
+interface LocalTranscriptTokeTier {
+  text: string
+  type: number|null
+}
+
+interface LocalTranscriptToken {
+  id: number
+  tiers: {
+    default: LocalTranscriptTokeTier
+    [tier: string]: LocalTranscriptTokeTier
+  }
+}
+
+interface LocalTranscriptEvent {
+  eventId: number
+  startTime: number
+  endTime: number,
+  speakerEvents: {
+    [speakerId: string]: LocalTranscriptToken[]
+  }
+}
+
+export type LocalTranscript = LocalTranscriptEvent[]
+
 interface Action {
   type: 'RESIZE'|'DELETE'|'CHANGE_TOKENS'|'ADD'
   segment: Segment
@@ -44,6 +119,8 @@ let transcript: Transcript|null = null
 export const history: Action[] = []
 
 function transcriptTreeToTranscribable(tree: ParsedXML, name: string): Transcript {
+  console.log({tree})
+  const speakers = _(tree.speakers).map((v, k) => k).value()
   const segments = _(tree.speakers)
     .map(tiers => _.map(tiers, tier => _.map(tier.events, event => ({
       id: `${event.start}-${event.end}`,
@@ -56,11 +133,11 @@ function transcriptTreeToTranscribable(tree: ParsedXML, name: string): Transcrip
     .uniqBy(s => s.id)
     .orderBy(s => s.startTime)
     .value()
-  const speakers = _(tree.speakers).map((t, v) => v).value()
+
   const speakerEvents = _(tree.speakers)
-    .map((t, key) => {
+    .map((tiers, key) => {
       // only the first tier for now
-      return _.toArray(t)[0].events.map(e => {
+      return _.toArray(tiers)[0].events.map(e => {
         return {
           start  : e.start,
           end    : e.end,
@@ -73,6 +150,7 @@ function transcriptTreeToTranscribable(tree: ParsedXML, name: string): Transcrip
     .groupBy(e => `${e.start}-${e.end}`)
     .mapValues(spe => _.keyBy(spe, 'speaker'))
     .value()
+
   transcript = {
     name,
     audioUrl: '',
@@ -80,7 +158,6 @@ function transcriptTreeToTranscribable(tree: ParsedXML, name: string): Transcrip
     segments,
     speakers
   }
-  // console.log(segments)
   return transcript
 }
 
@@ -115,7 +192,9 @@ export function updateSpeakerTokens(segment: Segment, speaker: string, tokens: s
         }
       ]
     })
-    transcript.speakerEvents[segment.id][speaker].tokens = tokens
+    if (transcript.speakerEvents[segment.id][speaker]) {
+      transcript.speakerEvents[segment.id][speaker].tokens = tokens
+    }
   }
 }
 
@@ -186,43 +265,6 @@ export function findSegmentAt(seconds: number): Segment|undefined {
   }
 }
 
-interface ServerTranscript {
-  aTokens: {
-    [token_id: string]: ServerToken
-  }
-  aEvents: ServerEvent[]
-  nNr: number
-  aNr: number
-  aTmNr?: number
-}
-
-interface ServerToken {
-  tr: number // token reihung
-  tt: number // token type
-  sr: number // sequence in sentence
-  t: string // text
-  to: string // text in ortho
-  s: number // sentence id
-  i: number // inf id
-  e: number // event id
-}
-
-interface ServerEvent {
-  pk: number
-  tid: {
-    [speaker_id: string]: number[]
-  }
-  e: string // end
-  s: string // start
-  l: 0
-}
-
-interface TranscriptChunk {
-  tokens: {
-  }
-  events: any[]
-}
-
 function timeToSeconds(time: string) {
   const chunks = _.map(time.split(':'), Number)
   return (
@@ -232,10 +274,56 @@ function timeToSeconds(time: string) {
   )
 }
 
-function serverTranscriptToLocal(s: ServerTranscript) {
+function serverTranscriptToTranscript(s: ServerTranscript, t: Transcript): Transcript {
+  const speakers = _.map(s.aInformanten || [], (i, k) => String(k))
+  const audioUrl = (() => {
+    if (s.aEinzelErhebung) {
+      return `https://dissdb.dioe.at/private-media/${
+        s.aEinzelErhebung.dp.split('\\').join('/')
+      }${
+        s.aEinzelErhebung.af
+      }.ogg`
+    } else {
+      return t.audioUrl
+    }
+  })()
+  const segments = _.map(s.aEvents, (e) => {
+    return {
+      id: String(e.pk),
+      startTime: timeToSeconds(e.s),
+      endTime: timeToSeconds(e.e)
+    }
+  })
+  const speakerEvents = _(s.aEvents)
+    .keyBy('pk')
+    .mapValues((e) => {
+      return _(e.tid).mapValues((ts) => {
+        return {
+          tokens: _(ts).map(ti => s.aTokens[ti].t).value()
+        }
+      }).value()
+    })
+    .value()
+  console.log('combined speaker events:', {
+    ...t.speakerEvents,
+    ...speakerEvents
+  })
+  return {
+    audioUrl,
+    name: t.name || (s.aTranscript ? s.aTranscript.n : ''),
+    speakers: speakers.length > 0 ? speakers : t.speakers,
+    segments: t.segments.concat(segments),
+    speakerEvents: {
+      ...t.speakerEvents,
+      ...speakerEvents
+    }
+  }
+}
+
+function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
   const x = _.map(s.aEvents, (e) => {
     return {
-      event_id: e.pk,
+      eventId: e.pk,
       startTime: timeToSeconds(e.s),
       endTime: timeToSeconds(e.e),
       speakerEvents: _.mapValues(e.tid, (tokenIds) => {
@@ -249,7 +337,7 @@ function serverTranscriptToLocal(s: ServerTranscript) {
               },
               ortho: {
                 // TODO: not "text_in_ortho", but "ortho".
-                ortho: s.aTokens[id].to,
+                text: s.aTokens[id].to,
                 type: null
               }
             }
@@ -261,13 +349,13 @@ function serverTranscriptToLocal(s: ServerTranscript) {
   return x
 }
 
-export async function getTranscript(
+export async function getTranscriptNew(
   id: number,
-  onProgress = (v: number) => v,
+  onProgress = (v: number): any => v,
   chunk = 0,
-  buffer: TranscriptChunk[] = [],
+  buffer: LocalTranscript = [],
   totalSteps?: number,
-): Promise<TranscriptChunk[]> {
+): Promise<LocalTranscript> {
   try {
 
     const res = await (await fetch(`https://dissdb.dioe.at/routes/transcript/${ id }/${ chunk }`, {
@@ -277,19 +365,63 @@ export async function getTranscript(
     if (onProgress !== undefined && totalSteps !== undefined) {
       onProgress(res.aNr / totalSteps)
     }
-    console.log(serverTranscriptToLocal(res))
+    // console.log(serverTranscriptToLocal(res))
     if (res.nNr > res.aNr)  {
-      return getTranscript(id, onProgress, chunk + 1, buffer.concat({
-        tokens: res.aTokens,
-        events: res.aEvents
-      }), totalSteps || res.aTmNr)
+      return getTranscriptNew(
+        id,
+        onProgress,
+        chunk + 1,
+        buffer.concat(serverTranscriptToLocal(res)),
+        totalSteps || res.aTmNr
+      )
     } else {
       return buffer
     }
   } catch (e) {
-    console.log(e)
     return buffer
   }
 }
+
+export async function getTranscript(
+  id: number,
+  onProgress: (p: number, t: Transcript|null) => any,
+  chunk = 0,
+  totalSteps?: number,
+): Promise<Transcript> {
+  try {
+
+    const res = await (await fetch(`https://dissdb.dioe.at/routes/transcript/${ id }/${ chunk }`, {
+      credentials: 'include'
+    })).json() as ServerTranscript
+
+    if (onProgress !== undefined && totalSteps !== undefined) {
+      onProgress(res.aNr / totalSteps, transcript)
+    }
+    // console.log(serverTranscriptToLocal(res))
+    if (res.nNr > res.aNr)  {
+      if (transcript === null) {
+        transcript = {
+          audioUrl: '',
+          name: '',
+          segments: [],
+          speakerEvents: {},
+          speakers: []
+        }
+      }
+      transcript = serverTranscriptToTranscript(res, transcript)
+      return getTranscript(
+        id,
+        onProgress,
+        chunk + 1,
+        totalSteps || res.aTmNr,
+      )
+    } else {
+      return transcript!
+    }
+  } catch (e) {
+    return transcript!
+  }
+}
+
 
 export default transcript

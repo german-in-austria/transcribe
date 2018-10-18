@@ -3,6 +3,7 @@ var path = require('path')
 var webpack = require('webpack')
 var UglifyJsPlugin = require('uglifyjs-webpack-plugin')
 var CopyWebpackPlugin = require('copy-webpack-plugin')
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 var _ = require('lodash')
 
 module.exports = {
@@ -120,6 +121,9 @@ if(process.env.NODE_ENV === 'development'){
       'process.env' : _(process.env).mapValues((v) => {
         return JSON.stringify(v)
       }).value()
+    }),
+    new BundleAnalyzerPlugin({
+      defaultSizes: 'gzip'
     })
   ])
 }

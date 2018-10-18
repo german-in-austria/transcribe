@@ -54,7 +54,7 @@ import history from './History.vue'
 
 import audio from '../service/audio'
 import settings from '../store/settings'
-import transcript, { loadExmeraldaFile } from '../store/transcript'
+import transcript, { loadExmeraldaFile, getTranscript } from '../store/transcript'
 
 interface FileReaderEventTarget extends EventTarget {
   result: string
@@ -135,12 +135,19 @@ export default class App extends Vue {
 
   async loadSampleFile() {
     // tslint:disable-next-line:max-line-length
-    const xmlString = await (await fetch('https://transcribe.dioe.at/files/0025_NECK_jungII_m_INT_vollständig.exb')).text()
+    // const xmlString = await (await fetch('https://transcribe.dioe.at/files/0025_NECK_jungII_m_INT_vollständig.exb')).text()
     // tslint:disable-next-line:max-line-length
-    this.transcript = loadExmeraldaFile('NECK_jungII_m_INT', xmlString)
-
+    // this.transcript = loadExmeraldaFile('NECK_jungII_m_INT', xmlString)
+    getTranscript(1, (p, t) => {
+      console.log({p})
+      this.transcript = t
+    })
     const y = document.createElement('audio')
-    y.src = 'https://transcribe.dioe.at/files/0025_NECK_jungII_m_INT.ogg'
+    if (this.transcript && this.transcript.audioUrl) {
+      // TODO: implement HEAD and Range requests in Django
+      // y.src = this.transcript.audioUrl
+    }
+    y.src = 'https://transcribe.dioe.at/files/0122_111626.ogg'
     y.addEventListener('durationchange', (e) => {
       this.audioElement = y
     })

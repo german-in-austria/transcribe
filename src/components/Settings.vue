@@ -61,9 +61,10 @@
                   <v-switch v-model="settings.showSegmentBoxes" />
                 </v-list-tile-action>
               </v-list-tile>
-              <v-subheader>Spectogram Colors</v-subheader>
+              <v-subheader v-if="settings.showSpectograms">Spectogram Colors</v-subheader>
+              <v-subheader v-else>Waveform Colors</v-subheader>
               <v-divider />
-              <div class="pt-3 pb-3 pl-3 pr-5">
+              <div v-if="settings.showSpectograms" class="pt-3 pb-3 pl-3 pr-5">
                 <v-menu
                   offset-y
                   lazy
@@ -81,22 +82,55 @@
                     :value="{ r: color.c[0], g: color.c[1], b: color.c[2], a: color.c[3] }" />
                 </v-menu>
               </div>
+              <div v-if="!settings.showSpectograms" class="pt-3 pb-3 pl-3 pr-5">
+                <v-menu
+                  offset-y
+                  lazy
+                  :close-on-content-click="false"
+                  v-for="(color, i) in settings.waveFormColors"
+                  :key="i">
+                  <v-btn
+                    small
+                    icon
+                    slot="activator"
+                    :style="{background: color, border: '1px solid #ccc'}"
+                    dark />
+                  <color-picker
+                    @input="(e) => settings.waveFormColors[i] = e.hex"
+                    :value="color" />
+                </v-menu>
+              </div>
             </v-list>
           </v-tab-item>
           <v-tab-item>
-            <v-list class="pa-4">
-              <v-list-tile>
-                <v-list-tile-title>Test</v-list-tile-title>
-                <v-list-tile-action>
-                  <v-switch />
-                </v-list-tile-action>
-              </v-list-tile>
-              <v-list-tile>
-                <v-list-tile-title>Test</v-list-tile-title>
-                <v-list-tile-action>
-                  <v-switch />
-                </v-list-tile-action>
-              </v-list-tile>
+            <v-list subheader class="pa-4">
+              <v-subheader>Token Types</v-subheader>
+              <v-divider class="mb-3" />
+              <v-layout class="ml-3" row :key="type.name" v-for="(type, i) in settings.tokenTypes">
+                <v-flex xs1>
+                  <v-menu
+                    class="mt-2"
+                    offset-y
+                    lazy
+                    :close-on-content-click="false">
+                    <v-btn
+                      small
+                      icon
+                      slot="activator"
+                      :style="{background: type.color, border: '1px solid #ccc'}"
+                      dark />
+                    <color-picker
+                      :value="type.color" 
+                      @input="(e) => type.color = e" />
+                  </v-menu>
+                </v-flex>
+                <v-flex xs5>
+                  <v-text-field label="Name" :value="type.name" />
+                </v-flex>
+                <v-flex xs5>
+                  <v-text-field :rules="regExInputRules" @input="(e) => updateRegEx(i, e)" label="Regular Expression" :value="type.regex.toString()" />
+                </v-flex>
+              </v-layout>
             </v-list>
           </v-tab-item>
           <v-tab-item>
@@ -143,6 +177,27 @@ export default class Settings extends Vue {
   @Prop({ default: false }) show: boolean
   settings = settings
   activeTab = null
+
+  regExInputRules = [
+    (e: string) => {
+      try {
+        console.log('tried')
+        const x = new RegExp(e)
+        return true
+      } catch (e) {
+        console.log('failed')
+        return 'Invalid Regular Expression'
+      }
+    }
+  ]
+
+  updateRegEx(...args: any[]) {
+    console.log(args)
+  }
+
+  updateWaveFormColor(...args: any[]) {
+    console.log(args)
+  }
 
   updateGradient(i: number, c: any) {
     this.settings.spectogramColors[i].c = [c.rgba.r, c.rgba.g, c.rgba.b, c.rgba.a]

@@ -11,8 +11,13 @@ export interface Settings {
   showSegmentBoxes: boolean,
   showSpectograms: boolean,
   useMonoWaveForm: boolean,
+  tokenTypes: Array<{
+    name: string
+    regex: RegExp
+    color: string
+  }>
   keyboardShortcuts: {
-    [s: string]: {
+    [action: string]: {
       modifier: string
       key: string
       name: string
@@ -94,6 +99,33 @@ const settings: Settings = {
   showSegmentBoxes: true,
   showSpectograms: false,
   useMonoWaveForm: false,
+  tokenTypes: [
+    {
+      name: 'proper-name',
+      regex: /\{(.*?)\}/g,
+      color: '#880000'
+    },
+    {
+      name: 'non-verbal',
+      regex: /\(\((.*?)\)\)|\[(.*?)\]/g,
+      color: '#008800'
+    },
+    {
+      name: 'delimiter',
+      regex: /(\?|\.|\,|!)/g,
+      color: '#000088'
+    },
+    {
+      name: 'pause',
+      regex: /\[[\s\S]{1,}s\]/g,
+      color: '#CCCCCC'
+    },
+    {
+      name: 'interrupted',
+      regex: /([\w]{1,}\/)/g,
+      color: '#6699CC'
+    }
+  ],
   keyboardShortcuts: {
     split: {
       modifier: 'meta',

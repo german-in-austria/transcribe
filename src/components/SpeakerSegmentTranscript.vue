@@ -6,7 +6,11 @@
         v-for="(token, i) in localTokens"
         :key="i">
         {{ token }}&nbsp;
-        <div :class="['token-type-indicator', tokenTypeFromToken(token), focused && 'focused']" />
+        <div
+          :style="{
+            backgroundColor: tokenTypeFromToken(token).color
+          }"
+          :class="['token-type-indicator', focused && 'focused']" />
       </div>
     </div>
     <div
@@ -25,6 +29,8 @@ import contenteditableDirective from 'vue-contenteditable-directive'
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
 import { updateSpeakerTokens } from '../store/transcript'
+import * as _ from 'lodash'
+
 Vue.use(contenteditableDirective)
 
 @Component
@@ -40,7 +46,16 @@ export default class SpeakerSegmentTranscript extends Vue {
   updateSpeakerTokens = updateSpeakerTokens
 
   tokenTypeFromToken(token: string) {
-    return token.startsWith('((') ? 'non-verbal' : ''
+    const type = _(settings.tokenTypes).find((tt) => {
+      return tt.regex.test(token)
+    })
+    if (type) {
+      return type
+    } else {
+      return {
+        color: '#222',
+      }
+    }
   }
 
   get segmentText() {
@@ -57,9 +72,12 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   updateLabelText(e: Event) {
     this.focused = false
-    const tokens = ((e.target as HTMLDivElement).textContent || '').split(' ')
-    updateSpeakerTokens(this.segment, this.speaker, tokens)
-    this.$emit('update-speaker-event', tokens)
+    const text = (e.target as HTMLDivElement).textContent
+    if (text !== null && text !== '') {
+      const tokens = text.split(' ')
+      updateSpeakerTokens(this.segment, this.speaker, tokens)
+      this.$emit('update-speaker-event', tokens)
+    }
   }
 
   get textStyle() {
@@ -82,13 +100,9 @@ export default class SpeakerSegmentTranscript extends Vue {
   position relative
 
 .token-type-indicator
-  background #6699CC
   height 3px
   border-radius 2px
   margin 1px 3px 3px 0px
-  &.non-verbal
-    background red
-  // OTHER TOKEN TYPES GO HERE
 
 .token-fake-display
   pointer-events none
@@ -98,7 +112,6 @@ export default class SpeakerSegmentTranscript extends Vue {
     color transparent
 
 .tokens-input
-  tokens-input
   outline 0
   opacity .7
   transition .5s color

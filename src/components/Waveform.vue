@@ -414,6 +414,7 @@ export default class Waveform extends Vue {
       if (container instanceof HTMLElement) {
         const currentOffset = container.scrollLeft
         container.scrollTo({
+          behavior: 'smooth',
           left: offset - window.innerWidth / 2
         })
       }
