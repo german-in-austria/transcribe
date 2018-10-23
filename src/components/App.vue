@@ -138,16 +138,16 @@ export default class App extends Vue {
     // const xmlString = await (await fetch('https://transcribe.dioe.at/files/0025_NECK_jungII_m_INT_vollständig.exb')).text()
     // tslint:disable-next-line:max-line-length
     // this.transcript = loadExmeraldaFile('NECK_jungII_m_INT', xmlString)
+    const y = document.createElement('audio')
     getTranscript(1, (p, t) => {
       console.log({p})
       this.transcript = t
+      if (!y.src && this.transcript && this.transcript.audioUrl) {
+        // TODO: implement HEAD and Range requests in Django
+        y.src = this.transcript.audioUrl
+      }
     })
-    const y = document.createElement('audio')
-    if (this.transcript && this.transcript.audioUrl) {
-      // TODO: implement HEAD and Range requests in Django
-      // y.src = this.transcript.audioUrl
-    }
-    y.src = 'https://transcribe.dioe.at/files/0122_111626.ogg'
+    // y.src = 'https://transcribe.dioe.at/files/0122_111626.ogg'
     y.addEventListener('durationchange', (e) => {
       this.audioElement = y
     })

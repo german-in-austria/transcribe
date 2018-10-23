@@ -278,7 +278,7 @@ function serverTranscriptToTranscript(s: ServerTranscript, t: Transcript): Trans
   const speakers = _.map(s.aInformanten || [], (i, k) => String(k))
   const audioUrl = (() => {
     if (s.aEinzelErhebung) {
-      return `https://dissdb.dioe.at/private-media/${
+      return `https://dissdb.dioe.at/private-media${
         s.aEinzelErhebung.dp.split('\\').join('/')
       }${
         s.aEinzelErhebung.af

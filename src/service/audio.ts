@@ -174,12 +174,7 @@ function findOggPages(from: number, to: number, pages: OggIndex['pages']) {
   let startPage: any = null
   let endPage: any = null
   let i = 0
-
-  console.log({
-    from, to
-  })
-
-  while (i <= countPages) {
+  while (i < countPages) {
     if (
       startPage === null &&
       pages[i + 1] &&
@@ -383,7 +378,7 @@ async function decodeBufferSegment(fromByte: number, toByte: number, buffer: Arr
 }
 
 async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuffer) {
-  console.time('decode buffer segment ' + from)
+  console.time('decode buffer segment from ' + from + ' to ' + to)
   // TODO: this is could possible be solved a little better.
   let startPage
   let endPage
@@ -411,8 +406,9 @@ async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuff
   const decodedBuffer = await decodeBufferSegment(startPage.byteOffset, endPage.byteOffset, buffer)
   console.log('decoded buffer duration', decodedBuffer.duration)
   // tslint:disable-next-line:max-line-length
+  console.log('start end', overflowStart * 1000, (to - from + overflowStart) * 1000)
   const slicedBuffer = await sliceAudioBuffer(decodedBuffer, overflowStart * 1000, (to - from + overflowStart) * 1000)
-  console.timeEnd('decode buffer segment ' + from)
+  console.timeEnd('decode buffer segment from ' + from + ' to ' + to)
   console.log({slicedDuration: slicedBuffer.duration})
   return slicedBuffer
 }

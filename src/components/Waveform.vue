@@ -279,28 +279,30 @@ export default class Waveform extends Vue {
   }
 
   doMaybeRerender() {
-      const piecesToRender = util.findAllNotIn(this.renderedWaveFormPieces, this.shouldRenderWaveFormPieces())
-      if (piecesToRender.length > 0) {
-        console.log('now rendering:', piecesToRender)
-        piecesToRender.forEach((p) => {
-          queue.unshiftTask((resolve: any, reject: any) => {
-            this.renderedWaveFormPieces.push(p)
-            try {
-              if (this.settings.showSpectograms) {
-                this.drawSpectogramPiece(p).then(resolve)
-              } else {
-                this.drawWaveFormPiece(p).then(resolve)
-              }
-            } catch (e) {
-              console.log(e)
-              // remove from cache index, if it failed
-              const i = this.renderedWaveFormPieces.indexOf(p)
-              this.renderedWaveFormPieces.splice(i)
-              reject()
+    const piecesToRender = util.findAllNotIn(this.renderedWaveFormPieces, this.shouldRenderWaveFormPieces())
+    if (piecesToRender.length > 0) {
+      console.log('now rendering:', piecesToRender)
+      piecesToRender.forEach((p) => {
+        queue.unshiftTask(async (resolve: any, reject: any) => {
+          this.renderedWaveFormPieces.push(p)
+          try {
+            if (this.settings.showSpectograms) {
+              const x = await this.drawSpectogramPiece(p)
+              resolve(x)
+            } else {
+              const y = await this.drawWaveFormPiece(p)
+              resolve(y)
             }
-              })
-          })
-      }
+          } catch (e) {
+            console.log(e)
+            // remove from cache index if it failed
+            const i = this.renderedWaveFormPieces.indexOf(p)
+            this.renderedWaveFormPieces.splice(i)
+            reject()
+          }
+        })
+      })
+    }
   }
 
   clearRenderCache() {
@@ -333,7 +335,6 @@ export default class Waveform extends Vue {
   endScaleX() {
     document.removeEventListener('mouseup', this.endScaleX)
     const el = (this.$refs.svgContainer as HTMLElement)
-    // console.log(el.scrollWidth, el.scrollLeft, el.clientWidth)
     const oldCenterPercent =  (el.scrollLeft + el.clientWidth / 2) / this.totalWidth
     // console.log({oldCenterPercent})
     requestAnimationFrame(() => {
@@ -422,7 +423,7 @@ export default class Waveform extends Vue {
   }
 
   async serverAcceptsRanges(url: string): Promise<boolean> {
-    const res = (await fetch(url, {method: 'HEAD', mode: 'cors'}))
+    const res = (await fetch(url, {method: 'HEAD', mode: 'cors', credentials: 'include'}))
     // return res.headers.has('Accept-Ranges')
     return true
   }
@@ -432,8 +433,15 @@ export default class Waveform extends Vue {
     if ((await this.serverAcceptsRanges(url)) === false) {
       throw new Error('server doesn’t accept ranges')
     } else {
-      const chunk              = await fetch(url, {method: 'GET', headers: { Range: `bytes=0-${ kb * 1024 }`}})
-      const fileSize            = (await fetch(url, { method: 'HEAD' })).headers.get('Content-Length')
+      const chunk = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { Range: `bytes=0-${ kb * 1024 }`}
+      })
+      const fileSize = (await fetch(url, {
+        credentials: 'include',
+        method: 'HEAD'
+      })).headers.get('Content-Length')
       const bufferFirstSlice   = await chunk.arrayBuffer()
       const sampleRate         = audio.getOggSampleRate(bufferFirstSlice)
       const bitRate            = audio.getOggNominalBitrate(bufferFirstSlice)
@@ -542,8 +550,8 @@ export default class Waveform extends Vue {
     const el = this.$refs.svgContainer
     if (el instanceof HTMLElement) {
       return [
-        Math.floor((el.scrollLeft + el.clientWidth / 2 - distance / 2)),
-        Math.floor((el.scrollLeft + el.clientWidth / 2 + distance / 2))
+        Math.max(Math.floor((el.scrollLeft + el.clientWidth / 2 - distance / 2)), 0),
+        Math.max(Math.floor((el.scrollLeft + el.clientWidth / 2 + distance / 2)), distance)
       ]
     } else {
       return [0, 0]
@@ -581,7 +589,6 @@ export default class Waveform extends Vue {
     const from = i * secondsPerDrawWidth
     const to = isLast ? this.audioLength : from + secondsPerDrawWidth
     const width = isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth
-
     const buffer = await audio.getOrFetchAudioBuffer(
       from,
       to,

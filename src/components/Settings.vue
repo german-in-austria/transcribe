@@ -121,7 +121,7 @@
                       dark />
                     <color-picker
                       :value="type.color" 
-                      @input="(e) => type.color = e" />
+                      @input="(e) => type.color = e.hex" />
                   </v-menu>
                 </v-flex>
                 <v-flex xs5>

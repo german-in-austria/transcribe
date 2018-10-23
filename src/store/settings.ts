@@ -106,19 +106,19 @@ const settings: Settings = {
       color: '#880000'
     },
     {
+      name: 'pause',
+      regex: /\[[\s\S]{1,}s\]/g,
+      color: '#CCCCCC'
+    },
+    {
       name: 'non-verbal',
       regex: /\(\((.*?)\)\)|\[(.*?)\]/g,
       color: '#008800'
     },
     {
       name: 'delimiter',
-      regex: /(\?|\.|\,|!)/g,
+      regex: /\B(\?|\.|\,|!)\B/g,
       color: '#000088'
-    },
-    {
-      name: 'pause',
-      regex: /\[[\s\S]{1,}s\]/g,
-      color: '#CCCCCC'
     },
     {
       name: 'interrupted',
