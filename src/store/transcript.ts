@@ -33,6 +33,11 @@ declare global {
       tokens: string[]
     }
   }
+  interface ServerTranscriptListItem {
+    pk: number
+    ut: string
+    n: string
+  }
 }
 
 interface ServerTranscript {

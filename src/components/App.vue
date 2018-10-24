@@ -15,18 +15,57 @@
           &nbsp;
         </vue-full-screen-file-drop>
         <v-layout
-          class="max-width"
-          :align-center="audioElement === null || transcript === null"
+          v-if="audioElement === null && transcript === null"
+          class="max-width pick-transcript-container"
+          :align-center="transcriptList === null"
           justify-center>
-          <div
-            v-if="transcript === null"
-            class="text-xs-center">
-            <h1>Drop an audio file here.</h1>
-            <p>or, use the <a @click="loadSampleFile" href="#">sample file</a></p>
-          </div>
-          <v-flex
-            xs12
-            v-if="transcript !== null && audioElement !== null">
+          <v-progress-circular
+            indeterminate
+            v-if="transcriptList === null"/>
+          <v-flex class="pt-5" xs6 md4 v-if="transcriptList !== null">
+            <h1 class="title text-xs-center text-light text-uppercase mt-3 mb-4">
+              Transcribe
+            </h1>
+            <v-text-field
+              v-model="searchTerm"
+              placeholder="search…"
+              prepend-icon="search"
+              autofocus />
+            <v-list
+              class="transparent scrollable"
+              dense
+              subheader
+              two-line>
+              <v-subheader>
+                Pick a Transcript
+              </v-subheader>
+              <v-list-tile
+                @click="loadTranscript(transcript.pk)"
+                :key="transcript.pk"
+                v-for="transcript in filteredTranscriptList">
+                <v-list-tile-content>
+                  <v-list-tile-title>
+                    {{ transcript.n }}
+                  </v-list-tile-title>
+                  <v-list-tile-sub-title>
+                    {{ transcript.ut }}
+                  </v-list-tile-sub-title>
+                  <v-progress-linear class="ma-0 pa-0" height="2" v-if="loadingTranscriptId === transcript.pk" indeterminate />
+                </v-list-tile-content>
+              </v-list-tile>
+              <v-list-tile class="text-xs-center" v-if="filteredTranscriptList.length === 0">
+                <span class="caption">
+                  no matching transcripts found
+                </span>
+              </v-list-tile>
+            </v-list>
+          </v-flex>
+        </v-layout>
+        <v-layout
+          v-if="transcript !== null && audioElement !== null"
+          class="max-width"
+          justify-center>
+          <v-flex xs12>
             <editor
               @toggle-drawer="e => drawer = !drawer"
               :transcript="transcript"
@@ -77,12 +116,32 @@ export default class App extends Vue {
   xmlText: string|null = null
   xml: any = null
   settings = settings
+  transcriptList: ServerTranscriptListItem[]|null = null
+  loadingTranscriptId: number|null = null
+  searchTerm = ''
+
   emptyTranscript = {
     name: '',
     audioUrl: this.audioUrl || '',
     speakers: [],
     segments : [],
     speakerEvents: {}
+  }
+
+  async mounted() {
+    this.transcriptList = (await (await fetch('https://dissdb.dioe.at/routes/transcripts', {
+      credentials: 'include'
+    })).json()).transcripts
+  }
+
+  get filteredTranscriptList(): ServerTranscriptListItem[] {
+    if (this.transcriptList !== null) {
+      return this.transcriptList.filter((v, i) => {
+        return v.n.toLowerCase().indexOf(this.searchTerm.toLowerCase()) > -1
+      })
+    } else {
+      return []
+    }
   }
 
   isAudio(file: File) {
@@ -92,13 +151,6 @@ export default class App extends Vue {
   // TODO: better sanity check.
   isXML(file: File) {
     return file.type.includes('/xml') || file.name.includes('.exb')
-  }
-
-  loadUrl(url: string) {
-    this.audioUrl = url
-    const el = document.createElement('audio')
-    el.src = url
-    this.audioElement = el
   }
 
   onFileDrop(formData: FormData, files: FileList) {
@@ -139,21 +191,16 @@ export default class App extends Vue {
     })
   }
 
-  async loadSampleFile() {
-    // tslint:disable-next-line:max-line-length
-    // const xmlString = await (await fetch('https://transcribe.dioe.at/files/0025_NECK_jungII_m_INT_vollständig.exb')).text()
-    // tslint:disable-next-line:max-line-length
-    // this.transcript = loadExmeraldaFile('NECK_jungII_m_INT', xmlString)
+  async loadTranscript(pk: number) {
+    this.loadingTranscriptId = pk
     const y = document.createElement('audio')
-    getTranscript(2, (p, t) => {
-      console.log({p})
+    getTranscript(pk, (p, t) => {
       this.transcript = t
       if (!y.src && this.transcript && this.transcript.audioUrl) {
-        // TODO: implement HEAD and Range requests in Django
         y.src = this.transcript.audioUrl
+        this.loadingTranscriptId = null
       }
     })
-    // y.src = 'https://transcribe.dioe.at/files/0122_111626.ogg'
     y.addEventListener('durationchange', (e) => {
       this.audioElement = y
     })
@@ -161,17 +208,24 @@ export default class App extends Vue {
 }
 </script>
 <style lang="stylus" scoped>
-.max-width{
-  max-width: 100%;
-}
-.help {
+.pick-transcript-container
+  background url('/static/img/bg-waveform.png')
+  background-repeat no-repeat
+  background-position center 100px
+  background-size 1740px 290px
+  background-color rgba(0,0,0,.3)
+
+.max-width
+  max-width 100%
+
+.help
   border-top 1px solid rgba(0,0,0,.1)
   border-radius 0
   background transparent
   box-shadow none
-  font-weight: 300
-}
-.file-dropper{
-  position: absolute;
-}
+  font-weight 300
+
+.file-dropper
+  position: absolute
+
 </style>

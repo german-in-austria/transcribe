@@ -3,7 +3,7 @@
     <v-layout class="pa-3" style="position: relative;">
       <v-flex xs2 text-xs-left>
         <label for="scaleFactorY" class="caption grey--text lighten-2">
-          Scale
+          Gain
         </label>
         <select name="scaleFactorY" class="ml-2 no-outline" style="padding: .1em .1em 0 1em; font-size: 90%" v-model="scaleFactorY">
           <option

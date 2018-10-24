@@ -2,7 +2,13 @@
 .absolute{
   position: absolute;
 }
-
+.text-light{
+  font-weight: 300;
+}
+.text-uppercase{
+  text-transform: uppercase;
+  letter-spacing: .2em !important;
+}
 a{
   color: #7cabda;
 }
