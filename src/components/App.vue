@@ -94,6 +94,13 @@ export default class App extends Vue {
     return file.type.includes('/xml') || file.name.includes('.exb')
   }
 
+  loadUrl(url: string) {
+    this.audioUrl = url
+    const el = document.createElement('audio')
+    el.src = url
+    this.audioElement = el
+  }
+
   onFileDrop(formData: FormData, files: FileList) {
     console.log(files[0].type)
     _(files).forEach(file => {
@@ -117,7 +124,6 @@ export default class App extends Vue {
         if (this.transcript === null) {
           this.transcript = this.emptyTranscript
         }
-        console.log(x)
       } else if (this.isXML(file)) {
         const reader = new FileReader()
         reader.onload = (e: Event) => {
