@@ -84,6 +84,16 @@
           :width="overviewSvgWidth"
           style="width: 100%"
           height="60">
+          <line
+            v-for="i in (overviewSvgWidth / 10)"
+            :key="i"
+            stroke-width="3"
+            stroke="#353535"
+            stroke-linecap="round"
+            :x1="i * 10"
+            :x2="i * 10"
+            y1="20"
+            y2="40" />
         </svg>
       </div>
       <triangle
@@ -415,7 +425,7 @@ export default class Waveform extends Vue {
       if (container instanceof HTMLElement) {
         const currentOffset = container.scrollLeft
         container.scrollTo({
-          behavior: 'smooth',
+          // behavior: 'smooth',
           left: offset - window.innerWidth / 2
         })
       }
