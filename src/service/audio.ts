@@ -417,10 +417,17 @@ async function getOrFetchHeaderBuffer(url: string): Promise<ArrayBuffer|null> {
   const kb = 100
   if (oggHeaderBuffer === null) {
     console.log('DOWNLOADING HEADER BUFFER')
-    const chunk = await fetch(url, {method: 'GET', headers: { Range: `bytes=0-${ kb * 1024 }`}})
-    const bufferFirstSlice = await chunk.arrayBuffer()
-    oggHeaderBuffer = audio.getOggHeaderBuffer(bufferFirstSlice)
-    return oggHeaderBuffer
+    try {
+      const chunk = await fetch(url, {
+        method: 'GET', credentials: 'include', headers: { Range: `bytes=0-${ kb * 1024 }`}
+      })
+      const bufferFirstSlice = await chunk.arrayBuffer()
+      oggHeaderBuffer = audio.getOggHeaderBuffer(bufferFirstSlice)
+      return oggHeaderBuffer
+    } catch (e) {
+      console.log(e)
+      return null
+    }
   } else {
     return oggHeaderBuffer
   }
@@ -442,7 +449,10 @@ async function getOrFetchAudioBuffer(
     const endByte   = Math.min(fileSize * (to / audioLength) + 1024 * 1024, fileSize).toFixed(0)
     console.log('DOWNLOADING AUDIO SEGMENT', {startByte, endByte}, (Number(endByte) - Number(startByte)) / 1024, 'MB')
     console.time('buffer segment download')
-    const buffer = await (await fetch(url, { headers: { Range: `bytes=${startByte}-${endByte}`}})).arrayBuffer()
+    const buffer = await (await fetch(url, {
+      credentials: 'include',
+      headers: { Range: `bytes=${startByte}-${endByte}` }
+    })).arrayBuffer()
     console.timeEnd('buffer segment download')
     const { pages } = await audio.getOggIndexAsync(buffer)
     const trimmedBuffer = buffer.slice(pages[0].byteOffset, pages[pages.length - 1].byteOffset)

@@ -139,7 +139,7 @@ export default class App extends Vue {
     // tslint:disable-next-line:max-line-length
     // this.transcript = loadExmeraldaFile('NECK_jungII_m_INT', xmlString)
     const y = document.createElement('audio')
-    getTranscript(1, (p, t) => {
+    getTranscript(2, (p, t) => {
       console.log({p})
       this.transcript = t
       if (!y.src && this.transcript && this.transcript.audioUrl) {

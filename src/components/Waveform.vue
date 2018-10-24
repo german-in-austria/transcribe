@@ -472,7 +472,7 @@ export default class Waveform extends Vue {
         console.log('A CHANGE CHANGED!!!')
         this.metadata = await this.getAudioMetadata(this.audioElement.src)
         console.log('this.metadata', this.metadata)
-        const x = await fetch(this.audioElement.src)
+        const x = await fetch(this.audioElement.src, { credentials: 'include' })
         .then(res => {
           this.loading = false
           const scrollLeft = localStorage.getItem('scrollPos')
