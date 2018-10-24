@@ -1,9 +1,19 @@
+
 declare interface process {
   env : {
     [key: string]: string
   }
 }
 
+declare module "*.wasm" {
+  const value: ArrayBuffer
+  export default value;
+}
+
+declare module "file-loader?name=[name].js!*" {
+  const value: string;
+  export = value;
+}
 declare module "worker-loader!*" {
   class WebpackWorker extends Worker {
     constructor();
@@ -17,11 +27,14 @@ declare module 'vue-scrollto' {
   export default x
 }
 declare module 'vue-full-screen-file-drop'
-declare module 'peaks.js'
 declare module 'draw-wave'
+declare module 'promise-worker'
+declare module 'promise-worker-transferable'
 declare module '@rgrove/parse-xml'
 declare module 'audiobuffer-slice'
 declare module 'simple-promise-queue'
 declare module 'vue-scroll'
 declare module 'array-buffer-concat'
 declare module 'audiobuffer-to-wav'
+declare module 'gradstop'
+declare module 'vue-color'

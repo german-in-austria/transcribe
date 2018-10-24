@@ -14,7 +14,7 @@ Vue.use(VueInputAutowidth)
 Vue.config.productionTip = true
 // Vue.use(VueAnalytics)
 
-Vue.use(vuescroll, {throttle: 600})
+Vue.use(vuescroll)
 
 Vue.use(Vuex)
 

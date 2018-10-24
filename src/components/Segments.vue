@@ -32,7 +32,6 @@
 
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { SpeakerEvent } from '@components/App.vue'
 import Resizer from '@components/helper/Resizer.vue'
 
 @Component({

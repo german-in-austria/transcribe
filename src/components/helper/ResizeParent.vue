@@ -158,29 +158,43 @@ export default class ResizeParent extends Vue {
       this.previous.classList.remove(this.resizingClass)
     }
     this.parent.classList.remove(this.resizingClass)
-    this.resetState()
     this.$emit('resize-end', {
       current: {
         left: this.parent.offsetLeft,
         right: this.parent.offsetLeft + this.parent.offsetWidth
       },
-      next: {
-        left: this.next instanceof HTMLElement
-          ? this.next.offsetLeft
-          : null,
-        right: this.next instanceof HTMLElement
-          ? this.next.offsetLeft + this.next.offsetWidth
-          : null
-      },
-      previous: {
-        left: this.previous instanceof HTMLElement
-          ? this.previous.offsetLeft
-          : null,
-        right: this.previous instanceof HTMLElement
-          ? this.previous.offsetLeft + this.previous.offsetWidth
-          : null
-      }
+      next: (() => {
+        console.log('next geometry', this.nextStartGeometry, this.next.offsetLeft)
+        if (
+          this.next instanceof HTMLElement &&
+          this.nextStartGeometry !== null &&
+          this.next.offsetLeft !== this.nextStartGeometry.offsetX
+        ) {
+          return {
+            left: this.next.offsetLeft,
+            right: this.next.offsetLeft + this.next.offsetWidth
+          }
+        } else {
+          return null
+        }
+      })(),
+      previous: (() => {
+        console.log('previous geometry', this.previousStartGeometry, this.previous.offsetWidth)
+        if (
+          this.previous instanceof HTMLElement &&
+          this.previousStartGeometry !== null &&
+          this.previous.offsetWidth !== this.previousStartGeometry.width
+        ) {
+          return {
+            left: this.previous.offsetLeft,
+            right:  this.previous.offsetLeft + this.previous.offsetWidth
+          }
+        } else {
+          return null
+        }
+      })()
     })
+    this.resetState()
   }
   cancelDrag(e: KeyboardEvent) {
     if (e.code === 'Escape' || e.key === 'Escape') {

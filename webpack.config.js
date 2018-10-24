@@ -3,6 +3,7 @@ var path = require('path')
 var webpack = require('webpack')
 var UglifyJsPlugin = require('uglifyjs-webpack-plugin')
 var CopyWebpackPlugin = require('copy-webpack-plugin')
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 var _ = require('lodash')
 
 module.exports = {
@@ -30,6 +31,10 @@ module.exports = {
   module: {
     rules: [
       {
+        test: /\.wasm$/,
+        loader: 'arraybuffer-loader',
+      },
+      {
         test: /\.vue$/,
         loader: "vue-loader",
         options: {
@@ -45,8 +50,10 @@ module.exports = {
       },
       {
         test: /\.worker\.ts$/,
-        loader: 'worker-loader',
-        options: { inline: true }
+        use: {
+          loader: 'worker-loader',
+          options: { inline: true }
+        }
       },
       {
         test: /\.css$/,
@@ -82,6 +89,7 @@ module.exports = {
     alias: {
       vue$: "vue/dist/vue.esm.js",
       "@components": path.resolve(__dirname, "src/components/"),
+      "@store": path.resolve(__dirname, "src/store/"),
       "@src": path.resolve(__dirname, "src/"),
       styles: path.resolve(__dirname, "src/styles"),
       "@util": path.resolve(__dirname, "src/util/")
@@ -113,6 +121,9 @@ if(process.env.NODE_ENV === 'development'){
       'process.env' : _(process.env).mapValues((v) => {
         return JSON.stringify(v)
       }).value()
+    }),
+    new BundleAnalyzerPlugin({
+      defaultSizes: 'gzip'
     })
   ])
 }

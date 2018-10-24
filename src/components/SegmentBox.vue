@@ -1,16 +1,22 @@
 <template>
   <div
     @mousedown="selectSegment(segment)"
-    @dblclick="playSegment(segmentKey, segment)"
-    @keydown.delete="deleteSegment(segmentKey, segment)"
+    @dblclick="playSegment(segment)"
+    @keydown.meta.enter="$emit('scroll-to-transcript', segment)"
     @keydown.right.stop.prevent="selectNext(segmentKey)"
     @keydown.left.stop.prevent="selectPrevious(segmentKey)"
-    @keydown.space.stop.prevent="playSegment(segmentKey, segment)"
+    @keydown.space.stop.prevent="playSegment(segment)"
     tabindex="-1"
     :class="[ 'segment', isSelected ? 'selected' : '' ]"
-    :style="style">
-    <slot :segment="segment" />
+    :style="{ left: offset + 'px', width: width + 'px' }">
+    <div :style="{ left: width / 2 + 'px' }" class="transcript-tooltip" v-if="isSelected">
+      <div class="inner" :key="i" v-for="(event, i) in getTranscriptSpeakerEvents(segment.id)">
+        {{ event.speaker + ' ' + event.tokens.join(' ') }}
+      </div>
+    </div>
+    <!-- <slot :segment="segment" /> -->
     <resize-parent
+      v-if="isSelected"
       class="resizer"
       resizing-class="resizing"
       @resize-end="onResizeEnd"
@@ -18,6 +24,7 @@
       left
     />
     <resize-parent
+      v-if="isSelected"
       class="resizer"
       resizing-class="resizing"
       @resize-end="onResizeEnd"
@@ -29,9 +36,9 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch, Provide } from 'vue-property-decorator'
-import { SpeakerEvent } from '@components/App.vue'
 import Resizer from '@components/helper/Resizer.vue'
 import ResizeParent from '@components/helper/ResizeParent.vue'
+import { resizeSegment, findSpeakerEventById } from '../store/transcript'
 import * as _ from 'lodash'
 @Component({
   components: {
@@ -45,39 +52,29 @@ export default class SegmentBox extends Vue {
   @Prop() nextSegment?: Segment
   @Prop() speakerEvents: SpeakerEvent[]
   @Prop() selectedSegment: Segment|null
-  @Prop() metadata: any
+  @Prop() pixelsPerSecond: number
   @Prop() segmentKey: any
 
   isSelected = false
 
-  get style(): any {
-    return {
-        left: `${ this.offset }px`,
-        width: this.width + 'px'
-    }
-  }
-  get maxSize() {
-    if (this.previousSegment !== undefined && this.nextSegment !== undefined) {
-      return (this.nextSegment.startTime - this.previousSegment.endTime) * this.pixelsPerSecond
-    }
-  }
   @Watch('selectedSegment')
   selectedSegmentChange() {
     console.log('hello')
     this.isSelected = this.selectedSegment !== null && this.selectedSegment.id === this.segment.id
   }
+
+  getTranscriptSpeakerEvents(id: string): SpeakerEvent|null {
+    console.log(id)
+    const e = findSpeakerEventById(id)
+    console.log(e)
+    return e
+  }
+
   get width(): number {
     return (Number(this.segment.endTime) - Number(this.segment.startTime)) * this.pixelsPerSecond
   }
   get offset(): number {
     return Number(this.segment.startTime) * this.pixelsPerSecond
-  }
-  get pixelsPerSecond() {
-    if ( this.metadata !== null) {
-      return this.metadata.pixelsPerSecond
-    } else {
-      return 0
-    }
   }
   selectNext(i: number) {
     this.$emit('select-next', i)
@@ -91,41 +88,49 @@ export default class SegmentBox extends Vue {
   playSegment(key: number, segment: Segment) {
     this.$emit('play-segment', key, segment)
   }
-  deleteSegment(key: number, segment: Segment) {
-    this.$emit('delete-segment', key, segment)
+  deleteSegment(segment: Segment) {
+    this.$emit('delete-segment', segment)
   }
   onResizeEnd(e: any) {
-    console.log(e)
     this.segment.startTime = e.current.left / this.pixelsPerSecond
     this.segment.endTime = e.current.right / this.pixelsPerSecond
-    if (this.nextSegment !== undefined) {
+    resizeSegment(this.segment.id!, this.segment.startTime, this.segment.endTime)
+    if (e.next !== null && this.nextSegment !== undefined) {
       this.nextSegment.startTime = e.next.left / this.pixelsPerSecond
+      resizeSegment(this.nextSegment.id!, this.nextSegment.startTime, this.nextSegment.endTime)
     }
-    if (this.previousSegment !== undefined) {
+    if (e.previous !== null && this.previousSegment !== undefined) {
       this.previousSegment.endTime = e.previous.right / this.pixelsPerSecond
-      console.log(this.segment.startTime, this.previousSegment.endTime)
+      resizeSegment(this.previousSegment.id!, this.previousSegment.startTime, this.previousSegment.endTime)
     }
   }
 }
 </script>
 <style lang="stylus" scoped>
+.transcript-tooltip
+  position absolute
+  top -40px
+  transform translateX(-50%)
+  text-align center
+  .inner
+    font-weight 300
+    white-space nowrap
+
 .segment
   min-width 12px
   height 150px
   top 75px
   border-radius 10px
-  overflow hidden
   background rgba(0,0,0,.2)
   position absolute
   border-top 1px solid rgba(255,255,255,.3)
   border-right 1px solid rgba(255,255,255,.2)
-  transition background .3s
   outline 0
   will-change width left
   transform-origin 0 0
   user-select none
   &.selected, &:focus
-    z-index 99
+    z-index 1
     border: 2px solid cornflowerblue
     box-shadow 0 0 50px rgba(0,0,0,.4)
   &:hover:not(.selected)

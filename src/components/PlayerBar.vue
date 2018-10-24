@@ -1,6 +1,6 @@
 <template>
-  <div class="playerbar">
-    <v-container>
+  <div :style="theme" class="playerbar">
+    <v-container class="pt-0" align-content-center justify-center>
       <v-layout row justify-space-between class="">
         <v-flex text-xs-left xs2>
           <div class="caption grey--text lighten-2">
@@ -15,7 +15,7 @@
             Playback Speed
           </div>
         </v-flex>
-        <v-flex xs12>
+        <v-flex class="pt-3" xs12 align-content-center>
           <v-btn class="play-button" @click="playPause" large icon flat>
             <v-icon v-if="isPaused" x-large>play_arrow</v-icon>
             <v-icon v-else x-large>pause_circle_outline</v-icon>
@@ -45,6 +45,7 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import settings from '@store/settings'
 
 @Component
 export default class PlayerBar extends Vue {
@@ -55,6 +56,7 @@ export default class PlayerBar extends Vue {
   currentTime = this.audioElement.currentTime
   playbackRate = 100
   volume = 100
+  settings = settings
 
   playPause(e: Event) {
     if (this.isPaused) {
@@ -82,6 +84,14 @@ export default class PlayerBar extends Vue {
     return new Date(time * 1000).toISOString().substr(11, 12)
   }
 
+  get theme() {
+    if (this.settings.darkMode) {
+      return { background: '#383838' }
+    } else {
+      return { background: '#efefef' }
+    }
+  }
+
   mounted() {
     this.audioElement.addEventListener('play', () => {
       this.isPaused = false
@@ -97,24 +107,24 @@ export default class PlayerBar extends Vue {
 </script>
 <style lang="stylus" scoped>
 .playerbar
-  position: fixed
-  left: 0
-  right: 0
-  bottom: 0
-  height: 100px
+  z-index 1
+  position fixed
+  left 0
+  right 0
+  bottom 0
+  height 70px
   text-align center
-  background #383838
 
 .play-button
-  margin-top: -5px
+  margin-top -5px
 
 .current-time
   font-size 110%
-  display: block
-  width: 185px
-  background: rgba(0,0,0,.15)
-  margin: 0 auto
-  border-radius: 1em
+  display inline-block
+  width 185px
+  background rgba(0,0,0,.15)
+  margin 0 auto
+  border-radius 1em
 
 </style>
 

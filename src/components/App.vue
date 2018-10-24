@@ -1,6 +1,13 @@
 <template>
-  <v-app dark>
-    <v-content class="main-content" app>
+  <v-app :dark="settings.darkMode">
+    <v-navigation-drawer
+      style="padding: 0"
+      v-model="drawer"
+      right
+      app>
+      <history />
+    </v-navigation-drawer>
+    <v-content class="main-content">
       <v-container fluid fill-height class="pa-0">
         <vue-full-screen-file-drop
           class="file-dropper"
@@ -8,19 +15,59 @@
           &nbsp;
         </vue-full-screen-file-drop>
         <v-layout
-          class="max-width"
-          :align-center="audioElement === null || transcript === null"
+          v-if="audioElement === null && transcript === null"
+          class="max-width pick-transcript-container"
+          :align-center="transcriptList === null"
           justify-center>
-          <div
-            v-if="transcript === null"
-            class="text-xs-center">
-            <h1>Drop an audio file here.</h1>
-            <p>or, use the <a @click="loadSampleFile" href="#">sample file</a></p>
-          </div>
-          <v-flex
-            xs12
-            v-if="transcript !== null">
+          <v-progress-circular
+            indeterminate
+            v-if="transcriptList === null"/>
+          <v-flex class="pt-5" xs6 md4 v-if="transcriptList !== null">
+            <h1 class="title text-xs-center text-light text-uppercase mt-3 mb-4">
+              Transcribe
+            </h1>
+            <v-text-field
+              v-model="searchTerm"
+              placeholder="search…"
+              prepend-icon="search"
+              autofocus />
+            <v-list
+              class="transparent scrollable"
+              dense
+              subheader
+              two-line>
+              <v-subheader>
+                Pick a Transcript
+              </v-subheader>
+              <v-list-tile
+                @click="loadTranscript(transcript.pk)"
+                :key="transcript.pk"
+                v-for="transcript in filteredTranscriptList">
+                <v-list-tile-content>
+                  <v-list-tile-title>
+                    {{ transcript.n }}
+                  </v-list-tile-title>
+                  <v-list-tile-sub-title>
+                    {{ transcript.ut }}
+                  </v-list-tile-sub-title>
+                  <v-progress-linear class="ma-0 pa-0" height="2" v-if="loadingTranscriptId === transcript.pk" indeterminate />
+                </v-list-tile-content>
+              </v-list-tile>
+              <v-list-tile class="text-xs-center" v-if="filteredTranscriptList.length === 0">
+                <span class="caption">
+                  no matching transcripts found
+                </span>
+              </v-list-tile>
+            </v-list>
+          </v-flex>
+        </v-layout>
+        <v-layout
+          v-if="transcript !== null && audioElement !== null"
+          class="max-width"
+          justify-center>
+          <v-flex xs12>
             <editor
+              @toggle-drawer="e => drawer = !drawer"
               :transcript="transcript"
               :audio-element="audioElement" />
             <router-view />
@@ -38,80 +85,40 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
-import peakjs from './Peakjs.vue'
 import playerBar from './PlayerBar.vue'
-import VueFullScreenFileDrop from 'vue-full-screen-file-drop'
 import 'vue-full-screen-file-drop/dist/vue-full-screen-file-drop.css'
-import * as parseXML from '@rgrove/parse-xml'
-import parseTranscriptFromTree, { ParsedXML } from '../service/transcript-parser'
+import VueFullScreenFileDrop from 'vue-full-screen-file-drop'
 import editor from './Editor.vue'
-import audio from '../service/audio'
+import history from './History.vue'
 
-declare global {
-  interface Window {
-    AudioContext: AudioContext
-    webkitAudioContext: AudioContext
-    peaks: any
-  }
-}
+import audio from '../service/audio'
+import settings from '../store/settings'
+import transcript, { loadExmeraldaFile, getTranscript } from '../store/transcript'
 
 interface FileReaderEventTarget extends EventTarget {
   result: string
 }
 
-export interface SpeakerEvent {
-  [key: string]: {
-    tokens: string[]
-  }
-}
-
-export interface Transcript {
-  name: string
-  audioUrl: string
-  speakers: string[]
-  segments: Segment[]
-  speakerEvents: _.Dictionary<SpeakerEvent>
-}
-
-const sampleTranscript = {
-  name: 'Thermodynamics',
-  audioUrl: '/static/audio/thermodynamics.ogg',
-  speakers : [ 'HJS', 'MS' ],
-  segments : _(0).range(1000).map((i) => {
-    return {
-      id: String(i),
-      startTime: i + 1,
-      endTime: i + 1 + 0.95
-    }
-  }).value(),
-  speakerEvents : _(_.range(0, 1000)).reduce((m: any, e, i, l) => {
-    m[i] = {
-      HJS : {
-        tokens : [
-          'in', 'this', 'house'
-        ]
-      }
-    }
-    return m
-  }, {})
-}
-
 @Component({
   components : {
     editor,
-    peakjs,
+    history,
     VueFullScreenFileDrop,
     playerBar
   }
 })
 export default class App extends Vue {
 
-  drawer = true
+  drawer = false
   audioUrl: string|null = null
   audioElement: HTMLAudioElement|null = null
-  transcript: Transcript|null = null
+  transcript: Transcript|null = transcript
   xmlText: string|null = null
   xml: any = null
+  settings = settings
+  transcriptList: ServerTranscriptListItem[]|null = null
+  loadingTranscriptId: number|null = null
+  searchTerm = ''
 
   emptyTranscript = {
     name: '',
@@ -121,59 +128,24 @@ export default class App extends Vue {
     speakerEvents: {}
   }
 
-  isAudio(file: File) {
-    return file.name.includes('.ogg') || file.type.includes('/ogg')
+  async mounted() {
+    this.transcriptList = (await (await fetch('https://dissdb.dioe.at/routes/transcripts', {
+      credentials: 'include'
+    })).json()).transcripts
   }
 
-  transcriptTreeToTranscribable(tree: ParsedXML, name: string): any {
-    const segments = _(tree.speakers)
-      .map(tiers => _.map(tiers, tier => _.map(tier.events, event => ({
-        id: `${event.start}-${event.end}`,
-        startTime: Number(event.startTime),
-        endTime: Number(event.endTime)
-      }) )))
-      .flatten()
-      .flatten()
-      .flatten()
-      .uniqBy(s => s.id)
-      .orderBy(s => s.startTime)
-      .value()
-    const speakers = _(tree.speakers).map((t, v) => v).value()
-    const speakerEvents = _(tree.speakers)
-      .map((t, key) => {
-        // only the first tier for now
-        return _.toArray(t)[0].events.map(e => {
-          return {
-            start: e.start,
-            end: e.end,
-            tokens : e.text !== null ? e.text.trim().split(' ') : [],
-            speaker : key
-          }
-        })
+  get filteredTranscriptList(): ServerTranscriptListItem[] {
+    if (this.transcriptList !== null) {
+      return this.transcriptList.filter((v, i) => {
+        return v.n.toLowerCase().indexOf(this.searchTerm.toLowerCase()) > -1
       })
-      .flatten()
-      .groupBy(e => `${e.start}-${e.end}`)
-      .mapValues(spe => _.keyBy(spe, 'speaker'))
-      .value()
-    this.transcript = {
-      name,
-      audioUrl: '',
-      speakerEvents,
-      segments,
-      speakers
+    } else {
+      return []
     }
-    sampleTranscript.speakerEvents = speakerEvents
-    sampleTranscript.segments = segments
-    sampleTranscript.speakers = speakers
-    console.log(segments)
-    return tree
-    // return {
-    //   name: 'bla',
-    //   audioUrl: sampleTranscript.audioUrl,
-    //   speakers : tree.speakers.map(s => s.display_name),
-    //   segments : tree.speakers.,
-    //   speakerEvents: tree.speakers
-    // }
+  }
+
+  isAudio(file: File) {
+    return file.name.includes('.ogg') || file.type.includes('/ogg')
   }
 
   // TODO: better sanity check.
@@ -181,20 +153,25 @@ export default class App extends Vue {
     return file.type.includes('/xml') || file.name.includes('.exb')
   }
 
-  loadUrl(url: string) {
-    this.audioUrl = url
-    const el = document.createElement('audio')
-    el.src = url
-    this.audioElement = el
-  }
-
   onFileDrop(formData: FormData, files: FileList) {
     console.log(files[0].type)
     _(files).forEach(file => {
       console.log(JSON.stringify(file))
       if (this.isAudio(file)) {
-        const url = URL.createObjectURL(file)
-        this.loadUrl(url)
+        const x = URL.createObjectURL(file)
+        this.audioUrl = x
+        const y = document.createElement('audio')
+        y.src = x
+        const reader = new FileReader()
+        reader.readAsArrayBuffer(file)
+        reader.onload = function() {
+          audio.store.isLocalFile = true
+          audio.store.uint8Buffer = new Uint8Array(this.result as ArrayBuffer)
+        }
+        y.addEventListener('durationchange', () => {
+          this.audioElement = y
+        })
+        // initialize with empty transcript,
         // if there is none.
         if (this.transcript === null) {
           this.transcript = this.emptyTranscript
@@ -203,7 +180,7 @@ export default class App extends Vue {
         const reader = new FileReader()
         reader.onload = (e: Event) => {
           // tslint:disable-next-line:max-line-length
-          this.xml = this.transcriptTreeToTranscribable(parseTranscriptFromTree(parseXML((e.target as FileReaderEventTarget).result)), file.name)
+          loadExmeraldaFile((e.target as FileReaderEventTarget).result, file.name)
         }
         reader.readAsText(file)
         console.log('xml')
@@ -214,31 +191,41 @@ export default class App extends Vue {
     })
   }
 
-  loadSampleFile() {
-    this.transcript = sampleTranscript
+  async loadTranscript(pk: number) {
+    this.loadingTranscriptId = pk
     const y = document.createElement('audio')
-    y.src = sampleTranscript.audioUrl
-    this.audioElement = y
-  }
-
-  async mounted() {
-    // this.loadUrl('http://localhost:8081/0025_NECK_jungII_m_INT.ogg')
-    console.log('mounted')
+    getTranscript(pk, (p, t) => {
+      this.transcript = t
+      if (!y.src && this.transcript && this.transcript.audioUrl) {
+        y.src = this.transcript.audioUrl
+        this.loadingTranscriptId = null
+      }
+    })
+    y.addEventListener('durationchange', (e) => {
+      this.audioElement = y
+    })
   }
 }
 </script>
 <style lang="stylus" scoped>
-.max-width{
-  max-width: 100%;
-}
-.help {
+.pick-transcript-container
+  background url('/static/img/bg-waveform.png')
+  background-repeat no-repeat
+  background-position center 100px
+  background-size 1740px 290px
+  background-color rgba(0,0,0,.3)
+
+.max-width
+  max-width 100%
+
+.help
   border-top 1px solid rgba(0,0,0,.1)
   border-radius 0
   background transparent
   box-shadow none
-  font-weight: 300
-}
-.file-dropper{
-  position: absolute;
-}
+  font-weight 300
+
+.file-dropper
+  position: absolute
+
 </style>

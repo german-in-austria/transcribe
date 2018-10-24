@@ -1,59 +1,74 @@
 <template>
-  <div>
-    <v-layout>
-      <v-flex xs1 />
-      <v-flex>
-        <h3 class="pa-4 transcript-title text-xs-center">
-          {{ transcript.name || 'Untitled Transcript' }}
-        </h3>
-      </v-flex>
-      <v-flex xs1 align-content-center justify-center>
-        <v-spacer></v-spacer>
-        <v-btn @click.stop="showSettings = true" icon flat>
-          <v-icon>settings</v-icon>
-        </v-btn>
-      </v-flex>
-      <settings @close="showSettings = false" :show="showSettings" />
-    </v-layout>
+  <div class="fill-height">
+    <v-toolbar class="elevation-0" fixed app>
+      <div>{{ transcript.name || 'Untitled Transcript' }}</div>
+      <v-spacer></v-spacer>
+      <v-btn @click.stop="showSearch = true" icon flat>
+        <v-icon>search</v-icon>
+      </v-btn>
+      <v-btn @click.stop="showSettings = true" icon flat>
+        <v-icon>settings</v-icon>
+      </v-btn>
+      <v-btn class="mr-4" @click.stop="$emit('toggle-drawer')" icon flat>
+        <v-icon>history</v-icon>
+      </v-btn>
+    </v-toolbar>
+    <search
+      :transcript="transcript"
+      v-if="showSearch"
+      @close="showSearch = false"
+      :show="showSearch" />
+    <settings-view
+      v-if="showSettings" 
+      @close="showSettings = false"
+      :show="showSettings" />
+    <spectogram
+      v-if="isSpectogramVisible"
+      @close="isSpectogramVisible = false"
+      :show="isSpectogramVisible"
+      :segment="spectogramSegment"
+    />
     <wave-form
       tabindex="-1"
+      class="no-outline"
       @keyup.native="handleKey"
       @change-metadata="changeMetadata"
       @scroll="handleScroll"
       @add-segment="addSegment"
       :height="300"
       :scroll-to-segment="scrollToSegment"
+      :scroll-to-second="scrollToSecond"
       :audio-element="audioElement">
       <play-head
         :playing-segment="playingSegment"
         :audio-element="audioElement"
         @change-position="scrub"
         :metadata="metadata" />
-      <div class="absolute">
+      <div
+        v-if="settings.showSegmentBoxes"
+        class="absolute">
         <segment-box
           v-for="(segment, key) in visibleSegments"
           :key="segment.id"
           :segmentKey="key"
+          @scroll-to-transcript="scrollTranscriptToSegment"
           @contextmenu.native.stop.prevent="doShowMenu"
           @delete-segment="deleteSegment"
           @select-segment="selectSegment"
           @select-previous="selectPrevious"
           @select-next="selectNext"
           @play-segment="playSegment"
-          @split-segment="splitSegment"
           :segment="segment"
           :previous-segment="visibleSegments[key - 1]"
           :next-segment="visibleSegments[key + 1]"
           :speaker-events="transcript.speakerEvents"
           :selected-segment="selectedSegment"
-          :metadata="metadata">
-          <template slot-scope="segment">
-            <!-- inner elements go here -->
-          </template>
+          :pixels-per-second="pixelsPerSecond">
         </segment-box>
         <v-menu
           min-width="150"
           lazy
+          transition="none"
           v-model="showMenu"
           :position-x="menuX"
           :position-y="menuY"
@@ -61,7 +76,7 @@
           offset-y>
           <v-list class="context-menu-list" dense>
             <v-list-tile
-              @click="playSegment(0, selectedSegment)">
+              @click="playSegment(selectedSegment)">
               <v-list-tile-content>
                 <v-list-tile-title>Play</v-list-tile-title>
               </v-list-tile-content>
@@ -70,7 +85,7 @@
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
-              @click="splitSegmentFromMenu(0, selectedSegment)">
+              @click="splitSegmentFromMenu(selectedSegment)">
               <v-list-tile-content>
                 <v-list-tile-title>Split</v-list-tile-title>
               </v-list-tile-content>
@@ -79,7 +94,7 @@
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
-              @click="() => null">
+              @click="scrollTranscriptToSegment(selectedSegment)">
               <v-list-tile-content>
                 <v-list-tile-title>Show Transcript</v-list-tile-title>
               </v-list-tile-content>
@@ -88,13 +103,12 @@
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
-              disabled
-              @click="() => null">
+              @click="showSpectogram(selectedSegment)">
               <v-list-tile-title>Show Spectrogram…</v-list-tile-title>
             </v-list-tile>
             <v-divider />
             <v-list-tile
-              @click="deleteSegment(0, selectedSegment)">
+              @click="deleteSegment(selectedSegment)">
               <v-list-tile-content>
                 <v-list-tile-title>Delete</v-list-tile-title>
               </v-list-tile-content>
@@ -105,49 +119,21 @@
           </v-list>
         </v-menu>
       </div>
+      <div slot="overview" ref="transcriptScrollbar" class="transcript-scrollbar">
+        <triangle
+          up
+          class="transcript-scrollhandle"
+          ref="transcriptScrollhandle" />
+      </div>
     </wave-form>
-    <!-- <h3 class="text-xs-center">
-      <div
-        v-for="(speaker, key) in transcript.speakerEvents[selectedSegment.id]"
-        :key="key"
-        v-if="selectedSegment !== null">
-        <span>{{ key }}: </span>
-        <span :key="key" v-for="(token, key) in speaker.tokens">
-          {{ token }}
-        </span>
-      </div>
-    </h3> -->
-    <div v-if="
-      transcript.segments &&
-      transcript.speakers &&
-      transcript.speakerEvents" class="tracks">
-      <div
-        v-for="(chunk, i) in chunkedSegments"
-        :key="i"
-        class="segment-chunk">
-        <div
-          v-for="segment in chunk"
-          :key="segment.id"
-          :class="['segment', segment.id === selectedSegment.id && 'segment-selected']">
-          <div class="time" @dblclick="playSegment(0, segment)" @mousedown="selectAndScrollToSegment(segment)">
-            {{ toTime(segment.startTime) }} - {{ toTime(segment.endTime) }}
-          </div>
-          <div
-            class="speaker-segment"
-            v-for="(speaker, key) in transcript.speakers"
-            :key="key">
-            <segment-transcript
-              v-if="
-                transcript.speakerEvents[segment.id] !== undefined &&
-                transcript.speakerEvents[segment.id][speaker] !== undefined &&
-                transcript.speakerEvents[segment.id][speaker].tokens !== undefined"
-              class="tokens"
-              :tokens="transcript.speakerEvents[segment.id][speaker].tokens"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
+    <transcript-editor
+      @scroll="handleTranscriptScroll"
+      @play-segment="playSegment"
+      @select-segment="selectSegment"
+      @scroll-to-segment="(s) => scrollToSegment = s"
+      :scroll-to-index="scrollTranscriptIndex"
+      :selected-segment="selectedSegment"
+      :transcript="transcript"/>
   </div>
 </template>
 <script lang="ts">
@@ -155,48 +141,83 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 
 import waveForm from './Waveform.vue'
-import Settings from './Settings.vue'
-import { Transcript } from './App.vue'
-import segments from '@components/Segments.vue'
-import segmentTranscript from '@components/SegmentTranscript.vue'
+import settingsView from './Settings.vue'
+import settings from '../store/settings'
+import spectogram from './Spectogram.vue'
+import search from './Search.vue'
+import transcriptEditor from '@components/TranscriptEditor.vue'
 import segmentBox from '@components/SegmentBox.vue'
+import triangle from '@components/Triangle.vue'
 import playHead from '@components/PlayHead.vue'
 import * as _ from 'lodash'
 import * as fns from 'date-fns'
 import audio from '../service/audio'
+import transcript, { addSegment, deleteSegment, splitSegment, findSegmentAt, getTranscript } from '../store/transcript'
 
 @Component({
   components: {
     waveForm,
-    Settings,
-    segments,
-    segmentTranscript,
+    transcriptEditor,
+    settingsView,
+    spectogram,
     playHead,
-    segmentBox
+    segmentBox,
+    search,
+    triangle
   }
 })
 export default class Editor extends Vue {
 
   @Prop() audioElement: HTMLAudioElement
   @Prop() transcript: Transcript
+
+  addSegment = addSegment
+  deleteSegment = deleteSegment
+  splitSegment = splitSegment
+  findSegmentAt = findSegmentAt
+
   // TODO: percentages are impractical. use pixels
-  segmentBufferPercent = .02
+  segmentBufferPercent = .01
   metadata: any = null
-  boundLeft = 0
-  boundRight = 10
-  selectedSegment: Segment|null = {id: undefined, startTime: 0, endTime: 0 }
+  visibleSegments: Segment[] = this.transcript.segments.slice(0, 40)
+  selectedSegment: Segment|null = {id: 'none', startTime: 0, endTime: 0 }
   scrollToSegment: Segment|null = null
   playingSegment: Segment|null = null
   segmentPlayingTimeout: any = null
+  scrollToSecond: number|null = null
+
+  scrollTranscriptIndex: number = 0
+
+  isSpectogramVisible = false
+  spectogramSegment: Segment|null = null
+
+  settings = settings
   playHeadPos = 0
   showSettings = false
+  showSearch = false
   showMenu = false
   menuX = 0
   menuY = 0
   layerX = 0 // this is used for splitting
 
+  handleTranscriptScroll(e: number) {
+    const i = (this.$refs.transcriptScrollhandle as Vue).$el
+    const o = this.$refs.transcriptScrollbar as HTMLElement
+    requestAnimationFrame(() => {
+      if (settings.lockScroll) {
+        this.scrollToSecond = e
+      }
+      const pixels = e / this.audioElement.duration * o.clientWidth
+      i.style.transform = `translateX(${ pixels }px)`
+    })
+  }
+
+  scrollTranscriptToSegment(segment: Segment) {
+    const i = _(this.transcript.segments).findIndex(s => s.id === segment.id)
+    this.scrollTranscriptIndex = i
+  }
+
   doShowMenu(e: MouseEvent) {
-    console.log(e)
     // this is used for splitting
     this.layerX = e.layerX
     this.menuX = e.x
@@ -204,26 +225,49 @@ export default class Editor extends Vue {
     this.showMenu = true
   }
 
-  splitSegmentFromMenu(segmentKey: number, segment: Segment) {
+  splitSegmentFromMenu(segment: Segment) {
     const splitAt = this.layerX / this.pixelsPerSecond
-    this.splitSegment(segmentKey, segment, splitAt)
+    this.splitSegment(segment, splitAt)
+  }
+
+  showSpectogram(segment: Segment) {
+    this.isSpectogramVisible = true
+    this.spectogramSegment = segment
   }
 
   handleKey(e: KeyboardEvent) {
-    console.log(e.key)
+    console.log(this.playHeadPos)
     if (e.key === 'c') {
-      console.log(this.metadata.pixelsPerSecond, this.playHeadPos)
-      console.log('cut!')
+      const segment = this.findSegmentAt(this.playHeadPos)
+      console.log(segment)
+      if (segment === undefined) {
+        const s = this.addSegment(this.playHeadPos)
+        if (s !== undefined) {
+          this.$nextTick(() => this.selectSegment(s))
+        }
+      } else {
+        const splitAt = this.playHeadPos - segment.startTime
+        this.splitSegment(segment, splitAt)
+      }
+    } else if (e.key === 'Backspace') {
+      if (this.selectedSegment !== null) {
+        this.deleteSegment(this.selectedSegment)
+      }
     }
   }
 
   mounted() {
-    this.audioElement.addEventListener('pause', () => {
-      if (this.segmentPlayingTimeout !== null) {
-        clearTimeout(this.segmentPlayingTimeout)
-        this.segmentPlayingTimeout = null
-      }
-    })
+    console.log('mounted')
+    console.log(this.audioElement)
+    if (this.audioElement instanceof HTMLAudioElement) {
+      console.log('inner')
+      this.audioElement.addEventListener('pause', () => {
+        if (this.segmentPlayingTimeout !== null) {
+          clearTimeout(this.segmentPlayingTimeout)
+          this.segmentPlayingTimeout = null
+        }
+      })
+    }
   }
 
   scrub(time: number) {
@@ -238,24 +282,28 @@ export default class Editor extends Vue {
     })
   }
 
-  toTime(time: number) {
-    return new Date(time * 1000).toISOString().substr(11, 8)
-  }
-
   handleScroll(e: Event) {
     if (this.playingSegment === null) {
       requestAnimationFrame(() => {
         const el = (e.target as HTMLElement)
-        const scrollFactorLeft = el.scrollLeft / el.scrollWidth
-        const scrollFactorRight = (el.scrollLeft + el.clientWidth) / el.scrollWidth
-        this.boundLeft = this.audioElement.duration * (scrollFactorLeft - this.segmentBufferPercent),
-        this.boundRight = this.audioElement.duration * (scrollFactorRight + this.segmentBufferPercent)
+        const w = el.scrollWidth
+        const l = el.scrollLeft
+        const cw = el.clientWidth
+        const scrollFactorLeft = l / w
+        const scrollFactorRight = (l + cw) / w
+        const boundLeft = this.audioElement.duration * (scrollFactorLeft - this.segmentBufferPercent)
+        const boundRight = this.audioElement.duration * (scrollFactorRight + this.segmentBufferPercent)
+        this.visibleSegments = _(this.transcript.segments)
+          .filter((s) => {
+            return s.startTime >= boundLeft && s.endTime <= boundRight
+          })
+          .sortBy('startTime')
+          .value()
       })
     }
-  }
-
-  detuneBy(speed: number): number {
-    return ((1 / speed) - 1) * 1000
+    if (this.showMenu) {
+      this.showMenu = false
+    }
   }
 
   playBuffer(buffer: AudioBuffer, start = 0, offset?: number, duration?: number) {
@@ -279,33 +327,24 @@ export default class Editor extends Vue {
     }
   }
 
-  async playSegment(key: number, segment: Segment) {
+  async playSegment(segment: Segment) {
     this.playingSegment = null
-    const buffer = await audio.decodeBufferSegment(segment.startTime, segment.endTime)
-    if (buffer !== undefined) {
-      requestAnimationFrame(() => {
-        this.playingSegment = segment
-        this.playBuffer(buffer).addEventListener('ended', (e: Event) => {
-          this.playingSegment = null
+    if (audio.store.uint8Buffer.byteLength > 0) {
+      console.log(segment)
+      const buffer = await audio.decodeBufferTimeSlice(
+        segment.startTime,
+        segment.endTime,
+        audio.store.uint8Buffer.buffer
+      )
+      if (buffer !== undefined) {
+        requestAnimationFrame(() => {
+          this.playingSegment = segment
+          this.playBuffer(buffer).addEventListener('ended', (e: Event) => {
+            this.playingSegment = null
+          })
         })
-      })
+      }
     }
-    // const listener = (e: Event) => {
-    //   console.log(e)
-    //   const playbackTimeInSeconds = (s.endTime - s.startTime) * (1 / this.audioElement.playbackRate)
-    //   this.segmentPlayingTimeout = setTimeout(() => {
-    //     console.log('pausing')
-    //     this.audioElement.pause()
-    //     console.log('paused')
-    //     this.audioElement.removeEventListener('play', listener)
-    //     this.playingSegment = null
-    //   }, (playbackTimeInSeconds - 0.05) * 1000)
-    // }
-    // if (this.audioElement !== null) {
-    //   this.audioElement.currentTime = segment.startTime
-    //   this.audioElement.addEventListener('play', listener)
-    //   this.audioElement.play()
-    // }
   }
 
   selectSegment(segment: Segment) {
@@ -319,51 +358,9 @@ export default class Editor extends Vue {
   selectNext(i: number) {
     this.selectAndScrollToSegment(this.transcript.segments[i + 1])
   }
-
-  addSegment(atTime: number) {
-    const newSegment: Segment = {
-      startTime: atTime,
-      endTime: atTime + 1,
-      labelText: '',
-      id: _.uniqueId('user-segment-')
-    }
-    this.transcript.segments.push(newSegment)
-  }
-
-  deleteSegment(key: number, segment: Segment) {
-    const i = _(this.transcript.segments).findIndex(s => s.id === segment.id)
-    this.transcript.segments.splice(i, 1)
-  }
-
-  splitSegment(key: number, segment: Segment, splitAt: number) {
-    const i = _(this.transcript.segments).findIndex(s => s.id === segment.id)
-    const oldEndTime = segment.endTime
-    const newSegment: Segment = {
-      startTime: segment.startTime + splitAt,
-      endTime: oldEndTime,
-      labelText: segment.labelText,
-      id: _.uniqueId('user-segment-')
-    }
-    segment.endTime = segment.startTime + splitAt
-    this.transcript.segments.splice(i + 1, 0, newSegment)
-  }
-
-  get visibleSegments() {
-    return _(this.transcript.segments)
-      .filter((s) => {
-        return s.startTime >= this.boundLeft && s.endTime <= this.boundRight
-      })
-      .sortBy('startTime')
-      .value()
-  }
-
   changeMetadata(metadata: any) {
     console.log({metadata})
     this.metadata = metadata
-  }
-
-  get chunkedSegments() {
-    return [_(this.transcript.segments).chunk(250).value()[0]]
   }
 
   get pixelsPerSecond() {
@@ -382,7 +379,7 @@ export default class Editor extends Vue {
   opacity .5
 .tracks
   white-space nowrap
-  overflow-x scroll
+  overflow-x hidden
   padding 10px 40px 20px 40px
   &::-webkit-scrollbar
   &::-webkit-scrollbar-button
@@ -398,32 +395,10 @@ export default class Editor extends Vue {
   // &::-webkit-scrollbar-corner
   // &::-webkit-resizer
 
-.segment
-  display inline-block
-  vertical-align top
-  border-right 1px solid rgba(255,255,255,.1)
-  padding 0 6px
-  color #444
-
-.segment-selected
-  color #000
-  .token-type-indicator
-    opacity 1
-  .time
-    color #ddd
-
-.speaker-segment
-  display block
-  min-height 2em
-
-.segment-chunk
-  display inline-block
-
-.time
-  cursor default
-  font-size 85%
-  color #aaa
-  text-align center
+.transcript-scrollbar
+  top -15px
+  position relative
+  height 20px
 
 .jump-to
   opacity 0

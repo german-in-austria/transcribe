@@ -2,6 +2,16 @@
 .absolute{
   position: absolute;
 }
+.text-light{
+  font-weight: 300;
+}
+.text-uppercase{
+  text-transform: uppercase;
+  letter-spacing: .2em !important;
+}
+a{
+  color: #7cabda;
+}
 
 .application {
   font-family: 'HKGrotesk', sans-serif
@@ -33,4 +43,15 @@ img[lazy=loading] {
 }
 img[lazy=loaded] {
   opacity: 1;
+}
+.no-outline{
+  outline: 0;
+}
+.bold{
+  font-weight: bold;
+}
+.dialog{
+  border-radius: 10px;
+  align-self: baseline;
+  max-height: 400px;
 }
