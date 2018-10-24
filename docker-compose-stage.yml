@@ -1,6 +1,0 @@
-version: '2'
-services:
-  sendmate-webclient-stage:
-    image: "${RB_REGISTRY}/${SERVICE_NAME}:${CI_BUILD_REF}"
-    env_file: "env-stage.env"
-    command : "start"

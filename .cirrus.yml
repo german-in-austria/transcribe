@@ -1,0 +1,8 @@
+docker_builder: 
+  only_if: "$CIRRUS_BRANCH == \"master\""
+  env: 
+    DOCKER_PASSWORD: "ENCRYPTED[4faa4afd1cff430d438cd9cfb74814f9911e669e988b3601565c6c6d8e550d28eb79464409c06957e32dc0a48f0e4c4e]"
+    DOCKER_USERNAME: "ENCRYPTED[bc413d5d5d87b88b9fb08b2ab41e7b4dc86c47b062496627f145828c40085730e4e031d24a671f31ef225c6371b1c90d]"
+  build_script: "docker build --cache-from dioe/transcribe --tag dioe/transcribe ."
+  login_script: "docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD"
+  push_script: "docker push dioe/transcribe && curl -i -X POST -H \"Content-Type: application/json\" -d '{\"text\": \"Cirrus CI built and pushed dioe/transcribe\\n details: https://cirrus-ci.com/task/'$CIRRUS_TASK_ID'\"}' https://mm.dioe.at/hooks/9xkct75bzpbn3cm1kiut3jx1ur\n"
