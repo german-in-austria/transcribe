@@ -93,11 +93,11 @@
                     small
                     icon
                     slot="activator"
-                    :style="{background: color, border: '1px solid #ccc'}"
+                    :style="{background: settings.waveFormColors[i], border: '1px solid #ccc'}"
                     dark />
                   <color-picker
                     @input="(e) => settings.waveFormColors[i] = e.hex"
-                    :value="color" />
+                    :value="settings.waveFormColors[i]" />
                 </v-menu>
               </div>
             </v-list>
