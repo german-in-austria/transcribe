@@ -1,6 +1,12 @@
 <template>
   <div :class="{ selected: isSelected }">
-    <div class="time" @dblclick="$emit('play-segment', segment)" @mousedown="selectAndScrollToSegment(segment)">
+    <div
+      style="outline: 0;"
+      tabindex="-1"
+      class="time"
+      @keydown.delete="deleteSegment(segment)"
+      @dblclick="$emit('play-segment', segment)"
+      @mousedown="selectAndScrollToSegment(segment)">
       {{ toTime(segment.startTime) }} - {{ toTime(segment.endTime) }}
     </div>
     <div
@@ -19,6 +25,7 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SpeakerSegmentTranscript from '@components/SpeakerSegmentTranscript.vue'
+import { deleteSegment } from '../store/transcript'
 
 @Component({
   components: {
@@ -33,6 +40,7 @@ export default class SegmentTranscript extends Vue {
   @Prop({ default: false }) isSelected: boolean
 
   offsetWidth = 0
+  deleteSegment = deleteSegment
 
   mounted() {
     this.offsetWidth = this.$el.offsetWidth + 1
