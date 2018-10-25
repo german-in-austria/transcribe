@@ -35,6 +35,7 @@
       @change-metadata="changeMetadata"
       @scroll="handleScroll"
       @add-segment="addSegment"
+      @jump-to-transcript-segment="scrollTranscriptToSegment"
       :height="300"
       :scroll-to-segment="scrollToSegment"
       :scroll-to-second="scrollToSecond"

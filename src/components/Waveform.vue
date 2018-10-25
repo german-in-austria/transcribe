@@ -102,6 +102,7 @@
         tabindex="-1"
         @mousedown="startDragOverview"
         @mouseup="scrollFromOverview"
+        @contextmenu="scrollBothFromOverview"
         :style="{
           transform: `translateX(${ overviewThumbOffset }px) translateY(7px)`,
           transition: transitionOverviewThumb ? '.25s' : 'unset'
@@ -119,7 +120,7 @@
         <slot name="overview" />
       </v-flex>
       <v-flex>
-        <scroll-lock-button v-model="settings.lockScroll" />
+        <scroll-lock-button style="margin-top: 11px;" v-model="settings.lockScroll" />
       </v-flex>
     </v-layout>
   </div>
@@ -136,6 +137,7 @@ import triangle from '@components/Triangle.vue'
 import settings from '../store/settings'
 import audio, { OggIndex } from '../service/audio'
 import util from '../service/util'
+import { findSegmentAt } from '../store/transcript'
 
 const queue = new Queue({
   concurrency: 1,
@@ -189,11 +191,6 @@ export default class Waveform extends Vue {
 
   addSegmentAt(e: MouseEvent) {
     const c = this.$refs.svgContainer as HTMLDivElement
-    console.log(
-      c.scrollWidth,
-      c.scrollLeft,
-      e.pageX
-    )
     this.$emit('add-segment', (c.scrollLeft + e.pageX) / this.pixelsPerSecond)
     console.log(e)
   }
@@ -266,7 +263,6 @@ export default class Waveform extends Vue {
 
   async drawSpectogramPiece(i: number) {
     console.log('DRAWING SPECTOGRAM')
-    // TODO: CLEANUP WITH drawWaveFormPiece
     const isLast = i + 1 === this.amountDrawSegments
     const secondsPerDrawWidth = this.drawWidth / this.pixelsPerSecond
     const from = i * secondsPerDrawWidth
@@ -381,6 +377,16 @@ export default class Waveform extends Vue {
   }
   onDragOverview(e: MouseEvent) {
     this.overviewThumbOffset = e.pageX - this.overviewThumbWidth / 2
+  }
+  scrollBothFromOverview(e: MouseEvent) {
+    this.scrollFromOverview(e)
+    this.scrollTranscriptFromOverview()
+  }
+  scrollTranscriptFromOverview() {
+    console.log('scrollTranscriptFromOverview')
+    const c = this.$refs.svgContainer as HTMLElement
+    const currentSeconds = c.scrollLeft / this.pixelsPerSecond
+    this.$emit('jump-to-transcript-segment', findSegmentAt(currentSeconds))
   }
   scrollFromOverview(e: MouseEvent) {
     this.transitionOverviewThumb = true
