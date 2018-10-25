@@ -1,10 +1,14 @@
 
 const registerPromiseWorker = require('promise-worker-transferable/register')
+const textDecoder = new TextDecoder('utf-8')
+
 // Post data to parent thread
-registerPromiseWorker(([buffer, options]: [ ArrayBuffer, string ]) => {
+// tslint:disable-next-line:max-line-length
+registerPromiseWorker((message: {buffer: ArrayBuffer, options: ArrayBuffer}, withTransferList: (...args: any[]) => any) => {
   let upperHalf = ''
   let lowerHalf = ''
-  const opts = JSON.parse(options)
+  const {options, buffer} = message
+  const opts = JSON.parse(textDecoder.decode(options))
   const chanData = new Float32Array(buffer)
   const step = Math.ceil( chanData.length / opts.width )
   const amp = opts.height / 2
