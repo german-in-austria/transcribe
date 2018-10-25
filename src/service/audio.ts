@@ -5,19 +5,30 @@ import * as audioBufferToWav from 'audiobuffer-to-wav'
 
 import util from './util'
 import settings from '../store/settings'
-import * as PromiseWorker from 'promise-worker'
-import * as PromiseWorkerTransferable from 'promise-worker-transferable'
+import * as PromiseWorker from 'promise-worker-transferable'
 import WaveformWorker from './waveform.worker'
-const waveformWorker = new PromiseWorkerTransferable(new WaveformWorker(''))
+const waveformWorker = new PromiseWorker(new WaveformWorker(''))
 // import MultiWorker from '../lib/worker-loader'
 // const waveformWorkerPar = new MultiWorker(new WaveformWorker(''))
 import GetFrequenciesWorker from './get-frequencies.worker'
 const getFrequenciesWorker = new PromiseWorker(new GetFrequenciesWorker(''))
 import OggIndexWorker from './oggindex.worker'
 const oggIndexWorker = new PromiseWorker(new OggIndexWorker(''))
+const textEncoder = new TextEncoder()
+const textDecoder = new TextDecoder('utf-8')
 // import drawWaveWasm from './wasm/module.untouched.wasm'
 // import getSpectogramWasm from './wasm/module2.untouched.wasm'
 // const loader = require('../lib/as-loader')
+
+export interface AudioMetaData {
+  url: string
+  sampleRate: number
+  headers: OggIndex['headers']
+  pages: OggIndex['pages']
+  bitRate: number
+  fileSize: number
+  headerBuffer: ArrayBuffer|null
+}
 
 export interface OggIndex {
   pages: Array<{ byteOffset: number, granulePosition: number, timestamp: number }>
@@ -31,12 +42,13 @@ const audioContext: AudioContext = new ctxClass()
 const uint8Buffer = new Uint8Array(0)
 // const oggBuffer = uint8Buffer.buffer
 
-const isLocalFile             = false
-let   oggPages                = [] as OggIndex['pages']
-let   oggHeaders              = [] as OggIndex['headers']
-let   oggLength: number|null  = null
-let   sampleRate: number|null = null
-const isBufferComplete        = false
+const isLocalFile                       = false
+let   oggPages                          = [] as OggIndex['pages']
+let   oggHeaders                        = [] as OggIndex['headers']
+let   oggLength: number|null            = null
+let   sampleRate: number|null           = null
+let   metadata: AudioMetaData|null      = null
+const isBufferComplete                  = false
 let   oggHeaderBuffer: ArrayBuffer|null = null
 
 function readU4le(dataView: DataView, i: number) {
@@ -189,7 +201,7 @@ function findOggPages(from: number, to: number, pages: OggIndex['pages']) {
       pages[i] &&
       pages[i].timestamp >= to &&
       pages[i].timestamp < errorTimestampTooBig ||
-      i === countPages
+      i + 1 === countPages
     ) {
       endPage = pages[i]
       break
@@ -274,7 +286,7 @@ async function drawWavePathAsync(
   offsetLeft = 0,
   mono = false
 ): Promise<string> {
-  const b = (() => {
+  const buf = (() => {
     if (mono === true) {
       return sumChannels(
         buffer.getChannelData(0),
@@ -284,14 +296,12 @@ async function drawWavePathAsync(
       return buffer.getChannelData(channel).buffer
     }
   })()
-  return await waveformWorker.postMessage([
-    b,
-    JSON.stringify({
-      width,
-      height,
-      offsetLeft
-    })
-  ], [ b ])
+  const options = textEncoder.encode(JSON.stringify({
+    width,
+    height,
+    offsetLeft
+  })).buffer
+  return await waveformWorker.postMessage({ buffer: buf, options }, [ buf, options ])
 }
 
 // let wasmModule: any
@@ -469,31 +479,35 @@ async function serverAcceptsRanges(url: string): Promise<boolean> {
   return true
 }
 
-async function getAudioMetadata(url: string): Promise<any> {
-  const kb = 100
-  if ((await serverAcceptsRanges(url)) === false) {
-    throw new Error('server doesn’t accept ranges')
+async function getAudioMetadata(url: string): Promise<AudioMetaData> {
+  if (metadata !== null) {
+    return metadata
   } else {
-    const chunk = await fetch(url, {
-      method: 'GET',
-      credentials: 'include',
-      headers: { Range: `bytes=0-${ kb * 1024 }`}
-    })
-    const fileSize = (await fetch(url, {
-      credentials: 'include',
-      method: 'HEAD'
-    })).headers.get('Content-Length')
-    const bufferFirstSlice   = await chunk.arrayBuffer()
-    const sr                 = audio.getOggSampleRate(bufferFirstSlice)
-    const bitRate            = audio.getOggNominalBitrate(bufferFirstSlice)
-    const headerBuffer       = audio.getOggHeaderBuffer(bufferFirstSlice)
-    const { headers, pages } = await audio.getOggIndexAsync(bufferFirstSlice)
-    return {
-      sampleRate: sr,
-      headers,
-      pages,
-      fileSize: Number(fileSize),
-      headerBuffer,
+    const kb = 100
+    if ((await serverAcceptsRanges(url)) === false) {
+      throw new Error('server doesn’t accept ranges')
+    } else {
+      const chunk = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { Range: `bytes=0-${ kb * 1024 }`}
+      })
+      const fileSize = (await fetch(url, {
+        credentials: 'include',
+        method: 'HEAD'
+      })).headers.get('Content-Length')
+      const bufferFirstSlice   = await chunk.arrayBuffer()
+      const { headers, pages } = await audio.getOggIndexAsync(bufferFirstSlice)
+      metadata = {
+        url,
+        sampleRate: audio.getOggSampleRate(bufferFirstSlice),
+        headers,
+        pages,
+        bitRate: audio.getOggNominalBitrate(bufferFirstSlice),
+        fileSize: Number(fileSize),
+        headerBuffer: audio.getOggHeaderBuffer(bufferFirstSlice)
+      }
+      return metadata
     }
   }
 }
@@ -508,7 +522,7 @@ async function downloadAudioStream({
     onProgress: (chunk: AudioBuffer, from: number, to: number) => any
   }
 ) {
-  const metadata = await getAudioMetadata(url)
+  metadata = await getAudioMetadata(url)
   const x = await fetch(url, { credentials: 'include' }).then((res) => {
     onStart(metadata)
     let preBuffer = new Uint8Array(0)
