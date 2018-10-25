@@ -27,11 +27,13 @@ export default {
     return a
   },
   async concatUint8ArrayAsync(first: Uint8Array, second: Uint8Array): Promise<Uint8Array[]> {
+    const b1 = first.buffer
+    const b2 = second.buffer
     const [ combined, one, two ] = await promiseWorker.postMessage({
-        first   : first.buffer,
-        second : second.buffer
+        first   : b1,
+        second : b2
       },
-      [ first.buffer, second.buffer ]
+      [ b1, b2 ]
     )
     return [
       new Uint8Array(combined),

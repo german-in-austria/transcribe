@@ -35,6 +35,7 @@
       @change-metadata="changeMetadata"
       @scroll="handleScroll"
       @add-segment="addSegment"
+      @jump-to-transcript-segment="scrollTranscriptToSegment"
       :height="300"
       :scroll-to-segment="scrollToSegment"
       :scroll-to-second="scrollToSecond"
@@ -179,7 +180,8 @@ export default class Editor extends Vue {
   // TODO: percentages are impractical. use pixels
   segmentBufferPercent = .01
   metadata: any = null
-  visibleSegments: Segment[] = this.transcript.segments.slice(0, 40)
+  boundLeft = 0
+  boundRight = 100
   selectedSegment: Segment|null = {id: 'none', startTime: 0, endTime: 0 }
   scrollToSegment: Segment|null = null
   playingSegment: Segment|null = null
@@ -282,6 +284,15 @@ export default class Editor extends Vue {
     })
   }
 
+  get visibleSegments() {
+    return _(this.transcript.segments)
+      .filter((s) => {
+        return s.startTime >= this.boundLeft && s.endTime <= this.boundRight
+      })
+      .sortBy('startTime')
+      .value()
+  }
+
   handleScroll(e: Event) {
     if (this.playingSegment === null) {
       requestAnimationFrame(() => {
@@ -291,14 +302,8 @@ export default class Editor extends Vue {
         const cw = el.clientWidth
         const scrollFactorLeft = l / w
         const scrollFactorRight = (l + cw) / w
-        const boundLeft = this.audioElement.duration * (scrollFactorLeft - this.segmentBufferPercent)
-        const boundRight = this.audioElement.duration * (scrollFactorRight + this.segmentBufferPercent)
-        this.visibleSegments = _(this.transcript.segments)
-          .filter((s) => {
-            return s.startTime >= boundLeft && s.endTime <= boundRight
-          })
-          .sortBy('startTime')
-          .value()
+        this.boundLeft = this.audioElement.duration * (scrollFactorLeft - this.segmentBufferPercent)
+        this.boundRight = this.audioElement.duration * (scrollFactorRight + this.segmentBufferPercent)
       })
     }
     if (this.showMenu) {
@@ -329,6 +334,15 @@ export default class Editor extends Vue {
 
   async playSegment(segment: Segment) {
     this.playingSegment = null
+    // TODO:
+    // const b = await audio.getOrFetchAudioBuffer(
+    //   segment.startTime,
+    //   segment.endTime,
+    //   this.metadata.fileSize,
+    //   this.audioElement.duration,
+    //   this.audioElement.src
+    // )
+
     if (audio.store.uint8Buffer.byteLength > 0) {
       console.log(segment)
       const buffer = await audio.decodeBufferTimeSlice(

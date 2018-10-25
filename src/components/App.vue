@@ -19,9 +19,12 @@
           class="max-width pick-transcript-container"
           :align-center="transcriptList === null"
           justify-center>
+          <div v-if="loggedIn === false">
+            Please <a href="https://dissdb.dioe.at/login" target="_blank">login</a> and <a href="/">refresh</a>
+          </div>
           <v-progress-circular
             indeterminate
-            v-if="transcriptList === null"/>
+            v-if="transcriptList === null && loggedIn === true"/>
           <v-flex class="pt-5" xs6 md4 v-if="transcriptList !== null">
             <h1 class="title text-xs-center text-light text-uppercase mt-3 mb-4">
               Transcribe
@@ -119,6 +122,7 @@ export default class App extends Vue {
   transcriptList: ServerTranscriptListItem[]|null = null
   loadingTranscriptId: number|null = null
   searchTerm = ''
+  loggedIn = true
 
   emptyTranscript = {
     name: '',
@@ -129,9 +133,14 @@ export default class App extends Vue {
   }
 
   async mounted() {
-    this.transcriptList = (await (await fetch('https://dissdb.dioe.at/routes/transcripts', {
+    const res = (await (await fetch('https://dissdb.dioe.at/routes/transcripts', {
       credentials: 'include'
-    })).json()).transcripts
+    })).json())
+    if (res.transcripts !== undefined) {
+      this.transcriptList = res.transcripts
+    } else if (res.error === 'login') {
+      this.loggedIn = false
+    }
   }
 
   get filteredTranscriptList(): ServerTranscriptListItem[] {

@@ -11,7 +11,7 @@
     :style="{ left: offset + 'px', width: width + 'px' }">
     <div :style="{ left: width / 2 + 'px' }" class="transcript-tooltip" v-if="isSelected">
       <div class="inner" :key="i" v-for="(event, i) in getTranscriptSpeakerEvents(segment.id)">
-        {{ event.speaker + ' ' + event.tokens.join(' ') }}
+        {{ i + ': ' + event.tokens.join(' ') }}
       </div>
     </div>
     <!-- <slot :segment="segment" /> -->

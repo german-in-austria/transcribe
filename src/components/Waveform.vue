@@ -102,6 +102,7 @@
         tabindex="-1"
         @mousedown="startDragOverview"
         @mouseup="scrollFromOverview"
+        @contextmenu="scrollBothFromOverview"
         :style="{
           transform: `translateX(${ overviewThumbOffset }px) translateY(7px)`,
           transition: transitionOverviewThumb ? '.25s' : 'unset'
@@ -119,7 +120,7 @@
         <slot name="overview" />
       </v-flex>
       <v-flex>
-        <scroll-lock-button v-model="settings.lockScroll" />
+        <scroll-lock-button style="margin-top: 11px;" v-model="settings.lockScroll" />
       </v-flex>
     </v-layout>
   </div>
@@ -136,6 +137,7 @@ import triangle from '@components/Triangle.vue'
 import settings from '../store/settings'
 import audio, { OggIndex } from '../service/audio'
 import util from '../service/util'
+import { findSegmentAt } from '../store/transcript'
 
 const queue = new Queue({
   concurrency: 1,
@@ -189,11 +191,6 @@ export default class Waveform extends Vue {
 
   addSegmentAt(e: MouseEvent) {
     const c = this.$refs.svgContainer as HTMLDivElement
-    console.log(
-      c.scrollWidth,
-      c.scrollLeft,
-      e.pageX
-    )
     this.$emit('add-segment', (c.scrollLeft + e.pageX) / this.pixelsPerSecond)
     console.log(e)
   }
@@ -266,7 +263,6 @@ export default class Waveform extends Vue {
 
   async drawSpectogramPiece(i: number) {
     console.log('DRAWING SPECTOGRAM')
-    // TODO: CLEANUP WITH drawWaveFormPiece
     const isLast = i + 1 === this.amountDrawSegments
     const secondsPerDrawWidth = this.drawWidth / this.pixelsPerSecond
     const from = i * secondsPerDrawWidth
@@ -382,6 +378,16 @@ export default class Waveform extends Vue {
   onDragOverview(e: MouseEvent) {
     this.overviewThumbOffset = e.pageX - this.overviewThumbWidth / 2
   }
+  scrollBothFromOverview(e: MouseEvent) {
+    this.scrollFromOverview(e)
+    this.scrollTranscriptFromOverview()
+  }
+  scrollTranscriptFromOverview() {
+    console.log('scrollTranscriptFromOverview')
+    const c = this.$refs.svgContainer as HTMLElement
+    const currentSeconds = c.scrollLeft / this.pixelsPerSecond
+    this.$emit('jump-to-transcript-segment', findSegmentAt(currentSeconds))
+  }
   scrollFromOverview(e: MouseEvent) {
     this.transitionOverviewThumb = true
     document.removeEventListener('mousemove', this.onDragOverview)
@@ -432,42 +438,6 @@ export default class Waveform extends Vue {
     }
   }
 
-  async serverAcceptsRanges(url: string): Promise<boolean> {
-    const res = (await fetch(url, {method: 'HEAD', mode: 'cors', credentials: 'include'}))
-    // return res.headers.has('Accept-Ranges')
-    return true
-  }
-
-  async getAudioMetadata(url: string): Promise<any> {
-    const kb = 100
-    if ((await this.serverAcceptsRanges(url)) === false) {
-      throw new Error('server doesn’t accept ranges')
-    } else {
-      const chunk = await fetch(url, {
-        method: 'GET',
-        credentials: 'include',
-        headers: { Range: `bytes=0-${ kb * 1024 }`}
-      })
-      const fileSize = (await fetch(url, {
-        credentials: 'include',
-        method: 'HEAD'
-      })).headers.get('Content-Length')
-      const bufferFirstSlice   = await chunk.arrayBuffer()
-      const sampleRate         = audio.getOggSampleRate(bufferFirstSlice)
-      const bitRate            = audio.getOggNominalBitrate(bufferFirstSlice)
-      const headerBuffer       = audio.getOggHeaderBuffer(bufferFirstSlice)
-      const { headers, pages } = await audio.getOggIndexAsync(bufferFirstSlice)
-      console.log(bitRate)
-      return {
-        sampleRate,
-        headers,
-        pages,
-        fileSize: Number(fileSize),
-        headerBuffer
-      }
-    }
-  }
-
   @Watch('audioElement')
   async initWithAudio() {
     if (this.audioElement !== null && !isNaN(this.audioElement.duration)) {
@@ -479,67 +449,20 @@ export default class Waveform extends Vue {
       if (audio.store.isLocalFile === true) {
         console.log('local')
       } else {
-        console.log('A CHANGE CHANGED!!!')
-        this.metadata = await this.getAudioMetadata(this.audioElement.src)
-        console.log('this.metadata', this.metadata)
-        const x = await fetch(this.audioElement.src, { credentials: 'include' })
-        .then(res => {
-          this.loading = false
-          const scrollLeft = localStorage.getItem('scrollPos')
-          const el = that.$refs.svgContainer
-          if (scrollLeft !== null && el instanceof HTMLElement) {
-            el.scrollTo({
-              left : Number(scrollLeft)
-            })
+        const buffer = await audio.downloadAudioStream({
+          url: this.audioElement.src,
+          onStart: (metadata: any) => {
+            this.metadata = metadata
+            this.loading = false
+            const scrollLeft = localStorage.getItem('scrollPos')
+            const el = that.$refs.svgContainer
+            if (scrollLeft !== null && el instanceof HTMLElement) {
+              el.scrollTo({ left : Number(scrollLeft) })
+            }
+          },
+          onProgress: (chunk: AudioBuffer, from: number, to: number) => {
+            this.drawOverviewWaveformPiece(from, to, chunk)
           }
-          let preBuffer = new Uint8Array(0)
-          if (res.body instanceof ReadableStream) {
-            const reader = res.body.getReader()
-            console.log('total length in bytes', res.headers.get('Content-Length'))
-            reader.read().then(async function process(chunk: {value: Uint8Array, done: boolean}): Promise<any> {
-              if (chunk.done === false) {
-                if (chunk.value && chunk.value.buffer instanceof ArrayBuffer) {
-                  [ preBuffer ] = await util.concatUint8ArrayAsync(preBuffer, chunk.value)
-                  if (preBuffer.byteLength > 2048 * 1024) {
-                    // tslint:disable-next-line:max-line-length
-                    const {headers, pages} = await audio.getOggIndexAsync(preBuffer.buffer)
-                    const buffers = await util.concatUint8ArrayAsync(audio.store.uint8Buffer, preBuffer)
-                    audio.store.uint8Buffer = buffers[0]
-                    preBuffer = new Uint8Array(0)
-                    // reset buffer
-                    // console.log(audio.store.uint8Buffer.byteLength, 'bytes loaded')
-                    // store headers
-                    if (headers.length > 0) {
-                      audio.store.oggHeaders = audio.store.oggHeaders.concat(headers)
-                    }
-                    if (pages.length > 0) {
-                      const firstPage = pages[0]
-                      const lastPage = pages[pages.length - 1]
-                      if (firstPage && lastPage && audio.store.uint8Buffer.byteLength > 0) {
-                        const decoded = await audio.decodeBufferSegment(
-                          audio.store.uint8Buffer.byteLength - lastPage.byteOffset,
-                          audio.store.uint8Buffer.byteLength,
-                          audio.store.uint8Buffer.buffer
-                        )
-                        console.log('DRAWING', firstPage.timestamp, lastPage.timestamp)
-                        that.drawOverviewWaveformPiece(firstPage.timestamp, lastPage.timestamp, decoded)
-                      }
-                    }
-                  }
-                } else {
-                  console.log('received non-buffer', chunk)
-                }
-                return reader.read().then(process)
-              } else {
-                if (chunk.done === true) {
-                  console.log('DONE.')
-                  audio.store.isBufferComplete = true
-                  audio.cacheOggIndex(audio.store.uint8Buffer.buffer)
-                }
-              }
-            })
-          }
-          return res
         })
       }
     }
@@ -713,7 +636,7 @@ export default class Waveform extends Vue {
   transition opacity .5s
   opacity 0
   pointer-events none
-  top 00px
+  top 0px
   z-index 1
   background #ccc
   height 80%

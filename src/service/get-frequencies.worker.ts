@@ -1,4 +1,4 @@
-const registerPromiseWorker = require('promise-worker/register')
+const registerPromiseWorker = require('promise-worker-transferable/register')
 // import { heatMap } from './heat-map'
 
 // // tslint:disable:no-bitwise

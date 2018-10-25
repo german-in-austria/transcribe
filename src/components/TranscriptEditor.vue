@@ -79,6 +79,11 @@ export default class TranscriptEditor extends Vue {
     })
   }
 
+  @Watch('transcript.segments')
+  onUpdateSpeakerEvents() {
+    this.visibleSegments = this.transcript.segments.slice(this.currentIndex, this.currentIndex + defaultLimit)
+  }
+
   mounted() {
     outerWidth = (this.$refs.tracks as HTMLElement).clientWidth
     this.emitScroll()
