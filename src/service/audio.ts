@@ -3,6 +3,7 @@ import * as sliceAudiobuffer from 'audiobuffer-slice'
 import * as concatBuffer from 'array-buffer-concat'
 import * as audioBufferToWav from 'audiobuffer-to-wav'
 
+import util from './util'
 import settings from '../store/settings'
 import * as PromiseWorker from 'promise-worker'
 import * as PromiseWorkerTransferable from 'promise-worker-transferable'
@@ -462,6 +463,101 @@ async function getOrFetchAudioBuffer(
   }
 }
 
+async function serverAcceptsRanges(url: string): Promise<boolean> {
+  const res = (await fetch(url, {method: 'HEAD', mode: 'cors', credentials: 'include'}))
+  // return res.headers.has('Accept-Ranges')
+  return true
+}
+
+async function getAudioMetadata(url: string): Promise<any> {
+  const kb = 100
+  if ((await serverAcceptsRanges(url)) === false) {
+    throw new Error('server doesn’t accept ranges')
+  } else {
+    const chunk = await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+      headers: { Range: `bytes=0-${ kb * 1024 }`}
+    })
+    const fileSize = (await fetch(url, {
+      credentials: 'include',
+      method: 'HEAD'
+    })).headers.get('Content-Length')
+    const bufferFirstSlice   = await chunk.arrayBuffer()
+    const sr                 = audio.getOggSampleRate(bufferFirstSlice)
+    const bitRate            = audio.getOggNominalBitrate(bufferFirstSlice)
+    const headerBuffer       = audio.getOggHeaderBuffer(bufferFirstSlice)
+    const { headers, pages } = await audio.getOggIndexAsync(bufferFirstSlice)
+    return {
+      sampleRate: sr,
+      headers,
+      pages,
+      fileSize: Number(fileSize),
+      headerBuffer,
+    }
+  }
+}
+
+async function downloadAudioStream({
+    url,
+    onStart,
+    onProgress
+  }: {
+    url: string,
+    onStart: (metadata: any) => any,
+    onProgress: (chunk: AudioBuffer, from: number, to: number) => any
+  }
+) {
+  const metadata = await getAudioMetadata(url)
+  const x = await fetch(url, { credentials: 'include' }).then((res) => {
+    onStart(metadata)
+    let preBuffer = new Uint8Array(0)
+    if (res.body instanceof ReadableStream) {
+      const reader = res.body.getReader()
+      console.log('total length in bytes', res.headers.get('Content-Length'))
+      reader.read().then(async function process(chunk: {value: Uint8Array, done: boolean}): Promise<any> {
+        if (chunk.value && chunk.value.buffer instanceof ArrayBuffer) {
+          [ preBuffer ] = await util.concatUint8ArrayAsync(preBuffer, chunk.value)
+          if (preBuffer.byteLength > 2048 * 1024) {
+            const {headers, pages} = await audio.getOggIndexAsync(preBuffer.buffer)
+            const buffers = await util.concatUint8ArrayAsync(audio.store.uint8Buffer, preBuffer)
+            audio.store.uint8Buffer = buffers[0]
+            preBuffer = new Uint8Array(0)
+            // reset buffer
+            // console.log(audio.store.uint8Buffer.byteLength, 'bytes loaded')
+            // store headers
+            if (headers.length > 0) {
+              audio.store.oggHeaders = audio.store.oggHeaders.concat(headers)
+            }
+            if (pages.length > 0) {
+              const firstPage = pages[0]
+              const lastPage = pages[pages.length - 1]
+              if (firstPage && lastPage && audio.store.uint8Buffer.byteLength > 0) {
+                const decoded = await audio.decodeBufferSegment(
+                  audio.store.uint8Buffer.byteLength - lastPage.byteOffset,
+                  audio.store.uint8Buffer.byteLength,
+                  audio.store.uint8Buffer.buffer
+                )
+                onProgress(decoded, firstPage.timestamp, lastPage.timestamp)
+              }
+            }
+          }
+        } else {
+          console.log('received non-buffer', chunk)
+        }
+        if (chunk.done === false) {
+          return reader.read().then(process)
+        } else {
+          console.log('DONE.')
+          audio.store.isBufferComplete = true
+          audio.cacheOggIndex(audio.store.uint8Buffer.buffer)
+        }
+      })
+    }
+    return res
+  })
+}
+
 const audio = {
   store : {
     uint8Buffer,
@@ -488,7 +584,7 @@ const audio = {
   drawWavePath,
   drawWavePathAsync,
   // drawSpectogram,
-  // drawWavePathWasm,
+  downloadAudioStream,
   drawSpectogramAsync,
   // drawSpectogramWasm
 }
