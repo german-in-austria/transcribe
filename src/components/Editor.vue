@@ -49,8 +49,8 @@
         v-if="settings.showSegmentBoxes"
         class="absolute">
         <segment-box
-          v-for="(segment, key) in visibleSegments"
-          :key="segment.id"
+          v-for="(event, key) in visibleEvents"
+          :key="event.eventId"
           :segmentKey="key"
           @scroll-to-transcript="scrollTranscriptToSegment"
           @contextmenu.native.stop.prevent="doShowMenu"
@@ -59,11 +59,9 @@
           @select-previous="selectPrevious"
           @select-next="selectNext"
           @play-segment="playSegment"
-          :segment="segment"
-          :previous-segment="visibleSegments[key - 1]"
-          :next-segment="visibleSegments[key + 1]"
-          :speaker-events="transcript.speakerEvents"
-          :selected-segment="selectedSegment"
+          :event="event"
+          :previous-segment="visibleEvents[key - 1]"
+          :next-segment="visibleEvents[key + 1]"
           :pixels-per-second="pixelsPerSecond">
         </segment-box>
         <v-menu
@@ -153,8 +151,8 @@ import playHead from '@components/PlayHead.vue'
 import * as _ from 'lodash'
 import * as fns from 'date-fns'
 import audio from '../service/audio'
-import transcript, { addSegment, deleteSegment, splitSegment, findSegmentAt, getTranscript } from '../store/transcript'
-
+// tslint:disable-next-line:max-line-length
+import transcript, { eventStore, addSegment, deleteSegment, splitSegment, findSegmentAt, getTranscript } from '../store/transcript'
 @Component({
   components: {
     waveForm,
@@ -172,6 +170,7 @@ export default class Editor extends Vue {
   @Prop() audioElement: HTMLAudioElement
   @Prop() transcript: Transcript
 
+  eventStore = eventStore
   addSegment = addSegment
   deleteSegment = deleteSegment
   splitSegment = splitSegment
@@ -182,7 +181,7 @@ export default class Editor extends Vue {
   metadata: any = null
   boundLeft = 0
   boundRight = 100
-  selectedSegment: Segment|null = {id: 'none', startTime: 0, endTime: 0 }
+  selectedSegment: Segment|null = {id: -1, startTime: 0, endTime: 0 }
   scrollToSegment: Segment|null = null
   playingSegment: Segment|null = null
   segmentPlayingTimeout: any = null
@@ -284,8 +283,8 @@ export default class Editor extends Vue {
     })
   }
 
-  get visibleSegments() {
-    return _(this.transcript.segments)
+  get visibleEvents() {
+    return _(this.eventStore.events)
       .filter((s) => {
         return s.startTime >= this.boundLeft && s.endTime <= this.boundRight
       })

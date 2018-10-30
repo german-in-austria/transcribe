@@ -14,7 +14,7 @@ declare global {
     editable?: boolean
     startTime: number
     endTime: number
-    id: string
+    id: number
     labelText?: string
   }
   interface Transcript {
@@ -63,6 +63,11 @@ interface ServerTranscript {
     pk: number
     ut: string
   }
+  aTokenTypes?: {
+    [id: string]: {
+      n: string // word
+    }
+  }
   aEvents: ServerEvent[]
   nNr: number
   aNr: number
@@ -95,6 +100,9 @@ interface LocalTranscriptTokeTier {
   type: number|null
 }
 
+type LocalTranscriptSpeakers = ServerTranscript['aInformanten']
+type LocalTranscriptTokenTypes = ServerTranscript['aTokenTypes']
+
 interface LocalTranscriptToken {
   id: number
   tiers: {
@@ -103,12 +111,15 @@ interface LocalTranscriptToken {
   }
 }
 
-interface LocalTranscriptEvent {
+export interface LocalTranscriptEvent {
   eventId: number
   startTime: number
   endTime: number,
   speakerEvents: {
-    [speakerId: string]: LocalTranscriptToken[]
+    [speakerId: string]: {
+      speakerEventId: number
+      tokens: LocalTranscriptToken[]
+    }
   }
 }
 
@@ -128,7 +139,7 @@ function transcriptTreeToTranscribable(tree: ParsedXML, name: string): Transcrip
   const speakers = _(tree.speakers).map((v, k) => k).value()
   const segments = _(tree.speakers)
     .map(tiers => _.map(tiers, tier => _.map(tier.events, event => ({
-      id: `${event.start}-${event.end}`,
+      id: Number(_.uniqueId()) * -1,
       startTime: Number(event.startTime),
       endTime: Number(event.endTime)
     }) )))
@@ -166,7 +177,7 @@ function transcriptTreeToTranscribable(tree: ParsedXML, name: string): Transcrip
   return transcript
 }
 
-export function findSegmentById(id: string) {
+export function findSegmentById(id: number) {
   if (transcript !== null) {
     return _(transcript.segments).findIndex(s => s.id === id)
   } else {
@@ -203,7 +214,7 @@ export function updateSpeakerTokens(segment: Segment, speaker: string, tokens: s
   }
 }
 
-export function resizeSegment(id: string, startTime: number, endTime: number) {
+export function resizeSegment(id: number, startTime: number, endTime: number) {
   if (transcript !== null) {
     const i = findSegmentById(id)
     history.push({
@@ -221,7 +232,7 @@ export function addSegment(atTime: number) {
       startTime: atTime,
       endTime: atTime + 1,
       labelText: '',
-      id: _.uniqueId('user-segment-')
+      id: Number(_.uniqueId()) * -1
     }
     history.push({
       type: 'ADD',
@@ -252,7 +263,7 @@ export function splitSegment(segment: Segment, splitAt: number): Segment[] {
       startTime: segment.startTime + splitAt,
       endTime: oldEndTime,
       labelText: segment.labelText,
-      id: _.uniqueId('user-segment-')
+      id: Number(_.uniqueId()) * -1
     }
     segment.endTime = segment.startTime + splitAt
     transcript.segments.splice(i + 1, 0, newSegment)
@@ -294,7 +305,7 @@ function serverTranscriptToTranscript(s: ServerTranscript, t: Transcript): Trans
   })()
   const segments = _.map(s.aEvents, (e) => {
     return {
-      id: String(e.pk),
+      id: e.pk,
       startTime: timeToSeconds(e.s),
       endTime: timeToSeconds(e.e)
     }
@@ -309,10 +320,7 @@ function serverTranscriptToTranscript(s: ServerTranscript, t: Transcript): Trans
       }).value()
     })
     .value()
-  console.log('combined speaker events:', {
-    ...t.speakerEvents,
-    ...speakerEvents
-  })
+  // console.log('new speaker events:', speakerEvents)
   return {
     audioUrl,
     name: t.name || (s.aTranscript ? s.aTranscript.n : ''),
@@ -326,37 +334,47 @@ function serverTranscriptToTranscript(s: ServerTranscript, t: Transcript): Trans
 }
 
 function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
-  const x = _.map(s.aEvents, (e) => {
-    return {
-      eventId: e.pk,
-      startTime: timeToSeconds(e.s),
-      endTime: timeToSeconds(e.e),
-      speakerEvents: _.mapValues(e.tid, (tokenIds) => {
-        return _.map(tokenIds, (id) => {
-          return {
-            id,
-            tiers : {
-              default: {
-                text: s.aTokens[id].t,
-                type: s.aTokens[id].tt
-              },
-              ortho: {
-                // TODO: not "text_in_ortho", but "ortho".
-                text: s.aTokens[id].to,
-                type: null
-              }
+  const x = _(s.aEvents)
+    .groupBy((e) => {
+      return e.s + '-' + e.e
+    })
+    .flatMap((e) => {
+      return {
+        eventId: e[0].pk,
+        startTime: timeToSeconds(e[0].s),
+        endTime: timeToSeconds(e[0].e),
+        speakerEvents: _.reduce(e, (m, se) => {
+          _.map(se.tid, (tokenIds, speakerKey) => {
+            m[speakerKey] = {
+              speakerEventId: se.pk,
+              tokens: _.map(tokenIds, (id) => {
+                return {
+                  id,
+                  tiers : {
+                    default: {
+                      text: s.aTokens[id].t,
+                      type: s.aTokens[id].tt
+                    },
+                    ortho: {
+                      // TODO: not "text_in_ortho", but "ortho".
+                      text: s.aTokens[id].to,
+                      type: null
+                    }
+                  }
+                }
+              })
             }
-          }
-        })
-      })
-    }
-  })
+          })
+          return m
+        }, {} as LocalTranscriptEvent['speakerEvents'])
+      }
+    }).value()
   return x
 }
 
 export async function getTranscriptNew(
   id: number,
-  onProgress = (v: number): any => v,
+  onProgress: (v: number, es: LocalTranscriptEvent[]) => any,
   chunk = 0,
   buffer: LocalTranscript = [],
   totalSteps?: number,
@@ -367,16 +385,22 @@ export async function getTranscriptNew(
       credentials: 'include'
     })).json() as ServerTranscript
 
-    if (onProgress !== undefined && totalSteps !== undefined) {
-      onProgress(res.aNr / totalSteps)
+    if (res.aNr === 0) {
+      eventStore.metadata = getMetadataFromServerTranscript(res)
     }
-    // console.log(serverTranscriptToLocal(res))
+
+    eventStore.events = buffer.concat(serverTranscriptToLocal(res))
+
+    if (onProgress !== undefined && totalSteps !== undefined) {
+      onProgress(res.aNr / totalSteps, eventStore.events)
+    }
+
     if (res.nNr > res.aNr)  {
       return getTranscriptNew(
         id,
         onProgress,
         chunk + 1,
-        buffer.concat(serverTranscriptToLocal(res)),
+        eventStore.events,
         totalSteps || res.aTmNr
       )
     } else {
@@ -399,21 +423,23 @@ export async function getTranscript(
       credentials: 'include'
     })).json() as ServerTranscript
 
+    if (transcript === null) {
+      transcript = {
+        audioUrl: '',
+        name: '',
+        segments: [],
+        speakerEvents: {},
+        speakers: []
+      }
+    }
+
+    transcript = serverTranscriptToTranscript(res, transcript)
     if (onProgress !== undefined && totalSteps !== undefined) {
       onProgress(res.aNr / totalSteps, transcript)
     }
+
     // console.log(serverTranscriptToLocal(res))
     if (res.nNr > res.aNr)  {
-      if (transcript === null) {
-        transcript = {
-          audioUrl: '',
-          name: '',
-          segments: [],
-          speakerEvents: {},
-          speakers: []
-        }
-      }
-      transcript = serverTranscriptToTranscript(res, transcript)
       return getTranscript(
         id,
         onProgress,
@@ -428,5 +454,31 @@ export async function getTranscript(
   }
 }
 
+const events: LocalTranscriptEvent[] = []
+const selectedEventIds: number[] = []
+
+function getMetadataFromServerTranscript(res: ServerTranscript) {
+  return {
+    speakers: res.aInformanten!,
+    tokenTypes: res.aTokenTypes!
+  }
+}
+
+export function selectEvent(e: LocalTranscriptEvent) {
+  eventStore.selectedEventIds = [ e.eventId ]
+}
+
+export function addEventsToSelection(es: LocalTranscriptEvent[]) {
+  eventStore.selectedEventIds = eventStore.selectedEventIds.concat(es.map(e => e.eventId))
+}
+
+export let eventStore = {
+  events,
+  selectedEventIds,
+  metadata: {
+    speakers: {} as LocalTranscriptSpeakers,
+    tokenTypes: {} as LocalTranscriptTokenTypes
+  }
+}
 
 export default transcript

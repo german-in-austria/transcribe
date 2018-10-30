@@ -1,5 +1,5 @@
 <template>
-  <div :class="{ disabled, loading, 'waveform-container': true }">
+  <div :style="containerStyle" :class="{ disabled, loading }">
     <v-layout class="pa-3" style="position: relative;">
       <v-flex xs2 text-xs-left>
         <label for="scaleFactorY" class="caption grey--text lighten-2">
@@ -88,7 +88,7 @@
             v-for="i in (overviewSvgWidth / 10)"
             :key="i"
             stroke-width="3"
-            stroke="#353535"
+            :stroke="settings.darkMode ? '#353535' : '#EEEEEE'"
             stroke-linecap="round"
             :x1="i * 10"
             :x2="i * 10"
@@ -187,6 +187,12 @@ export default class Waveform extends Vue {
 
   mounted() {
     this.initWithAudio()
+  }
+
+  get containerStyle() {
+    return {
+      background: this.settings.darkMode ? '#191919' : '#e8e8e8'
+    }
   }
 
   addSegmentAt(e: MouseEvent) {
@@ -430,9 +436,10 @@ export default class Waveform extends Vue {
       const offset = (s.startTime + duration / 2) * this.pixelsPerSecond
       if (container instanceof HTMLElement) {
         const currentOffset = container.scrollLeft
-        container.scrollTo({
-          // behavior: 'smooth',
-          left: offset - window.innerWidth / 2
+        requestAnimationFrame(() => {
+          container.scrollTo({
+            left: offset - window.innerWidth / 2
+          })
         })
       }
     }
@@ -499,8 +506,8 @@ export default class Waveform extends Vue {
 
   async drawOverviewWaveformPiece(startTime: number, endTime: number, audioBuffer: AudioBuffer) {
     const totalDuration = this.audioLength
-    const width = (endTime - startTime) * (this.overviewSvgWidth / totalDuration)
-    const left = (startTime) * (this.overviewSvgWidth / totalDuration)
+    const width = Math.ceil((endTime - startTime) * (this.overviewSvgWidth / totalDuration)) + 1
+    const left = Math.floor((startTime) * (this.overviewSvgWidth / totalDuration))
     const [svg1, svg2] = await Promise.all([
       audio.drawWavePathAsync(audioBuffer, width, this.overviewHeight, 0, left),
       audio.drawWavePathAsync(audioBuffer, width, this.overviewHeight, 1, left)
@@ -532,7 +539,7 @@ export default class Waveform extends Vue {
 
     let svg: string
     if (this.settings.useMonoWaveForm === true) {
-      svg = await audio.drawWave(buffer, width, this.height, settings.waveFormColors[0], undefined, true)
+      svg = await audio.drawWave(buffer, width, this.height, settings.waveFormColors[1], undefined, true)
     } else {
       const [svg1, svg2] = await Promise.all([
         audio.drawWave(buffer, width, this.height, settings.waveFormColors[0], 0),
@@ -568,6 +575,8 @@ export default class Waveform extends Vue {
 .overview-waveform
   z-index -1
   white-space nowrap
+  // svg path
+  //   mix-blend-mode overlay
 
 .wave-form-inner
   svg
@@ -696,9 +705,6 @@ export default class Waveform extends Vue {
 
 select
   background #303030
-
-.waveform-container
-  background #191919
 
 input[type=range]
   -webkit-appearance none

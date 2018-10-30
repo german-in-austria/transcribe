@@ -15,18 +15,17 @@
         v-if="transcript.segments && transcript.speakers && transcript.speakerEvents">
         <div :style="{transform: `translateX(${ innerLeft }px)`}" ref="inner" class="transcript-segments-inner">
           <segment-transcript
-            v-for="(segment, i) in visibleSegments"
-            :key="segment.id"
+            v-for="(event, i) in visibleEvents"
+            :key="event.eventId"
             @select-segment="(e) => $emit('select-segment', e)"
             @scroll-to-segment="(e) => $emit('scroll-to-segment', e)"
             @play-segment="(e) => $emit('play-segment', e)"
-            @element-unrender="(width) => handleUnrender(width, i, segment.id)"
-            @element-render="(width) => handleRender(width, i, segment.id)"
-            :segment="segment"
-            :speaker-event="transcript.speakerEvents[segment.id]"
+            @element-unrender="(width) => handleUnrender(width, i, event.eventId)"
+            @element-render="(width) => handleRender(width, i, event.eventId)"
+            :event="event"
             :speakers="transcript.speakers"
-            :is-selected="segment.id === selectedSegment.id"
-            :class="['segment', segment.id === selectedSegment.id && 'segment-selected']"
+            :is-selected="eventStore.selectedEventIds.indexOf(event.eventId) > -1"
+            :class="['segment', (event.eventId in eventStore.selectedEventIds) && 'segment-selected']"
           />
         </div>
       </div>
@@ -40,9 +39,9 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SegmentTranscript from '@components/SegmentTranscript.vue'
 import settings from '@store/settings'
 import * as _ from 'lodash'
+import { eventStore, LocalTranscriptEvent } from '@store/transcript'
 
 const defaultLimit = 20
-let outerWidth = 0
 
 @Component({
   components: {
@@ -54,10 +53,13 @@ export default class TranscriptEditor extends Vue {
   @Prop() transcript: Transcript
   @Prop() selectedSegment: Segment
   @Prop({ default: 0 }) scrollToIndex: number
+
+  eventStore = eventStore
   settings = settings
   innerLeft = 0
   currentIndex = this.scrollToIndex
   lastScrollLeft = 0
+  visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
   visibleSegments = this.transcript.segments.slice(this.currentIndex, this.currentIndex + defaultLimit)
   throttledRenderer = _.throttle(this.updateList, 60)
   throttledEmitter = _.throttle(this.emitScroll, 60)
@@ -65,7 +67,7 @@ export default class TranscriptEditor extends Vue {
   @Watch('scrollToIndex')
   doScrollToSegment(i: number) {
     // right in the middle
-    this.currentIndex = Math.max(0, i - Math.floor(this.visibleSegments.length / 2))
+    this.currentIndex = Math.max(0, i - Math.floor(this.visibleEvents.length / 2))
     this.visibleSegments = this.transcript.segments.slice(this.currentIndex, this.currentIndex + defaultLimit)
     this.$nextTick(() => {
       requestAnimationFrame(() => {
@@ -79,18 +81,17 @@ export default class TranscriptEditor extends Vue {
     })
   }
 
-  @Watch('transcript.segments')
+  @Watch('eventStore.events')
   onUpdateSpeakerEvents() {
-    this.visibleSegments = this.transcript.segments.slice(this.currentIndex, this.currentIndex + defaultLimit)
+    this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
   }
 
   mounted() {
-    outerWidth = (this.$refs.tracks as HTMLElement).clientWidth
-    this.emitScroll()
+    // this.emitScroll()
   }
 
   emitScroll() {
-    this.$emit('scroll', this.visibleSegments[Math.floor(this.visibleSegments.length / 2)].startTime)
+    this.$emit('scroll', this.visibleEvents[Math.floor(this.visibleEvents.length / 2)].startTime)
   }
 
   handleRender(width: number, index: number, segment_id: string) {
@@ -98,7 +99,7 @@ export default class TranscriptEditor extends Vue {
       // console.log('rendered leftmost item', width, segment_id)
       this.innerLeft = this.innerLeft - width
     // RIGHT
-    } else if (index === this.visibleSegments.length - 1) {
+    } else if (index === this.visibleEvents.length - 1) {
       // console.log('rendered rightmost item', width, segment_id)
       // this.innerLeft = this.innerLeft + width
     }
@@ -109,7 +110,7 @@ export default class TranscriptEditor extends Vue {
       // console.log('unrendered leftmost item', width, segment_id)
       this.innerLeft = this.innerLeft + width
     // RIGHT
-    } else if (index === this.visibleSegments.length - 1) {
+    } else if (index === this.visibleEvents.length - 1) {
       // console.log('unrendered rightmost item', width, segment_id)
       // console.log('unrendered rightmost item', width)
       // this.innerLeft = this.innerLeft - width // padding
@@ -120,16 +121,16 @@ export default class TranscriptEditor extends Vue {
     if (leftToRight) {
       // SCROLL LEFT TO RIGHT
       if (this.innerLeft <= -1500 && this.currentIndex + defaultLimit + 1 < this.transcript.segments.length) {
-        this.visibleSegments.push(this.transcript.segments[this.currentIndex + defaultLimit + 1])
-        const unrendered = this.visibleSegments.shift()
+        this.visibleEvents.push(this.eventStore.events[this.currentIndex + defaultLimit + 1])
+        const unrendered = this.visibleEvents.shift()
         this.currentIndex = this.currentIndex + 1
         this.emitScroll()
       }
     } else {
       // SCROLL RIGHT TO LEFT
       if (this.innerLeft >= -200 && this.currentIndex > 0) {
-        this.visibleSegments.unshift(this.transcript.segments[this.currentIndex - 1])
-        const unrendered = this.visibleSegments.pop()
+        this.visibleEvents.unshift(this.eventStore.events[this.currentIndex - 1])
+        const unrendered = this.visibleEvents.pop()
         this.currentIndex = this.currentIndex - 1
         this.emitScroll()
       }
@@ -141,7 +142,7 @@ export default class TranscriptEditor extends Vue {
       requestAnimationFrame(() => {
         if (
           (this.innerLeft <= -1500 || this.innerLeft >= -200)
-          && (this.currentIndex > 0 && this.currentIndex + defaultLimit + 1 < this.transcript.segments.length)
+          && (this.currentIndex > 0 && this.currentIndex + defaultLimit + 1 < this.eventStore.events.length)
         ) {
           this.updateList(leftToRight)
         }

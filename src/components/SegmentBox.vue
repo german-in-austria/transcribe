@@ -1,6 +1,6 @@
 <template>
   <div
-    @mousedown="selectSegment(segment)"
+    @mousedown="selectEvent(event)"
     @dblclick="playSegment(segment)"
     @keydown.meta.enter="$emit('scroll-to-transcript', segment)"
     @keydown.right.stop.prevent="selectNext(segmentKey)"
@@ -10,8 +10,8 @@
     :class="[ 'segment', isSelected ? 'selected' : '' ]"
     :style="{ left: offset + 'px', width: width + 'px' }">
     <div :style="{ left: width / 2 + 'px' }" class="transcript-tooltip" v-if="isSelected">
-      <div class="inner" :key="i" v-for="(event, i) in getTranscriptSpeakerEvents(segment.id)">
-        {{ i + ': ' + event.tokens.join(' ') }}
+      <div class="inner" :key="i" v-for="(se, i) in event.speakerEvents">
+        {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
       </div>
     </div>
     <!-- <slot :segment="segment" /> -->
@@ -38,7 +38,7 @@
 import { Vue, Component, Prop, Watch, Provide } from 'vue-property-decorator'
 import Resizer from '@components/helper/Resizer.vue'
 import ResizeParent from '@components/helper/ResizeParent.vue'
-import { resizeSegment, findSpeakerEventById } from '../store/transcript'
+import { resizeSegment, findSpeakerEventById, LocalTranscriptEvent, eventStore, selectEvent } from '../store/transcript'
 import * as _ from 'lodash'
 @Component({
   components: {
@@ -47,21 +47,23 @@ import * as _ from 'lodash'
 })
 export default class SegmentBox extends Vue {
 
-  @Prop() segment: Segment
+  @Prop() event: LocalTranscriptEvent
   @Prop() previousSegment?: Segment
   @Prop() nextSegment?: Segment
-  @Prop() speakerEvents: SpeakerEvent[]
-  @Prop() selectedSegment: Segment|null
   @Prop() pixelsPerSecond: number
   @Prop() segmentKey: any
 
-  isSelected = false
+  selectEvent = selectEvent
+  eventStore = eventStore
 
-  @Watch('selectedSegment')
-  selectedSegmentChange() {
-    console.log('hello')
-    this.isSelected = this.selectedSegment !== null && this.selectedSegment.id === this.segment.id
+  get isSelected(): boolean {
+    return eventStore.selectedEventIds.indexOf(this.event.eventId) > -1
   }
+
+  // @Watch('selectedSegment')
+  // selectedSegmentChange() {
+  //   this.isSelected = this.selectedSegment !== null && this.selectedSegment.id === this.segment.id
+  // }
 
   getTranscriptSpeakerEvents(id: string): SpeakerEvent|null {
     console.log(id)
@@ -71,10 +73,10 @@ export default class SegmentBox extends Vue {
   }
 
   get width(): number {
-    return (Number(this.segment.endTime) - Number(this.segment.startTime)) * this.pixelsPerSecond
+    return (Number(this.event.endTime) - Number(this.event.startTime)) * this.pixelsPerSecond
   }
   get offset(): number {
-    return Number(this.segment.startTime) * this.pixelsPerSecond
+    return Number(this.event.startTime) * this.pixelsPerSecond
   }
   selectNext(i: number) {
     this.$emit('select-next', i)
@@ -92,9 +94,9 @@ export default class SegmentBox extends Vue {
     this.$emit('delete-segment', segment)
   }
   onResizeEnd(e: any) {
-    this.segment.startTime = e.current.left / this.pixelsPerSecond
-    this.segment.endTime = e.current.right / this.pixelsPerSecond
-    resizeSegment(this.segment.id!, this.segment.startTime, this.segment.endTime)
+    this.event.startTime = e.current.left / this.pixelsPerSecond
+    this.event.endTime = e.current.right / this.pixelsPerSecond
+    resizeSegment(this.event.eventId!, this.event.startTime, this.event.endTime)
     if (e.next !== null && this.nextSegment !== undefined) {
       this.nextSegment.startTime = e.next.left / this.pixelsPerSecond
       resizeSegment(this.nextSegment.id!, this.nextSegment.startTime, this.nextSegment.endTime)

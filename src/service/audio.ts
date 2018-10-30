@@ -532,14 +532,11 @@ async function downloadAudioStream({
       reader.read().then(async function process(chunk: {value: Uint8Array, done: boolean}): Promise<any> {
         if (chunk.value && chunk.value.buffer instanceof ArrayBuffer) {
           [ preBuffer ] = await util.concatUint8ArrayAsync(preBuffer, chunk.value)
-          if (preBuffer.byteLength > 2048 * 1024) {
+          if (preBuffer.byteLength > 1024 * 1024) {
             const {headers, pages} = await audio.getOggIndexAsync(preBuffer.buffer)
             const buffers = await util.concatUint8ArrayAsync(audio.store.uint8Buffer, preBuffer)
             audio.store.uint8Buffer = buffers[0]
             preBuffer = new Uint8Array(0)
-            // reset buffer
-            // console.log(audio.store.uint8Buffer.byteLength, 'bytes loaded')
-            // store headers
             if (headers.length > 0) {
               audio.store.oggHeaders = audio.store.oggHeaders.concat(headers)
             }
@@ -547,12 +544,16 @@ async function downloadAudioStream({
               const firstPage = pages[0]
               const lastPage = pages[pages.length - 1]
               if (firstPage && lastPage && audio.store.uint8Buffer.byteLength > 0) {
-                const decoded = await audio.decodeBufferSegment(
-                  audio.store.uint8Buffer.byteLength - lastPage.byteOffset,
-                  audio.store.uint8Buffer.byteLength,
-                  audio.store.uint8Buffer.buffer
-                )
-                onProgress(decoded, firstPage.timestamp, lastPage.timestamp)
+                try {
+                  const decoded = await audio.decodeBufferSegment(
+                    audio.store.uint8Buffer.byteLength - lastPage.byteOffset,
+                    audio.store.uint8Buffer.byteLength,
+                    audio.store.uint8Buffer.buffer
+                  )
+                  onProgress(decoded, firstPage.timestamp, lastPage.timestamp)
+                } catch (e) {
+                  console.log('streaming decoder error', e)
+                }
               }
             }
           }

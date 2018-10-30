@@ -96,7 +96,8 @@ import history from './History.vue'
 
 import audio from '../service/audio'
 import settings from '../store/settings'
-import transcript, { loadExmeraldaFile, getTranscript } from '../store/transcript'
+// tslint:disable-next-line:max-line-length
+import transcript, { loadExmeraldaFile, getTranscript, getTranscriptNew, LocalTranscriptEvent, eventStore } from '../store/transcript'
 
 interface FileReaderEventTarget extends EventTarget {
   result: string
@@ -210,6 +211,10 @@ export default class App extends Vue {
         this.loadingTranscriptId = null
       }
     })
+    getTranscriptNew(pk, (p, es) => {
+      console.log(p)
+    })
+
     y.addEventListener('durationchange', (e) => {
       this.audioElement = y
     })
