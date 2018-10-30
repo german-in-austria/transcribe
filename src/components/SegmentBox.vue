@@ -1,22 +1,22 @@
 <template>
   <div
     @mousedown="selectEvent(event)"
-    @dblclick="playSegment(segment)"
-    @keydown.meta.enter="$emit('scroll-to-transcript', segment)"
-    @keydown.right.stop.prevent="selectNext(segmentKey)"
-    @keydown.left.stop.prevent="selectPrevious(segmentKey)"
-    @keydown.space.stop.prevent="playSegment(segment)"
+    @dblclick="playEvent(event)"
+    @keydown.meta.enter="$emit('scroll-to-transcript', event)"
+    @keydown.right.stop.prevent="selectNextEvent()"
+    @keydown.left.stop.prevent="selectPreviousEvent()"
+    @keydown.space.stop.prevent="playEvent(event)"
     tabindex="-1"
-    :class="[ 'segment', isSelected ? 'selected' : '' ]"
+    :class="[ 'segment', isEventSelected(event.eventId) ? 'selected' : '' ]"
     :style="{ left: offset + 'px', width: width + 'px' }">
-    <div :style="{ left: width / 2 + 'px' }" class="transcript-tooltip" v-if="isSelected">
+    <div :style="{ left: width / 2 + 'px' }" class="transcript-tooltip" v-if="isEventSelected(event.eventId)">
       <div class="inner" :key="i" v-for="(se, i) in event.speakerEvents">
         {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
       </div>
     </div>
     <!-- <slot :segment="segment" /> -->
     <resize-parent
-      v-if="isSelected"
+      v-if="isEventSelected(event.eventId)"
       class="resizer"
       resizing-class="resizing"
       @resize-end="onResizeEnd"
@@ -24,7 +24,7 @@
       left
     />
     <resize-parent
-      v-if="isSelected"
+      v-if="isEventSelected(event.eventId)"
       class="resizer"
       resizing-class="resizing"
       @resize-end="onResizeEnd"
@@ -38,7 +38,8 @@
 import { Vue, Component, Prop, Watch, Provide } from 'vue-property-decorator'
 import Resizer from '@components/helper/Resizer.vue'
 import ResizeParent from '@components/helper/ResizeParent.vue'
-import { resizeSegment, findSpeakerEventById, LocalTranscriptEvent, eventStore, selectEvent } from '../store/transcript'
+// tslint:disable-next-line:max-line-length
+import { playEvent, resizeSegment, findSpeakerEventById, LocalTranscriptEvent, eventStore, selectEvent, selectNextEvent, isEventSelected, selectPreviousEvent } from '../store/transcript'
 import * as _ from 'lodash'
 @Component({
   components: {
@@ -48,27 +49,20 @@ import * as _ from 'lodash'
 export default class SegmentBox extends Vue {
 
   @Prop() event: LocalTranscriptEvent
-  @Prop() previousSegment?: Segment
-  @Prop() nextSegment?: Segment
+  @Prop() previousEvent?: LocalTranscriptEvent
+  @Prop() nextEvent?: LocalTranscriptEvent
   @Prop() pixelsPerSecond: number
-  @Prop() segmentKey: any
+  @Prop() eventKey: number
 
   selectEvent = selectEvent
   eventStore = eventStore
-
-  get isSelected(): boolean {
-    return eventStore.selectedEventIds.indexOf(this.event.eventId) > -1
-  }
-
-  // @Watch('selectedSegment')
-  // selectedSegmentChange() {
-  //   this.isSelected = this.selectedSegment !== null && this.selectedSegment.id === this.segment.id
-  // }
+  selectNextEvent = selectNextEvent
+  selectPreviousEvent = selectPreviousEvent
+  isEventSelected = isEventSelected
+  playEvent = playEvent
 
   getTranscriptSpeakerEvents(id: string): SpeakerEvent|null {
-    console.log(id)
     const e = findSpeakerEventById(id)
-    console.log(e)
     return e
   }
 
@@ -78,32 +72,20 @@ export default class SegmentBox extends Vue {
   get offset(): number {
     return Number(this.event.startTime) * this.pixelsPerSecond
   }
-  selectNext(i: number) {
-    this.$emit('select-next', i)
-  }
-  selectPrevious(i: number) {
-    this.$emit('select-previous', i)
-  }
-  selectSegment(segment: Segment) {
-    this.$emit('select-segment', segment)
-  }
-  playSegment(key: number, segment: Segment) {
-    this.$emit('play-segment', key, segment)
-  }
-  deleteSegment(segment: Segment) {
-    this.$emit('delete-segment', segment)
+  deleteEvent(segment: Event) {
+    this.$emit('delete-event', event)
   }
   onResizeEnd(e: any) {
     this.event.startTime = e.current.left / this.pixelsPerSecond
     this.event.endTime = e.current.right / this.pixelsPerSecond
     resizeSegment(this.event.eventId!, this.event.startTime, this.event.endTime)
-    if (e.next !== null && this.nextSegment !== undefined) {
-      this.nextSegment.startTime = e.next.left / this.pixelsPerSecond
-      resizeSegment(this.nextSegment.id!, this.nextSegment.startTime, this.nextSegment.endTime)
+    if (e.next !== null && this.nextEvent !== undefined) {
+      this.nextEvent.startTime = e.next.left / this.pixelsPerSecond
+      resizeSegment(this.nextEvent.eventId!, this.nextEvent.startTime, this.nextEvent.endTime)
     }
-    if (e.previous !== null && this.previousSegment !== undefined) {
-      this.previousSegment.endTime = e.previous.right / this.pixelsPerSecond
-      resizeSegment(this.previousSegment.id!, this.previousSegment.startTime, this.previousSegment.endTime)
+    if (e.previous !== null && this.previousEvent !== undefined) {
+      this.previousEvent.endTime = e.previous.right / this.pixelsPerSecond
+      resizeSegment(this.previousEvent.eventId!, this.previousEvent.startTime, this.previousEvent.endTime)
     }
   }
 }

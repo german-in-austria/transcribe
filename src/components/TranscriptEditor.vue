@@ -17,9 +17,7 @@
           <segment-transcript
             v-for="(event, i) in visibleEvents"
             :key="event.eventId"
-            @select-segment="(e) => $emit('select-segment', e)"
             @scroll-to-segment="(e) => $emit('scroll-to-segment', e)"
-            @play-segment="(e) => $emit('play-segment', e)"
             @element-unrender="(width) => handleUnrender(width, i, event.eventId)"
             @element-render="(width) => handleRender(width, i, event.eventId)"
             :event="event"

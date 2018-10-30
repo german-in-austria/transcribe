@@ -242,6 +242,26 @@ function findOggPages(from: number, to: number, pages: OggIndex['pages']) {
 //   }
 // }
 
+export function playBuffer(buffer: AudioBuffer, start = 0, offset?: number, duration?: number, speed = 1) {
+  const src = audio.store.audioContext.createBufferSource()
+  if (speed !== 1) {
+    const x = document.createElement('audio')
+    const wav = audio.audioBufferToWav(buffer)
+    const blob = new Blob([new Uint8Array(wav)])
+    x.src = URL.createObjectURL(blob)
+    x.playbackRate = speed
+    x.crossOrigin = 'anonymous'
+    x.play()
+    // TODO: remove audio element
+    return src
+  } else {
+    src.buffer = buffer
+    src.connect(audio.store.audioContext.destination)
+    src.start(0, offset, duration)
+    return src
+  }
+}
+
 async function drawSpectogramAsync(buffer: AudioBuffer, width: number, height: number): Promise<HTMLCanvasElement> {
   const b = sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
   const [f, i] = await getFrequenciesWorker.postMessage({
@@ -575,33 +595,31 @@ async function downloadAudioStream({
 
 const audio = {
   store : {
-    uint8Buffer,
+    audioContext,
+    isBufferComplete,
     isLocalFile,
     oggHeaderBuffer,
     oggHeaders,
     oggPages,
-    audioContext,
-    isBufferComplete
+    uint8Buffer
   },
-  cacheOggIndex,
-  getOrFetchAudioBuffer,
-  getOggSampleRate,
-  getOggNominalBitrate,
   audioBufferToWav,
-  // getOggIndex,
-  getOggIndexAsync,
-  getOggHeaderBuffer,
-  sliceAudioBuffer,
+  cacheOggIndex,
   concatBuffer,
   decodeBufferSegment,
   decodeBufferTimeSlice,
+  downloadAudioStream,
+  drawSpectogramAsync,
   drawWave,
   drawWavePath,
   drawWavePathAsync,
-  // drawSpectogram,
-  downloadAudioStream,
-  drawSpectogramAsync,
-  // drawSpectogramWasm
+  getOggHeaderBuffer,
+  getOggIndexAsync,
+  getOggNominalBitrate,
+  getOggSampleRate,
+  getOrFetchAudioBuffer,
+  playBuffer,
+  sliceAudioBuffer
 }
 
 ;

@@ -2,6 +2,7 @@
 import * as _ from 'lodash'
 import parseTree, { ParsedXML } from '../service/transcript-parser'
 import * as parseXML from '@rgrove/parse-xml'
+import audio from '../service/audio'
 
 declare global {
   interface Window {
@@ -125,21 +126,20 @@ export interface LocalTranscriptEvent {
 
 export type LocalTranscript = LocalTranscriptEvent[]
 
-interface Action {
+interface HistoryEventAction {
   type: 'RESIZE'|'DELETE'|'CHANGE_TOKENS'|'ADD'
-  segment: Segment
-  speakerEvents?: SpeakerEvent[]
+  event: LocalTranscriptEvent
 }
 
 let transcript: Transcript|null = null
-export const history: Action[] = []
+export const history: HistoryEventAction[] = []
 
 function transcriptTreeToTranscribable(tree: ParsedXML, name: string): Transcript {
   console.log({tree})
   const speakers = _(tree.speakers).map((v, k) => k).value()
   const segments = _(tree.speakers)
     .map(tiers => _.map(tiers, tier => _.map(tier.events, event => ({
-      id: Number(_.uniqueId()) * -1,
+      id: makeEventId(),
       startTime: Number(event.startTime),
       endTime: Number(event.endTime)
     }) )))
@@ -177,12 +177,12 @@ function transcriptTreeToTranscribable(tree: ParsedXML, name: string): Transcrip
   return transcript
 }
 
+function makeEventId() {
+  return Number(_.uniqueId()) * -1
+}
+
 export function findSegmentById(id: number) {
-  if (transcript !== null) {
-    return _(transcript.segments).findIndex(s => s.id === id)
-  } else {
-    return  -1
-  }
+  return _(eventStore.events).findIndex(e => e.eventId === id)
 }
 
 export function findSpeakerEventById(id: string): SpeakerEvent|null {
@@ -197,19 +197,26 @@ export function loadExmeraldaFile(fileName: string, xml: string) {
   return transcriptTreeToTranscribable(parseTree(parseXML(xml)), fileName)
 }
 
-export function updateSpeakerTokens(segment: Segment, speaker: string, tokens: string[]) {
+export function updateSpeakerTokens(
+  event: LocalTranscriptEvent,
+  speaker: string,
+  tokens: LocalTranscriptToken[],
+  tier = 'default'
+) {
   if (transcript !== null) {
     history.push({
       type: 'CHANGE_TOKENS',
-      segment: _.clone(segment),
-      speakerEvents: [
-        {
-          [speaker]: _.clone(transcript.speakerEvents[segment.id][speaker])
-        }
-      ]
+      event: _.clone(event)
     })
-    if (transcript.speakerEvents[segment.id][speaker]) {
-      transcript.speakerEvents[segment.id][speaker].tokens = tokens
+    event = {
+      ...event,
+      speakerEvents: {
+        ...event.speakerEvents,
+        [speaker] : {
+          speakerEventId: event.speakerEvents[speaker].speakerEventId,
+          tokens
+        }
+      }
     }
   }
 }
@@ -219,66 +226,65 @@ export function resizeSegment(id: number, startTime: number, endTime: number) {
     const i = findSegmentById(id)
     history.push({
       type: 'RESIZE',
-      segment: _.clone(transcript.segments[i])
+      event: _.clone(eventStore.events[i])
     })
-    transcript.segments[i].startTime = startTime
-    transcript.segments[i].endTime = endTime
+    eventStore.events[i].startTime = startTime
+    eventStore.events[i].endTime = endTime
   }
 }
 
 export function addSegment(atTime: number) {
   if (transcript !== null) {
-    const newSegment: Segment = {
+    const newEvent: LocalTranscriptEvent = {
       startTime: atTime,
       endTime: atTime + 1,
-      labelText: '',
-      id: Number(_.uniqueId()) * -1
+      eventId: makeEventId(),
+      speakerEvents: {}
     }
     history.push({
       type: 'ADD',
-      segment: newSegment
+      event: newEvent
     })
-    transcript.segments.push(newSegment)
-    return newSegment
+    eventStore.events.push(newEvent)
+    return newEvent
   }
 }
 
-export function deleteSegment(segment: Segment) {
+export function deleteSegment(event: LocalTranscriptEvent) {
   if (transcript !== null) {
-    console.log(segment)
-    const i = findSegmentById(segment.id)
+    console.log(event)
+    const i = findSegmentById(event.eventId)
     history.push({
       type: 'DELETE',
-      segment: _.clone(transcript.segments[i])
+      event: _.clone(eventStore.events[i])
     })
-    transcript.segments.splice(i, 1)
+    eventStore.events.splice(i, 1)
   }
 }
 
-export function splitSegment(segment: Segment, splitAt: number): Segment[] {
-  if (transcript !== null) {
-    const i = findSegmentById(segment.id)
-    const oldEndTime = segment.endTime
-    const newSegment: Segment = {
-      startTime: segment.startTime + splitAt,
-      endTime: oldEndTime,
-      labelText: segment.labelText,
-      id: Number(_.uniqueId()) * -1
-    }
-    segment.endTime = segment.startTime + splitAt
-    transcript.segments.splice(i + 1, 0, newSegment)
-    return [ segment, newSegment ]
-  } else {
-    return []
+export function splitSegment(event: LocalTranscriptEvent, splitAt: number): LocalTranscriptEvent[] {
+  const i = findSegmentById(event.eventId)
+  const oldEndTime = event.endTime
+  const newEvent: LocalTranscriptEvent = {
+    startTime: event.startTime + splitAt,
+    endTime: oldEndTime,
+    eventId: makeEventId(),
+    speakerEvents: {}
   }
+  event.endTime = event.startTime + splitAt
+  eventStore.events.splice(i + 1, 0, newEvent)
+  return [ event, newEvent ]
 }
 
-export function findSegmentAt(seconds: number): Segment|undefined {
-  if (transcript !== null) {
-    return _(transcript.segments).find((s) => {
-      return s.startTime <= seconds && s.endTime >= seconds
-    })
-  }
+export function findSegmentAt(seconds: number): LocalTranscriptEvent|undefined {
+  return _(eventStore.events).find((e) => {
+    return e.startTime <= seconds && e.endTime >= seconds
+  })
+}
+
+export function deleteEventById(id: number) {
+  const i = findSegmentById(id)
+  deleteSegment(eventStore.events[i])
 }
 
 function timeToSeconds(time: string) {
@@ -454,6 +460,8 @@ export async function getTranscript(
   }
 }
 
+// EVENTS
+
 const events: LocalTranscriptEvent[] = []
 const selectedEventIds: number[] = []
 
@@ -464,6 +472,40 @@ function getMetadataFromServerTranscript(res: ServerTranscript) {
   }
 }
 
+export async function playEvent(event: LocalTranscriptEvent) {
+  if (audio.store.uint8Buffer.byteLength > 0) {
+    const buffer = await audio.decodeBufferTimeSlice(
+      event.startTime,
+      event.endTime,
+      audio.store.uint8Buffer.buffer
+    )
+    if (buffer !== undefined) {
+      requestAnimationFrame(() => {
+        eventStore.playingEvent = event
+        audio.playBuffer(buffer).addEventListener('ended', (e: Event) => {
+          eventStore.playingEvent = null
+        })
+      })
+    }
+  }
+}
+
+export function isEventSelected(id: number) {
+  return eventStore.selectedEventIds.indexOf(id) > -1
+}
+
+export function selectNextEvent(reverse = false) {
+  if (eventStore.selectedEventIds.length > 0) {
+    const i = findSegmentById(eventStore.selectedEventIds[0])
+    const n = eventStore.events[i + (reverse ? -1 : 1)]
+    selectEvent(n)
+  }
+}
+
+export function selectPreviousEvent() {
+  selectNextEvent(true)
+}
+
 export function selectEvent(e: LocalTranscriptEvent) {
   eventStore.selectedEventIds = [ e.eventId ]
 }
@@ -472,9 +514,14 @@ export function addEventsToSelection(es: LocalTranscriptEvent[]) {
   eventStore.selectedEventIds = eventStore.selectedEventIds.concat(es.map(e => e.eventId))
 }
 
+export function getSelectedEvent(): LocalTranscriptEvent|undefined {
+  return _.find(eventStore.events, (e) => e.eventId === eventStore.selectedEventIds[0])
+}
+
 export let eventStore = {
   events,
   selectedEventIds,
+  playingEvent: null as LocalTranscriptEvent|null,
   metadata: {
     speakers: {} as LocalTranscriptSpeakers,
     tokenTypes: {} as LocalTranscriptTokenTypes

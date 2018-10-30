@@ -28,7 +28,7 @@
 import contenteditableDirective from 'vue-contenteditable-directive'
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
-import { updateSpeakerTokens } from '../store/transcript'
+import { updateSpeakerTokens, LocalTranscriptEvent } from '../store/transcript'
 import * as _ from 'lodash'
 
 Vue.use(contenteditableDirective)
@@ -36,11 +36,12 @@ Vue.use(contenteditableDirective)
 @Component
 export default class SpeakerSegmentTranscript extends Vue {
 
-  @Prop() segment: Segment
+  @Prop() event: LocalTranscriptEvent
   @Prop() speaker: string
-  @Prop() tokens: string[]
 
-  localTokens = this.tokens.slice()
+  localTokens = this.event.speakerEvents[this.speaker]
+    ? this.event.speakerEvents[Number(this.speaker)].tokens.slice().map(t => t.tiers.default.text)
+    : []
   focused = false
   settings = settings
   updateSpeakerTokens = updateSpeakerTokens
@@ -56,6 +57,10 @@ export default class SpeakerSegmentTranscript extends Vue {
         color: '#222',
       }
     }
+  }
+
+  get tokens() {
+    return this.event.speakerEvents[this.speaker].tokens
   }
 
   get segmentText() {
@@ -74,9 +79,8 @@ export default class SpeakerSegmentTranscript extends Vue {
     this.focused = false
     const text = (e.target as HTMLDivElement).textContent
     if (text !== null && text !== '') {
-      const tokens = text.split(' ')
-      updateSpeakerTokens(this.segment, this.speaker, tokens)
-      this.$emit('update-speaker-event', tokens)
+      updateSpeakerTokens(this.event, this.speaker, this.tokens)
+      this.$emit('update-speaker-event', this.tokens)
     }
   }
 

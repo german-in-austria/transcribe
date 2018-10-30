@@ -16,19 +16,19 @@
           </v-list-tile-avatar>
           <v-list-tile-content v-if="action.type === 'RESIZE'">
             <v-list-tile-title>resize segment</v-list-tile-title>
-            <v-list-tile-sub-title class="subtitle">{{ action.segment.id }}</v-list-tile-sub-title>
+            <v-list-tile-sub-title class="subtitle">{{ action.event.eventId }}</v-list-tile-sub-title>
           </v-list-tile-content>
           <v-list-tile-content v-else-if="action.type === 'DELETE'">
             <v-list-tile-title>delete segment</v-list-tile-title>
-            <v-list-tile-sub-title class="subtitle">{{ action.segment.id }}</v-list-tile-sub-title>
+            <v-list-tile-sub-title class="subtitle">{{ action.event.eventId }}</v-list-tile-sub-title>
           </v-list-tile-content>
           <v-list-tile-content v-else-if="action.type === 'ADD'">
             <v-list-tile-title>add segment</v-list-tile-title>
-            <v-list-tile-sub-title class="subtitle">{{ action.segment.id }}</v-list-tile-sub-title>
+            <v-list-tile-sub-title class="subtitle">{{ action.event.eventId }}</v-list-tile-sub-title>
           </v-list-tile-content>
           <v-list-tile-content v-else-if="action.type === 'CHANGE_TOKENS'">
             <v-list-tile-title>update transcript</v-list-tile-title>
-            <v-list-tile-sub-title class="subtitle">{{ action.segment.id }}</v-list-tile-sub-title>
+            <v-list-tile-sub-title class="subtitle">{{ action.event.eventId }}</v-list-tile-sub-title>
           </v-list-tile-content>
           <v-list-tile-action>
             <v-btn icon @click="" class="undo-btn">

@@ -5,7 +5,7 @@
       tabindex="-1"
       class="time"
       @keydown.delete="deleteSegment(event)"
-      @dblclick="$emit('play-event', event)"
+      @dblclick="playEvent(event)"
       @mousedown.meta.stop="addEventsToSelection([ event ])"
       @mousedown="selectAndScrollToEvent(event)">
       {{ toTime(event.startTime) }} - {{ toTime(event.endTime) }}
@@ -16,9 +16,8 @@
       :key="key">
       <speaker-segment-transcript
         class="tokens"
-        :segment="event"
-        :speaker="key"
-        :tokens="getTokens(speaker)"
+        :event="event"
+        :speaker="speaker"
       />
     </div>
   </div>
@@ -26,7 +25,7 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SpeakerSegmentTranscript from '@components/SpeakerSegmentTranscript.vue'
-import { deleteSegment, LocalTranscriptEvent, selectEvent, addEventsToSelection } from '../store/transcript'
+import { deleteSegment, LocalTranscriptEvent, selectEvent, addEventsToSelection, playEvent } from '../store/transcript'
 
 @Component({
   components: {
@@ -44,6 +43,7 @@ export default class SegmentTranscript extends Vue {
   offsetWidth = 0
   deleteSegment = deleteSegment
   addEventsToSelection = addEventsToSelection
+  playEvent = playEvent
 
   mounted() {
     this.offsetWidth = this.$el.offsetWidth + 1
