@@ -15,7 +15,7 @@
           &nbsp;
         </vue-full-screen-file-drop>
         <v-layout
-          v-if="audioElement === null && transcript === null"
+          v-if="audioElement === null && eventStore.status === 'empty'"
           class="max-width pick-transcript-container"
           :align-center="transcriptList === null"
           justify-center>
@@ -65,13 +65,12 @@
           </v-flex>
         </v-layout>
         <v-layout
-          v-if="transcript !== null && audioElement !== null"
+          v-if="eventStore.status !== 'empty' && audioElement !== null"
           class="max-width"
           justify-center>
           <v-flex xs12>
             <editor
               @toggle-drawer="e => drawer = !drawer"
-              :transcript="transcript"
               :audio-element="audioElement" />
             <router-view />
             <player-bar
@@ -97,7 +96,7 @@ import history from './History.vue'
 import audio from '../service/audio'
 import settings from '../store/settings'
 // tslint:disable-next-line:max-line-length
-import transcript, { loadExmeraldaFile, getTranscript, getTranscriptNew, LocalTranscriptEvent, eventStore } from '../store/transcript'
+import { loadExmeraldaFile, getTranscript, LocalTranscriptEvent, eventStore } from '../store/transcript'
 
 interface FileReaderEventTarget extends EventTarget {
   result: string
@@ -114,9 +113,7 @@ interface FileReaderEventTarget extends EventTarget {
 export default class App extends Vue {
 
   drawer = false
-  audioUrl: string|null = null
   audioElement: HTMLAudioElement|null = null
-  transcript: Transcript|null = transcript
   xmlText: string|null = null
   xml: any = null
   settings = settings
@@ -124,14 +121,7 @@ export default class App extends Vue {
   loadingTranscriptId: number|null = null
   searchTerm = ''
   loggedIn = true
-
-  emptyTranscript = {
-    name: '',
-    audioUrl: this.audioUrl || '',
-    speakers: [],
-    segments : [],
-    speakerEvents: {}
-  }
+  eventStore = eventStore
 
   async mounted() {
     const res = (await (await fetch('https://dissdb.dioe.at/routes/transcripts', {
@@ -169,7 +159,7 @@ export default class App extends Vue {
       console.log(JSON.stringify(file))
       if (this.isAudio(file)) {
         const x = URL.createObjectURL(file)
-        this.audioUrl = x
+        this.eventStore.metadata.audioUrl = x
         const y = document.createElement('audio')
         y.src = x
         const reader = new FileReader()
@@ -183,9 +173,6 @@ export default class App extends Vue {
         })
         // initialize with empty transcript,
         // if there is none.
-        if (this.transcript === null) {
-          this.transcript = this.emptyTranscript
-        }
       } else if (this.isXML(file)) {
         const reader = new FileReader()
         reader.onload = (e: Event) => {
@@ -204,14 +191,12 @@ export default class App extends Vue {
   async loadTranscript(pk: number) {
     this.loadingTranscriptId = pk
     const y = document.createElement('audio')
-    getTranscript(pk, (p, t) => {
-      this.transcript = t
-      if (!y.src && this.transcript && this.transcript.audioUrl) {
-        y.src = this.transcript.audioUrl
+    getTranscript(pk, (p, es) => {
+      if (this.eventStore.metadata.audioUrl !== null) {
+        console.log(this.eventStore.metadata)
+        y.src = this.eventStore.metadata.audioUrl
         this.loadingTranscriptId = null
       }
-    })
-    getTranscriptNew(pk, (p, es) => {
       console.log(p)
     })
 

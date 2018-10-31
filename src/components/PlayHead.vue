@@ -17,22 +17,22 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { setTimeout } from 'timers';
+import { eventStore } from '../store/transcript'
 
 @Component
 export default class PlayHead extends Vue {
 
   @Prop() metadata: any
-  @Prop() playingSegment: Segment|null
   @Prop() audioElement: HTMLAudioElement
   @Prop() posX: number
 
+  eventStore = eventStore
   left = 10
   transition = 'unset'
 
-  @Watch('playingSegment')
+  @Watch('eventStore.playingEvent')
   moveOnSegment() {
-    const s = this.playingSegment
+    const s = this.eventStore.playingEvent
     if (s !== null) {
       this.transition = 'unset'
       const playbackTimeInSeconds = (s.endTime - s.startTime) * (1 / this.audioElement.playbackRate)

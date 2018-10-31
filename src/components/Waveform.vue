@@ -392,7 +392,7 @@ export default class Waveform extends Vue {
     console.log('scrollTranscriptFromOverview')
     const c = this.$refs.svgContainer as HTMLElement
     const currentSeconds = c.scrollLeft / this.pixelsPerSecond
-    this.$emit('jump-to-transcript-segment', findSegmentAt(currentSeconds))
+    this.$emit('jump-to-transcript-event', findSegmentAt(currentSeconds))
   }
   scrollFromOverview(e: MouseEvent) {
     this.transitionOverviewThumb = true

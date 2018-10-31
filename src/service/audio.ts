@@ -15,7 +15,7 @@ const getFrequenciesWorker = new PromiseWorker(new GetFrequenciesWorker(''))
 import OggIndexWorker from './oggindex.worker'
 const oggIndexWorker = new PromiseWorker(new OggIndexWorker(''))
 const textEncoder = new TextEncoder()
-const textDecoder = new TextDecoder('utf-8')
+const localAudioElement = document.createElement('audio')
 // import drawWaveWasm from './wasm/module.untouched.wasm'
 // import getSpectogramWasm from './wasm/module2.untouched.wasm'
 // const loader = require('../lib/as-loader')
@@ -245,13 +245,12 @@ function findOggPages(from: number, to: number, pages: OggIndex['pages']) {
 export function playBuffer(buffer: AudioBuffer, start = 0, offset?: number, duration?: number, speed = 1) {
   const src = audio.store.audioContext.createBufferSource()
   if (speed !== 1) {
-    const x = document.createElement('audio')
     const wav = audio.audioBufferToWav(buffer)
     const blob = new Blob([new Uint8Array(wav)])
-    x.src = URL.createObjectURL(blob)
-    x.playbackRate = speed
-    x.crossOrigin = 'anonymous'
-    x.play()
+    localAudioElement.src = URL.createObjectURL(blob)
+    localAudioElement.playbackRate = speed
+    localAudioElement.crossOrigin = 'anonymous'
+    localAudioElement.play()
     // TODO: remove audio element
     return src
   } else {

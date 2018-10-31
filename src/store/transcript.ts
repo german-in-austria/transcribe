@@ -59,7 +59,7 @@ interface ServerTranscript {
       k: string // name
     }
   }
-  aTranscript?: {
+  aTranskript?: {
     n: string // name
     pk: number
     ut: string
@@ -296,49 +296,6 @@ function timeToSeconds(time: string) {
   )
 }
 
-function serverTranscriptToTranscript(s: ServerTranscript, t: Transcript): Transcript {
-  const speakers = _.map(s.aInformanten || [], (i, k) => String(k))
-  const audioUrl = (() => {
-    if (s.aEinzelErhebung) {
-      return `https://dissdb.dioe.at/private-media${
-        s.aEinzelErhebung.dp.split('\\').join('/')
-      }${
-        s.aEinzelErhebung.af
-      }.ogg`
-    } else {
-      return t.audioUrl
-    }
-  })()
-  const segments = _.map(s.aEvents, (e) => {
-    return {
-      id: e.pk,
-      startTime: timeToSeconds(e.s),
-      endTime: timeToSeconds(e.e)
-    }
-  })
-  const speakerEvents = _(s.aEvents)
-    .keyBy('pk')
-    .mapValues((e) => {
-      return _(e.tid).mapValues((ts) => {
-        return {
-          tokens: _(ts).map(ti => s.aTokens[ti].t).value()
-        }
-      }).value()
-    })
-    .value()
-  // console.log('new speaker events:', speakerEvents)
-  return {
-    audioUrl,
-    name: t.name || (s.aTranscript ? s.aTranscript.n : ''),
-    speakers: speakers.length > 0 ? speakers : t.speakers,
-    segments: t.segments.concat(segments),
-    speakerEvents: {
-      ...t.speakerEvents,
-      ...speakerEvents
-    }
-  }
-}
-
 function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
   const x = _(s.aEvents)
     .groupBy((e) => {
@@ -378,7 +335,7 @@ function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
   return x
 }
 
-export async function getTranscriptNew(
+export async function getTranscript(
   id: number,
   onProgress: (v: number, es: LocalTranscriptEvent[]) => any,
   chunk = 0,
@@ -393,6 +350,7 @@ export async function getTranscriptNew(
 
     if (res.aNr === 0) {
       eventStore.metadata = getMetadataFromServerTranscript(res)
+      eventStore.status = 'loading'
     }
 
     eventStore.events = buffer.concat(serverTranscriptToLocal(res))
@@ -402,7 +360,7 @@ export async function getTranscriptNew(
     }
 
     if (res.nNr > res.aNr)  {
-      return getTranscriptNew(
+      return getTranscript(
         id,
         onProgress,
         chunk + 1,
@@ -410,69 +368,44 @@ export async function getTranscriptNew(
         totalSteps || res.aTmNr
       )
     } else {
+      eventStore.status = 'finished'
       return buffer
     }
   } catch (e) {
+    console.error(e)
     return buffer
-  }
-}
-
-export async function getTranscript(
-  id: number,
-  onProgress: (p: number, t: Transcript|null) => any,
-  chunk = 0,
-  totalSteps?: number,
-): Promise<Transcript> {
-  try {
-
-    const res = await (await fetch(`https://dissdb.dioe.at/routes/transcript/${ id }/${ chunk }`, {
-      credentials: 'include'
-    })).json() as ServerTranscript
-
-    if (transcript === null) {
-      transcript = {
-        audioUrl: '',
-        name: '',
-        segments: [],
-        speakerEvents: {},
-        speakers: []
-      }
-    }
-
-    transcript = serverTranscriptToTranscript(res, transcript)
-    if (onProgress !== undefined && totalSteps !== undefined) {
-      onProgress(res.aNr / totalSteps, transcript)
-    }
-
-    // console.log(serverTranscriptToLocal(res))
-    if (res.nNr > res.aNr)  {
-      return getTranscript(
-        id,
-        onProgress,
-        chunk + 1,
-        totalSteps || res.aTmNr,
-      )
-    } else {
-      return transcript!
-    }
-  } catch (e) {
-    return transcript!
   }
 }
 
 // EVENTS
 
-const events: LocalTranscriptEvent[] = []
-const selectedEventIds: number[] = []
+export let eventStore = {
+  events: [] as LocalTranscriptEvent[],
+  selectedEventIds: [] as number[],
+  playingEvent: null as LocalTranscriptEvent|null,
+  metadata: {
+    speakers: {} as LocalTranscriptSpeakers,
+    tokenTypes: {} as LocalTranscriptTokenTypes,
+    transcriptName: null as string|null,
+    audioUrl: null as string|null
+  },
+  status: 'empty' as 'empty'|'loading'|'finished'
+}
 
 function getMetadataFromServerTranscript(res: ServerTranscript) {
   return {
     speakers: res.aInformanten!,
-    tokenTypes: res.aTokenTypes!
+    tokenTypes: res.aTokenTypes!,
+    transcriptName: res.aTranskript!.n,
+    audioUrl: 'https://dissdb.dioe.at/private-media'
+      + res.aEinzelErhebung!.dp.split('\\').join('/')
+      + res.aEinzelErhebung!.af
+      + '.ogg'
   }
 }
 
 export async function playEvent(event: LocalTranscriptEvent) {
+  eventStore.playingEvent = null
   if (audio.store.uint8Buffer.byteLength > 0) {
     const buffer = await audio.decodeBufferTimeSlice(
       event.startTime,
@@ -517,15 +450,3 @@ export function addEventsToSelection(es: LocalTranscriptEvent[]) {
 export function getSelectedEvent(): LocalTranscriptEvent|undefined {
   return _.find(eventStore.events, (e) => e.eventId === eventStore.selectedEventIds[0])
 }
-
-export let eventStore = {
-  events,
-  selectedEventIds,
-  playingEvent: null as LocalTranscriptEvent|null,
-  metadata: {
-    speakers: {} as LocalTranscriptSpeakers,
-    tokenTypes: {} as LocalTranscriptTokenTypes
-  }
-}
-
-export default transcript

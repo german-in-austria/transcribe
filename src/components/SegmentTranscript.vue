@@ -37,7 +37,6 @@ export default class SegmentTranscript extends Vue {
   @Prop() event: LocalTranscriptEvent
   @Prop() segment: Segment
   @Prop() speakers: any[]
-  @Prop() speakerEvent: SpeakerEvent
   @Prop({ default: false }) isSelected: boolean
 
   offsetWidth = 0

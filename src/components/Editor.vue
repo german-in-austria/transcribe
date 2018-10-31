@@ -1,7 +1,7 @@
 <template>
   <div class="fill-height">
     <v-toolbar class="elevation-0" fixed app>
-      <div>{{ transcript.name || 'Untitled Transcript' }}</div>
+      <div>{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
       <v-spacer></v-spacer>
       <v-btn @click.stop="showSearch = true" icon flat>
         <v-icon>search</v-icon>
@@ -14,7 +14,6 @@
       </v-btn>
     </v-toolbar>
     <search
-      :transcript="transcript"
       v-if="showSearch"
       @close="showSearch = false"
       :show="showSearch" />
@@ -35,7 +34,7 @@
       @change-metadata="changeMetadata"
       @scroll="handleScroll"
       @add-segment="addSegment"
-      @jump-to-transcript-segment="scrollTranscriptToSegment"
+      @jump-to-transcript-event="scrollTranscriptToEvent"
       :height="300"
       :scroll-to-segment="scrollToSegment"
       :scroll-to-second="scrollToSecond"
@@ -51,7 +50,7 @@
           v-for="(event, key) in visibleEvents"
           :key="event.eventId"
           :event-key="key"
-          @scroll-to-transcript="scrollTranscriptToSegment"
+          @scroll-to-transcript="scrollTranscriptToEvent"
           @contextmenu.native.stop.prevent="doShowMenu"
           :event="event"
           :previous-segment="visibleEvents[key - 1]"
@@ -123,8 +122,7 @@
       @scroll="handleTranscriptScroll"
       @scroll-to-segment="(s) => scrollToSegment = s"
       :scroll-to-index="scrollTranscriptIndex"
-      :selected-segment="selectedSegment"
-      :transcript="transcript"/>
+      :selected-segment="selectedSegment" />
   </div>
 </template>
 <script lang="ts">
@@ -144,7 +142,8 @@ import * as _ from 'lodash'
 import * as fns from 'date-fns'
 import audio from '../service/audio'
 // tslint:disable-next-line:max-line-length
-import transcript, { selectEvent, LocalTranscriptEvent, eventStore, addSegment, deleteSegment, deleteEventById, splitSegment, findSegmentAt, getTranscript } from '../store/transcript'
+import { selectEvent, LocalTranscriptEvent, eventStore, addSegment, deleteSegment, deleteEventById, splitSegment, findSegmentAt, getTranscript, selectNextEvent, selectPreviousEvent } from '../store/transcript'
+
 @Component({
   components: {
     waveForm,
@@ -160,7 +159,6 @@ import transcript, { selectEvent, LocalTranscriptEvent, eventStore, addSegment, 
 export default class Editor extends Vue {
 
   @Prop() audioElement: HTMLAudioElement
-  @Prop() transcript: Transcript
 
   eventStore = eventStore
   addSegment = addSegment
@@ -175,7 +173,6 @@ export default class Editor extends Vue {
   boundRight = 100
   selectedSegment: Segment|null = {id: -1, startTime: 0, endTime: 0 }
   scrollToSegment: Segment|null = null
-  playingSegment: Segment|null = null
   segmentPlayingTimeout: any = null
   scrollToSecond: number|null = null
 
@@ -205,8 +202,8 @@ export default class Editor extends Vue {
     })
   }
 
-  scrollTranscriptToSegment(segment: Segment) {
-    const i = _(this.transcript.segments).findIndex(s => s.id === segment.id)
+  scrollTranscriptToEvent(e: LocalTranscriptEvent) {
+    const i = _(this.eventStore.events).findIndex(s => s.eventId === e.eventId)
     this.scrollTranscriptIndex = i
   }
 
@@ -306,11 +303,11 @@ export default class Editor extends Vue {
   }
 
   selectPrevious(i: number) {
-    this.selectAndScrollToSegment(this.transcript.segments[i - 1])
+    selectPreviousEvent()
   }
 
   selectNext(i: number) {
-    this.selectAndScrollToSegment(this.transcript.segments[i + 1])
+    selectNextEvent()
   }
   changeMetadata(metadata: any) {
     console.log({metadata})
