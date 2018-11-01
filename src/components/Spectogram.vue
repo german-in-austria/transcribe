@@ -29,17 +29,18 @@
 </template>
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-// import drawSpectogram from '../service/spectogram'
 import audio from '../service/audio'
+import { LocalTranscriptEvent } from '@store/transcript'
+
 @Component
 export default class Settings extends Vue {
   @Prop({ default: false }) show: boolean
-  @Prop({ required: true }) segment: Segment
+  @Prop({ required: true }) event: LocalTranscriptEvent
   buffer: AudioBuffer
   async mounted() {
     const slicedBuffer = await audio.decodeBufferTimeSlice(
-      this.segment.startTime,
-      this.segment.endTime,
+      this.event.startTime,
+      this.event.endTime,
       audio.store.uint8Buffer.buffer
     )
     const width = 1200

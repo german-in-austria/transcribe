@@ -1,6 +1,6 @@
 <template>
   <div class="fill-height">
-    <v-toolbar class="elevation-0" fixed app>
+    <v-toolbar class="topbar elevation-0" fixed app>
       <div>{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
       <v-spacer></v-spacer>
       <v-btn @click.stop="showSearch = true" icon flat>
@@ -25,7 +25,7 @@
       v-if="isSpectogramVisible"
       @close="isSpectogramVisible = false"
       :show="isSpectogramVisible"
-      :segment="spectogramSegment"
+      :event="spectogramEvent"
     />
     <wave-form
       tabindex="-1"
@@ -34,9 +34,8 @@
       @change-metadata="changeMetadata"
       @scroll="handleScroll"
       @add-segment="addSegment"
-      @jump-to-transcript-event="scrollTranscriptToEvent"
       :height="300"
-      :scroll-to-segment="scrollToSegment"
+      :scroll-to-event="scrollToEvent"
       :scroll-to-second="scrollToSecond"
       :audio-element="audioElement">
       <play-head
@@ -49,8 +48,6 @@
         <segment-box
           v-for="(event, key) in visibleEvents"
           :key="event.eventId"
-          :event-key="key"
-          @scroll-to-transcript="scrollTranscriptToEvent"
           @contextmenu.native.stop.prevent="doShowMenu"
           :event="event"
           :previous-segment="visibleEvents[key - 1]"
@@ -68,7 +65,7 @@
           offset-y>
           <v-list class="context-menu-list" dense>
             <v-list-tile
-              @click="playEvent(selectedSegment)">
+              @click="playEvent(getSelectedEvent())">
               <v-list-tile-content>
                 <v-list-tile-title>Play</v-list-tile-title>
               </v-list-tile-content>
@@ -77,7 +74,7 @@
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
-              @click="splitSegmentFromMenu(eventStore.getSelectedEvent())">
+              @click="splitSegmentFromMenu(getSelectedEvent())">
               <v-list-tile-content>
                 <v-list-tile-title>Split</v-list-tile-title>
               </v-list-tile-content>
@@ -86,7 +83,7 @@
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
-              @click="scrollTranscriptToSegment(selectedSegment)">
+              @click="scrollToTranscriptEvent(getSelectedEvent())">
               <v-list-tile-content>
                 <v-list-tile-title>Show Transcript</v-list-tile-title>
               </v-list-tile-content>
@@ -95,12 +92,12 @@
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
-              @click="showSpectogram(selectedSegment)">
+              @click="showSpectogram(getSelectedEvent())">
               <v-list-tile-title>Show Spectrogram…</v-list-tile-title>
             </v-list-tile>
             <v-divider />
             <v-list-tile
-              @click="deleteSegment(selectedSegment)">
+              @click="deleteSegment(getSelectedEvent())">
               <v-list-tile-content>
                 <v-list-tile-title>Delete</v-list-tile-title>
               </v-list-tile-content>
@@ -120,9 +117,8 @@
     </wave-form>
     <transcript-editor
       @scroll="handleTranscriptScroll"
-      @scroll-to-segment="(s) => scrollToSegment = s"
-      :scroll-to-index="scrollTranscriptIndex"
-      :selected-segment="selectedSegment" />
+      @scroll-to-event="(e) => scrollToEvent = e"
+      :scroll-to-index="scrollTranscriptIndex"/>
   </div>
 </template>
 <script lang="ts">
@@ -142,7 +138,21 @@ import * as _ from 'lodash'
 import * as fns from 'date-fns'
 import audio from '../service/audio'
 // tslint:disable-next-line:max-line-length
-import { selectEvent, LocalTranscriptEvent, eventStore, addSegment, deleteSegment, deleteEventById, splitSegment, findSegmentAt, getTranscript, selectNextEvent, selectPreviousEvent } from '../store/transcript'
+import {
+  getSelectedEvent,
+  selectEvent,
+  LocalTranscriptEvent,
+  eventStore,
+  playEvent,
+  addSegment,
+  deleteSegment,
+  deleteEventById,
+  splitSegment,
+  findSegmentAt,
+  selectNextEvent,
+  selectPreviousEvent,
+  scrollToTranscriptEvent
+} from '@store/transcript'
 
 @Component({
   components: {
@@ -165,22 +175,24 @@ export default class Editor extends Vue {
   deleteSegment = deleteSegment
   splitSegment = splitSegment
   findSegmentAt = findSegmentAt
+  playEvent = playEvent
+  getSelectedEvent = getSelectedEvent
 
   // TODO: percentages are impractical. use pixels
   segmentBufferPercent = .01
   metadata: any = null
   boundLeft = 0
   boundRight = 100
-  selectedSegment: Segment|null = {id: -1, startTime: 0, endTime: 0 }
-  scrollToSegment: Segment|null = null
+  scrollToEvent: LocalTranscriptEvent|null = null
   segmentPlayingTimeout: any = null
   scrollToSecond: number|null = null
 
   scrollTranscriptIndex: number = 0
 
   isSpectogramVisible = false
-  spectogramSegment: Segment|null = null
+  spectogramEvent: LocalTranscriptEvent|null = null
 
+  scrollToTranscriptEvent = scrollToTranscriptEvent
   settings = settings
   playHeadPos = 0
   showSettings = false
@@ -202,11 +214,6 @@ export default class Editor extends Vue {
     })
   }
 
-  scrollTranscriptToEvent(e: LocalTranscriptEvent) {
-    const i = _(this.eventStore.events).findIndex(s => s.eventId === e.eventId)
-    this.scrollTranscriptIndex = i
-  }
-
   doShowMenu(e: MouseEvent) {
     // this is used for splitting
     this.layerX = e.layerX
@@ -220,9 +227,9 @@ export default class Editor extends Vue {
     this.splitSegment(event, splitAt)
   }
 
-  showSpectogram(segment: Segment) {
+  showSpectogram(e: LocalTranscriptEvent) {
     this.isSpectogramVisible = true
-    this.spectogramSegment = segment
+    this.spectogramEvent = e
   }
 
   handleKey(e: KeyboardEvent) {
@@ -264,10 +271,10 @@ export default class Editor extends Vue {
     this.audioElement.currentTime = time
   }
 
-  selectAndScrollToSegment(segment: Segment) {
-    this.selectSegment(segment)
+  selectAndScrollToEvent(e: LocalTranscriptEvent) {
+    selectEvent(e)
     this.$nextTick(() => {
-      this.scrollToSegment = segment
+      this.scrollToEvent = e
     })
   }
 
@@ -296,10 +303,6 @@ export default class Editor extends Vue {
     if (this.showMenu) {
       this.showMenu = false
     }
-  }
-
-  selectSegment(segment: Segment) {
-    this.selectedSegment = segment
   }
 
   selectPrevious(i: number) {
@@ -361,4 +364,5 @@ export default class Editor extends Vue {
   color #b7b7b7
   a
     cursor default !important
+
 </style>

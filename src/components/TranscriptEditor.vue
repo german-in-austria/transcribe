@@ -17,11 +17,10 @@
           <segment-transcript
             v-for="(event, i) in visibleEvents"
             :key="event.eventId"
-            @scroll-to-segment="(e) => $emit('scroll-to-segment', e)"
+            @scroll-to-event="(e) => $emit('scroll-to-event', e)"
             @element-unrender="(width) => handleUnrender(width, i, event.eventId)"
             @element-render="(width) => handleRender(width, i, event.eventId)"
             :event="event"
-            :speakers="eventStore.metadata.speakers"
             :is-selected="isEventSelected(event.eventId)"
             :class="['segment', (event.eventId in eventStore.selectedEventIds) && 'segment-selected']"
           />
@@ -37,7 +36,7 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SegmentTranscript from '@components/SegmentTranscript.vue'
 import settings from '@store/settings'
 import * as _ from 'lodash'
-import { eventStore, LocalTranscriptEvent, isEventSelected } from '@store/transcript'
+import { eventStore, LocalTranscriptEvent, isEventSelected, findSegmentById } from '@store/transcript'
 
 const defaultLimit = 20
 
@@ -51,6 +50,7 @@ export default class TranscriptEditor extends Vue {
   @Prop({ default: 0 }) scrollToIndex: number
 
   eventStore = eventStore
+  userState = eventStore.userState
   settings = settings
   innerLeft = 0
   currentIndex = this.scrollToIndex
@@ -60,9 +60,12 @@ export default class TranscriptEditor extends Vue {
   throttledEmitter = _.throttle(this.emitScroll, 60)
   isEventSelected = isEventSelected
 
-  @Watch('scrollToIndex')
-  doScrollToSegment(i: number) {
+  @Watch('userState.viewingTranscriptEvent')
+  doScrollToEvent(e: LocalTranscriptEvent) {
     // right in the middle
+    console.log({e})
+    const i = findSegmentById(e.eventId)
+    console.log({i})
     this.currentIndex = Math.max(0, i - Math.floor(this.visibleEvents.length / 2))
     this.$nextTick(() => {
       requestAnimationFrame(() => {

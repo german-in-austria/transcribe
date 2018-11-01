@@ -2,7 +2,7 @@
   <div
     @mousedown="selectEvent(event)"
     @dblclick="playEvent(event)"
-    @keydown.meta.enter="$emit('scroll-to-transcript', event)"
+    @keydown.meta.enter="scrollToTranscriptEvent(event)"
     @keydown.right.stop.prevent="selectNextEvent()"
     @keydown.left.stop.prevent="selectPreviousEvent()"
     @keydown.space.stop.prevent="playEvent(event)"
@@ -39,7 +39,7 @@ import { Vue, Component, Prop, Watch, Provide } from 'vue-property-decorator'
 import Resizer from '@components/helper/Resizer.vue'
 import ResizeParent from '@components/helper/ResizeParent.vue'
 // tslint:disable-next-line:max-line-length
-import { playEvent, resizeSegment, findSpeakerEventById, LocalTranscriptEvent, eventStore, selectEvent, selectNextEvent, isEventSelected, selectPreviousEvent } from '../store/transcript'
+import { playEvent, resizeSegment, LocalTranscriptEvent, eventStore, selectEvent, selectNextEvent, isEventSelected, selectPreviousEvent, scrollToTranscriptEvent } from '../store/transcript'
 import * as _ from 'lodash'
 @Component({
   components: {
@@ -52,19 +52,14 @@ export default class SegmentBox extends Vue {
   @Prop() previousEvent?: LocalTranscriptEvent
   @Prop() nextEvent?: LocalTranscriptEvent
   @Prop() pixelsPerSecond: number
-  @Prop() eventKey: number
 
+  scrollToTranscriptEvent = scrollToTranscriptEvent
   selectEvent = selectEvent
   eventStore = eventStore
   selectNextEvent = selectNextEvent
   selectPreviousEvent = selectPreviousEvent
   isEventSelected = isEventSelected
   playEvent = playEvent
-
-  getTranscriptSpeakerEvents(id: string): SpeakerEvent|null {
-    const e = findSpeakerEventById(id)
-    return e
-  }
 
   get width(): number {
     return (Number(this.event.endTime) - Number(this.event.startTime)) * this.pixelsPerSecond

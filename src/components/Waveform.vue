@@ -137,7 +137,7 @@ import triangle from '@components/Triangle.vue'
 import settings from '../store/settings'
 import audio, { OggIndex } from '../service/audio'
 import util from '../service/util'
-import { findSegmentAt } from '../store/transcript'
+import { eventStore, findSegmentAt, LocalTranscriptEvent, scrollToTranscriptEvent } from '../store/transcript'
 
 const queue = new Queue({
   concurrency: 1,
@@ -154,7 +154,6 @@ export default class Waveform extends Vue {
 
   @Prop() audioElement: HTMLAudioElement
   @Prop() audioUrl: string
-  @Prop({ default: null }) scrollToSegment: Segment|null
   @Prop({ default: 200 }) height: number
   @Prop({ default: null }) scrollToSecond: number|null
   // config
@@ -163,6 +162,8 @@ export default class Waveform extends Vue {
   initialPixelsPerSecond = 150
   overviewSvgWidth = 1500
   overviewTimeWidth = 70
+  userState = eventStore.userState
+
   // state
   pixelsPerSecond = this.initialPixelsPerSecond
   disabled = false
@@ -392,7 +393,10 @@ export default class Waveform extends Vue {
     console.log('scrollTranscriptFromOverview')
     const c = this.$refs.svgContainer as HTMLElement
     const currentSeconds = c.scrollLeft / this.pixelsPerSecond
-    this.$emit('jump-to-transcript-event', findSegmentAt(currentSeconds))
+    const e = findSegmentAt(currentSeconds)
+    if (e !== undefined) {
+      scrollToTranscriptEvent(e)
+    }
   }
   scrollFromOverview(e: MouseEvent) {
     this.transitionOverviewThumb = true
@@ -427,13 +431,12 @@ export default class Waveform extends Vue {
     }
   }
 
-  @Watch('scrollToSegment')
-  doScrollToSegment() {
-    const s = this.scrollToSegment
-    if (s !== null) {
+  @Watch('userState.viewingAudioEvent')
+  doScrollToSegment(e: LocalTranscriptEvent) {
+    if (e !== null) {
       const container = this.$refs.svgContainer
-      const duration = s.endTime - s.startTime
-      const offset = (s.startTime + duration / 2) * this.pixelsPerSecond
+      const duration = e.endTime - e.startTime
+      const offset = (e.startTime + duration / 2) * this.pixelsPerSecond
       if (container instanceof HTMLElement) {
         const currentOffset = container.scrollLeft
         requestAnimationFrame(() => {

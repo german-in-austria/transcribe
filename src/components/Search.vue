@@ -23,19 +23,21 @@
       <v-flex xs12>
         <v-list class="scroll-y" v-if="results.length > 0" dense>
           <v-list-tile
-            v-for="result in results"
-            :key="result.segment_id + '__' + result.speaker_id">
-            <v-list-tile-avatar>
-              {{ result.speaker_id }}
+            v-for="(event) in results"
+            :key="event.eventId"
+            @click="openItem(event)">
+            <v-list-tile-avatar class="grey--text">
+              <small>{{ toTime(event.startTime) }}</small>
             </v-list-tile-avatar>
             <v-list-tile-content>
               <v-list-tile-content>
-                <v-list-tile-title class="bold">{{ result.tokens }}</v-list-tile-title>
+                <v-list-tile-title>
+                  <div :key="i" v-for="(se, i) in event.speakerEvents">
+                    <b class="speaker">{{ eventStore.metadata.speakers[i].k }}</b> {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
+                  </div>
+                </v-list-tile-title>
               </v-list-tile-content>
             </v-list-tile-content>
-            <v-list-tile-action class="caption">
-              00:00:00
-            </v-list-tile-action>
           </v-list-tile>
         </v-list>
       </v-flex>
@@ -45,35 +47,34 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
+// tslint:disable-next-line:max-line-length
+import { eventStore, LocalTranscriptEvent, scrollToAudioEvent, scrollToTranscriptEvent, selectEvent } from '@store/transcript'
+
 @Component
 export default class Search extends Vue {
-  @Prop() transcript: Transcript
+
   @Prop({ default: false }) show: boolean
+
   searchTerm = ''
-  list: any = []
   results: any = []
-  getFlatList() {
-    return _(this.transcript.speakerEvents).reduce((m, e, i, l) => {
-      return m = m.concat(_.map(e, (v, k) => {
-        return {
-          segment_id: i,
-          speaker_id: k,
-          tokens: v.tokens.join(' ')
-        }
-      }))
-    }, [] as any)
-  }
+  eventStore = eventStore
+
   handleSearch(e: string) {
     this.searchTerm = e.toLowerCase().trim()
     if (this.searchTerm === '') {
       this.results = []
     } else {
-      this.results = _(this.list)
+      console.time('search took')
+      const r = _(eventStore.events)
         .filter((v) => {
-          return v.tokens.toLowerCase().indexOf(this.searchTerm) > -1
+          return _(v.speakerEvents).filter((se) => {
+            return _(se.tokens).map(t => t.tiers.default.text).value().join(' ').indexOf(this.searchTerm) > -1
+          }).value().length
         })
         .take(20)
         .value()
+      console.timeEnd('search took')
+      this.results = r
     }
   }
   handleEsc() {
@@ -91,10 +92,23 @@ export default class Search extends Vue {
         i.focus()
       }
     })
-    this.list = this.getFlatList()
   }
   toTime(time: number) {
     return new Date(time * 1000).toISOString().substr(11, 8)
   }
+  openItem(e: LocalTranscriptEvent) {
+    scrollToAudioEvent(e)
+    scrollToTranscriptEvent(e)
+    selectEvent(e)
+    this.$emit('close')
+  }
 }
 </script>
+<style lang="stylus" scoped>
+.speaker
+  display inline-block
+  width 3.5em
+  padding-left .5em
+
+</style>
+

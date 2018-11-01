@@ -12,12 +12,12 @@
     </div>
     <div
       class="speaker-segment"
-      v-for="(speaker, key) in speakers"
+      v-for="(speaker, key) in eventStore.metadata.speakers"
       :key="key">
       <speaker-segment-transcript
         class="tokens"
         :event="event"
-        :speaker="speaker"
+        :speaker="key"
       />
     </div>
   </div>
@@ -25,7 +25,8 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SpeakerSegmentTranscript from '@components/SpeakerSegmentTranscript.vue'
-import { deleteSegment, LocalTranscriptEvent, selectEvent, addEventsToSelection, playEvent } from '../store/transcript'
+// tslint:disable-next-line:max-line-length
+import { eventStore, deleteSegment, LocalTranscriptEvent, selectEvent, addEventsToSelection, playEvent, scrollToAudioEvent } from '../store/transcript'
 
 @Component({
   components: {
@@ -35,10 +36,9 @@ import { deleteSegment, LocalTranscriptEvent, selectEvent, addEventsToSelection,
 export default class SegmentTranscript extends Vue {
 
   @Prop() event: LocalTranscriptEvent
-  @Prop() segment: Segment
-  @Prop() speakers: any[]
   @Prop({ default: false }) isSelected: boolean
 
+  eventStore = eventStore
   offsetWidth = 0
   deleteSegment = deleteSegment
   addEventsToSelection = addEventsToSelection
@@ -70,8 +70,9 @@ export default class SegmentTranscript extends Vue {
   toTime(time: number) {
     return new Date(time * 1000).toISOString().substr(11, 8)
   }
-  selectAndScrollToEvent(event: LocalTranscriptEvent) {
-    selectEvent(event)
+  selectAndScrollToEvent(e: LocalTranscriptEvent) {
+    scrollToAudioEvent(e)
+    selectEvent(e)
   }
   // selectAndScrollToSegment(segment: Segment) {
   //   this.$emit('scroll-to-segment', segment)
@@ -86,12 +87,12 @@ export default class SegmentTranscript extends Vue {
   color #aaa
   text-align center
   width 133px
-  display: block;
-  margin: 0 auto;
-  padding: 0 1em;
+  display block
+  margin 0 auto
+  padding 0 1em
 
 .selected .time
-  background: #174cff;
-  color: white;
-  border-radius: 10px;
+  background cornflowerblue
+  color white
+  border-radius 10px
 </style>

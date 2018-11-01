@@ -96,7 +96,9 @@ import history from './History.vue'
 import audio from '../service/audio'
 import settings from '../store/settings'
 // tslint:disable-next-line:max-line-length
-import { loadExmeraldaFile, getTranscript, LocalTranscriptEvent, eventStore } from '../store/transcript'
+import { LocalTranscriptEvent, eventStore } from '../store/transcript'
+import { getTranscript } from '../service/data-backend/server-backend'
+import { loadExmeraldaFile } from '../service/data-backend/exmaralda-backend'
 
 interface FileReaderEventTarget extends EventTarget {
   result: string
