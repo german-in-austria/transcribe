@@ -7,18 +7,23 @@
         :key="i">
         {{ token }}&nbsp;
         <div
-          :style="{
-            backgroundColor: tokenTypeFromToken(token).color
-          }"
-          :class="['token-type-indicator', focused && 'focused']" />
+          :style="{ backgroundColor: tokenTypeFromToken(token).color }"
+          :class="['token-type-indicator', focused && 'focused']">
+        </div>
       </div>
     </div>
     <div
       @focus="focused = true"
+      @input="updateLocalTokens"
       @blur="updateLabelText"
       v-contenteditable:segmentText="true"
       :style="textStyle"
       class="tokens-input segment-text">
+    </div>
+    <div class="secondary-token-tier" v-for="tier in secondaryTiers" :key="tier.name">
+      <div v-if="event.speakerEvents[speaker] && event.speakerEvents[speaker].tokens[i]">
+        {{ event.speakerEvents[speaker].tokens[i].tiers[tier.name].text }}
+      </div>
     </div>
   </div>
 </template>
@@ -28,8 +33,15 @@
 import contenteditableDirective from 'vue-contenteditable-directive'
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
-import { updateSpeakerTokens, LocalTranscriptEvent } from '../store/transcript'
+import {
+  updateSpeakerTokens,
+  LocalTranscriptEvent,
+  eventStore,
+  LocalTranscriptToken,
+  makeTokenId
+} from '../store/transcript'
 import * as _ from 'lodash'
+import * as listDiff from 'list-diff2'
 
 Vue.use(contenteditableDirective)
 
@@ -37,14 +49,23 @@ Vue.use(contenteditableDirective)
 export default class SpeakerSegmentTranscript extends Vue {
 
   @Prop() event: LocalTranscriptEvent
-  @Prop() speaker: string
+  @Prop() speaker: number
 
   localTokens = this.event.speakerEvents[this.speaker]
-    ? this.event.speakerEvents[Number(this.speaker)].tokens.slice().map(t => t.tiers.default.text)
+    ? this.event.speakerEvents[this.speaker].tokens.slice().map(t => t.tiers.default.text)
     : []
+  localEvent = _.clone(this.event)
   focused = false
   settings = settings
   updateSpeakerTokens = updateSpeakerTokens
+
+  tokenizeText(text: string) {
+    return text.trim().split(' ')
+  }
+
+  get secondaryTiers() {
+    return eventStore.metadata.tiers.filter(t => t.name !== 'default' && t.show === true)
+  }
 
   tokenTypeFromToken(token: string) {
     const type = _(settings.tokenTypes).find((tt) => {
@@ -72,7 +93,75 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   updateLocalTokens(e: Event) {
-    this.localTokens = ((e.target as HTMLDivElement).textContent || '').split(' ')
+    const newTokens = this.tokenizeText((e.target as HTMLDivElement).textContent as string)
+    console.log({newTokens})
+    const {moves, children} = listDiff(
+      this.localTokens.map(t => ({ text: t })),
+      newTokens.map(t => ({ text: t })),
+      'text'
+    )
+    const updates = _(moves)
+      .groupBy('index')
+      .map((moveGroup, k) => {
+        if (moveGroup.length > 1) {
+          return [ { index: moveGroup[0].index, type: 2, item: moveGroup[moveGroup.length - 1].item } ]
+        } else {
+          return moveGroup
+        }
+      })
+      .flatten()
+      .value()
+    console.log({ moves, updates })
+    const ts = this.event.speakerEvents[this.speaker].tokens
+    updates.forEach((u) => {
+      // DELETE
+      if (u.type === 0) {
+        ts.splice(u.index, 1)
+      // INSERT
+      } else if (u.type === 1) {
+        ts.splice(u.index, 1, {
+          id: makeTokenId(),
+          tiers: {
+            default: {
+              text: u.item.text,
+              type: 0
+            },
+            ortho: {
+              text: '',
+              type: null
+            }
+          }
+        })
+      // UPDATE
+      } else if (u.type === 2) {
+        ts[u.index].tiers.default.text = u.item.text
+      }
+    })
+    console.log(this.event)
+    // moves.forEach((move: any) => {
+    //   if (move.type === 0) {
+    //     this.event.speakerEvents[this.speaker].tokens.splice(move.index, 0)
+    //   }
+    // })
+    // this.event = {
+    //   ...this.event,
+    //   speakerEvents: {
+    //     ...this.event.speakerEvents,
+    //     [this.speaker]: {
+    //       ...this.event.speakerEvents[this.speaker],
+    //       tokens: this.event.speakerEvents[this.speaker].tokens.filter(t => {
+    //         return t
+    //       })
+    //     }
+    //   }
+    // }
+    // console.log(editDiff(this.segmentText, newTokens.join(' '), window.getSelection().anchorOffset))
+    // const ev: LocalTranscriptToken[] = this.localTokens.map((t, i) => {
+    //   return {
+    //     id: this.localEvent.speakerEvents[this.speaker].tokens[i].id
+    //   }
+    //   // console.log(t, this.localEvent.speakerEvents[this.speaker].tokens[i].tiers.default.text)
+    // })
   }
 
   updateLabelText(e: Event) {
@@ -100,6 +189,9 @@ export default class SpeakerSegmentTranscript extends Vue {
 </script>
 
 <style lang="stylus" scoped>
+.secondary-token-tier
+  color #777
+
 .segment-editor
   position relative
 

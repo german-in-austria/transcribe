@@ -478,13 +478,6 @@ export default class Waveform extends Vue {
     }
   }
 
-  playBuffer(buffer: AudioBuffer, start = 0, offset?: number, duration?: number) {
-    const src = audio.store.audioContext.createBufferSource()
-    src.buffer = buffer
-    src.connect(audio.store.audioContext.destination)
-    src.start(0, offset, duration)
-  }
-
   get amountDrawSegments() {
     return Math.ceil(this.audioLength * this.pixelsPerSecond / this.drawWidth)
   }
@@ -519,7 +512,7 @@ export default class Waveform extends Vue {
       const el = (this.$el.querySelector('.overview-waveform svg') as HTMLElement);
       el.innerHTML = `
         ${el.innerHTML}
-        <path fill="${ settings.waveFormColors[0] }" d="${svg1}"/>
+        <path fill="${ settings.waveFormColors[0] }" d="${svg1}" />
         <path fill="${ settings.waveFormColors[1] }" d="${svg2}" />
       `
     })

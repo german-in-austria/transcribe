@@ -69,7 +69,7 @@ interface ServerEvent {
   l: 0
 }
 
-interface LocalTranscriptTokeTier {
+interface LocalTranscriptTokenTier {
   text: string
   type: number|null
 }
@@ -77,11 +77,11 @@ interface LocalTranscriptTokeTier {
 type LocalTranscriptSpeakers = ServerTranscript['aInformanten']
 type LocalTranscriptTokenTypes = ServerTranscript['aTokenTypes']
 
-interface LocalTranscriptToken {
+export interface LocalTranscriptToken {
   id: number
   tiers: {
-    default: LocalTranscriptTokeTier
-    [tier: string]: LocalTranscriptTokeTier
+    default: LocalTranscriptTokenTier
+    [tier: string]: LocalTranscriptTokenTier
   }
 }
 
@@ -95,6 +95,11 @@ export interface LocalTranscriptEvent {
       tokens: LocalTranscriptToken[]
     }
   }
+}
+
+export interface LocalTranscriptTier {
+  name: string
+  show: boolean
 }
 
 export type LocalTranscript = LocalTranscriptEvent[]
@@ -115,11 +120,12 @@ export const eventStore = {
     speakers: {} as LocalTranscriptSpeakers,
     tokenTypes: {} as LocalTranscriptTokenTypes,
     transcriptName: null as string|null,
-    audioUrl: null as string|null
+    audioUrl: null as string|null,
+    tiers: [] as LocalTranscriptTier[]
   },
   userState: {
     viewingTranscriptEvent: null as LocalTranscriptEvent|null,
-    viewingAudioEvent: null as LocalTranscriptEvent|null,
+    viewingAudioEvent: null as LocalTranscriptEvent|null
   },
   status: 'empty' as 'empty'|'loading'|'finished'
 }
@@ -136,13 +142,17 @@ export function makeEventId() {
   return Number(_.uniqueId()) * -1
 }
 
+export function makeTokenId() {
+  return makeEventId()
+}
+
 export function findSegmentById(id: number) {
   return _(eventStore.events).findIndex(e => e.eventId === id)
 }
 
 export function updateSpeakerTokens(
   event: LocalTranscriptEvent,
-  speaker: string,
+  speaker: number,
   tokens: LocalTranscriptToken[],
 ) {
   history.push({

@@ -9,7 +9,17 @@ function getMetadataFromServerTranscript(res: ServerTranscript) {
     audioUrl: 'https://dissdb.dioe.at/private-media'
       + res.aEinzelErhebung!.dp.split('\\').join('/')
       + res.aEinzelErhebung!.af
-      + '.ogg'
+      + '.ogg',
+    tiers: [
+      {
+        name: 'default',
+        show: true
+      },
+      {
+        name: 'ortho',
+        show: false
+      }
+    ]
   }
 }
 

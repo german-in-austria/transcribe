@@ -12,12 +12,12 @@
     </div>
     <div
       class="speaker-segment"
-      v-for="(speaker, key) in eventStore.metadata.speakers"
-      :key="key">
+      v-for="(speaker, speakerKey) in eventStore.metadata.speakers"
+      :key="speakerKey">
       <speaker-segment-transcript
         class="tokens"
         :event="event"
-        :speaker="key"
+        :speaker="speakerKey"
       />
     </div>
   </div>
@@ -61,12 +61,6 @@ export default class SegmentTranscript extends Vue {
     this.$emit('element-unrender', this.offsetWidth)
   }
 
-  emitDimensions() {
-    requestAnimationFrame(() => {
-      this.offsetWidth = this.$el.offsetWidth + 1
-    })
-  }
-
   toTime(time: number) {
     return new Date(time * 1000).toISOString().substr(11, 8)
   }
@@ -74,9 +68,6 @@ export default class SegmentTranscript extends Vue {
     scrollToAudioEvent(e)
     selectEvent(e)
   }
-  // selectAndScrollToSegment(segment: Segment) {
-  //   this.$emit('scroll-to-segment', segment)
-  // }
 }
 </script>
 <style lang="stylus" scoped>

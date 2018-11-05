@@ -2,9 +2,31 @@
   <v-layout>
     <v-flex :style="theme" class="pt-4 speaker-panel" xs1>
       <div :key="i" v-for="(speaker, i) in eventStore.metadata.speakers" class="speaker">
-        <div class="speaker-name">
-          <span class="speaker-triangle">▶</span> {{ speaker.k }}
-        </div>
+        <v-menu
+          close-delay="500"
+          close-on-content-click
+          transition="fade-transition"
+          right offset-x
+          nudge-right="12"
+          nudge-top="5">
+          <div slot="activator" class="speaker-name">
+            <span class="speaker-triangle">▶</span> {{ speaker.k }}
+          </div>
+          <v-list class="context-menu-list" dense>
+            <v-list-tile
+              v-for="(tier, i) in eventStore.metadata.tiers"
+              :key="i"
+              :disabled="tier.name === 'default'"
+              @click="tier.show = !tier.show">
+              <v-list-tile-avatar>
+                <v-icon v-if="tier.show">check</v-icon>
+              </v-list-tile-avatar>
+              <v-list-tile-content>
+                <v-list-tile-title>{{ tier.name }}</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+          </v-list>
+        </v-menu>
       </div>
     </v-flex>
     <v-flex class="tracks-outer pt-2">
