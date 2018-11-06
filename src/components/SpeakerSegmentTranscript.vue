@@ -10,6 +10,11 @@
           :style="{ backgroundColor: tokenTypeFromToken(token).color }"
           :class="['token-type-indicator', focused && 'focused']">
         </div>
+        <div class="secondary-token-tier" v-for="tier in secondaryTiers" :key="tier.name">
+          <div v-if="event.speakerEvents[speaker] && event.speakerEvents[speaker].tokens[i]">
+            {{ event.speakerEvents[speaker].tokens[i].tiers[tier.name].text }}
+          </div>
+        </div>
       </div>
     </div>
     <div
@@ -19,11 +24,6 @@
       v-contenteditable:segmentText="true"
       :style="textStyle"
       class="tokens-input segment-text">
-    </div>
-    <div class="secondary-token-tier" v-for="tier in secondaryTiers" :key="tier.name">
-      <div v-if="event.speakerEvents[speaker] && event.speakerEvents[speaker].tokens[i]">
-        {{ event.speakerEvents[speaker].tokens[i].tiers[tier.name].text }}
-      </div>
     </div>
   </div>
 </template>
@@ -206,6 +206,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   .token
     display inline-block
     color transparent
+    vertical-align top
 
 .tokens-input
   outline 0
