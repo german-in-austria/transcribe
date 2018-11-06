@@ -4,20 +4,20 @@
       style="outline: 0;"
       tabindex="-1"
       class="time"
-      @keydown.delete="deleteSegment(segment)"
-      @dblclick="$emit('play-segment', segment)"
-      @mousedown="selectAndScrollToSegment(segment)">
-      {{ toTime(segment.startTime) }} - {{ toTime(segment.endTime) }}
+      @keydown.delete="deleteSegment(event)"
+      @dblclick="playEvent(event)"
+      @mousedown.meta.stop="addEventsToSelection([ event ])"
+      @mousedown="selectAndScrollToEvent(event)">
+      {{ toTime(event.startTime) }} - {{ toTime(event.endTime) }}
     </div>
     <div
       class="speaker-segment"
-      v-for="(speaker, key) in speakers"
-      :key="key">
+      v-for="(speaker, speakerKey) in eventStore.metadata.speakers"
+      :key="speakerKey">
       <speaker-segment-transcript
         class="tokens"
-        :segment="segment"
-        :speaker="key"
-        :tokens="getTokens(speaker)"
+        :event="event"
+        :speaker="speakerKey"
       />
     </div>
   </div>
@@ -25,7 +25,8 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SpeakerSegmentTranscript from '@components/SpeakerSegmentTranscript.vue'
-import { deleteSegment } from '../store/transcript'
+// tslint:disable-next-line:max-line-length
+import { eventStore, deleteSegment, LocalTranscriptEvent, selectEvent, addEventsToSelection, playEvent, scrollToAudioEvent } from '../store/transcript'
 
 @Component({
   components: {
@@ -34,13 +35,14 @@ import { deleteSegment } from '../store/transcript'
 })
 export default class SegmentTranscript extends Vue {
 
-  @Prop() segment: Segment
-  @Prop() speakers: any[]
-  @Prop() speakerEvent: SpeakerEvent
+  @Prop() event: LocalTranscriptEvent
   @Prop({ default: false }) isSelected: boolean
 
+  eventStore = eventStore
   offsetWidth = 0
   deleteSegment = deleteSegment
+  addEventsToSelection = addEventsToSelection
+  playEvent = playEvent
 
   mounted() {
     this.offsetWidth = this.$el.offsetWidth + 1
@@ -48,8 +50,8 @@ export default class SegmentTranscript extends Vue {
   }
 
   getTokens(speaker: string): string[] {
-    if (this.speakerEvent && this.speakerEvent[speaker] && this.speakerEvent[speaker].tokens) {
-      return this.speakerEvent[speaker].tokens
+    if (this.event && this.event.speakerEvents[speaker]) {
+      return this.event.speakerEvents[speaker].tokens.map(t => t.tiers.default.text)
     } else {
       return []
     }
@@ -59,18 +61,12 @@ export default class SegmentTranscript extends Vue {
     this.$emit('element-unrender', this.offsetWidth)
   }
 
-  emitDimensions() {
-    requestAnimationFrame(() => {
-      this.offsetWidth = this.$el.offsetWidth + 1
-    })
-  }
-
   toTime(time: number) {
     return new Date(time * 1000).toISOString().substr(11, 8)
   }
-  selectAndScrollToSegment(segment: Segment) {
-    this.$emit('select-segment', segment)
-    this.$emit('scroll-to-segment', segment)
+  selectAndScrollToEvent(e: LocalTranscriptEvent) {
+    scrollToAudioEvent(e)
+    selectEvent(e)
   }
 }
 </script>
@@ -82,12 +78,12 @@ export default class SegmentTranscript extends Vue {
   color #aaa
   text-align center
   width 133px
-  display: block;
-  margin: 0 auto;
-  padding: 0 1em;
+  display block
+  margin 0 auto
+  padding 0 1em
 
 .selected .time
-  background: #426198;
-  color: white;
-  border-radius: 10px;
+  background cornflowerblue
+  color white
+  border-radius 10px
 </style>

@@ -55,3 +55,20 @@ img[lazy=loaded] {
   align-self: baseline;
   max-height: 400px;
 }
+.btn i {
+  font-size: 1.4em !important;
+}
+.menu__content {
+  border-radius: 4px;
+  box-shadow: 0 5px 30px rgba(0,0,0,.2);
+}
+.menu__content .avatar i.icon {
+  font-size: 1.1em;
+}
+.menu__content .list__tile__avatar {
+  min-width: 40px;
+  margin-left: -10px;
+}
+.menu__content .list--dense:not(.list--two-line) .list__tile:not(.list__tile--avatar){
+  height: 33px;
+}

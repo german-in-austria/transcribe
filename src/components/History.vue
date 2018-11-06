@@ -5,9 +5,9 @@
     <v-tab-item>
       <v-list dense>
         <v-list-tile
-          class="tile"
           :key="i"
-          v-for="(action, i) in history">
+          v-for="(action, i) in history"
+          @click="showEventIfExists(action.event)">
           <v-list-tile-avatar>
             <v-icon v-if="action.type === 'RESIZE'">aspect_ratio</v-icon>
             <v-icon v-if="action.type === 'DELETE'">delete_forever</v-icon>
@@ -16,19 +16,35 @@
           </v-list-tile-avatar>
           <v-list-tile-content v-if="action.type === 'RESIZE'">
             <v-list-tile-title>resize segment</v-list-tile-title>
-            <v-list-tile-sub-title class="subtitle">{{ action.segment.id }}</v-list-tile-sub-title>
+            <v-list-tile-sub-title class="subtitle">
+              <div class="inner" :key="i" v-for="(se, i) in action.event.speakerEvents">
+                {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
+              </div>
+            </v-list-tile-sub-title>
           </v-list-tile-content>
           <v-list-tile-content v-else-if="action.type === 'DELETE'">
             <v-list-tile-title>delete segment</v-list-tile-title>
-            <v-list-tile-sub-title class="subtitle">{{ action.segment.id }}</v-list-tile-sub-title>
+            <v-list-tile-sub-title class="subtitle">
+              <div class="inner" :key="i" v-for="(se, i) in action.event.speakerEvents">
+                {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
+              </div>
+            </v-list-tile-sub-title>
           </v-list-tile-content>
           <v-list-tile-content v-else-if="action.type === 'ADD'">
             <v-list-tile-title>add segment</v-list-tile-title>
-            <v-list-tile-sub-title class="subtitle">{{ action.segment.id }}</v-list-tile-sub-title>
+            <v-list-tile-sub-title class="subtitle">
+              <div class="inner" :key="i" v-for="(se, i) in action.event.speakerEvents">
+                {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
+              </div>
+            </v-list-tile-sub-title>
           </v-list-tile-content>
           <v-list-tile-content v-else-if="action.type === 'CHANGE_TOKENS'">
             <v-list-tile-title>update transcript</v-list-tile-title>
-            <v-list-tile-sub-title class="subtitle">{{ action.segment.id }}</v-list-tile-sub-title>
+            <v-list-tile-sub-title class="subtitle">
+              <div class="inner" :key="i" v-for="(se, i) in action.event.speakerEvents">
+                {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
+              </div>
+            </v-list-tile-sub-title>
           </v-list-tile-content>
           <v-list-tile-action>
             <v-btn icon @click="" class="undo-btn">
@@ -62,12 +78,26 @@
 </template>
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { history } from '../store/transcript'
+
+import {
+  history,
+  LocalTranscriptEvent,
+  scrollToAudioEvent,
+  findSegmentById,
+  scrollToTranscriptEvent
+} from '../store/transcript'
 
 @Component
 export default class History extends Vue {
   history = history
   activeTab = 0
+  showEventIfExists(e: LocalTranscriptEvent) {
+    const i = findSegmentById(e.eventId)
+    if (i > -1) {
+      scrollToAudioEvent(e)
+      scrollToTranscriptEvent(e)
+    }
+  }
 }
 </script>
 <style lang="stylus">

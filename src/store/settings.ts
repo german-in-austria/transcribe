@@ -92,10 +92,10 @@ const spectogramColors = [
 const settings: Settings = {
   spectogramGradient: makeGradient(spectogramColors),
   spectogramColors,
-  waveFormColors: [ '#fb7676', '#69c' ],
+  waveFormColors: [ '#fb7676', '#6699CC' ],
   lockScroll: false,
   darkMode: true,
-  emulateHorizontalScrolling: true,
+  emulateHorizontalScrolling: false, // set to true when finished
   showSegmentBoxes: true,
   showSpectograms: false,
   useMonoWaveForm: false,

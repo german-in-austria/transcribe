@@ -27,8 +27,6 @@ declare module 'vue-scrollto' {
   export default x
 }
 declare module 'vue-full-screen-file-drop'
-declare module 'draw-wave'
-declare module 'promise-worker'
 declare module 'promise-worker-transferable'
 declare module '@rgrove/parse-xml'
 declare module 'audiobuffer-slice'
@@ -36,5 +34,5 @@ declare module 'simple-promise-queue'
 declare module 'vue-scroll'
 declare module 'array-buffer-concat'
 declare module 'audiobuffer-to-wav'
-declare module 'gradstop'
 declare module 'vue-color'
+declare module 'list-diff2'

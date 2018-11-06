@@ -1,5 +1,5 @@
 <template>
-  <div :class="{ disabled, loading, 'waveform-container': true }">
+  <div :style="containerStyle" :class="{ disabled, loading }">
     <v-layout class="pa-3" style="position: relative;">
       <v-flex xs2 text-xs-left>
         <label for="scaleFactorY" class="caption grey--text lighten-2">
@@ -88,7 +88,7 @@
             v-for="i in (overviewSvgWidth / 10)"
             :key="i"
             stroke-width="3"
-            stroke="#353535"
+            :stroke="settings.darkMode ? '#353535' : '#EEEEEE'"
             stroke-linecap="round"
             :x1="i * 10"
             :x2="i * 10"
@@ -137,7 +137,7 @@ import triangle from '@components/Triangle.vue'
 import settings from '../store/settings'
 import audio, { OggIndex } from '../service/audio'
 import util from '../service/util'
-import { findSegmentAt } from '../store/transcript'
+import { eventStore, findSegmentAt, LocalTranscriptEvent, scrollToTranscriptEvent } from '../store/transcript'
 
 const queue = new Queue({
   concurrency: 1,
@@ -154,7 +154,6 @@ export default class Waveform extends Vue {
 
   @Prop() audioElement: HTMLAudioElement
   @Prop() audioUrl: string
-  @Prop({ default: null }) scrollToSegment: Segment|null
   @Prop({ default: 200 }) height: number
   @Prop({ default: null }) scrollToSecond: number|null
   // config
@@ -163,6 +162,8 @@ export default class Waveform extends Vue {
   initialPixelsPerSecond = 150
   overviewSvgWidth = 1500
   overviewTimeWidth = 70
+  userState = eventStore.userState
+
   // state
   pixelsPerSecond = this.initialPixelsPerSecond
   disabled = false
@@ -187,6 +188,12 @@ export default class Waveform extends Vue {
 
   mounted() {
     this.initWithAudio()
+  }
+
+  get containerStyle() {
+    return {
+      background: this.settings.darkMode ? '#191919' : '#e8e8e8'
+    }
   }
 
   addSegmentAt(e: MouseEvent) {
@@ -386,7 +393,10 @@ export default class Waveform extends Vue {
     console.log('scrollTranscriptFromOverview')
     const c = this.$refs.svgContainer as HTMLElement
     const currentSeconds = c.scrollLeft / this.pixelsPerSecond
-    this.$emit('jump-to-transcript-segment', findSegmentAt(currentSeconds))
+    const e = findSegmentAt(currentSeconds)
+    if (e !== undefined) {
+      scrollToTranscriptEvent(e)
+    }
   }
   scrollFromOverview(e: MouseEvent) {
     this.transitionOverviewThumb = true
@@ -421,18 +431,18 @@ export default class Waveform extends Vue {
     }
   }
 
-  @Watch('scrollToSegment')
-  doScrollToSegment() {
-    const s = this.scrollToSegment
-    if (s !== null) {
+  @Watch('userState.viewingAudioEvent')
+  doScrollToSegment(e: LocalTranscriptEvent) {
+    if (e !== null) {
       const container = this.$refs.svgContainer
-      const duration = s.endTime - s.startTime
-      const offset = (s.startTime + duration / 2) * this.pixelsPerSecond
+      const duration = e.endTime - e.startTime
+      const offset = (e.startTime + duration / 2) * this.pixelsPerSecond
       if (container instanceof HTMLElement) {
         const currentOffset = container.scrollLeft
-        container.scrollTo({
-          // behavior: 'smooth',
-          left: offset - window.innerWidth / 2
+        requestAnimationFrame(() => {
+          container.scrollTo({
+            left: offset - window.innerWidth / 2
+          })
         })
       }
     }
@@ -468,13 +478,6 @@ export default class Waveform extends Vue {
     }
   }
 
-  playBuffer(buffer: AudioBuffer, start = 0, offset?: number, duration?: number) {
-    const src = audio.store.audioContext.createBufferSource()
-    src.buffer = buffer
-    src.connect(audio.store.audioContext.destination)
-    src.start(0, offset, duration)
-  }
-
   get amountDrawSegments() {
     return Math.ceil(this.audioLength * this.pixelsPerSecond / this.drawWidth)
   }
@@ -499,8 +502,8 @@ export default class Waveform extends Vue {
 
   async drawOverviewWaveformPiece(startTime: number, endTime: number, audioBuffer: AudioBuffer) {
     const totalDuration = this.audioLength
-    const width = (endTime - startTime) * (this.overviewSvgWidth / totalDuration)
-    const left = (startTime) * (this.overviewSvgWidth / totalDuration)
+    const width = Math.ceil((endTime - startTime) * (this.overviewSvgWidth / totalDuration)) + 1
+    const left = Math.floor((startTime) * (this.overviewSvgWidth / totalDuration))
     const [svg1, svg2] = await Promise.all([
       audio.drawWavePathAsync(audioBuffer, width, this.overviewHeight, 0, left),
       audio.drawWavePathAsync(audioBuffer, width, this.overviewHeight, 1, left)
@@ -509,7 +512,7 @@ export default class Waveform extends Vue {
       const el = (this.$el.querySelector('.overview-waveform svg') as HTMLElement);
       el.innerHTML = `
         ${el.innerHTML}
-        <path fill="${ settings.waveFormColors[0] }" d="${svg1}"/>
+        <path fill="${ settings.waveFormColors[0] }" d="${svg1}" />
         <path fill="${ settings.waveFormColors[1] }" d="${svg2}" />
       `
     })
@@ -532,7 +535,7 @@ export default class Waveform extends Vue {
 
     let svg: string
     if (this.settings.useMonoWaveForm === true) {
-      svg = await audio.drawWave(buffer, width, this.height, settings.waveFormColors[0], undefined, true)
+      svg = await audio.drawWave(buffer, width, this.height, settings.waveFormColors[1], undefined, true)
     } else {
       const [svg1, svg2] = await Promise.all([
         audio.drawWave(buffer, width, this.height, settings.waveFormColors[0], 0),
@@ -568,6 +571,8 @@ export default class Waveform extends Vue {
 .overview-waveform
   z-index -1
   white-space nowrap
+  // svg path
+  //   mix-blend-mode overlay
 
 .wave-form-inner
   svg
@@ -696,9 +701,6 @@ export default class Waveform extends Vue {
 
 select
   background #303030
-
-.waveform-container
-  background #191919
 
 input[type=range]
   -webkit-appearance none

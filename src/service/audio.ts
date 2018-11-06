@@ -15,7 +15,7 @@ const getFrequenciesWorker = new PromiseWorker(new GetFrequenciesWorker(''))
 import OggIndexWorker from './oggindex.worker'
 const oggIndexWorker = new PromiseWorker(new OggIndexWorker(''))
 const textEncoder = new TextEncoder()
-const textDecoder = new TextDecoder('utf-8')
+const localAudioElement = document.createElement('audio')
 // import drawWaveWasm from './wasm/module.untouched.wasm'
 // import getSpectogramWasm from './wasm/module2.untouched.wasm'
 // const loader = require('../lib/as-loader')
@@ -241,6 +241,25 @@ function findOggPages(from: number, to: number, pages: OggIndex['pages']) {
 //     return drawSpectogramWasm(buffer, width, height)
 //   }
 // }
+
+export function playBuffer(buffer: AudioBuffer, start = 0, offset?: number, duration?: number, speed = 1) {
+  const src = audio.store.audioContext.createBufferSource()
+  if (speed !== 1) {
+    const wav = audio.audioBufferToWav(buffer)
+    const blob = new Blob([new Uint8Array(wav)])
+    localAudioElement.src = URL.createObjectURL(blob)
+    localAudioElement.playbackRate = speed
+    localAudioElement.crossOrigin = 'anonymous'
+    localAudioElement.play()
+    // TODO: remove audio element
+    return src
+  } else {
+    src.buffer = buffer
+    src.connect(audio.store.audioContext.destination)
+    src.start(0, offset, duration)
+    return src
+  }
+}
 
 async function drawSpectogramAsync(buffer: AudioBuffer, width: number, height: number): Promise<HTMLCanvasElement> {
   const b = sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
@@ -532,14 +551,11 @@ async function downloadAudioStream({
       reader.read().then(async function process(chunk: {value: Uint8Array, done: boolean}): Promise<any> {
         if (chunk.value && chunk.value.buffer instanceof ArrayBuffer) {
           [ preBuffer ] = await util.concatUint8ArrayAsync(preBuffer, chunk.value)
-          if (preBuffer.byteLength > 2048 * 1024) {
+          if (preBuffer.byteLength > 1024 * 1024) {
             const {headers, pages} = await audio.getOggIndexAsync(preBuffer.buffer)
             const buffers = await util.concatUint8ArrayAsync(audio.store.uint8Buffer, preBuffer)
             audio.store.uint8Buffer = buffers[0]
             preBuffer = new Uint8Array(0)
-            // reset buffer
-            // console.log(audio.store.uint8Buffer.byteLength, 'bytes loaded')
-            // store headers
             if (headers.length > 0) {
               audio.store.oggHeaders = audio.store.oggHeaders.concat(headers)
             }
@@ -547,12 +563,16 @@ async function downloadAudioStream({
               const firstPage = pages[0]
               const lastPage = pages[pages.length - 1]
               if (firstPage && lastPage && audio.store.uint8Buffer.byteLength > 0) {
-                const decoded = await audio.decodeBufferSegment(
-                  audio.store.uint8Buffer.byteLength - lastPage.byteOffset,
-                  audio.store.uint8Buffer.byteLength,
-                  audio.store.uint8Buffer.buffer
-                )
-                onProgress(decoded, firstPage.timestamp, lastPage.timestamp)
+                try {
+                  const decoded = await audio.decodeBufferSegment(
+                    audio.store.uint8Buffer.byteLength - lastPage.byteOffset,
+                    audio.store.uint8Buffer.byteLength,
+                    audio.store.uint8Buffer.buffer
+                  )
+                  onProgress(decoded, firstPage.timestamp, lastPage.timestamp)
+                } catch (e) {
+                  console.log('streaming decoder error', e)
+                }
               }
             }
           }
@@ -574,33 +594,31 @@ async function downloadAudioStream({
 
 const audio = {
   store : {
-    uint8Buffer,
+    audioContext,
+    isBufferComplete,
     isLocalFile,
     oggHeaderBuffer,
     oggHeaders,
     oggPages,
-    audioContext,
-    isBufferComplete
+    uint8Buffer
   },
-  cacheOggIndex,
-  getOrFetchAudioBuffer,
-  getOggSampleRate,
-  getOggNominalBitrate,
   audioBufferToWav,
-  // getOggIndex,
-  getOggIndexAsync,
-  getOggHeaderBuffer,
-  sliceAudioBuffer,
+  cacheOggIndex,
   concatBuffer,
   decodeBufferSegment,
   decodeBufferTimeSlice,
+  downloadAudioStream,
+  drawSpectogramAsync,
   drawWave,
   drawWavePath,
   drawWavePathAsync,
-  // drawSpectogram,
-  downloadAudioStream,
-  drawSpectogramAsync,
-  // drawSpectogramWasm
+  getOggHeaderBuffer,
+  getOggIndexAsync,
+  getOggNominalBitrate,
+  getOggSampleRate,
+  getOrFetchAudioBuffer,
+  playBuffer,
+  sliceAudioBuffer
 }
 
 ;
