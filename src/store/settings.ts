@@ -108,7 +108,7 @@ const settings: Settings = {
     {
       name: 'pause',
       regex: /\[[\s\S]{1,}s\]/g,
-      color: '#CCCCCC'
+      color: '#6B6B6B'
     },
     {
       name: 'non-verbal',

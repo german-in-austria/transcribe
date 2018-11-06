@@ -1,21 +1,21 @@
 <template>
   <div class="segment-editor">
-    <div class="token-fake-display segment-text">
-      <div
+    <div class="token-display segment-text">
+      <span
         class="token"
         v-for="(token, i) in localTokens"
         :key="i">
-        {{ token }}&nbsp;
-        <div
-          :style="{ backgroundColor: tokenTypeFromToken(token).color }"
-          :class="['token-type-indicator', focused && 'focused']">
-        </div>
-        <div class="secondary-token-tier" v-for="tier in secondaryTiers" :key="tier.name">
-          <div v-if="event.speakerEvents[speaker] && event.speakerEvents[speaker].tokens[i]">
-            {{ event.speakerEvents[speaker].tokens[i].tiers[tier.name].text }}
-          </div>
-        </div>
-      </div>
+        <span
+          v-html="token.trim()"
+          :class="['token-type-indicator', focused && 'focused']"
+          :style="{ backgroundColor: tokenTypeFromToken(token).color }">
+        </span><span class="secondary-token-tier" v-for="tier in secondaryTiers" :key="tier.name">
+          <span
+            v-html="event.speakerEvents[speaker].tokens[i].tiers[tier.name].text"
+            class="secondary-token-tier-text"
+            v-if="event.speakerEvents[speaker] && event.speakerEvents[speaker].tokens[i]" />
+        </span><span class="token-spacer" />
+      </span>
     </div>
     <div
       @focus="focused = true"
@@ -75,7 +75,8 @@ export default class SpeakerSegmentTranscript extends Vue {
       return type
     } else {
       return {
-        color: '#222',
+        name: 'default',
+        color: 'transparent'
       }
     }
   }
@@ -191,24 +192,28 @@ export default class SpeakerSegmentTranscript extends Vue {
 <style lang="stylus" scoped>
 .secondary-token-tier
   color #777
+  .secondary-token-tier-text
+  display inline-block
+    border-bottom 1px dotted #777
+    // margin-right .25em
 
 .segment-editor
   position relative
 
 .token-type-indicator
-  height 3px
   border-radius 2px
-  margin 1px 3px 3px 0px
+  display inline
 
-.token-fake-display
-  pointer-events none
-  position absolute
+.token-display
   .token
-    display inline-block
+    display inline
     color transparent
     vertical-align top
 
 .tokens-input
+  top 0
+  position absolute
+  width 100%
   outline 0
   opacity .7
   transition .5s color
@@ -219,4 +224,7 @@ export default class SpeakerSegmentTranscript extends Vue {
 .segment-text
   padding 1px
 
+.token-spacer
+  display inline-block
+  width .25em
 </style>
