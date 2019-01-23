@@ -4,24 +4,24 @@
       <span
         class="token"
         v-for="(token, i) in localTokens"
-        :key="i">
+        :key="token.id">
         <span
-          v-html="token.trim()"
+          v-html="token.tiers.default.text"
           :class="['token-type-indicator', focused && 'focused']"
-          :style="{ backgroundColor: tokenTypeFromToken(token).color }">
+          :style="{ backgroundColor: colorFromTokenType(token.tiers.default.type).color }">
         </span><span class="secondary-token-tier" v-for="tier in secondaryTiers" :key="tier.name">
           <span
+            v-if="event.speakerEvents[speaker] && event.speakerEvents[speaker].tokens[i]"
             v-html="event.speakerEvents[speaker].tokens[i].tiers[tier.name].text"
-            class="secondary-token-tier-text"
-            v-if="event.speakerEvents[speaker] && event.speakerEvents[speaker].tokens[i]" />
+            class="secondary-token-tier-text" />
         </span><span class="token-spacer" />
       </span>
     </div>
     <div
       @focus="focused = true"
       @input="updateLocalTokens"
-      @blur="updateLabelText"
-      v-contenteditable:segmentText="true"
+      contenteditable="true"
+      v-text="segmentText"
       :style="textStyle"
       class="tokens-input segment-text">
     </div>
@@ -43,7 +43,25 @@ import {
 import * as _ from 'lodash'
 import * as listDiff from 'list-diff2'
 
-Vue.use(contenteditableDirective)
+// Vue.use(contenteditableDirective)
+
+function tokenTypeFromToken(token: string) {
+    const type = _(settings.tokenTypes).find((tt) => {
+      console.log({token}, tt.regex, tt.name)
+      const x = tt.regex.test(token)
+      console.log({x})
+      return x
+    })
+    if (type !== undefined) {
+      return type
+    } else {
+      return {
+        name: 'error',
+        color: 'red',
+        id: -1
+      }
+    }
+  }
 
 @Component
 export default class SpeakerSegmentTranscript extends Vue {
@@ -52,8 +70,9 @@ export default class SpeakerSegmentTranscript extends Vue {
   @Prop() speaker: number
 
   localTokens = this.event.speakerEvents[this.speaker]
-    ? this.event.speakerEvents[this.speaker].tokens.slice().map(t => t.tiers.default.text)
+    ? this.event.speakerEvents[this.speaker].tokens
     : []
+  segmentText = this.localTokens ? this.localTokens.map(t => t.tiers.default.text).join(' ') : ''
   localEvent = _.clone(this.event)
   focused = false
   settings = settings
@@ -67,45 +86,33 @@ export default class SpeakerSegmentTranscript extends Vue {
     return eventStore.metadata.tiers.filter(t => t.name !== 'default' && t.show === true)
   }
 
-  tokenTypeFromToken(token: string) {
-    const type = _(settings.tokenTypes).find((tt) => {
-      return tt.regex.test(token)
-    })
-    if (type) {
-      return type
-    } else {
-      return {
-        name: 'default',
-        color: 'transparent'
-      }
-    }
-  }
-
   get tokens() {
     return this.event.speakerEvents[this.speaker].tokens
   }
 
-  get segmentText() {
-    return this.localTokens ? this.localTokens.join(' ') : ''
-  }
-
-  set segmentText(newVal: string) {
-    this.localTokens = newVal.split(' ')
+  colorFromTokenType(id: number) {
+    const c = this.settings.tokenTypes.find(tt => tt.id === id)
+    if (c) {
+      return c
+    } else {
+      return 'red'
+    }
   }
 
   updateLocalTokens(e: Event) {
-    const newTokens = this.tokenizeText((e.target as HTMLDivElement).textContent as string)
-    console.log({newTokens})
-    const {moves, children} = listDiff(
-      this.localTokens.map(t => ({ text: t })),
-      newTokens.map(t => ({ text: t })),
-      'text'
-    )
+    const newTokens = this.tokenizeText((e.target as HTMLDivElement).textContent as string).map(t => ({ text: t }))
+    const oldTokens = this.localTokens.map(t => ({ text: t.tiers.default.text }))
+    console.log({ newTokens, oldTokens })
+    const {moves, children} = listDiff(oldTokens, newTokens, 'text')
     const updates = _(moves)
       .groupBy('index')
       .map((moveGroup, k) => {
         if (moveGroup.length > 1) {
-          return [ { index: moveGroup[0].index, type: 2, item: moveGroup[moveGroup.length - 1].item } ]
+          return [{
+            index: moveGroup[0].index,
+            type: 2,
+            item: moveGroup[moveGroup.length - 1].item
+          }]
         } else {
           return moveGroup
         }
@@ -125,7 +132,7 @@ export default class SpeakerSegmentTranscript extends Vue {
           tiers: {
             default: {
               text: u.item.text,
-              type: 0
+              type: tokenTypeFromToken(u.item.text).id
             },
             ortho: {
               text: '',
@@ -135,10 +142,13 @@ export default class SpeakerSegmentTranscript extends Vue {
         })
       // UPDATE
       } else if (u.type === 2) {
-        ts[u.index].tiers.default.text = u.item.text
+        ts[u.index].tiers.default = {
+          text: u.item.text,
+          type: tokenTypeFromToken(u.item.text).id
+        }
       }
     })
-    console.log(this.event)
+    console.log(ts)
     // moves.forEach((move: any) => {
     //   if (move.type === 0) {
     //     this.event.speakerEvents[this.speaker].tokens.splice(move.index, 0)

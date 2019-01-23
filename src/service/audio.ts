@@ -264,7 +264,7 @@ export function playBuffer(buffer: AudioBuffer, start = 0, offset?: number, dura
 async function drawSpectogramAsync(buffer: AudioBuffer, width: number, height: number): Promise<HTMLCanvasElement> {
   const b = sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
   const [f, i] = await getFrequenciesWorker.postMessage({
-    fftSamples: 1024,
+    fftSamples: 2048,
     buffer: b,
     length: buffer.length,
     sampleRate: buffer.sampleRate,
