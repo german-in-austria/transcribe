@@ -1,7 +1,7 @@
 <template>
   <v-tabs class="history layout fill-height column" height="64" grow v-model="activeTab">
     <v-tab ripple>History</v-tab>
-    <v-tab ripple>Versions</v-tab>
+    <v-tab ripple>Errors<v-chip small class="chip--extra-small">2</v-chip></v-tab>
     <v-tab-item>
       <v-list dense>
         <v-list-tile

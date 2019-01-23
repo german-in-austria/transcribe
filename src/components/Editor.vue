@@ -137,7 +137,7 @@ import playHead from '@components/PlayHead.vue'
 import * as _ from 'lodash'
 import * as fns from 'date-fns'
 import audio from '../service/audio'
-// tslint:disable-next-line:max-line-length
+
 import {
   getSelectedEvent,
   selectEvent,

@@ -1,7 +1,6 @@
 <template>
   <v-dialog
     lazy
-    :transition="false"
     :scrollable="false"
     @input="$event === false && $emit('close')"
     :value="show"
@@ -86,8 +85,9 @@ export default class Search extends Vue {
     }
   }
   mounted() {
-    requestAnimationFrame(() => {
+    this.$nextTick(() => {
       const i = this.$el.querySelector('input')
+      console.log({i})
       if (i instanceof HTMLElement) {
         i.focus()
       }
