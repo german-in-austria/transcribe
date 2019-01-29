@@ -103,7 +103,7 @@ const settings: Settings = {
   tokenTypes: [
     {
       name: 'proper-name',
-      regex: /\{(.*?)\}/u,
+      regex: /\{(.+)\}/u,
       color: '#880000',
       id: 4
     },
