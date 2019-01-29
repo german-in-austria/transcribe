@@ -97,67 +97,69 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   updateLocalTokens(e: Event) {
-    const newTokens = this.tokenizeText((e.target as HTMLDivElement).textContent as string).map((t, i) => {
-      return { text: t, index: i }
-    })
-    const oldTokens = this.localTokens.map((t, i) => ({ text: t.tiers.default.text, index: i }))
-    console.log({ newTokens, oldTokens })
-    const hunks = jsdiff.diffArrays(oldTokens, newTokens, { comparator: (l, r) => l.text === r.text })
-
-    const u2 = _(hunks)
-      .filter((h) => h.added === true || h.removed === true)
-      .map((h) => h.value.map(v => ({
-        ...v,
-        type: (() => {
-          if (h.added === true) {
-            return 'add'
-          } else if (h.removed) {
-            return 'remove'
-          }
-        })()
-      })))
-      .flatten()
-      .groupBy('index')
-      .map((g) => {
-        if (g.length > 1) {
-          return [{
-            ...g[1],
-            type: 'update'
-          }]
-        } else {
-          return g
-        }
+    requestAnimationFrame(() => {
+      const newTokens = this.tokenizeText((e.target as HTMLDivElement).textContent as string).map((t, i) => {
+        return { text: t, index: i }
       })
-      .flatten()
-      .value()
-    console.log({u2})
-    const ts = this.event.speakerEvents[this.speaker].tokens
-    u2.forEach((u) => {
-      // DELETE
-      if (u.type === 'remove') {
-        ts.splice(u.index, 1)
-      // INSERT
-      } else if (u.type === 'add') {
-        ts.splice(u.index, 1, {
-          id: makeTokenId(),
-          tiers: {
-            default: {
-              text: u.text,
-              type: tokenTypeFromToken(u.text).id
-            },
-            ortho: {
-              text: '',
-              type: null
+      const oldTokens = this.localTokens.map((t, i) => ({ text: t.tiers.default.text, index: i }))
+      console.log({ newTokens, oldTokens })
+      const hunks = jsdiff.diffArrays(oldTokens, newTokens, { comparator: (l, r) => l.text === r.text })
+
+      const u2 = _(hunks)
+        .filter((h) => h.added === true || h.removed === true)
+        .map((h) => h.value.map(v => ({
+          ...v,
+          type: (() => {
+            if (h.added === true) {
+              return 'add'
+            } else if (h.removed) {
+              return 'remove'
             }
+          })()
+        })))
+        .flatten()
+        .groupBy('index')
+        .map((g) => {
+          if (g.length > 1) {
+            return [{
+              ...g[1],
+              type: 'update'
+            }]
+          } else {
+            return g
           }
         })
-      // UPDATE
-      } else if (u.type === 'update') {
-        ts[u.index].tiers.default = {
-          text: u.text,
-          type: tokenTypeFromToken(u.text).id
+        .flatten()
+        .value()
+      console.log({u2})
+      const ts = this.event.speakerEvents[this.speaker].tokens
+      u2.forEach((u) => {
+        // DELETE
+        if (u.type === 'remove') {
+          ts.splice(u.index, 1)
+        // INSERT
+        } else if (u.type === 'add') {
+          ts.splice(u.index, 1, {
+            id: makeTokenId(),
+            tiers: {
+              default: {
+                text: u.text,
+                type: tokenTypeFromToken(u.text).id
+              },
+              ortho: {
+                text: '',
+                type: null
+              }
+            }
+          })
+        // UPDATE
+        } else if (u.type === 'update') {
+          ts[u.index].tiers.default = {
+            text: u.text,
+            type: tokenTypeFromToken(u.text).id
+          }
         }
-      }
+      })
     })
     // console.log(ts)
     // moves.forEach((move: any) => {
