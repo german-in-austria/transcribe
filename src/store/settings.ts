@@ -115,7 +115,7 @@ const settings: Settings = {
     },
     {
       name: 'non-verbal',
-      regex: /\(\((.*?)\)\)|\[(.*?)\]/u,
+      regex: /\(\((.+)\)\)|\[(.+)\]/u,
       color: '#008800',
       id: 5
     },

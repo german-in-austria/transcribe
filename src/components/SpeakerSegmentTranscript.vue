@@ -41,16 +41,13 @@ import {
   makeTokenId
 } from '../store/transcript'
 import * as _ from 'lodash'
-import * as listDiff from 'list-diff2'
+import * as jsdiff from 'diff'
 
 // Vue.use(contenteditableDirective)
 
 function tokenTypeFromToken(token: string) {
     const type = _(settings.tokenTypes).find((tt) => {
-      console.log({token}, tt.regex, tt.name)
-      const x = tt.regex.test(token)
-      console.log({x})
-      return x
+      return tt.regex.test(token)
     })
     if (type !== undefined) {
       return type
@@ -100,39 +97,53 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   updateLocalTokens(e: Event) {
-    const newTokens = this.tokenizeText((e.target as HTMLDivElement).textContent as string).map(t => ({ text: t }))
-    const oldTokens = this.localTokens.map(t => ({ text: t.tiers.default.text }))
+    const newTokens = this.tokenizeText((e.target as HTMLDivElement).textContent as string).map((t, i) => {
+      return { text: t, index: i }
+    })
+    const oldTokens = this.localTokens.map((t, i) => ({ text: t.tiers.default.text, index: i }))
     console.log({ newTokens, oldTokens })
-    const {moves, children} = listDiff(oldTokens, newTokens, 'text')
-    const updates = _(moves)
+    const hunks = jsdiff.diffArrays(oldTokens, newTokens, { comparator: (l, r) => l.text === r.text })
+
+    const u2 = _(hunks)
+      .filter((h) => h.added === true || h.removed === true)
+      .map((h) => h.value.map(v => ({
+        ...v,
+        type: (() => {
+          if (h.added === true) {
+            return 'add'
+          } else if (h.removed) {
+            return 'remove'
+          }
+        })()
+      })))
+      .flatten()
       .groupBy('index')
-      .map((moveGroup, k) => {
-        if (moveGroup.length > 1) {
+      .map((g) => {
+        if (g.length > 1) {
           return [{
-            index: moveGroup[0].index,
-            type: 2,
-            item: moveGroup[moveGroup.length - 1].item
+            ...g[1],
+            type: 'update'
           }]
         } else {
-          return moveGroup
+          return g
         }
       })
       .flatten()
       .value()
-    console.log({ moves, updates })
+    console.log({u2})
     const ts = this.event.speakerEvents[this.speaker].tokens
-    updates.forEach((u) => {
+    u2.forEach((u) => {
       // DELETE
-      if (u.type === 0) {
+      if (u.type === 'remove') {
         ts.splice(u.index, 1)
       // INSERT
-      } else if (u.type === 1) {
+      } else if (u.type === 'add') {
         ts.splice(u.index, 1, {
           id: makeTokenId(),
           tiers: {
             default: {
-              text: u.item.text,
-              type: tokenTypeFromToken(u.item.text).id
+              text: u.text,
+              type: tokenTypeFromToken(u.text).id
             },
             ortho: {
               text: '',
@@ -141,14 +152,14 @@ export default class SpeakerSegmentTranscript extends Vue {
           }
         })
       // UPDATE
-      } else if (u.type === 2) {
+      } else if (u.type === 'update') {
         ts[u.index].tiers.default = {
-          text: u.item.text,
-          type: tokenTypeFromToken(u.item.text).id
+          text: u.text,
+          type: tokenTypeFromToken(u.text).id
         }
       }
     })
-    console.log(ts)
+    // console.log(ts)
     // moves.forEach((move: any) => {
     //   if (move.type === 0) {
     //     this.event.speakerEvents[this.speaker].tokens.splice(move.index, 0)
