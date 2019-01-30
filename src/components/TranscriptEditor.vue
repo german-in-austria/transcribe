@@ -198,6 +198,7 @@ export default class TranscriptEditor extends Vue {
     opacity 0
 
 .tracks-outer
+  overflow hidden
   white-space nowrap
 
 .speaker-panel

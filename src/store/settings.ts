@@ -2,19 +2,20 @@
 import { makeGradient, Color } from '../lib/gradient'
 
 export interface Settings {
-  spectogramGradient: number[][]
-  spectogramColors: Color[]
+  spectrogramGradient: number[][]
+  spectrogramColors: Color[]
   waveFormColors: string[]
   lockScroll: boolean,
   emulateHorizontalScrolling: boolean,
   darkMode: boolean,
   showSegmentBoxes: boolean,
-  showSpectograms: boolean,
+  showSpectrograms: boolean,
   useMonoWaveForm: boolean,
   tokenTypes: Array<{
     name: string
     regex: RegExp
     color: string
+    id: number
   }>
   keyboardShortcuts: {
     [action: string]: {
@@ -26,7 +27,7 @@ export interface Settings {
   }
 }
 
-const spectogramColors = [
+const spectrogramColors = [
   {
     at: 0,
     c: [ 5, 0, 11, 0 ]
@@ -90,40 +91,51 @@ const spectogramColors = [
 ]
 
 const settings: Settings = {
-  spectogramGradient: makeGradient(spectogramColors),
-  spectogramColors,
+  spectrogramGradient: makeGradient(spectrogramColors),
+  spectrogramColors,
   waveFormColors: [ '#fb7676', '#6699CC' ],
   lockScroll: false,
   darkMode: true,
   emulateHorizontalScrolling: false, // set to true when finished
   showSegmentBoxes: true,
-  showSpectograms: false,
+  showSpectrograms: false,
   useMonoWaveForm: false,
   tokenTypes: [
     {
       name: 'proper-name',
-      regex: /\{(.*?)\}/g,
-      color: '#880000'
+      regex: /\{(.+)\}/u,
+      color: '#880000',
+      id: 4
     },
     {
       name: 'pause',
-      regex: /\[[\s\S]{1,}s\]/g,
-      color: '#CCCCCC'
+      regex: /\[[\s\S]{1,}s\]/u,
+      color: '#6B6B6B',
+      id: 3
     },
     {
       name: 'non-verbal',
-      regex: /\(\((.*?)\)\)|\[(.*?)\]/g,
-      color: '#008800'
+      regex: /\(\((.+)\)\)|\[(.+)\]/u,
+      color: '#008800',
+      id: 5
     },
     {
       name: 'delimiter',
-      regex: /\B(\?|\.|\,|!)\B/g,
-      color: '#000088'
+      regex: /(\?|\.|\,|!)/,
+      color: '#000088',
+      id: 2
     },
     {
       name: 'interrupted',
-      regex: /([\w]{1,}\/)/g,
-      color: '#6699CC'
+      regex: /([\w]{1,}\/)/u,
+      color: '#6699CC',
+      id: 6
+    },
+    {
+      name: 'word',
+      regex: /_?[a-zA-ZÜüÄäÖöß]+_?/u,
+      color: 'transparent',
+      id: 1
     }
   ],
   keyboardShortcuts: {

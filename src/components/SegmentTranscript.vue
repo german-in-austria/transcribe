@@ -3,7 +3,7 @@
     <div
       style="outline: 0;"
       tabindex="-1"
-      class="time"
+      :class="{time: true, error: hasErrors}"
       @keydown.delete="deleteSegment(event)"
       @dblclick="playEvent(event)"
       @mousedown.meta.stop="addEventsToSelection([ event ])"
@@ -25,8 +25,17 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SpeakerSegmentTranscript from '@components/SpeakerSegmentTranscript.vue'
-// tslint:disable-next-line:max-line-length
-import { eventStore, deleteSegment, LocalTranscriptEvent, selectEvent, addEventsToSelection, playEvent, scrollToAudioEvent } from '../store/transcript'
+
+import {
+  eventStore,
+  deleteSegment,
+  LocalTranscriptEvent,
+  selectEvent,
+  addEventsToSelection,
+  playEvent,
+  scrollToAudioEvent,
+  speakerEventHasErrors
+} from '../store/transcript'
 
 @Component({
   components: {
@@ -47,6 +56,10 @@ export default class SegmentTranscript extends Vue {
   mounted() {
     this.offsetWidth = this.$el.offsetWidth + 1
     this.$emit('element-render', this.offsetWidth)
+  }
+
+  get hasErrors() {
+    return speakerEventHasErrors(this.event)
   }
 
   getTokens(speaker: string): string[] {
@@ -81,9 +94,10 @@ export default class SegmentTranscript extends Vue {
   display block
   margin 0 auto
   padding 0 1em
-
+  border-radius 10px
+  &.error
+    color white
 .selected .time
   background cornflowerblue
   color white
-  border-radius 10px
 </style>

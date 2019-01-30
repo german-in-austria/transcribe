@@ -37,6 +37,7 @@
     "copy-webpack-plugin": "^4.3.1",
     "date-fns": "^1.29.0",
     "deep-diff": "^1.0.2",
+    "diff": "^4.0.1",
     "dotenv": "^4.0.0",
     "draw-wave": "^2.0.0",
     "express": "^4.16.2",
@@ -77,6 +78,7 @@
     "webfontloader": "^1.6.28"
   },
   "devDependencies": {
+    "@types/diff": "^3.5.2",
     "@types/node": "^8.0.58",
     "arraybuffer-loader": "^1.0.6",
     "assemblyscript": "github:AssemblyScript/assemblyscript",

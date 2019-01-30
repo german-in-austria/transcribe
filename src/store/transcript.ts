@@ -150,6 +150,22 @@ export function findSegmentById(id: number) {
   return _(eventStore.events).findIndex(e => e.eventId === id)
 }
 
+export function sentencesFromEvent(event: LocalTranscriptEvent): string[] {
+  return _(event.speakerEvents).map(e => {
+    return e.tokens.map(t => t.tiers.default.text).join(' ')
+  }).value()
+}
+
+const sentenceRules: [(text: string) => boolean] = [
+  (text) => !text.includes('  ')
+]
+
+export function speakerEventHasErrors(event: LocalTranscriptEvent): boolean {
+  const sentences = sentencesFromEvent(event)
+  // not every sentence satisfies every rule.
+  return !sentences.every(s => sentenceRules.every(r => r(s)))
+}
+
 export function updateSpeakerTokens(
   event: LocalTranscriptEvent,
   speaker: number,

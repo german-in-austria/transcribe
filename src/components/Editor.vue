@@ -3,15 +3,27 @@
     <v-toolbar class="topbar elevation-0" fixed app>
       <div>{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
       <v-spacer></v-spacer>
-      <v-btn @click.stop="showSearch = true" icon flat>
-        <v-icon>search</v-icon>
-      </v-btn>
-      <v-btn @click.stop="showSettings = true" icon flat>
-        <v-icon>settings</v-icon>
-      </v-btn>
-      <v-btn class="mr-4" @click.stop="$emit('toggle-drawer')" icon flat>
-        <v-icon>history</v-icon>
-      </v-btn>
+      <v-tooltip class="mt-3" bottom>
+        <v-btn slot="activator" @click.stop="showSearch = true" icon flat>
+          <v-icon>search</v-icon>
+        </v-btn>
+        <span>Search</span>
+      </v-tooltip>
+      <v-tooltip class="mt-3" bottom>
+        <v-btn slot="activator" @click.stop="showSettings = true" icon flat>
+          <v-icon>settings</v-icon>
+        </v-btn>
+        <span>Settings</span>
+      </v-tooltip>
+      <v-tooltip class="mt-3" bottom>
+        <v-btn slot="activator" class="mr-4" @click.stop="$emit('toggle-drawer')" icon flat>
+          <v-badge color="error" overlap :value="errors.length > 0">
+            <span class="custom-badge" slot="badge">{{ errors.length }}</span>
+            <v-icon>history</v-icon>
+          </v-badge>
+        </v-btn>
+        <span>History & Errors</span>
+      </v-tooltip>
     </v-toolbar>
     <search
       v-if="showSearch"
@@ -21,11 +33,11 @@
       v-if="showSettings" 
       @close="showSettings = false"
       :show="showSettings" />
-    <spectogram
-      v-if="isSpectogramVisible"
-      @close="isSpectogramVisible = false"
-      :show="isSpectogramVisible"
-      :event="spectogramEvent"
+    <spectrogram
+      v-if="isSpectrogramVisible"
+      @close="isSpectrogramVisible = false"
+      :show="isSpectrogramVisible"
+      :event="spectrogramEvent"
     />
     <wave-form
       tabindex="-1"
@@ -92,7 +104,7 @@
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
-              @click="showSpectogram(getSelectedEvent())">
+              @click="showSpectrogram(getSelectedEvent())">
               <v-list-tile-title>Show Spectrogram…</v-list-tile-title>
             </v-list-tile>
             <v-divider />
@@ -128,7 +140,7 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import waveForm from './Waveform.vue'
 import settingsView from './Settings.vue'
 import settings from '../store/settings'
-import spectogram from './Spectogram.vue'
+import spectrogram from './Spectrogram.vue'
 import search from './Search.vue'
 import transcriptEditor from '@components/TranscriptEditor.vue'
 import segmentBox from '@components/SegmentBox.vue'
@@ -137,7 +149,7 @@ import playHead from '@components/PlayHead.vue'
 import * as _ from 'lodash'
 import * as fns from 'date-fns'
 import audio from '../service/audio'
-// tslint:disable-next-line:max-line-length
+
 import {
   getSelectedEvent,
   selectEvent,
@@ -159,7 +171,7 @@ import {
     waveForm,
     transcriptEditor,
     settingsView,
-    spectogram,
+    spectrogram,
     playHead,
     segmentBox,
     search,
@@ -169,6 +181,7 @@ import {
 export default class Editor extends Vue {
 
   @Prop() audioElement: HTMLAudioElement
+  @Prop() errors: LocalTranscriptEvent[]
 
   eventStore = eventStore
   addSegment = addSegment
@@ -189,8 +202,8 @@ export default class Editor extends Vue {
 
   scrollTranscriptIndex: number = 0
 
-  isSpectogramVisible = false
-  spectogramEvent: LocalTranscriptEvent|null = null
+  isSpectrogramVisible = false
+  spectrogramEvent: LocalTranscriptEvent|null = null
 
   scrollToTranscriptEvent = scrollToTranscriptEvent
   settings = settings
@@ -227,9 +240,9 @@ export default class Editor extends Vue {
     this.splitSegment(event, splitAt)
   }
 
-  showSpectogram(e: LocalTranscriptEvent) {
-    this.isSpectogramVisible = true
-    this.spectogramEvent = e
+  showSpectrogram(e: LocalTranscriptEvent) {
+    this.isSpectrogramVisible = true
+    this.spectrogramEvent = e
   }
 
   handleKey(e: KeyboardEvent) {

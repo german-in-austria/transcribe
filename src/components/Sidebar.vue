@@ -1,7 +1,11 @@
 <template>
   <v-tabs class="history layout fill-height column" height="64" grow v-model="activeTab">
     <v-tab ripple>History</v-tab>
-    <v-tab ripple>Versions</v-tab>
+    <v-tab ripple>
+      <v-badge :value="errors.length > 0" color="grey">
+        Errors <span slot="badge">{{ errors.length }}</span>
+      </v-badge>
+      </v-tab>
     <v-tab-item>
       <v-list dense>
         <v-list-tile
@@ -56,20 +60,12 @@
     </v-tab-item>
     <v-tab-item>
       <v-list dense>
-        <v-list-tile @click="">
+        <v-list-tile v-for="(error) in errors" :key="error.eventId">
           <v-list-tile-action>
-            <v-icon>home</v-icon>
+            <v-icon>error</v-icon>
           </v-list-tile-action>
           <v-list-tile-content>
-            <v-list-tile-title>Home</v-list-tile-title>
-          </v-list-tile-content>
-        </v-list-tile>
-        <v-list-tile @click="">
-          <v-list-tile-action>
-            <v-icon>contact_mail</v-icon>
-          </v-list-tile-action>
-          <v-list-tile-content>
-            <v-list-tile-title>Contact</v-list-tile-title>
+            <v-list-tile-title>error</v-list-tile-title>
           </v-list-tile-content>
         </v-list-tile>
       </v-list>
@@ -84,13 +80,20 @@ import {
   LocalTranscriptEvent,
   scrollToAudioEvent,
   findSegmentById,
-  scrollToTranscriptEvent
+  scrollToTranscriptEvent,
+  eventStore,
+  speakerEventHasErrors
 } from '../store/transcript'
 
 @Component
-export default class History extends Vue {
+export default class Sidebar extends Vue {
+
+  @Prop() errors: LocalTranscriptEvent[]
+
   history = history
   activeTab = 0
+  eventStore = eventStore
+
   showEventIfExists(e: LocalTranscriptEvent) {
     const i = findSegmentById(e.eventId)
     if (i > -1) {
@@ -98,6 +101,7 @@ export default class History extends Vue {
       scrollToTranscriptEvent(e)
     }
   }
+
 }
 </script>
 <style lang="stylus">

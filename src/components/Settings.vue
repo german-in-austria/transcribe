@@ -44,12 +44,12 @@
               <v-divider />
               <v-list-tile>
                 <v-list-tile-title>Visualization Type</v-list-tile-title>
-                <v-btn-toggle mandatory v-model="settings.showSpectograms">
+                <v-btn-toggle mandatory v-model="settings.showSpectrograms">
                   <v-btn small flat :value="false">Amplitude</v-btn>
                   <v-btn small flat :value="true">Spectrogram</v-btn>
                 </v-btn-toggle>
               </v-list-tile>
-              <v-list-tile v-if="!settings.showSpectograms">
+              <v-list-tile v-if="!settings.showSpectrograms">
                 <v-list-tile-title>Use Mono Waveform</v-list-tile-title>
                 <v-list-tile-action>
                   <v-switch v-model="settings.useMonoWaveForm" />
@@ -61,15 +61,15 @@
                   <v-switch v-model="settings.showSegmentBoxes" />
                 </v-list-tile-action>
               </v-list-tile>
-              <v-subheader v-if="settings.showSpectograms">Spectogram Colors</v-subheader>
+              <v-subheader v-if="settings.showSpectrograms">Spectrogram Colors</v-subheader>
               <v-subheader v-else>Waveform Colors</v-subheader>
               <v-divider />
-              <div v-if="settings.showSpectograms" class="pt-3 pb-3 pl-3 pr-5">
+              <div v-if="settings.showSpectrograms" class="pt-3 pb-3 pl-3 pr-5">
                 <v-menu
                   offset-y
                   lazy
                   :close-on-content-click="false"
-                  v-for="(color, i) in settings.spectogramColors"
+                  v-for="(color, i) in settings.spectrogramColors"
                   :key="i">
                   <v-btn
                     small
@@ -82,7 +82,7 @@
                     :value="{ r: color.c[0], g: color.c[1], b: color.c[2], a: color.c[3] }" />
                 </v-menu>
               </div>
-              <div v-if="!settings.showSpectograms" class="pt-3 pb-3 pl-3 pr-5">
+              <div v-if="!settings.showSpectrograms" class="pt-3 pb-3 pl-3 pr-5">
                 <v-menu
                   offset-y
                   lazy
@@ -200,10 +200,10 @@ export default class Settings extends Vue {
   }
 
   updateGradient(i: number, c: any) {
-    this.settings.spectogramColors[i].c = [c.rgba.r, c.rgba.g, c.rgba.b, c.rgba.a]
-    console.log(this.settings.spectogramColors[i].c)
-    const g = makeGradient(this.settings.spectogramColors)
-    this.settings.spectogramGradient = g
+    this.settings.spectrogramColors[i].c = [c.rgba.r, c.rgba.g, c.rgba.b, c.rgba.a]
+    console.log(this.settings.spectrogramColors[i].c)
+    const g = makeGradient(this.settings.spectrogramColors)
+    this.settings.spectrogramGradient = g
   }
 }
 </script>

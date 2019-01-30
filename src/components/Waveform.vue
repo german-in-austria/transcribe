@@ -40,11 +40,8 @@
       <div class="second-marker-row">
         <div
           v-for="i in visibleSeconds"
-          v-if="pixelsPerSecond > 60 || i % 2 === 0"
           :key="i"
-          :style="{
-            transform: `translateX(${ i * pixelsPerSecond }px)`
-          }"
+          :style="{ transform: `translateX(${ i * pixelsPerSecond }px)` }"
           class="second-marker">
             {{ toTime(i) }}
         </div>
@@ -156,16 +153,20 @@ export default class Waveform extends Vue {
   @Prop() audioUrl: string
   @Prop({ default: 200 }) height: number
   @Prop({ default: null }) scrollToSecond: number|null
+
   // config
   zoomLevels = [.25, .5, .75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4]
   drawDistance = 5000 // pixels in both directions from the center of the viewport (left and right)
   initialPixelsPerSecond = 150
-  overviewSvgWidth = 1500
-  overviewTimeWidth = 70
+  overviewSvgWidth = 1500 // width of the overview waveform in logical pixels
+  overviewTimeWidth = 70 // width of the time preview tooltip above the overview waveform
+
+  // bind stores
+  settings = settings
   userState = eventStore.userState
 
   // state
-  pixelsPerSecond = this.initialPixelsPerSecond
+  pixelsPerSecond = this.initialPixelsPerSecond // copied on init, not bound.
   disabled = false
   loading = false
   overviewThumbOffset = 0
@@ -175,16 +176,13 @@ export default class Waveform extends Vue {
   overviewThumbWidth = 0
   overviewHeight = 60
   visibleSeconds: number[] = []
-  // this is only used DURING scaling, then reset to 1
-  intermediateScaleFactorX: number|null = null
   audioLength = 0
-  metadata: any = {}
+  metadata: any = {} // TODO: get rid of this
 
   renderedWaveFormPieces: number[] = []
   totalWidth = this.audioLength * this.pixelsPerSecond
 
   onScroll = _.throttle((e) => this.handleScroll(e), 350)
-  settings = settings
 
   mounted() {
     this.initWithAudio()
@@ -245,13 +243,18 @@ export default class Waveform extends Vue {
   }
 
   toTime(time: number) {
+    // seconds to readable time
     return new Date(time * 1000).toISOString().substr(11, 8)
   }
 
   updateSecondsMarkers() {
+    // compute and set visible seconds
+    // (it’s dependent on browser geometry, so a computed getter doesn’t work here.)
     const [left, right] = this.getRenderBoundaries(10000)
     const [startSecond, endSecond] = [Math.floor(left / this.pixelsPerSecond), Math.floor(right / this.pixelsPerSecond)]
-    this.visibleSeconds = util.range(Math.max(startSecond, 0), Math.min(endSecond, this.audioLength))
+    this.visibleSeconds = util
+      .range(Math.max(startSecond, 0), Math.min(endSecond, this.audioLength))
+      .filter((s, i) => this.pixelsPerSecond > 60 || i % 2 === 0)
   }
 
   updateOverviewThumb() {
@@ -268,8 +271,8 @@ export default class Waveform extends Vue {
     }
   }
 
-  async drawSpectogramPiece(i: number) {
-    console.log('DRAWING SPECTOGRAM')
+  async drawSpectrogramPiece(i: number) {
+    console.log('DRAWING Spectrogram')
     const isLast = i + 1 === this.amountDrawSegments
     const secondsPerDrawWidth = this.drawWidth / this.pixelsPerSecond
     const from = i * secondsPerDrawWidth
@@ -283,7 +286,7 @@ export default class Waveform extends Vue {
     )
     console.log({ from, to, duration: to - from })
     const width = isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth
-    const c = (await audio.drawSpectogramAsync(buffer, width, this.height)) as HTMLCanvasElement
+    const c = (await audio.drawSpectrogramAsync(buffer, width, this.height)) as HTMLCanvasElement
     const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
     console.time('render')
     el.innerHTML = ''
@@ -299,8 +302,8 @@ export default class Waveform extends Vue {
         queue.unshiftTask(async (resolve: any, reject: any) => {
           this.renderedWaveFormPieces.push(p)
           try {
-            if (this.settings.showSpectograms) {
-              const x = await this.drawSpectogramPiece(p)
+            if (this.settings.showSpectrograms) {
+              const x = await this.drawSpectrogramPiece(p)
               resolve(x)
             } else {
               const y = await this.drawWaveFormPiece(p)
@@ -322,8 +325,8 @@ export default class Waveform extends Vue {
     this.renderedWaveFormPieces = []
   }
 
-  @Watch('settings.showSpectograms')
-  onChangeVisualizationType(showSpectograms: boolean) {
+  @Watch('settings.showSpectrograms')
+  onChangeVisualizationType(showSpectrograms: boolean) {
     this.resetView()
   }
 
@@ -357,7 +360,6 @@ export default class Waveform extends Vue {
       this.doMaybeRerender()
       this.doScrollToPercentage(oldCenterPercent)
       this.totalWidth = this.audioLength * this.pixelsPerSecond
-      this.intermediateScaleFactorX = null
       this.$emit('change-metadata', {
         totalWidth: this.totalWidth,
         amountDrawSegments: this.amountDrawSegments,

@@ -1,27 +1,27 @@
 <template>
   <div class="segment-editor">
-    <div class="token-fake-display segment-text">
-      <div
+    <div class="token-display segment-text">
+      <span
         class="token"
         v-for="(token, i) in localTokens"
-        :key="i">
-        {{ token }}&nbsp;
-        <div
-          :style="{ backgroundColor: tokenTypeFromToken(token).color }"
-          :class="['token-type-indicator', focused && 'focused']">
-        </div>
-        <div class="secondary-token-tier" v-for="tier in secondaryTiers" :key="tier.name">
-          <div v-if="event.speakerEvents[speaker] && event.speakerEvents[speaker].tokens[i]">
-            {{ event.speakerEvents[speaker].tokens[i].tiers[tier.name].text }}
-          </div>
-        </div>
-      </div>
+        :key="token.id">
+        <span
+          v-html="token.tiers.default.text"
+          :class="['token-type-indicator', focused && 'focused']"
+          :style="{ backgroundColor: colorFromTokenType(token.tiers.default.type).color }">
+        </span><span class="secondary-token-tier" v-for="tier in secondaryTiers" :key="tier.name">
+          <span
+            v-if="event.speakerEvents[speaker] && event.speakerEvents[speaker].tokens[i]"
+            v-html="event.speakerEvents[speaker].tokens[i].tiers[tier.name].text"
+            class="secondary-token-tier-text" />
+        </span><span class="token-spacer" />
+      </span>
     </div>
     <div
       @focus="focused = true"
       @input="updateLocalTokens"
-      @blur="updateLabelText"
-      v-contenteditable:segmentText="true"
+      contenteditable="true"
+      v-text="segmentText"
       :style="textStyle"
       class="tokens-input segment-text">
     </div>
@@ -41,9 +41,24 @@ import {
   makeTokenId
 } from '../store/transcript'
 import * as _ from 'lodash'
-import * as listDiff from 'list-diff2'
+import * as jsdiff from 'diff'
 
-Vue.use(contenteditableDirective)
+// Vue.use(contenteditableDirective)
+
+function tokenTypeFromToken(token: string) {
+    const type = _(settings.tokenTypes).find((tt) => {
+      return tt.regex.test(token)
+    })
+    if (type !== undefined) {
+      return type
+    } else {
+      return {
+        name: 'error',
+        color: 'red',
+        id: -1
+      }
+    }
+  }
 
 @Component
 export default class SpeakerSegmentTranscript extends Vue {
@@ -52,8 +67,9 @@ export default class SpeakerSegmentTranscript extends Vue {
   @Prop() speaker: number
 
   localTokens = this.event.speakerEvents[this.speaker]
-    ? this.event.speakerEvents[this.speaker].tokens.slice().map(t => t.tiers.default.text)
+    ? this.event.speakerEvents[this.speaker].tokens
     : []
+  segmentText = this.localTokens ? this.localTokens.map(t => t.tiers.default.text).join(' ') : ''
   localEvent = _.clone(this.event)
   focused = false
   settings = settings
@@ -67,77 +83,85 @@ export default class SpeakerSegmentTranscript extends Vue {
     return eventStore.metadata.tiers.filter(t => t.name !== 'default' && t.show === true)
   }
 
-  tokenTypeFromToken(token: string) {
-    const type = _(settings.tokenTypes).find((tt) => {
-      return tt.regex.test(token)
-    })
-    if (type) {
-      return type
-    } else {
-      return {
-        color: '#222',
-      }
-    }
-  }
-
   get tokens() {
     return this.event.speakerEvents[this.speaker].tokens
   }
 
-  get segmentText() {
-    return this.localTokens ? this.localTokens.join(' ') : ''
-  }
-
-  set segmentText(newVal: string) {
-    this.localTokens = newVal.split(' ')
+  colorFromTokenType(id: number) {
+    const c = this.settings.tokenTypes.find(tt => tt.id === id)
+    if (c) {
+      return c
+    } else {
+      return 'red'
+    }
   }
 
   updateLocalTokens(e: Event) {
-    const newTokens = this.tokenizeText((e.target as HTMLDivElement).textContent as string)
-    console.log({newTokens})
-    const {moves, children} = listDiff(
-      this.localTokens.map(t => ({ text: t })),
-      newTokens.map(t => ({ text: t })),
-      'text'
-    )
-    const updates = _(moves)
-      .groupBy('index')
-      .map((moveGroup, k) => {
-        if (moveGroup.length > 1) {
-          return [ { index: moveGroup[0].index, type: 2, item: moveGroup[moveGroup.length - 1].item } ]
-        } else {
-          return moveGroup
-        }
+    requestAnimationFrame(() => {
+      const newTokens = this.tokenizeText((e.target as HTMLDivElement).textContent as string).map((t, i) => {
+        return { text: t, index: i }
       })
-      .flatten()
-      .value()
-    console.log({ moves, updates })
-    const ts = this.event.speakerEvents[this.speaker].tokens
-    updates.forEach((u) => {
-      // DELETE
-      if (u.type === 0) {
-        ts.splice(u.index, 1)
-      // INSERT
-      } else if (u.type === 1) {
-        ts.splice(u.index, 1, {
-          id: makeTokenId(),
-          tiers: {
-            default: {
-              text: u.item.text,
-              type: 0
-            },
-            ortho: {
-              text: '',
-              type: null
+      const oldTokens = this.localTokens.map((t, i) => ({ text: t.tiers.default.text, index: i }))
+      console.log({ newTokens, oldTokens })
+      const hunks = jsdiff.diffArrays(oldTokens, newTokens, { comparator: (l, r) => l.text === r.text })
+
+      const u2 = _(hunks)
+        .filter((h) => h.added === true || h.removed === true)
+        .map((h) => h.value.map(v => ({
+          ...v,
+          type: (() => {
+            if (h.added === true) {
+              return 'add'
+            } else if (h.removed) {
+              return 'remove'
             }
+          })()
+        })))
+        .flatten()
+        .groupBy('index')
+        .map((g) => {
+          if (g.length > 1) {
+            return [{
+              ...g[1],
+              type: 'update'
+            }]
+          } else {
+            return g
           }
         })
-      // UPDATE
-      } else if (u.type === 2) {
-        ts[u.index].tiers.default.text = u.item.text
-      }
+        .flatten()
+        .value()
+      console.log({u2})
+      const ts = this.event.speakerEvents[this.speaker].tokens
+      u2.forEach((u) => {
+        // DELETE
+        if (u.type === 'remove') {
+          ts.splice(u.index, 1)
+        // INSERT
+        } else if (u.type === 'add') {
+          ts.splice(u.index, 1, {
+            id: makeTokenId(),
+            tiers: {
+              default: {
+                text: u.text,
+                type: tokenTypeFromToken(u.text).id
+              },
+              ortho: {
+                text: '',
+                type: null
+              }
+            }
+          })
+        // UPDATE
+        } else if (u.type === 'update') {
+          ts[u.index].tiers.default = {
+            text: u.text,
+            type: tokenTypeFromToken(u.text).id
+          }
+        }
+      })
     })
-    console.log(this.event)
+    // console.log(ts)
     // moves.forEach((move: any) => {
     //   if (move.type === 0) {
     //     this.event.speakerEvents[this.speaker].tokens.splice(move.index, 0)
@@ -191,24 +215,28 @@ export default class SpeakerSegmentTranscript extends Vue {
 <style lang="stylus" scoped>
 .secondary-token-tier
   color #777
+  .secondary-token-tier-text
+  display inline-block
+    border-bottom 1px dotted #777
+    // margin-right .25em
 
 .segment-editor
   position relative
 
 .token-type-indicator
-  height 3px
   border-radius 2px
-  margin 1px 3px 3px 0px
+  display inline
 
-.token-fake-display
-  pointer-events none
-  position absolute
+.token-display
   .token
-    display inline-block
+    display inline
     color transparent
     vertical-align top
 
 .tokens-input
+  top 0
+  position absolute
+  width 100%
   outline 0
   opacity .7
   transition .5s color
@@ -219,4 +247,7 @@ export default class SpeakerSegmentTranscript extends Vue {
 .segment-text
   padding 1px
 
+.token-spacer
+  display inline-block
+  width .25em
 </style>
