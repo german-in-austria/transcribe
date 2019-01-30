@@ -5,7 +5,7 @@
       v-model="drawer"
       right
       app>
-      <history />
+      <sidebar :errors="errors" />
     </v-navigation-drawer>
     <v-content class="main-content">
       <v-container fluid fill-height class="pa-0">
@@ -71,6 +71,7 @@
           <v-flex xs12>
             <editor
               @toggle-drawer="e => drawer = !drawer"
+              :errors="errors"
               :audio-element="audioElement" />
             <router-view />
             <player-bar
@@ -91,12 +92,12 @@ import playerBar from './PlayerBar.vue'
 import 'vue-full-screen-file-drop/dist/vue-full-screen-file-drop.css'
 import VueFullScreenFileDrop from 'vue-full-screen-file-drop'
 import editor from './Editor.vue'
-import history from './History.vue'
+import sidebar from './Sidebar.vue'
 
 import audio from '../service/audio'
 import settings from '../store/settings'
 // tslint:disable-next-line:max-line-length
-import { LocalTranscriptEvent, eventStore } from '../store/transcript'
+import { LocalTranscriptEvent, eventStore, speakerEventHasErrors } from '../store/transcript'
 import { getTranscript } from '../service/data-backend/server-backend'
 import { loadExmeraldaFile } from '../service/data-backend/exmaralda-backend'
 
@@ -107,7 +108,7 @@ interface FileReaderEventTarget extends EventTarget {
 @Component({
   components : {
     editor,
-    history,
+    sidebar,
     VueFullScreenFileDrop,
     playerBar
   }
@@ -206,6 +207,13 @@ export default class App extends Vue {
       this.audioElement = y
     })
   }
+
+  get errors() {
+    return eventStore.events.filter(e => {
+      return speakerEventHasErrors(e)
+    })
+  }
+
 }
 </script>
 <style lang="stylus" scoped>
