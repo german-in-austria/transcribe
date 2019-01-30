@@ -153,16 +153,20 @@ export default class Waveform extends Vue {
   @Prop() audioUrl: string
   @Prop({ default: 200 }) height: number
   @Prop({ default: null }) scrollToSecond: number|null
+
   // config
   zoomLevels = [.25, .5, .75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4]
   drawDistance = 5000 // pixels in both directions from the center of the viewport (left and right)
   initialPixelsPerSecond = 150
-  overviewSvgWidth = 1500
-  overviewTimeWidth = 70
+  overviewSvgWidth = 1500 // width of the overview waveform in logical pixels
+  overviewTimeWidth = 70 // width of the time preview tooltip above the overview waveform
+
+  // bind stores
+  settings = settings
   userState = eventStore.userState
 
   // state
-  pixelsPerSecond = this.initialPixelsPerSecond
+  pixelsPerSecond = this.initialPixelsPerSecond // copied on init, not bound.
   disabled = false
   loading = false
   overviewThumbOffset = 0
@@ -172,16 +176,13 @@ export default class Waveform extends Vue {
   overviewThumbWidth = 0
   overviewHeight = 60
   visibleSeconds: number[] = []
-  // this is only used DURING scaling, then reset to 1
-  intermediateScaleFactorX: number|null = null
   audioLength = 0
-  metadata: any = {}
+  metadata: any = {} // TODO: get rid of this
 
   renderedWaveFormPieces: number[] = []
   totalWidth = this.audioLength * this.pixelsPerSecond
 
   onScroll = _.throttle((e) => this.handleScroll(e), 350)
-  settings = settings
 
   mounted() {
     this.initWithAudio()
@@ -358,7 +359,6 @@ export default class Waveform extends Vue {
       this.doMaybeRerender()
       this.doScrollToPercentage(oldCenterPercent)
       this.totalWidth = this.audioLength * this.pixelsPerSecond
-      this.intermediateScaleFactorX = null
       this.$emit('change-metadata', {
         totalWidth: this.totalWidth,
         amountDrawSegments: this.amountDrawSegments,
