@@ -21,11 +21,11 @@
       v-if="showSettings" 
       @close="showSettings = false"
       :show="showSettings" />
-    <spectogram
-      v-if="isSpectogramVisible"
-      @close="isSpectogramVisible = false"
-      :show="isSpectogramVisible"
-      :event="spectogramEvent"
+    <spectrogram
+      v-if="isSpectrogramVisible"
+      @close="isSpectrogramVisible = false"
+      :show="isSpectrogramVisible"
+      :event="spectrogramEvent"
     />
     <wave-form
       tabindex="-1"
@@ -92,7 +92,7 @@
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
-              @click="showSpectogram(getSelectedEvent())">
+              @click="showSpectrogram(getSelectedEvent())">
               <v-list-tile-title>Show Spectrogram…</v-list-tile-title>
             </v-list-tile>
             <v-divider />
@@ -128,7 +128,7 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import waveForm from './Waveform.vue'
 import settingsView from './Settings.vue'
 import settings from '../store/settings'
-import spectogram from './Spectogram.vue'
+import spectrogram from './Spectrogram.vue'
 import search from './Search.vue'
 import transcriptEditor from '@components/TranscriptEditor.vue'
 import segmentBox from '@components/SegmentBox.vue'
@@ -159,7 +159,7 @@ import {
     waveForm,
     transcriptEditor,
     settingsView,
-    spectogram,
+    spectrogram,
     playHead,
     segmentBox,
     search,
@@ -189,8 +189,8 @@ export default class Editor extends Vue {
 
   scrollTranscriptIndex: number = 0
 
-  isSpectogramVisible = false
-  spectogramEvent: LocalTranscriptEvent|null = null
+  isSpectrogramVisible = false
+  spectrogramEvent: LocalTranscriptEvent|null = null
 
   scrollToTranscriptEvent = scrollToTranscriptEvent
   settings = settings
@@ -227,9 +227,9 @@ export default class Editor extends Vue {
     this.splitSegment(event, splitAt)
   }
 
-  showSpectogram(e: LocalTranscriptEvent) {
-    this.isSpectogramVisible = true
-    this.spectogramEvent = e
+  showSpectrogram(e: LocalTranscriptEvent) {
+    this.isSpectrogramVisible = true
+    this.spectrogramEvent = e
   }
 
   handleKey(e: KeyboardEvent) {

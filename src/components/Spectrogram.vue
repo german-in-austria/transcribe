@@ -7,7 +7,7 @@
     :value="show"
     max-width="1200">
     <v-card class="text-xs-center pt-3" style="background: rgb(30, 0, 30)">
-      <small>Spectogram</small>
+      <small>Spectrogram</small>
       <v-card-text class="pa-0" ref="canvasContainer"></v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
@@ -44,7 +44,7 @@ export default class Settings extends Vue {
       audio.store.uint8Buffer.buffer
     )
     const width = 1200
-    const c = (await audio.drawSpectogramAsync(slicedBuffer, width, 500)) as HTMLCanvasElement;
+    const c = (await audio.drawSpectrogramAsync(slicedBuffer, width, 500)) as HTMLCanvasElement;
     const cont = (this.$refs.canvasContainer as HTMLElement)
     cont.innerHTML = ''
     cont.appendChild(c)

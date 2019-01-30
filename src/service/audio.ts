@@ -17,7 +17,7 @@ const oggIndexWorker = new PromiseWorker(new OggIndexWorker(''))
 const textEncoder = new TextEncoder()
 const localAudioElement = document.createElement('audio')
 // import drawWaveWasm from './wasm/module.untouched.wasm'
-// import getSpectogramWasm from './wasm/module2.untouched.wasm'
+// import getSpectrogramWasm from './wasm/module2.untouched.wasm'
 // const loader = require('../lib/as-loader')
 
 export interface AudioMetaData {
@@ -213,22 +213,22 @@ function findOggPages(from: number, to: number, pages: OggIndex['pages']) {
   return {startPage, endPage}
 }
 
-// let spectogramWasmModule: any
+// let spectrogramWasmModule: any
 
-// async function drawSpectogramWasm(buffer: AudioBuffer, width: number, height: number): Promise<HTMLCanvasElement> {
-//   if (spectogramWasmModule) {
+// async function drawSpectrogramWasm(buffer: AudioBuffer, width: number, height: number): Promise<HTMLCanvasElement> {
+//   if (spectrogramWasmModule) {
 //     const b = buffer.getChannelData(0)
-//     const spectogramBuffer = new Uint8Array(width * 512)
-//     const outPtr = spectogramWasmModule.newArray(spectogramBuffer)
-//     const inPtr = spectogramWasmModule.newArray(b)
-//     const p = spectogramWasmModule.getFrequencies(1024, inPtr, b.length, buffer.sampleRate, width, outPtr)
+//     const spectrogramBuffer = new Uint8Array(width * 512)
+//     const outPtr = spectrogramWasmModule.newArray(spectrogramBuffer)
+//     const inPtr = spectrogramWasmModule.newArray(b)
+//     const p = spectrogramWasmModule.getFrequencies(1024, inPtr, b.length, buffer.sampleRate, width, outPtr)
 //     console.log(wasmModule.getArray(Uint8Array, outPtr))
-//     spectogramWasmModule.freeArray(outPtr)
-//     spectogramWasmModule.freeArray(inPtr)
+//     spectrogramWasmModule.freeArray(outPtr)
+//     spectrogramWasmModule.freeArray(inPtr)
 //     return document.createElement('canvas')
 //   } else {
-//     const module = await WebAssembly.compile(getSpectogramWasm)
-//     spectogramWasmModule = await loader.instantiate(module, {
+//     const module = await WebAssembly.compile(getSpectrogramWasm)
+//     spectrogramWasmModule = await loader.instantiate(module, {
 //       memory: new WebAssembly.Memory({
 //         initial: 100
 //       }),
@@ -238,7 +238,7 @@ function findOggPages(from: number, to: number, pages: OggIndex['pages']) {
 //       }
 //     })
 //     console.log(wasmModule)
-//     return drawSpectogramWasm(buffer, width, height)
+//     return drawSpectrogramWasm(buffer, width, height)
 //   }
 // }
 
@@ -261,7 +261,7 @@ export function playBuffer(buffer: AudioBuffer, start = 0, offset?: number, dura
   }
 }
 
-async function drawSpectogramAsync(buffer: AudioBuffer, width: number, height: number): Promise<HTMLCanvasElement> {
+async function drawSpectrogramAsync(buffer: AudioBuffer, width: number, height: number): Promise<HTMLCanvasElement> {
   const b = sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
   const [f, i] = await getFrequenciesWorker.postMessage({
     fftSamples: 2048,
@@ -269,7 +269,7 @@ async function drawSpectogramAsync(buffer: AudioBuffer, width: number, height: n
     length: buffer.length,
     sampleRate: buffer.sampleRate,
     width,
-    gradient: settings.spectogramGradient
+    gradient: settings.spectrogramGradient
   }, [ b ])
 
   const canvas = document.createElement('canvas')
@@ -608,7 +608,7 @@ const audio = {
   decodeBufferSegment,
   decodeBufferTimeSlice,
   downloadAudioStream,
-  drawSpectogramAsync,
+  drawSpectrogramAsync,
   drawWave,
   drawWavePath,
   drawWavePathAsync,

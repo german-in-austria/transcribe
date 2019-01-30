@@ -2,14 +2,14 @@
 import { makeGradient, Color } from '../lib/gradient'
 
 export interface Settings {
-  spectogramGradient: number[][]
-  spectogramColors: Color[]
+  spectrogramGradient: number[][]
+  spectrogramColors: Color[]
   waveFormColors: string[]
   lockScroll: boolean,
   emulateHorizontalScrolling: boolean,
   darkMode: boolean,
   showSegmentBoxes: boolean,
-  showSpectograms: boolean,
+  showSpectrograms: boolean,
   useMonoWaveForm: boolean,
   tokenTypes: Array<{
     name: string
@@ -27,7 +27,7 @@ export interface Settings {
   }
 }
 
-const spectogramColors = [
+const spectrogramColors = [
   {
     at: 0,
     c: [ 5, 0, 11, 0 ]
@@ -91,14 +91,14 @@ const spectogramColors = [
 ]
 
 const settings: Settings = {
-  spectogramGradient: makeGradient(spectogramColors),
-  spectogramColors,
+  spectrogramGradient: makeGradient(spectrogramColors),
+  spectrogramColors,
   waveFormColors: [ '#fb7676', '#6699CC' ],
   lockScroll: false,
   darkMode: true,
   emulateHorizontalScrolling: false, // set to true when finished
   showSegmentBoxes: true,
-  showSpectograms: false,
+  showSpectrograms: false,
   useMonoWaveForm: false,
   tokenTypes: [
     {
