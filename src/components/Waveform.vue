@@ -243,6 +243,7 @@ export default class Waveform extends Vue {
   }
 
   toTime(time: number) {
+    // seconds to readable time
     return new Date(time * 1000).toISOString().substr(11, 8)
   }
 
