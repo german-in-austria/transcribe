@@ -3,27 +3,29 @@
     <v-toolbar class="topbar elevation-0" fixed app>
       <div>{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
       <v-spacer></v-spacer>
-      <v-tooltip class="mt-3" bottom>
-        <v-btn slot="activator" @click.stop="showSearch = true" icon flat>
-          <v-icon>search</v-icon>
-        </v-btn>
-        <span>Search</span>
-      </v-tooltip>
-      <v-tooltip class="mt-3" bottom>
-        <v-btn slot="activator" @click.stop="showSettings = true" icon flat>
-          <v-icon>settings</v-icon>
-        </v-btn>
-        <span>Settings</span>
-      </v-tooltip>
-      <v-tooltip class="mt-3" bottom>
-        <v-btn slot="activator" class="mr-4" @click.stop="$emit('toggle-drawer')" icon flat>
-          <v-badge color="error" overlap :value="errors.length > 0">
-            <span class="custom-badge" slot="badge">{{ errors.length }}</span>
-            <v-icon>history</v-icon>
-          </v-badge>
-        </v-btn>
-        <span>History & Errors</span>
-      </v-tooltip>
+      <div>
+        <v-tooltip bottom>
+          <v-btn slot="activator" @click.stop="showSearch = true" icon flat>
+            <v-icon>search</v-icon>
+          </v-btn>
+          <span>Search</span>
+        </v-tooltip>
+        <v-tooltip bottom>
+          <v-btn slot="activator" @click.stop="showSettings = true" icon flat>
+            <v-icon>settings</v-icon>
+          </v-btn>
+          <span>Settings</span>
+        </v-tooltip>
+        <v-tooltip bottom>
+          <v-btn slot="activator" class="mr-4" @click.stop="$emit('toggle-drawer')" icon flat>
+            <v-badge color="error" overlap :value="errors.length > 0">
+              <span class="custom-badge" slot="badge">{{ errors.length }}</span>
+              <v-icon>history</v-icon>
+            </v-badge>
+          </v-btn>
+          <span>History & Errors</span>
+        </v-tooltip>
+      </div>
     </v-toolbar>
     <search
       v-if="showSearch"

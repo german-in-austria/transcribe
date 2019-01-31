@@ -8,7 +8,7 @@
     max-width="700">
     <v-card>
       <v-card-text class="pa-0">
-        <v-tabs class="settings layout fill-height column" grow height="64" v-model="activeTab">
+        <v-tabs hide-slider class="settings layout fill-height column" grow height="64" v-model="activeTab">
           <v-tab>
             Application
           </v-tab>
@@ -44,10 +44,12 @@
               <v-divider />
               <v-list-tile>
                 <v-list-tile-title>Visualization Type</v-list-tile-title>
-                <v-btn-toggle mandatory v-model="settings.showSpectrograms">
-                  <v-btn small flat :value="false">Amplitude</v-btn>
-                  <v-btn small flat :value="true">Spectrogram</v-btn>
-                </v-btn-toggle>
+                <v-list-tile-action class="no-flex-direction">
+                  <select v-model="settings.showSpectrograms">
+                    <option :value="false">Waveform</option>
+                    <option :value="true">Spectrogram</option>
+                  </select>
+                </v-list-tile-action>
               </v-list-tile>
               <v-list-tile v-if="!settings.showSpectrograms">
                 <v-list-tile-title>Use Mono Waveform</v-list-tile-title>
@@ -141,13 +143,13 @@
                   <v-list-tile-sub-title>{{ e.description }}</v-list-tile-sub-title>
                 </v-list-tile-content>
                 <v-list-tile-action class="no-flex-direction">
-                  <select v-model="e.meta" class="keyboard-shortcut">
+                  <select v-model="e.meta">
                     <option value="null">none</option>
                     <option value="alt">alt</option>
                     <option value="ctrl">ctrl</option>
                     <option value="meta">command</option>
                   </select>
-                  <select v-model="e.key" class="keyboard-shortcut">
+                  <select v-model="e.key">
                     <option :value="l" :selected="i === 1" v-for="(l, i) in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')" :key="i">
                       {{ l }}
                     </option>
@@ -218,11 +220,13 @@ export default class Settings extends Vue {
 .no-flex-direction
   flex-direction: unset
 
-select.keyboard-shortcut
+select
+  cursor pointer
   -webkit-appearance none
   background rgba(0,0,0,.1)
   margin-right .5em
-  padding .15em .7em
+  padding .15em 1em
+  text-align center
   font-size 90%
   outline 0
 </style>

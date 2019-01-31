@@ -1,5 +1,5 @@
 <template>
-  <v-tabs class="history layout fill-height column" height="64" grow v-model="activeTab">
+  <v-tabs hide-slider class="history layout fill-height column" height="64" grow v-model="activeTab">
     <v-tab ripple>History</v-tab>
     <v-tab ripple>
       <v-badge :value="errors.length > 0" color="grey">

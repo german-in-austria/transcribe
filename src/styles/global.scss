@@ -72,3 +72,9 @@ img[lazy=loaded] {
 .menu__content .list--dense:not(.list--two-line) .list__tile:not(.list__tile--avatar){
   height: 33px;
 }
+.tabs__item{
+  background: rgba(0,0,0,.2);
+}
+.tabs__item--active{
+  background: transparent
+}
