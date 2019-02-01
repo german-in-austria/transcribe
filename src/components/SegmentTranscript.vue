@@ -4,7 +4,7 @@
       style="outline: 0;"
       tabindex="-1"
       :class="{time: true, error: hasErrors}"
-      @keydown.delete="deleteEvent(event)"
+      @keydown.delete="deleteSelectedEvents"
       @dblclick="playEvent(event)"
       @mousedown.meta.stop="addEventsToSelection([ event ])"
       @mousedown.exact="selectAndScrollToEvent(event)">
@@ -28,7 +28,7 @@ import SpeakerSegmentTranscript from '@components/SpeakerSegmentTranscript.vue'
 
 import {
   eventStore,
-  deleteEvent,
+  deleteSelectedEvents,
   LocalTranscriptEvent,
   selectEvent,
   addEventsToSelection,
@@ -49,7 +49,7 @@ export default class SegmentTranscript extends Vue {
 
   eventStore = eventStore
   offsetWidth = 0
-  deleteEvent = deleteEvent
+  deleteSelectedEvents = deleteSelectedEvents
   addEventsToSelection = addEventsToSelection
   playEvent = playEvent
 
