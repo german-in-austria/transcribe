@@ -38,13 +38,13 @@
         <div :style="{transform: `translateX(${ innerLeft }px)`}" ref="inner" class="transcript-segments-inner">
           <segment-transcript
             v-for="(event, i) in visibleEvents"
+            :event="event"
             :key="event.eventId"
+            :is-selected="isEventSelected(event.eventId)"
+            :class="['segment', (event.eventId in eventStore.selectedEventIds) && 'segment-selected']"
             @scroll-to-event="(e) => $emit('scroll-to-event', e)"
             @element-unrender="(width) => handleUnrender(width, i, event.eventId)"
             @element-render="(width) => handleRender(width, i, event.eventId)"
-            :event="event"
-            :is-selected="isEventSelected(event.eventId)"
-            :class="['segment', (event.eventId in eventStore.selectedEventIds) && 'segment-selected']"
           />
         </div>
       </div>
