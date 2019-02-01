@@ -7,7 +7,7 @@
       </v-badge>
       </v-tab>
     <v-tab-item>
-      <v-list dense>
+      <v-list v-if="history.length > 0" dense>
         <v-list-tile
           :key="i"
           v-for="(action, i) in history"
@@ -19,7 +19,7 @@
             <v-icon v-if="action.type === 'CHANGE_TOKENS'">format_color_text</v-icon>
           </v-list-tile-avatar>
           <v-list-tile-content v-if="action.type === 'RESIZE'">
-            <v-list-tile-title>resize segment</v-list-tile-title>
+            <v-list-tile-title class="history-title">resize segment</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
               <div class="inner" :key="i" v-for="(se, i) in action.event.speakerEvents">
                 {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
@@ -27,7 +27,7 @@
             </v-list-tile-sub-title>
           </v-list-tile-content>
           <v-list-tile-content v-else-if="action.type === 'DELETE'">
-            <v-list-tile-title>delete segment</v-list-tile-title>
+            <v-list-tile-title class="history-title">delete segment</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
               <div class="inner" :key="i" v-for="(se, i) in action.event.speakerEvents">
                 {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
@@ -35,7 +35,7 @@
             </v-list-tile-sub-title>
           </v-list-tile-content>
           <v-list-tile-content v-else-if="action.type === 'ADD'">
-            <v-list-tile-title>add segment</v-list-tile-title>
+            <v-list-tile-title class="history-title">add segment</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
               <div class="inner" :key="i" v-for="(se, i) in action.event.speakerEvents">
                 {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
@@ -43,7 +43,7 @@
             </v-list-tile-sub-title>
           </v-list-tile-content>
           <v-list-tile-content v-else-if="action.type === 'CHANGE_TOKENS'">
-            <v-list-tile-title>update transcript</v-list-tile-title>
+            <v-list-tile-title class="history-title">update transcript</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
               <div class="inner" :key="i" v-for="(se, i) in action.event.speakerEvents">
                 {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
@@ -57,9 +57,12 @@
           </v-list-tile-action>
         </v-list-tile>
       </v-list>
+      <div v-else class="text-xs-center grey--text mt-4">
+        <small>any edits will appear here.</small>
+      </div>
     </v-tab-item>
     <v-tab-item>
-      <v-list dense>
+      <v-list v-if="errors.length > 0" dense>
         <v-list-tile v-for="(error) in errors" :key="error.eventId">
           <v-list-tile-action>
             <v-icon>error</v-icon>
@@ -69,6 +72,9 @@
           </v-list-tile-content>
         </v-list-tile>
       </v-list>
+      <div v-else class="text-xs-center grey--text mt-4">
+        <small>any errors will appear here.</small>
+      </div>
     </v-tab-item>
   </v-tabs>
 </template>
@@ -111,6 +117,9 @@ export default class Sidebar extends Vue {
 </style>
 
 <style lang="stylus" scoped>
+.history-title
+  height 19px
+  
 .subtitle
   font-size 11px
 
