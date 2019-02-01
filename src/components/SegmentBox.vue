@@ -1,6 +1,7 @@
 <template>
   <div
-    @mousedown="selectEvent(event)"
+    @mousedown.exact="selectEvent(event)"
+    @mousedown.meta="addEventsToSelection([event])"
     @dblclick="playEvent(event)"
     @keydown.meta.enter="scrollToTranscriptEvent(event)"
     @keydown.right.stop.prevent="selectNextEvent()"
@@ -39,8 +40,8 @@ import { Vue, Component, Prop, Watch, Provide } from 'vue-property-decorator'
 import Resizer from '@components/helper/Resizer.vue'
 import ResizeParent from '@components/helper/ResizeParent.vue'
 // tslint:disable-next-line:max-line-length
-import { playEvent, resizeSegment, LocalTranscriptEvent, eventStore, selectEvent, selectNextEvent, isEventSelected, selectPreviousEvent, scrollToTranscriptEvent } from '../store/transcript'
-import * as _ from 'lodash'
+import { playEvent, resizeSegment, LocalTranscriptEvent, eventStore, selectEvent, addEventsToSelection, selectNextEvent, isEventSelected, selectPreviousEvent, scrollToTranscriptEvent } from '../store/transcript'
+
 @Component({
   components: {
     ResizeParent
@@ -55,6 +56,7 @@ export default class SegmentBox extends Vue {
 
   scrollToTranscriptEvent = scrollToTranscriptEvent
   selectEvent = selectEvent
+  addEventsToSelection = addEventsToSelection
   eventStore = eventStore
   selectNextEvent = selectNextEvent
   selectPreviousEvent = selectPreviousEvent
