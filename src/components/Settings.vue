@@ -143,11 +143,12 @@
                   <v-list-tile-sub-title>{{ e.description }}</v-list-tile-sub-title>
                 </v-list-tile-content>
                 <v-list-tile-action class="no-flex-direction">
-                  <select v-model="e.meta">
-                    <option value="null">none</option>
-                    <option value="alt">alt</option>
-                    <option value="ctrl">ctrl</option>
-                    <option value="meta">command</option>
+                  <select v-model="e.modifier">
+                    <option :value="null"></option>
+                    <option value="altKey">alt</option>
+                    <option value="ctrlKey">ctrl</option>
+                    <option value="metaKey">command</option>
+                    <option value="shiftKey">shift</option>
                   </select>
                   <select v-model="e.key">
                     <option :value="l" :selected="i === 1" v-for="(l, i) in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')" :key="i">
