@@ -4,19 +4,19 @@
       <div>{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
       <v-spacer></v-spacer>
       <div>
-        <v-tooltip bottom>
+        <v-tooltip transition="none" bottom>
           <v-btn slot="activator" @click.stop="showSearch = true" icon flat>
             <v-icon>search</v-icon>
           </v-btn>
           <span>Search</span>
         </v-tooltip>
-        <v-tooltip bottom>
+        <v-tooltip transition="none" bottom>
           <v-btn slot="activator" @click.stop="showSettings = true" icon flat>
             <v-icon>settings</v-icon>
           </v-btn>
           <span>Settings</span>
         </v-tooltip>
-        <v-tooltip bottom>
+        <v-tooltip transition="none" bottom>
           <v-btn slot="activator" class="mr-4" @click.stop="$emit('toggle-drawer')" icon flat>
             <v-badge color="error" overlap :value="errors.length > 0">
               <span class="custom-badge" slot="badge">{{ errors.length }}</span>
@@ -111,7 +111,7 @@
             </v-list-tile>
             <v-divider />
             <v-list-tile
-              @click="deleteSegment(getSelectedEvent())">
+              @click="deleteEvent(getSelectedEvent())">
               <v-list-tile-content>
                 <v-list-tile-title>Delete</v-list-tile-title>
               </v-list-tile-content>
@@ -159,7 +159,7 @@ import {
   eventStore,
   playEvent,
   addSegment,
-  deleteSegment,
+  deleteEvent,
   deleteEventById,
   splitSegment,
   findSegmentAt,
@@ -187,7 +187,7 @@ export default class Editor extends Vue {
 
   eventStore = eventStore
   addSegment = addSegment
-  deleteSegment = deleteSegment
+  deleteEvent = deleteEvent
   splitSegment = splitSegment
   findSegmentAt = findSegmentAt
   playEvent = playEvent
