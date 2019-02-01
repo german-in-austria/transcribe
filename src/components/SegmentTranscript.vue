@@ -62,14 +62,6 @@ export default class SegmentTranscript extends Vue {
     return speakerEventHasErrors(this.event)
   }
 
-  getTokens(speaker: string): string[] {
-    if (this.event && this.event.speakerEvents[speaker]) {
-      return this.event.speakerEvents[speaker].tokens.map(t => t.tiers.default.text)
-    } else {
-      return []
-    }
-  }
-
   beforeDestroy() {
     this.$emit('element-unrender', this.offsetWidth)
   }
