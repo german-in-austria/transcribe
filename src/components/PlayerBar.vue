@@ -5,12 +5,13 @@
         <v-flex text-xs-left xs2>
           <div class="caption grey--text lighten-2">
             <v-slider
-              color="grey"
-              thumb-color="grey darken-2"
+              color="grey darken-4"
+              thumb-color="grey lighten-1"
               hide-details
               :min="10"
               :max="100"
               thumb-label
+              dark
               v-model="playbackRate" />
             Playback Speed
           </div>
@@ -27,11 +28,12 @@
         <v-flex text-xs-left xs2>
           <div class="caption grey--text lighten-2">
             <v-slider
-              color="grey"
-              thumb-color="grey darken-2"
+              color="grey darken-4"
+              thumb-color="grey lighten-1"
               hide-details
               :min="0"
               :max="100"
+              dark
               thumb-label
               v-model="volume" />
             Volume
