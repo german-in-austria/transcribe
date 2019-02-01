@@ -218,6 +218,11 @@ export function addSegment(atTime: number) {
   return newEvent
 }
 
+export function deleteSelectedEvents(): number[] {
+  eventStore.selectedEventIds.forEach(deleteEventById)
+  return eventStore.selectedEventIds
+}
+
 export function deleteEvent(event: LocalTranscriptEvent) {
   const i = findSegmentById(event.eventId)
   history.push({
