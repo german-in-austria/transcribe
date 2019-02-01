@@ -249,6 +249,11 @@ export default class Editor extends Vue {
 
   handleKey(e: KeyboardEvent) {
     console.log(this.playHeadPos)
+    console.log(e)
+    // _(settings.keyboardShortcuts).forEach((v, i) => {
+    //   if (v.key === e.key && (v.modifier === null || (e as any)[v.modifier] === true)) {
+    //   }
+    // })
     if (e.key === 'c') {
       const event = this.findSegmentAt(this.playHeadPos)
       if (event === undefined) {
