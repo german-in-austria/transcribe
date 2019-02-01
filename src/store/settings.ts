@@ -19,7 +19,7 @@ export interface Settings {
   }>
   keyboardShortcuts: {
     [action: string]: {
-      modifier: string
+      modifier: 'altKey'|'ctrlKey'|'metaKey'|'shiftKey'|null
       key: string
       name: string
       description: string
@@ -140,8 +140,8 @@ const settings: Settings = {
   ],
   keyboardShortcuts: {
     split: {
-      modifier: 'meta',
-      key: '',
+      modifier: null,
+      key: 'S',
       name: 'Split Segment',
       description: 'Split a segment at the current play-head position.'
     }
