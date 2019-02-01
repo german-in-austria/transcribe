@@ -84,7 +84,7 @@
           <line
             v-for="i in (overviewSvgWidth / 10)"
             :key="i"
-            stroke-width="3"
+            stroke-width="1"
             :stroke="settings.darkMode ? '#353535' : '#EEEEEE'"
             stroke-linecap="round"
             :x1="i * 10"
