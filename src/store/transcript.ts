@@ -1,7 +1,7 @@
 
 import * as _ from 'lodash'
 import audio from '../service/audio'
-import { clone } from '../util'
+import { clone, isEqualDeep } from '../util'
 
 declare global {
   interface Window {
@@ -218,7 +218,7 @@ export function addSegment(atTime: number) {
   return newEvent
 }
 
-export function deleteSegment(event: LocalTranscriptEvent) {
+export function deleteEvent(event: LocalTranscriptEvent) {
   const i = findSegmentById(event.eventId)
   history.push({
     apply: true,
@@ -250,7 +250,7 @@ export function findSegmentAt(seconds: number): LocalTranscriptEvent|undefined {
 
 export function deleteEventById(id: number) {
   const i = findSegmentById(id)
-  deleteSegment(eventStore.events[i])
+  deleteEvent(eventStore.events[i])
 }
 
 export function timeToSeconds(time: string) {

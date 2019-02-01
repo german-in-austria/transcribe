@@ -34,7 +34,7 @@
 import contenteditableDirective from 'vue-contenteditable-directive'
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
-import { clone } from '../util'
+import { clone, isEqualDeep } from '../util'
 import {
   updateSpeakerTokens,
   LocalTranscriptEvent,
@@ -97,7 +97,11 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   commit() {
-    updateSpeakerTokens(this.localEvent, this.speaker, this.localTokens)
+    if (!isEqualDeep(this.localTokens, this.event.speakerEvents[this.speaker].tokens)) {
+      updateSpeakerTokens(this.localEvent, this.speaker, this.localTokens)
+    } else {
+      // nothing to update
+    }
   }
 
   updateLocalTokens(e: Event) {
