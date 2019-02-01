@@ -1,6 +1,7 @@
 
 import * as _ from 'lodash'
 import audio from '../service/audio'
+import { clone } from '../util'
 
 declare global {
   interface Window {
@@ -171,12 +172,7 @@ export function updateSpeakerTokens(
   speaker: number,
   tokens: LocalTranscriptToken[],
 ) {
-  history.push({
-    apply: true,
-    type: 'CHANGE_TOKENS',
-    event: _.clone(event)
-  })
-  event = {
+  const newEvent = clone({
     ...event,
     speakerEvents: {
       ...event.speakerEvents,
@@ -185,7 +181,14 @@ export function updateSpeakerTokens(
         tokens
       }
     }
-  }
+  })
+  history.push({
+    apply: true,
+    type: 'CHANGE_TOKENS',
+    event: newEvent
+  })
+  const index = findSegmentById(event.eventId)
+  eventStore.events.splice(index, 1, newEvent)
 }
 
 export function resizeSegment(id: number, startTime: number, endTime: number) {
