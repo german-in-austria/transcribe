@@ -20,6 +20,7 @@
     <div
       @focus="focused = true"
       @input="updateLocalTokens"
+      @blur="commit"
       contenteditable="true"
       v-text="segmentText"
       :style="textStyle"
@@ -33,6 +34,7 @@
 import contenteditableDirective from 'vue-contenteditable-directive'
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
+import { clone } from '../util'
 import {
   updateSpeakerTokens,
   LocalTranscriptEvent,
@@ -43,22 +45,20 @@ import {
 import * as _ from 'lodash'
 import * as jsdiff from 'diff'
 
-// Vue.use(contenteditableDirective)
-
 function tokenTypeFromToken(token: string) {
-    const type = _(settings.tokenTypes).find((tt) => {
-      return tt.regex.test(token)
-    })
-    if (type !== undefined) {
-      return type
-    } else {
-      return {
-        name: 'error',
-        color: 'red',
-        id: -1
-      }
+  const type = _(settings.tokenTypes).find((tt) => {
+    return tt.regex.test(token)
+  })
+  if (type !== undefined) {
+    return type
+  } else {
+    return {
+      name: 'error',
+      color: 'red',
+      id: -1
     }
   }
+}
 
 @Component
 export default class SpeakerSegmentTranscript extends Vue {
@@ -66,11 +66,11 @@ export default class SpeakerSegmentTranscript extends Vue {
   @Prop() event: LocalTranscriptEvent
   @Prop() speaker: number
 
-  localTokens = this.event.speakerEvents[this.speaker]
-    ? this.event.speakerEvents[this.speaker].tokens
+  localEvent = clone(this.event)
+  localTokens = this.localEvent.speakerEvents[this.speaker]
+    ? this.localEvent.speakerEvents[this.speaker].tokens
     : []
   segmentText = this.localTokens ? this.localTokens.map(t => t.tiers.default.text).join(' ') : ''
-  localEvent = _.clone(this.event)
   focused = false
   settings = settings
   updateSpeakerTokens = updateSpeakerTokens
@@ -96,6 +96,10 @@ export default class SpeakerSegmentTranscript extends Vue {
     }
   }
 
+  commit() {
+    updateSpeakerTokens(this.localEvent, this.speaker, this.localTokens)
+  }
+
   updateLocalTokens(e: Event) {
     requestAnimationFrame(() => {
       const newTokens = this.tokenizeText((e.target as HTMLDivElement).textContent as string).map((t, i) => {
@@ -105,7 +109,7 @@ export default class SpeakerSegmentTranscript extends Vue {
       console.log({ newTokens, oldTokens })
       const hunks = jsdiff.diffArrays(oldTokens, newTokens, { comparator: (l, r) => l.text === r.text })
 
-      const u2 = _(hunks)
+      const updates = _(hunks)
         .filter((h) => h.added === true || h.removed === true)
         .map((h) => h.value.map(v => ({
           ...v,
@@ -131,9 +135,9 @@ export default class SpeakerSegmentTranscript extends Vue {
         })
         .flatten()
         .value()
-      console.log({u2})
-      const ts = this.event.speakerEvents[this.speaker].tokens
-      u2.forEach((u) => {
+      console.log({updates})
+      const ts = this.localTokens
+      updates.forEach((u) => {
         // DELETE
         if (u.type === 'remove') {
           ts.splice(u.index, 1)
@@ -161,31 +165,6 @@ export default class SpeakerSegmentTranscript extends Vue {
         }
       })
     })
-    // console.log(ts)
-    // moves.forEach((move: any) => {
-    //   if (move.type === 0) {
-    //     this.event.speakerEvents[this.speaker].tokens.splice(move.index, 0)
-    //   }
-    // })
-    // this.event = {
-    //   ...this.event,
-    //   speakerEvents: {
-    //     ...this.event.speakerEvents,
-    //     [this.speaker]: {
-    //       ...this.event.speakerEvents[this.speaker],
-    //       tokens: this.event.speakerEvents[this.speaker].tokens.filter(t => {
-    //         return t
-    //       })
-    //     }
-    //   }
-    // }
-    // console.log(editDiff(this.segmentText, newTokens.join(' '), window.getSelection().anchorOffset))
-    // const ev: LocalTranscriptToken[] = this.localTokens.map((t, i) => {
-    //   return {
-    //     id: this.localEvent.speakerEvents[this.speaker].tokens[i].id
-    //   }
-    //   // console.log(t, this.localEvent.speakerEvents[this.speaker].tokens[i].tiers.default.text)
-    // })
   }
 
   updateLabelText(e: Event) {
