@@ -58,7 +58,7 @@
         </v-list-tile>
       </v-list>
       <div v-else class="text-xs-center grey--text mt-4">
-        <small>any edits will appear here.</small>
+        <small>Edits will appear here.</small>
       </div>
     </v-tab-item>
     <v-tab-item>
@@ -73,7 +73,7 @@
         </v-list-tile>
       </v-list>
       <div v-else class="text-xs-center grey--text mt-4">
-        <small>any errors will appear here.</small>
+        <small>Errors will appear here.</small>
       </div>
     </v-tab-item>
   </v-tabs>
