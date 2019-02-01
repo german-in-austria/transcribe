@@ -71,21 +71,26 @@ export async function getTranscript(
 ): Promise<LocalTranscript> {
   try {
 
+    // download transcript page
     const res = await (await fetch(`https://dissdb.dioe.at/routes/transcript/${ id }/${ chunk }`, {
       credentials: 'include'
     })).json() as ServerTranscript
 
+    // when it’s the first page
     if (res.aNr === 0) {
       eventStore.metadata = getMetadataFromServerTranscript(res)
       eventStore.status = 'loading'
     }
 
+    // convert and concat
     eventStore.events = buffer.concat(serverTranscriptToLocal(res))
 
+    // progress callback with data
     if (onProgress !== undefined && totalSteps !== undefined) {
       onProgress(res.aNr / totalSteps, eventStore.events)
     }
 
+    // get next (recursion) or finish
     if (res.nNr > res.aNr)  {
       return getTranscript(
         id,
