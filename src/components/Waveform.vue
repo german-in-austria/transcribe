@@ -67,53 +67,46 @@
     </div>
     <v-layout row>
       <v-flex>
-    <div
-      @mousemove="moveOverviewCrossAndTime"
-      class="overview"
-      :style="{height: overviewHeight + 'px'}">
-      <div
-        @mousedown="startDragOverview"
-        ref="overview"
-        class="overview-waveform">
-        <svg
-          preserveAspectRatio="none"
-          :viewBox="`0 0 ${ overviewSvgWidth } 60`"
-          :width="overviewSvgWidth"
-          style="width: 100%"
-          height="60">
-          <line
-            v-for="i in (overviewSvgWidth / 10)"
-            :key="i"
-            stroke-width="1"
-            :stroke="settings.darkMode ? '#353535' : '#EEEEEE'"
-            stroke-linecap="round"
-            :x1="i * 10"
-            :x2="i * 10"
-            y1="20"
-            y2="40" />
-        </svg>
-      </div>
-      <triangle
-        down
-        class="overview-thumb"
-        tabindex="-1"
-        @mousedown="startDragOverview"
-        @mouseup="scrollFromOverview"
-        @contextmenu="scrollBothFromOverview"
-        :style="{
-          transform: `translateX(${ overviewThumbOffset }px) translateY(7px)`,
-          transition: transitionOverviewThumb ? '.25s' : 'unset'
-        }" />
-      <div
-        class="overview-cross"
-        ref="overviewCross"
-      />
-      <div
-        class="overview-time"
-        ref="overviewTime"
-        :style="{ width: overviewTimeWidth + 'px' }"
-      />
-    </div>
+        <div
+          @mousemove="moveOverviewCrossAndTime"
+          class="overview"
+          :style="{height: overviewHeight + 'px'}">
+          <div
+            @mousedown="startDragOverview"
+            ref="overview"
+            class="overview-waveform">
+            <svg
+              preserveAspectRatio="none"
+              :viewBox="`0 0 ${ overviewSvgWidth } 60`"
+              :width="overviewSvgWidth"
+              style="width: 100%"
+              height="60">
+              <line
+                v-for="i in (overviewSvgWidth / 10)"
+                :key="i"
+                stroke-width="1"
+                :stroke="settings.darkMode ? '#353535' : '#EEEEEE'"
+                stroke-linecap="round"
+                :x1="i * 10"
+                :x2="i * 10"
+                y1="20"
+                y2="40" />
+            </svg>
+          </div>
+          <triangle
+            down
+            class="overview-thumb"
+            tabindex="-1"
+            @mousedown="startDragOverview"
+            @mouseup="scrollFromOverview"
+            @contextmenu="scrollBothFromOverview"
+            :style="{
+              transform: `translateX(${ overviewThumbOffset }px) translateY(7px)`,
+              transition: transitionOverviewThumb ? '.25s' : 'unset'
+            }" />
+          <div class="overview-cross" ref="overviewCross" />
+          <div class="overview-time" ref="overviewTime" :style="{ width: overviewTimeWidth + 'px' }" />
+        </div>
         <slot name="overview" />
       </v-flex>
       <v-flex>
