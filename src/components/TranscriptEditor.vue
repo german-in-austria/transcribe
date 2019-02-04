@@ -31,7 +31,7 @@
     </v-flex>
     <v-flex class="tracks-outer pt-2">
       <div
-        @wheel="onMousewheel"
+        @wheel="handleMousewheel"
         ref="tracks"
         class="tracks"
         v-if="eventStore.events.length">
@@ -41,7 +41,7 @@
             :event="event"
             :key="event.eventId"
             :is-selected="isEventSelected(event.eventId)"
-            :class="['segment', (event.eventId in eventStore.selectedEventIds) && 'segment-selected']"
+            :class="['segment', isEventSelected(event.eventId) && 'segment-selected']"
             @scroll-to-event="(e) => $emit('scroll-to-event', e)"
             @element-unrender="(width) => handleUnrender(width, i, event.eventId)"
             @element-render="(width) => handleRender(width, i, event.eventId)"
@@ -86,9 +86,10 @@ export default class TranscriptEditor extends Vue {
   doScrollToEvent(e: LocalTranscriptEvent) {
     // right in the middle
     console.log({e})
-    const i = findSegmentById(e.eventId)
+    const i = findSegmentById(e.eventId) - Math.floor(defaultLimit / 2)
     console.log({i})
-    this.currentIndex = Math.max(0, i - Math.floor(this.visibleEvents.length / 2))
+    this.currentIndex = Math.max(0, i)
+    this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
     this.$nextTick(() => {
       requestAnimationFrame(() => {
         const el = this.$el.querySelector('.segment-selected')
@@ -170,7 +171,7 @@ export default class TranscriptEditor extends Vue {
     })
   }
 
-  onMousewheel(e: MouseWheelEvent) {
+  handleMousewheel(e: MouseWheelEvent) {
     e.preventDefault()
     this.lastScrollLeft = this.innerLeft
     this.innerLeft = this.innerLeft - (e.deltaX || e.deltaY) / (e.shiftKey === true ? 10 : 1)
