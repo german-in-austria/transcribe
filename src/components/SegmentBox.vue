@@ -3,7 +3,7 @@
     @click.exact.stop="selectEvent(event)"
     @mousedown.meta="addEventsToSelection([event])"
     @dblclick="playEvent(event)"
-    @keydown.meta.enter="scrollToTranscriptEvent(event)"
+    @keydown.enter="scrollToTranscriptEvent(event)"
     @keydown.right.stop.prevent="selectNextEvent()"
     @keydown.left.stop.prevent="selectPreviousEvent()"
     @keydown.space.stop.prevent="playEvent(event)"
