@@ -108,7 +108,7 @@
                 <v-list-tile-title>Show Transcript</v-list-tile-title>
               </v-list-tile-content>
               <v-list-tile-action>
-                ⌘&#9166;
+                &#9166;
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
@@ -133,6 +133,13 @@
           up
           class="transcript-scrollhandle"
           ref="transcriptScrollhandle" />
+        <div v-if="this.audioElement !== undefined" class="error-overview-container">
+          <div
+            v-for="(error) in errors"
+            :key="error.eventId"
+            class="error-overview"
+            :style="{ left: `${ error.startTime / audioElement.duration * 100}%` }" />
+        </div>
       </div>
     </wave-form>
     <transcript-editor
@@ -390,5 +397,14 @@ export default class Editor extends Vue {
   color #b7b7b7
   a
     cursor default !important
+
+.error-overview
+  top 18px
+  opacity 0.5
+  background #f00
+  width 2px
+  height 8px
+  position absolute
+  border-radius 2px
 
 </style>
