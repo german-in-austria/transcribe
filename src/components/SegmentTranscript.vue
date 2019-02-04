@@ -89,7 +89,15 @@ export default class SegmentTranscript extends Vue {
   border-radius 10px
   &.error
     color white
+
 .selected .time
   background cornflowerblue
   color white
+
+.speaker-segment
+  border-bottom 1px solid rgba(255,255,255,.1)
+  height 25px
+
+.speaker-segment:last-child
+  border-bottom 0
 </style>
