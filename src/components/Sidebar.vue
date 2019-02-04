@@ -11,17 +11,26 @@
         <v-list-tile
           :key="i"
           v-for="(action, i) in history"
-          @click="showEventIfExists(action.event)">
+          @click="showEventIfExists(action.events[0])">
           <v-list-tile-avatar>
-            <v-icon v-if="action.type === 'RESIZE'">aspect_ratio</v-icon>
+            <v-icon v-if="action.type === 'RESIZE'">swap_horiz</v-icon>
             <v-icon v-if="action.type === 'DELETE'">delete_forever</v-icon>
             <v-icon v-if="action.type === 'ADD'">add_circle_outline</v-icon>
-            <v-icon v-if="action.type === 'CHANGE_TOKENS'">format_color_text</v-icon>
+            <v-icon v-if="action.type === 'CHANGE_TOKENS'">edit</v-icon>
+            <v-icon v-if="action.type === 'JOIN'">merge_type</v-icon>
           </v-list-tile-avatar>
           <v-list-tile-content v-if="action.type === 'RESIZE'">
             <v-list-tile-title class="history-title">resize segment</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
-              <div class="inner" :key="i" v-for="(se, i) in action.event.speakerEvents">
+              <div class="inner" :key="i" v-for="(se, i) in action.events[0].speakerEvents">
+                {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
+              </div>
+            </v-list-tile-sub-title>
+          </v-list-tile-content>
+          <v-list-tile-content v-if="action.type === 'JOIN'">
+            <v-list-tile-title class="history-title">join segments</v-list-tile-title>
+            <v-list-tile-sub-title class="subtitle">
+              <div class="inner" :key="i" v-for="(se, i) in action.events[0].speakerEvents">
                 {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
               </div>
             </v-list-tile-sub-title>
@@ -29,7 +38,7 @@
           <v-list-tile-content v-else-if="action.type === 'DELETE'">
             <v-list-tile-title class="history-title">delete segment</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
-              <div class="inner" :key="i" v-for="(se, i) in action.event.speakerEvents">
+              <div class="inner" :key="i" v-for="(se, i) in action.events[0].speakerEvents">
                 {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
               </div>
             </v-list-tile-sub-title>
@@ -37,7 +46,7 @@
           <v-list-tile-content v-else-if="action.type === 'ADD'">
             <v-list-tile-title class="history-title">add segment</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
-              <div class="inner" :key="i" v-for="(se, i) in action.event.speakerEvents">
+              <div class="inner" :key="i" v-for="(se, i) in action.events[0].speakerEvents">
                 {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
               </div>
             </v-list-tile-sub-title>
@@ -45,7 +54,7 @@
           <v-list-tile-content v-else-if="action.type === 'CHANGE_TOKENS'">
             <v-list-tile-title class="history-title">update transcript</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
-              <div class="inner" :key="i" v-for="(se, i) in action.event.speakerEvents">
+              <div class="inner" :key="i" v-for="(se, i) in action.events[0].speakerEvents">
                 {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
               </div>
             </v-list-tile-sub-title>

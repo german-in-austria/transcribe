@@ -92,9 +92,15 @@
               <v-list-tile-content>
                 <v-list-tile-title>Split</v-list-tile-title>
               </v-list-tile-content>
-              <v-list-tile-action>
-                ⌘S
-              </v-list-tile-action>
+              <v-list-tile-action>S</v-list-tile-action>
+            </v-list-tile>
+            <v-list-tile
+              :disabled="eventStore.selectedEventIds.length < 2"
+              @click="joinSelectedEvents">
+              <v-list-tile-content>
+                <v-list-tile-title>Join</v-list-tile-title>
+              </v-list-tile-content>
+              <v-list-tile-action>J</v-list-tile-action>
             </v-list-tile>
             <v-list-tile
               @click="scrollToTranscriptEvent(getSelectedEvent())">
@@ -165,7 +171,8 @@ import {
   findSegmentAt,
   selectNextEvent,
   selectPreviousEvent,
-  scrollToTranscriptEvent
+  scrollToTranscriptEvent,
+  joinSelectedEvents
 } from '@store/transcript'
 
 @Component({
@@ -192,6 +199,7 @@ export default class Editor extends Vue {
   findSegmentAt = findSegmentAt
   playEvent = playEvent
   getSelectedEvent = getSelectedEvent
+  joinSelectedEvents = joinSelectedEvents
 
   // TODO: percentages are impractical. use pixels
   segmentBufferPercent = .01
@@ -201,7 +209,6 @@ export default class Editor extends Vue {
   scrollToEvent: LocalTranscriptEvent|null = null
   segmentPlayingTimeout: any = null
   scrollToSecond: number|null = null
-
   scrollTranscriptIndex: number = 0
 
   isSpectrogramVisible = false
@@ -266,9 +273,8 @@ export default class Editor extends Vue {
         this.splitSegment(event, splitAt)
       }
     } else if (e.key === 'Backspace') {
-      if (this.eventStore.selectedEventIds.length === 1) {
-        deleteEventById(this.eventStore.selectedEventIds[0])
-      }
+      this.eventStore.selectedEventIds.forEach(deleteEventById)
+      this.eventStore.selectedEventIds = []
     }
   }
 

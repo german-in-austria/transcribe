@@ -1,6 +1,6 @@
 <template>
   <div
-    @mousedown.exact="selectEvent(event)"
+    @click.exact.stop="selectEvent(event)"
     @mousedown.meta="addEventsToSelection([event])"
     @dblclick="playEvent(event)"
     @keydown.meta.enter="scrollToTranscriptEvent(event)"
