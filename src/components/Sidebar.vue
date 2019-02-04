@@ -130,6 +130,7 @@ export default class Sidebar extends Vue {
   height 19px
   
 .subtitle
+  height 18px
   font-size 11px
 
 .undo-btn
