@@ -303,7 +303,7 @@ function getEventsByIds(ids: number[]): LocalTranscriptEvent[] {
 
 function replaceEvents(oldEvents: LocalTranscriptEvent[], newEvents: LocalTranscriptEvent[]) {
   const startIndex = findSegmentById(oldEvents[0].eventId)
-  const numDeletions = oldEvents.length - 1
+  const numDeletions = oldEvents.length
   eventStore.events.splice(startIndex, numDeletions, ...newEvents)
 }
 
