@@ -97,7 +97,13 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   commit() {
-    if (!isEqualDeep(this.localTokens, this.event.speakerEvents[this.speaker].tokens)) {
+    if (
+      // it exists
+      this.event.speakerEvents[this.speaker] &&
+      // it changed
+      !isEqualDeep(this.localTokens, this.event.speakerEvents[this.speaker].tokens)
+    ) {
+      // perform update
       updateSpeakerTokens(this.localEvent, this.speaker, this.localTokens)
     } else {
       // nothing to update
