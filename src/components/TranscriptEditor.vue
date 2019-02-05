@@ -6,7 +6,8 @@
           close-delay="500"
           close-on-content-click
           transition="fade-transition"
-          right offset-x
+          right
+          offset-x
           nudge-right="12"
           nudge-top="5">
           <div slot="activator" class="speaker-name">

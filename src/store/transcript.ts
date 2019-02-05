@@ -144,7 +144,7 @@ export function makeEventId() {
 }
 
 export function makeTokenId() {
-  return makeEventId()
+  return Number(_.uniqueId()) * -1
 }
 
 export function findSegmentById(id: number) {

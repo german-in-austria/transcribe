@@ -262,15 +262,15 @@ export function playBuffer(buffer: AudioBuffer, start = 0, offset?: number, dura
 }
 
 async function drawSpectrogramAsync(buffer: AudioBuffer, width: number, height: number): Promise<HTMLCanvasElement> {
-  const b = sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
+  const monoBuffer = sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
   const [f, i] = await getFrequenciesWorker.postMessage({
     fftSamples: 2048,
-    buffer: b,
+    buffer: monoBuffer,
     length: buffer.length,
     sampleRate: buffer.sampleRate,
     width,
     gradient: settings.spectrogramGradient
-  }, [ b ])
+  }, [ monoBuffer ])
 
   const canvas = document.createElement('canvas')
   canvas.width = width
@@ -284,8 +284,8 @@ async function drawSpectrogramAsync(buffer: AudioBuffer, width: number, height: 
   // ctx.scale(1, height / (i as ImageData).height)
   ctx.scale(1, height / i.height)
   ctx.drawImage(fakeCanvas, 0, 0)
-  console.log(f.length)
-  console.log(f[0].length)
+  // console.log(f.length)
+  // console.log(f[0].length)
   return canvas
 }
 
@@ -307,19 +307,12 @@ async function drawWavePathAsync(
 ): Promise<string> {
   const buf = (() => {
     if (mono === true) {
-      return sumChannels(
-        buffer.getChannelData(0),
-        buffer.getChannelData(1)
-      ).buffer
+      return sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
     } else {
       return buffer.getChannelData(channel).buffer
     }
   })()
-  const options = textEncoder.encode(JSON.stringify({
-    width,
-    height,
-    offsetLeft
-  })).buffer
+  const options = textEncoder.encode(JSON.stringify({ width, height, offsetLeft})).buffer
   return await waveformWorker.postMessage({ buffer: buf, options }, [ buf, options ])
 }
 
