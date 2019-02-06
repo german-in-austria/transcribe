@@ -4,8 +4,6 @@
     @mousedown.meta="addEventsToSelection([event])"
     @dblclick="playEvent(event)"
     @keydown.enter="scrollToTranscriptEvent(event)"
-    @keydown.right.stop.prevent="selectNextEvent()"
-    @keydown.left.stop.prevent="selectPreviousEvent()"
     @keydown.space.stop.prevent="playEvent(event)"
     tabindex="-1"
     :class="[ 'segment', isEventSelected(event.eventId) ? 'selected' : '' ]"
@@ -58,8 +56,6 @@ export default class SegmentBox extends Vue {
   selectEvent = selectEvent
   addEventsToSelection = addEventsToSelection
   eventStore = eventStore
-  selectNextEvent = selectNextEvent
-  selectPreviousEvent = selectPreviousEvent
   isEventSelected = isEventSelected
   playEvent = playEvent
 
@@ -110,7 +106,7 @@ export default class SegmentBox extends Vue {
   will-change width left
   transform-origin 0 0
   user-select none
-  &.selected, &:focus
+  &.selected
     z-index 1
     border: 2px solid cornflowerblue
     box-shadow 0 0 50px rgba(0,0,0,.4)

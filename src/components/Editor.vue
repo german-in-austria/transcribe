@@ -44,7 +44,7 @@
     <wave-form
       tabindex="-1"
       class="no-outline"
-      @keyup.native="handleKey"
+      @keydown.native="handleKey"
       @change-metadata="changeMetadata"
       @scroll="handleScroll"
       @add-segment="addSegment"
@@ -60,12 +60,12 @@
         v-if="settings.showSegmentBoxes"
         class="absolute">
         <segment-box
-          v-for="(event, key) in visibleEvents"
+          v-for="(event, i) in visibleEvents"
           :key="event.eventId"
           @contextmenu.native.stop.prevent="doShowMenu"
           :event="event"
-          :previous-segment="visibleEvents[key - 1]"
-          :next-segment="visibleEvents[key + 1]"
+          :previous-event="visibleEvents[i - 1]"
+          :next-event="visibleEvents[i + 1]"
           :pixels-per-second="pixelsPerSecond">
         </segment-box>
         <v-menu
@@ -282,6 +282,23 @@ export default class Editor extends Vue {
     } else if (e.key === 'Backspace') {
       this.eventStore.selectedEventIds.forEach(deleteEventById)
       this.eventStore.selectedEventIds = []
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.key === 'ArrowRight') {
+        // const oldFocusEl = document.activeElement as HTMLElement
+        selectNextEvent()
+        // this.$nextTick(() => oldFocusEl.focus())
+      } else {
+        selectPreviousEvent()
+      }
+      this.$nextTick(() => {
+        setTimeout(() => {
+          const el = (document.querySelector('.segment.selected') as HTMLElement)
+          // el.scrollIntoView({ behavior: 'smooth' })
+          el.focus()
+        }, 0)
+      })
     }
   }
 
