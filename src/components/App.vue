@@ -39,6 +39,15 @@
               dense
               subheader
               two-line>
+              <v-list-tile
+                disabled
+                @click="initializeEmptyTranscript()">
+                <v-list-tile-content>
+                  <v-list-tile-title>
+                    Create new Transcript
+                  </v-list-tile-title>
+                </v-list-tile-content>
+              </v-list-tile>
               <v-subheader>
                 Pick a Transcript
               </v-subheader>
@@ -65,7 +74,7 @@
           </v-flex>
         </v-layout>
         <v-layout
-          v-if="eventStore.status !== 'empty' && audioElement !== null"
+          v-if="eventStore.status !== 'empty'"
           class="max-width"
           justify-center>
           <v-flex xs12>
@@ -159,7 +168,6 @@ export default class App extends Vue {
   onFileDrop(formData: FormData, files: FileList) {
     console.log(files[0].type)
     _(files).forEach(file => {
-      console.log(JSON.stringify(file))
       if (this.isAudio(file)) {
         const x = URL.createObjectURL(file)
         this.eventStore.metadata.audioUrl = x
@@ -189,6 +197,10 @@ export default class App extends Vue {
         console.log('unsupported file type', file)
       }
     })
+  }
+
+  initializeEmptyTranscript() {
+    this.eventStore.status = 'new'
   }
 
   async loadTranscript(pk: number) {

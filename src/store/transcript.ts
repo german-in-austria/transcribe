@@ -128,7 +128,7 @@ export const eventStore = {
     viewingTranscriptEvent: null as LocalTranscriptEvent|null,
     viewingAudioEvent: null as LocalTranscriptEvent|null
   },
-  status: 'empty' as 'empty'|'loading'|'finished'
+  status: 'empty' as 'empty'|'loading'|'finished'|'new'
 }
 
 export function scrollToAudioEvent(e: LocalTranscriptEvent) {

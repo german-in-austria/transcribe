@@ -86,9 +86,7 @@ export default class TranscriptEditor extends Vue {
   @Watch('userState.viewingTranscriptEvent')
   doScrollToEvent(e: LocalTranscriptEvent) {
     // right in the middle
-    console.log({e})
     const i = findSegmentById(e.eventId) - Math.floor(defaultLimit / 2)
-    console.log({i})
     this.currentIndex = Math.max(0, i)
     this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
     this.$nextTick(() => {
@@ -163,8 +161,8 @@ export default class TranscriptEditor extends Vue {
     this.$nextTick(() => {
       requestAnimationFrame(() => {
         if (
-          (this.innerLeft <= -1500 || this.innerLeft >= -200)
-          && (this.currentIndex > 0 && this.currentIndex + defaultLimit + 1 < this.eventStore.events.length)
+          (this.innerLeft <= -1500 || this.innerLeft >= -200) &&
+          (this.currentIndex > 0 && this.currentIndex + defaultLimit + 1 < this.eventStore.events.length)
         ) {
           this.updateList(leftToRight)
         }
