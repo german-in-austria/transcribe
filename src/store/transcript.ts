@@ -278,9 +278,10 @@ export async function playEvent(event: LocalTranscriptEvent) {
     if (buffer !== undefined) {
       requestAnimationFrame(() => {
         eventStore.playingEvent = event
-        audio.playBuffer(buffer).addEventListener('ended', (e: Event) => {
-          eventStore.playingEvent = null
-        })
+        audio.playBuffer(buffer, audio.store.playbackRate)
+          .addEventListener('ended', (e: Event) => {
+            eventStore.playingEvent = null
+          })
       })
     }
   }

@@ -18,6 +18,7 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import { eventStore } from '../store/transcript'
+import audio from '../service/audio'
 
 @Component
 export default class PlayHead extends Vue {
@@ -26,6 +27,7 @@ export default class PlayHead extends Vue {
   @Prop() audioElement: HTMLAudioElement
   @Prop() posX: number
 
+  audioStore = audio.store
   eventStore = eventStore
   left = 10
   transition = 'unset'
@@ -35,7 +37,7 @@ export default class PlayHead extends Vue {
     const s = this.eventStore.playingEvent
     if (s !== null) {
       this.transition = 'unset'
-      const playbackTimeInSeconds = (s.endTime - s.startTime) * (1 / this.audioElement.playbackRate)
+      const playbackTimeInSeconds = (s.endTime - s.startTime) * (1 / (this.audioStore.playbackRate / 100))
       requestAnimationFrame(() => {
         this.left = s.startTime * this.pixelsPerSecond
         requestAnimationFrame(() => {

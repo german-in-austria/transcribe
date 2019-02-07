@@ -50,6 +50,7 @@ let   sampleRate: number|null           = null
 let   metadata: AudioMetaData|null      = null
 const isBufferComplete                  = false
 let   oggHeaderBuffer: ArrayBuffer|null = null
+const playbackRate                      = 100
 
 function readU4le(dataView: DataView, i: number) {
   return dataView.byteLength > i + 32 ? dataView.getUint32(i, true) : null
@@ -242,16 +243,15 @@ function findOggPages(from: number, to: number, pages: OggIndex['pages']) {
 //   }
 // }
 
-export function playBuffer(buffer: AudioBuffer, start = 0, offset?: number, duration?: number, speed = 1) {
+export function playBuffer(buffer: AudioBuffer, speed = 100, start = 0, offset?: number, duration?: number) {
   const src = audio.store.audioContext.createBufferSource()
-  if (speed !== 1) {
+  if (speed !== 100) {
     const wav = audio.audioBufferToWav(buffer)
     const blob = new Blob([new Uint8Array(wav)])
     localAudioElement.src = URL.createObjectURL(blob)
-    localAudioElement.playbackRate = speed
+    localAudioElement.playbackRate = speed / 100
     localAudioElement.crossOrigin = 'anonymous'
     localAudioElement.play()
-    // TODO: remove audio element
     return src
   } else {
     src.buffer = buffer
@@ -593,7 +593,8 @@ const audio = {
     oggHeaderBuffer,
     oggHeaders,
     oggPages,
-    uint8Buffer
+    uint8Buffer,
+    playbackRate
   },
   audioBufferToWav,
   cacheOggIndex,

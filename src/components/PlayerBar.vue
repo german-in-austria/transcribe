@@ -12,7 +12,7 @@
               :max="100"
               thumb-label
               dark
-              v-model="playbackRate" />
+              v-model="audioStore.playbackRate" />
             Playback Speed
           </div>
         </v-flex>
@@ -48,6 +48,7 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '@store/settings'
+import audio from '../service/audio'
 
 @Component
 export default class PlayerBar extends Vue {
@@ -56,7 +57,7 @@ export default class PlayerBar extends Vue {
 
   isPaused = true
   currentTime = this.audioElement.currentTime
-  playbackRate = 100
+  audioStore = audio.store
   volume = 100
   settings = settings
 
@@ -75,6 +76,7 @@ export default class PlayerBar extends Vue {
 
   setPlaybackRate(rate: number) {
     this.audioElement.playbackRate = rate / 100
+    console.log(this.audioElement)
   }
 
   @Watch('volume')
