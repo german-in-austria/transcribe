@@ -229,7 +229,7 @@ export default class Waveform extends Vue {
   }
 
   handleScroll(e: Event) {
-    this.$emit('scroll', e)
+    this.$emit('scroll', e, (this.$refs.svgContainer as any).scrollWidth / this.pixelsPerSecond)
     this.updateSecondsMarkers()
     this.doMaybeRerender()
     this.updateOverviewThumb()
@@ -505,11 +505,11 @@ export default class Waveform extends Vue {
     ])
     requestAnimationFrame(() => {
       const el = (this.$el.querySelector('.overview-waveform svg') as HTMLElement);
+      const oldHTML = el.innerHTML
       el.innerHTML = `
-        ${el.innerHTML}
-        <path fill="${ settings.waveFormColors[0] }" d="${svg1}" />
-        <path fill="${ settings.waveFormColors[1] }" d="${svg2}" />
-      `
+        ${ oldHTML }
+        <path fill="${ settings.waveFormColors[0] }" d="${ svg1 }" />
+        <path fill="${ settings.waveFormColors[1] }" d="${ svg2 }" />`
     })
   }
 

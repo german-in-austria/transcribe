@@ -59,7 +59,8 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SegmentTranscript from '@components/SegmentTranscript.vue'
 import settings from '@store/settings'
 import * as _ from 'lodash'
-import { eventStore, LocalTranscriptEvent, isEventSelected, findSegmentById } from '@store/transcript'
+// tslint:disable-next-line:max-line-length
+import { eventStore, LocalTranscriptEvent, isEventSelected, findSegmentById, findSegmentAt, findSegmentIndexAt } from '@store/transcript'
 
 const defaultLimit = 20
 
@@ -71,6 +72,8 @@ const defaultLimit = 20
 export default class TranscriptEditor extends Vue {
 
   @Prop({ default: 0 }) scrollToIndex: number
+  @Prop() pixelsPerSecond: number
+  @Prop({ default: 0 }) scrollToTime: number
 
   eventStore = eventStore
   userState = eventStore.userState
@@ -110,8 +113,45 @@ export default class TranscriptEditor extends Vue {
     // this.emitScroll()
   }
 
+  @Watch('scrollToTime')
+  async onScrollToSecond(seconds: number) {
+    // const i = findSegmentIndexAt(seconds)
+    // // const event = this.eventStore.events[i]
+    // if (i !== undefined) {
+    //   if (i !== this.currentIndex) {
+    //     this.visibleEvents = this.eventStore.events.slice(i, i + defaultLimit)
+    //     this.currentIndex = i
+    //     await this.$nextTick()
+    //   }
+    //   const [ firstVisibleEvent, innerOffset, width ] = this.findFirstVisibleEventAndDimensions()
+    //   const eventLength = firstVisibleEvent.endTime - firstVisibleEvent.startTime
+    //   const progressFactor = (firstVisibleEvent.startTime - seconds) / eventLength
+    //   const offsetLeft = width * progressFactor
+    //   console.log({offsetLeft, progressFactor, i})
+    //   this.innerLeft = offsetLeft
+    // }
+  }
+
+  findFirstVisibleEventAndDimensions(): [LocalTranscriptEvent, number, number] {
+    let innerOffset = 0
+    let width = 0
+    const nodeList = Array.from(this.$el.querySelectorAll('.segment') as NodeListOf<HTMLElement>)
+    const firstVisibleIndex = nodeList.findIndex((v, i) => {
+      innerOffset = this.innerLeft * -1 - v.offsetLeft
+      width = v.clientWidth
+      return v.offsetLeft + v.offsetWidth > this.innerLeft * -1
+    })
+    const firstVisibleEvent = this.visibleEvents[firstVisibleIndex]
+    return [ firstVisibleEvent, innerOffset, width ]
+  }
+
   emitScroll() {
-    this.$emit('scroll', this.visibleEvents[Math.floor(this.visibleEvents.length / 2)].startTime)
+    const [firstVisibleEvent, innerOffset, width] = this.findFirstVisibleEventAndDimensions()
+    const eventLength = firstVisibleEvent.endTime - firstVisibleEvent.startTime
+    const progressFactor = innerOffset / width
+    const progress = progressFactor * eventLength
+    // console.log(currentEvent.startTime + progress, progress)
+    this.$emit('scroll', firstVisibleEvent.startTime + progress)
   }
 
   handleRender(width: number, index: number, segment_id: string) {
@@ -144,7 +184,6 @@ export default class TranscriptEditor extends Vue {
         this.visibleEvents.push(this.eventStore.events[this.currentIndex + defaultLimit + 1])
         const unrendered = this.visibleEvents.shift()
         this.currentIndex = this.currentIndex + 1
-        this.emitScroll()
       }
     } else {
       // SCROLL RIGHT TO LEFT
@@ -152,7 +191,6 @@ export default class TranscriptEditor extends Vue {
         this.visibleEvents.unshift(this.eventStore.events[this.currentIndex - 1])
         const unrendered = this.visibleEvents.pop()
         this.currentIndex = this.currentIndex - 1
-        this.emitScroll()
       }
     }
     // WAIT FOR THE ELEMENT TO RENDER,
@@ -172,6 +210,7 @@ export default class TranscriptEditor extends Vue {
 
   handleMousewheel(e: MouseWheelEvent) {
     e.preventDefault()
+    this.emitScroll()
     this.lastScrollLeft = this.innerLeft
     this.innerLeft = this.innerLeft - (e.deltaX || e.deltaY) / (e.shiftKey === true ? 10 : 1)
     this.throttledRenderer(this.innerLeft <= this.lastScrollLeft)

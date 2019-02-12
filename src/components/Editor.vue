@@ -143,8 +143,10 @@
       </div>
     </wave-form>
     <transcript-editor
+      :pixels-per-second="pixelsPerSecond"
       @scroll="handleTranscriptScroll"
       @scroll-to-event="(e) => scrollToEvent = e"
+      :scroll-to-time="scrollTranscriptTime"
       :scroll-to-index="scrollTranscriptIndex"/>
   </div>
 </template>
@@ -217,6 +219,7 @@ export default class Editor extends Vue {
   segmentPlayingTimeout: any = null
   scrollToSecond: number|null = null
   scrollTranscriptIndex: number = 0
+  scrollTranscriptTime: number = 0
 
   isSpectrogramVisible = false
   spectrogramEvent: LocalTranscriptEvent|null = null
@@ -337,7 +340,10 @@ export default class Editor extends Vue {
       .value()
   }
 
-  handleScroll(e: Event) {
+  handleScroll(e: MouseEvent, time?: number) {
+    if (this.settings.lockScroll && time) {
+      this.scrollTranscriptTime = time
+    }
     if (this.eventStore.playingEvent === null) {
       requestAnimationFrame(() => {
         const el = (e.target as HTMLElement)

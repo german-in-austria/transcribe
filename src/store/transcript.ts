@@ -248,9 +248,11 @@ export function splitSegment(event: LocalTranscriptEvent, splitAt: number): Loca
 }
 
 export function findSegmentAt(seconds: number): LocalTranscriptEvent|undefined {
-  return _(eventStore.events).find((e) => {
-    return e.startTime <= seconds && e.endTime >= seconds
-  })
+  return _(eventStore.events).find((e) => e.startTime <= seconds && e.endTime >= seconds)
+}
+
+export function findSegmentIndexAt(seconds: number): number {
+  return _(eventStore.events).findIndex((e) => e.startTime <= seconds && e.endTime >= seconds)
 }
 
 export function deleteEventById(id: number) {

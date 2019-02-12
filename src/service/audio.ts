@@ -8,6 +8,7 @@ import settings from '../store/settings'
 import * as PromiseWorker from 'promise-worker-transferable'
 import WaveformWorker from './waveform.worker'
 const waveformWorker = new PromiseWorker(new WaveformWorker(''))
+const waveformWorker2 = new PromiseWorker(new WaveformWorker(''))
 // import MultiWorker from '../lib/worker-loader'
 // const waveformWorkerPar = new MultiWorker(new WaveformWorker(''))
 import GetFrequenciesWorker from './get-frequencies.worker'
@@ -313,7 +314,11 @@ async function drawWavePathAsync(
     }
   })()
   const options = textEncoder.encode(JSON.stringify({ width, height, offsetLeft})).buffer
-  return await waveformWorker.postMessage({ buffer: buf, options }, [ buf, options ])
+  if (channel === 0) {
+    return await waveformWorker.postMessage({ buffer: buf, options }, [ buf, options ])
+  } else {
+    return await waveformWorker2.postMessage({ buffer: buf, options }, [ buf, options ])
+  }
 }
 
 // let wasmModule: any
@@ -526,10 +531,12 @@ async function getAudioMetadata(url: string): Promise<AudioMetaData> {
 
 async function downloadAudioStream({
     url,
+    chunkSize = 2048 * 1024,
     onStart,
     onProgress
   }: {
     url: string,
+    chunkSize?: number,
     onStart: (metadata: any) => any,
     onProgress: (chunk: AudioBuffer, from: number, to: number) => any
   }
@@ -544,7 +551,7 @@ async function downloadAudioStream({
       reader.read().then(async function process(chunk: {value: Uint8Array, done: boolean}): Promise<any> {
         if (chunk.value && chunk.value.buffer instanceof ArrayBuffer) {
           [ preBuffer ] = await util.concatUint8ArrayAsync(preBuffer, chunk.value)
-          if (preBuffer.byteLength > 1024 * 1024) {
+          if (preBuffer.byteLength > chunkSize) {
             const {headers, pages} = await audio.getOggIndexAsync(preBuffer.buffer)
             const buffers = await util.concatUint8ArrayAsync(audio.store.uint8Buffer, preBuffer)
             audio.store.uint8Buffer = buffers[0]

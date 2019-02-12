@@ -13,7 +13,6 @@
         {{ eventStore.metadata.speakers[i].k }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
       </div>
     </div>
-    <!-- <slot :segment="segment" /> -->
     <resize-parent
       v-if="isEventSelected(event.eventId)"
       class="resizer"
@@ -58,13 +57,12 @@ export default class SegmentBox extends Vue {
   eventStore = eventStore
   isEventSelected = isEventSelected
   playEvent = playEvent
+  width = (Number(this.event.endTime) - Number(this.event.startTime)) * this.pixelsPerSecond
+  // get width(): number {
+  //   return
+  // }
+  offset = Number(this.event.startTime) * this.pixelsPerSecond
 
-  get width(): number {
-    return (Number(this.event.endTime) - Number(this.event.startTime)) * this.pixelsPerSecond
-  }
-  get offset(): number {
-    return Number(this.event.startTime) * this.pixelsPerSecond
-  }
   deleteEvent(segment: Event) {
     this.$emit('delete-event', event)
   }
