@@ -127,7 +127,7 @@ import triangle from '@components/Triangle.vue'
 import settings from '../store/settings'
 import audio, { OggIndex } from '../service/audio'
 import * as util from '../util'
-import { eventStore, findSegmentAt, LocalTranscriptEvent, scrollToTranscriptEvent } from '../store/transcript'
+import { eventStore, findSegmentAt, LocalTranscriptEvent, scrollToTranscriptEvent, toTime } from '../store/transcript'
 
 const queue = new Queue({
   concurrency: 1,
@@ -157,6 +157,7 @@ export default class Waveform extends Vue {
   // bind stores
   settings = settings
   userState = eventStore.userState
+  toTime = toTime
 
   // state
   pixelsPerSecond = this.initialPixelsPerSecond // copied on init, not bound.
@@ -233,11 +234,6 @@ export default class Waveform extends Vue {
     this.updateSecondsMarkers()
     this.doMaybeRerender()
     this.updateOverviewThumb()
-  }
-
-  toTime(time: number) {
-    // seconds to readable time
-    return new Date(time * 1000).toISOString().substr(11, 8)
   }
 
   updateSecondsMarkers() {

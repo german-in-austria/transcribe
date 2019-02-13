@@ -381,7 +381,7 @@ export function addEventsToSelection(es: LocalTranscriptEvent[]) {
 
 export function removeEventsFromSelection(es: LocalTranscriptEvent[]) {
   const eIds = es.map(e => e.eventId)
-  eventStore.selectedEventIds = eventStore.selectedEventIds.filter((e) => eIds.indexOf(e) === -1)
+  eventStore.selectedEventIds = eventStore.selectedEventIds.filter((eId) => eIds.indexOf(eId) === -1)
 }
 
 export function getSelectedEvent(): LocalTranscriptEvent|undefined {

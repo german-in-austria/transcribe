@@ -48,6 +48,7 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
 // tslint:disable-next-line:max-line-length
 import { eventStore, LocalTranscriptEvent, scrollToAudioEvent, scrollToTranscriptEvent, selectEvent } from '@store/transcript'
+import { toTime } from '@store/transcript'
 
 @Component
 export default class Search extends Vue {
@@ -57,6 +58,7 @@ export default class Search extends Vue {
   searchTerm = ''
   results: any = []
   eventStore = eventStore
+  toTime = toTime
 
   handleSearch(e: string) {
     this.searchTerm = e.toLowerCase().trim()
@@ -92,9 +94,6 @@ export default class Search extends Vue {
         i.focus()
       }
     })
-  }
-  toTime(time: number) {
-    return new Date(time * 1000).toISOString().substr(11, 8)
   }
   openItem(e: LocalTranscriptEvent) {
     scrollToAudioEvent(e)

@@ -34,7 +34,8 @@ import {
   addEventsToSelection,
   playEvent,
   scrollToAudioEvent,
-  speakerEventHasErrors
+  speakerEventHasErrors,
+  toTime
 } from '../store/transcript'
 
 @Component({
@@ -52,6 +53,7 @@ export default class SegmentTranscript extends Vue {
   deleteSelectedEvents = deleteSelectedEvents
   addEventsToSelection = addEventsToSelection
   playEvent = playEvent
+  toTime = toTime
 
   mounted() {
     this.offsetWidth = this.$el.offsetWidth + 1
@@ -66,9 +68,6 @@ export default class SegmentTranscript extends Vue {
     this.$emit('element-unrender', this.offsetWidth)
   }
 
-  toTime(time: number) {
-    return new Date(time * 1000).toISOString().substr(11, 8)
-  }
   selectAndScrollToEvent(e: LocalTranscriptEvent) {
     scrollToAudioEvent(e)
     selectEvent(e)
