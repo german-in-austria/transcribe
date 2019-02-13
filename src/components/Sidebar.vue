@@ -1,5 +1,5 @@
 <template>
-  <v-tabs hide-slider class="history layout fill-height column" height="64" grow v-model="activeTab">
+  <v-tabs hide-slider class="sidebar layout fill-height column" height="64" grow v-model="activeTab">
     <v-tab ripple>History</v-tab>
     <v-tab ripple>
       <v-badge :value="errors.length > 0" color="grey">
@@ -7,65 +7,7 @@
       </v-badge>
       </v-tab>
     <v-tab-item>
-      <v-list v-if="history.length > 0" dense>
-        <v-list-tile
-          :key="i"
-          v-for="(action, i) in history"
-          @click="showEventIfExists(action.events[0])">
-          <v-list-tile-avatar>
-            <v-icon v-if="action.type === 'RESIZE'">swap_horiz</v-icon>
-            <v-icon v-if="action.type === 'DELETE'">delete_forever</v-icon>
-            <v-icon v-if="action.type === 'ADD'">add_circle_outline</v-icon>
-            <v-icon v-if="action.type === 'CHANGE_TOKENS'">edit</v-icon>
-            <v-icon v-if="action.type === 'JOIN'">merge_type</v-icon>
-          </v-list-tile-avatar>
-          <v-list-tile-content v-if="action.type === 'RESIZE'">
-            <v-list-tile-title class="history-title">resize segment</v-list-tile-title>
-            <v-list-tile-sub-title class="subtitle">
-              <div class="inner" :key="i" v-for="(se, i) in action.events[0].speakerEvents">
-                {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
-              </div>
-            </v-list-tile-sub-title>
-          </v-list-tile-content>
-          <v-list-tile-content v-if="action.type === 'JOIN'">
-            <v-list-tile-title class="history-title">join segments</v-list-tile-title>
-            <v-list-tile-sub-title class="subtitle">
-              <div class="inner" :key="i" v-for="(se, i) in action.events[0].speakerEvents">
-                {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
-              </div>
-            </v-list-tile-sub-title>
-          </v-list-tile-content>
-          <v-list-tile-content v-else-if="action.type === 'DELETE'">
-            <v-list-tile-title class="history-title">delete segment</v-list-tile-title>
-            <v-list-tile-sub-title class="subtitle">
-              <div class="inner" :key="i" v-for="(se, i) in action.events[0].speakerEvents">
-                {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
-              </div>
-            </v-list-tile-sub-title>
-          </v-list-tile-content>
-          <v-list-tile-content v-else-if="action.type === 'ADD'">
-            <v-list-tile-title class="history-title">add segment</v-list-tile-title>
-            <v-list-tile-sub-title class="subtitle">
-              <div class="inner" :key="i" v-for="(se, i) in action.events[0].speakerEvents">
-                {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
-              </div>
-            </v-list-tile-sub-title>
-          </v-list-tile-content>
-          <v-list-tile-content v-else-if="action.type === 'CHANGE_TOKENS'">
-            <v-list-tile-title class="history-title">update transcript</v-list-tile-title>
-            <v-list-tile-sub-title class="subtitle">
-              <div class="inner" :key="i" v-for="(se, i) in action.events[0].speakerEvents">
-                {{ i }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
-              </div>
-            </v-list-tile-sub-title>
-          </v-list-tile-content>
-          <v-list-tile-action>
-            <v-btn icon @click="" class="undo-btn">
-              <v-icon>undo</v-icon>
-            </v-btn>
-          </v-list-tile-action>
-        </v-list-tile>
-      </v-list>
+      <edit-history v-if="history.length > 0" />
       <div v-else class="text-xs-center grey--text mt-4">
         <small>Edits will appear here.</small>
       </div>
@@ -89,6 +31,7 @@
 </template>
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import editHistory from './EditHistory.vue'
 
 import {
   history,
@@ -100,7 +43,11 @@ import {
   speakerEventHasErrors
 } from '../store/transcript'
 
-@Component
+@Component({
+  components: {
+    editHistory
+  }
+})
 export default class Sidebar extends Vue {
 
   @Prop() errors: LocalTranscriptEvent[]
@@ -120,23 +67,19 @@ export default class Sidebar extends Vue {
 }
 </script>
 <style lang="stylus">
-.history
+.sidebar
   .tabs__items
     overflow-y scroll
-</style>
+  .title
+    height 19px
+    
+  .subtitle
+    height 18px
+    font-size 11px
 
-<style lang="stylus" scoped>
-.history-title
-  height 19px
-  
-.subtitle
-  height 18px
-  font-size 11px
+  .undo-btn
+    opacity 0
 
-.undo-btn
-  opacity 0
-
-.tile:hover .undo-btn
-  opacity 1
-
+  .tile:hover .undo-btn
+    opacity 1
 </style>
