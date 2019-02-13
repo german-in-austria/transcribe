@@ -43,8 +43,7 @@ import {
   LocalTranscriptEvent,
   eventStore,
   selectEvent,
-  addEventsToSelection,
-  removeEventsFromSelection,
+  selectOrDeselectEvent,
   selectNextEvent,
   isEventSelected,
   selectPreviousEvent,
@@ -65,7 +64,7 @@ export default class SegmentBox extends Vue {
 
   scrollToTranscriptEvent = scrollToTranscriptEvent
   selectEvent = selectEvent
-  addEventsToSelection = addEventsToSelection
+  selectOrDeselectEvent = selectOrDeselectEvent
   eventStore = eventStore
   isEventSelected = isEventSelected
   playEvent = playEvent
@@ -76,14 +75,6 @@ export default class SegmentBox extends Vue {
 
   get width(): number {
     return (Number(this.event.endTime) - Number(this.event.startTime)) * this.pixelsPerSecond
-  }
-
-  selectOrDeselectEvent(e: LocalTranscriptEvent) {
-    if (isEventSelected(e.eventId)) {
-      removeEventsFromSelection([ e ])
-    } else {
-      addEventsToSelection([ e ])
-    }
   }
 
   deleteEvent(segment: Event) {

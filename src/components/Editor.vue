@@ -4,12 +4,9 @@
       <div>{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
       <v-spacer></v-spacer>
       <div>
-        <v-tooltip transition="none" bottom>
-          <v-btn slot="activator" @click.stop="showSearch = true" icon flat>
-            <v-icon>search</v-icon>
-          </v-btn>
-          <span>Search</span>
-        </v-tooltip>
+        <search :show="showSearch" />
+      </div>
+      <div>
         <v-tooltip transition="none" bottom>
           <v-btn slot="activator" @click.stop="showSettings = true" icon flat>
             <v-icon>settings</v-icon>
@@ -27,10 +24,6 @@
         </v-tooltip>
       </div>
     </v-toolbar>
-    <search
-      v-if="showSearch"
-      @close="showSearch = false"
-      :show="showSearch" />
     <settings-view
       v-if="showSettings" 
       @close="showSettings = false"
@@ -139,6 +132,13 @@
             :key="error.eventId"
             class="error-overview"
             :style="{ left: `${ error.startTime / audioElement.duration * 100}%` }" />
+        </div>
+        <div v-if="this.audioElement !== undefined" class="search-overview-container">
+          <div
+            v-for="(result) in eventStore.searchResults"
+            :key="result.eventId"
+            class="result-overview"
+            :style="{ left: `${ result.startTime / audioElement.duration * 100}%` }" />
         </div>
       </div>
     </wave-form>
@@ -425,9 +425,16 @@ export default class Editor extends Vue {
   top 18px
   opacity 0.5
   background #f00
-  width 2px
-  height 8px
+  width 5px
+  height 5px
   position absolute
-  border-radius 2px
+  border-radius 3px
 
+.result-overview
+  background green
+  width 5px
+  height 5px
+  position absolute
+  border-radius 3px
+  top 10px
 </style>

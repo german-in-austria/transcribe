@@ -1,47 +1,13 @@
 <template>
-  <v-dialog
-    lazy
-    :scrollable="false"
-    @input="$event === false && $emit('close')"
-    :value="show"
-    @keydown.esc.stop="handleEsc"
-    content-class="search-dialog"
-    max-width="700">
-    <v-layout wrap>
-      <v-flex xs12>
-        <v-text-field
-          :value="searchTerm"
-          @input="handleSearch"
-          prepend-icon="search"
-          label="Search"
-          autofocus
-          clearable
-          solo
-          flat/>
-      </v-flex>
-      <v-flex xs12>
-        <v-list class="scroll-y" v-if="results.length > 0" dense>
-          <v-list-tile
-            v-for="(event) in results"
-            :key="event.eventId"
-            @click="openItem(event)">
-            <v-list-tile-avatar class="grey--text">
-              <small>{{ toTime(event.startTime) }}</small>
-            </v-list-tile-avatar>
-            <v-list-tile-content>
-              <v-list-tile-content>
-                <v-list-tile-title>
-                  <div :key="i" v-for="(se, i) in event.speakerEvents">
-                    <b class="speaker">{{ eventStore.metadata.speakers[i].k }}</b> {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
-                  </div>
-                </v-list-tile-title>
-              </v-list-tile-content>
-            </v-list-tile-content>
-          </v-list-tile>
-        </v-list>
-      </v-flex>
-    </v-layout>
-  </v-dialog>
+  <input
+    type="text"
+    :value="searchTerm"
+    @keydown="handleKey"
+    @input="handleSearch"
+    @focus="focussed = true"
+    @blur="focussed = false"
+    placeholder="Search…"
+  />
 </template>
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
@@ -55,15 +21,20 @@ export default class Search extends Vue {
 
   @Prop({ default: false }) show: boolean
 
+  focussed = false
   searchTerm = ''
-  results: any = []
   eventStore = eventStore
   toTime = toTime
 
-  handleSearch(e: string) {
-    this.searchTerm = e.toLowerCase().trim()
+  handleKey(e: KeyboardEvent) {
+    console.log(e)
+  }
+
+  handleSearch(e: Event) {
+    console.log(e)
+    this.searchTerm = (e.target as any).value
     if (this.searchTerm === '') {
-      this.results = []
+      this.eventStore.searchResults = []
     } else {
       console.time('search took')
       const r = _(eventStore.events)
@@ -72,10 +43,10 @@ export default class Search extends Vue {
             return _(se.tokens).map(t => t.tiers.default.text).value().join(' ').indexOf(this.searchTerm) > -1
           }).value().length
         })
-        .take(20)
+        // .take(20)
         .value()
       console.timeEnd('search took')
-      this.results = r
+      this.eventStore.searchResults = r
     }
   }
   handleEsc() {
@@ -83,7 +54,7 @@ export default class Search extends Vue {
       this.$emit('close')
     } else {
       this.searchTerm = ''
-      this.results = []
+      this.eventStore.searchResults = []
     }
   }
   mounted() {
@@ -109,5 +80,16 @@ export default class Search extends Vue {
   width 3.5em
   padding-left .5em
 
+input
+  background rgba(255,255,255,.1)
+  height 32px
+  width 78px
+  padding 0 10px
+  border-radius 5px
+  margin-right 12px
+  outline 0
+  &:focus{
+    width 200px
+  }
 </style>
 

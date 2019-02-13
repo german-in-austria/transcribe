@@ -116,6 +116,7 @@ export const history: HistoryEventAction[] = []
 export const eventStore = {
   events: [] as LocalTranscriptEvent[],
   selectedEventIds: [] as number[],
+  searchResults: [] as LocalTranscriptEvent[],
   playingEvent: null as LocalTranscriptEvent|null,
   metadata: {
     speakers: {} as LocalTranscriptSpeakers,
@@ -375,6 +376,14 @@ export function selectEvent(e: LocalTranscriptEvent) {
   eventStore.selectedEventIds = [ e.eventId ]
 }
 
+export function selectOrDeselectEvent(e: LocalTranscriptEvent): LocalTranscriptEvent {
+  if (isEventSelected(e.eventId)) {
+    removeEventsFromSelection([ e ])
+  } else {
+    addEventsToSelection([ e ])
+  }
+  return e
+}
 export function addEventsToSelection(es: LocalTranscriptEvent[]) {
   eventStore.selectedEventIds = eventStore.selectedEventIds.concat(es.map(e => e.eventId))
 }

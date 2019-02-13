@@ -6,7 +6,7 @@
       :class="{time: true, error: hasErrors}"
       @keydown.delete="deleteSelectedEvents"
       @dblclick="playEvent(event)"
-      @mousedown.meta.stop="addEventsToSelection([ event ])"
+      @mousedown.meta.stop="selectOrDeselectEvent(event)"
       @mousedown.exact="selectAndScrollToEvent(event)">
       {{ toTime(event.startTime) }} - {{ toTime(event.endTime) }}
     </div>
@@ -31,7 +31,7 @@ import {
   deleteSelectedEvents,
   LocalTranscriptEvent,
   selectEvent,
-  addEventsToSelection,
+  selectOrDeselectEvent,
   playEvent,
   scrollToAudioEvent,
   speakerEventHasErrors,
@@ -51,7 +51,7 @@ export default class SegmentTranscript extends Vue {
   eventStore = eventStore
   offsetWidth = 0
   deleteSelectedEvents = deleteSelectedEvents
-  addEventsToSelection = addEventsToSelection
+  selectOrDeselectEvent = selectOrDeselectEvent
   playEvent = playEvent
   toTime = toTime
 
@@ -81,7 +81,7 @@ export default class SegmentTranscript extends Vue {
   font-size 85%
   color #aaa
   text-align center
-  width 133px
+  min-width 133px
   display block
   margin 0 auto
   padding 0 1em
