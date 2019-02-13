@@ -115,6 +115,7 @@ export default class TranscriptEditor extends Vue {
 
   @Watch('scrollToTime')
   async onScrollToSecond(seconds: number) {
+    // TODO: re-enable
     // const i = findSegmentIndexAt(seconds)
     // // const event = this.eventStore.events[i]
     // if (i !== undefined) {

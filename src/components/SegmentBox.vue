@@ -1,7 +1,7 @@
 <template>
   <div
     @click.exact.stop="selectEvent(event)"
-    @mousedown.meta="addEventsToSelection([event])"
+    @mousedown.meta="selectOrDeselectEvent(event)"
     @dblclick="playEvent(event)"
     @keydown.enter="scrollToTranscriptEvent(event)"
     @keydown.space.stop.prevent="playEvent(event)"
@@ -37,7 +37,19 @@ import { Vue, Component, Prop, Watch, Provide } from 'vue-property-decorator'
 import Resizer from '@components/helper/Resizer.vue'
 import ResizeParent from '@components/helper/ResizeParent.vue'
 // tslint:disable-next-line:max-line-length
-import { playEvent, resizeSegment, LocalTranscriptEvent, eventStore, selectEvent, addEventsToSelection, selectNextEvent, isEventSelected, selectPreviousEvent, scrollToTranscriptEvent } from '../store/transcript'
+import {
+  playEvent,
+  resizeSegment,
+  LocalTranscriptEvent,
+  eventStore,
+  selectEvent,
+  addEventsToSelection,
+  removeEventsFromSelection,
+  selectNextEvent,
+  isEventSelected,
+  selectPreviousEvent,
+  scrollToTranscriptEvent
+} from '../store/transcript'
 
 @Component({
   components: {
@@ -57,11 +69,22 @@ export default class SegmentBox extends Vue {
   eventStore = eventStore
   isEventSelected = isEventSelected
   playEvent = playEvent
-  width = (Number(this.event.endTime) - Number(this.event.startTime)) * this.pixelsPerSecond
-  // get width(): number {
-  //   return
-  // }
-  offset = Number(this.event.startTime) * this.pixelsPerSecond
+
+  get offset() {
+    return Number(this.event.startTime) * this.pixelsPerSecond
+  }
+
+  get width(): number {
+    return (Number(this.event.endTime) - Number(this.event.startTime)) * this.pixelsPerSecond
+  }
+
+  selectOrDeselectEvent(e: LocalTranscriptEvent) {
+    if (isEventSelected(e.eventId)) {
+      removeEventsFromSelection([ e ])
+    } else {
+      addEventsToSelection([ e ])
+    }
+  }
 
   deleteEvent(segment: Event) {
     this.$emit('delete-event', event)

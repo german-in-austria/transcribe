@@ -66,7 +66,7 @@
       </div>
     </div>
     <v-layout row>
-      <v-flex>
+      <v-flex class="ml-3">
         <div
           @mousemove="moveOverviewCrossAndTime"
           class="overview"
@@ -126,7 +126,7 @@ import triangle from '@components/Triangle.vue'
 
 import settings from '../store/settings'
 import audio, { OggIndex } from '../service/audio'
-import util from '../service/util'
+import * as util from '../util'
 import { eventStore, findSegmentAt, LocalTranscriptEvent, scrollToTranscriptEvent } from '../store/transcript'
 
 const queue = new Queue({
@@ -210,15 +210,15 @@ export default class Waveform extends Vue {
     if (o instanceof HTMLElement && t instanceof HTMLElement && c instanceof HTMLElement) {
       requestAnimationFrame(() => {
         const w = o.clientWidth
-        const secondsIn = this.audioLength / w * e.pageX
+        const secondsIn = this.audioLength / w * e.layerX
         const offsetT = Math.min(
-          Math.max(e.pageX - this.overviewTimeWidth / 2, 0),
+          Math.max(e.layerX - this.overviewTimeWidth / 2, 0),
           w - this.overviewTimeWidth
         )
         requestAnimationFrame(() => {
           t.innerHTML = this.toTime(secondsIn)
           t.style.transform = `translateX(${offsetT}px)`
-          c.style.transform = `translateX(${e.pageX}px)`
+          c.style.transform = `translateX(${e.layerX}px)`
         })
       })
     }

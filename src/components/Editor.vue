@@ -96,7 +96,7 @@
             </v-list-tile>
             <v-list-tile
               :disabled="eventStore.selectedEventIds.length < 2"
-              @click="joinSelectedEvents">
+              @click="joinEvents(eventStore.selectedEventIds)">
               <v-list-tile-content>
                 <v-list-tile-title>Join</v-list-tile-title>
               </v-list-tile-content>
@@ -181,7 +181,7 @@ import {
   selectNextEvent,
   selectPreviousEvent,
   scrollToTranscriptEvent,
-  joinSelectedEvents
+  joinEvents
 } from '@store/transcript'
 
 @Component({
@@ -208,7 +208,7 @@ export default class Editor extends Vue {
   findSegmentAt = findSegmentAt
   playEvent = playEvent
   getSelectedEvent = getSelectedEvent
-  joinSelectedEvents = joinSelectedEvents
+  joinEvents = joinEvents
 
   // TODO: percentages are impractical. use pixels
   segmentBufferPercent = .01
@@ -271,7 +271,7 @@ export default class Editor extends Vue {
     //   if (v.key === e.key && (v.modifier === null || (e as any)[v.modifier] === true)) {
     //   }
     // })
-    if (e.key === 'c') {
+    if (e.key === 's') {
       const event = this.findSegmentAt(this.playHeadPos)
       if (event === undefined) {
         const s = this.addSegment(this.playHeadPos)
