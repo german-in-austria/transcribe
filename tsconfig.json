@@ -23,6 +23,9 @@
             ],
             "@models/*": [
                 "models/*"
+            ],
+            "@service/*": [
+              "service/*"
             ]
         }
     },

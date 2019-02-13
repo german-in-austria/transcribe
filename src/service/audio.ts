@@ -1,16 +1,12 @@
-
 import * as sliceAudiobuffer from 'audiobuffer-slice'
 import * as concatBuffer from 'array-buffer-concat'
 import * as audioBufferToWav from 'audiobuffer-to-wav'
-
-import util from './util'
+import * as util from '../util'
 import settings from '../store/settings'
 import * as PromiseWorker from 'promise-worker-transferable'
 import WaveformWorker from './waveform.worker'
 const waveformWorker = new PromiseWorker(new WaveformWorker(''))
 const waveformWorker2 = new PromiseWorker(new WaveformWorker(''))
-// import MultiWorker from '../lib/worker-loader'
-// const waveformWorkerPar = new MultiWorker(new WaveformWorker(''))
 import GetFrequenciesWorker from './get-frequencies.worker'
 const getFrequenciesWorker = new PromiseWorker(new GetFrequenciesWorker(''))
 import OggIndexWorker from './oggindex.worker'

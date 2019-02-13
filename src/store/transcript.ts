@@ -1,7 +1,7 @@
 
 import * as _ from 'lodash'
 import audio from '../service/audio'
-import { clone, isEqualDeep } from '../util'
+import { clone, isEqualDeep  } from '../util'
 
 declare global {
   interface Window {
@@ -235,15 +235,29 @@ export function deleteEvent(event: LocalTranscriptEvent) {
 
 export function splitSegment(event: LocalTranscriptEvent, splitAt: number): LocalTranscriptEvent[] {
   const i = findSegmentById(event.eventId)
-  const oldEndTime = event.endTime
+  const oldEvent: LocalTranscriptEvent = {
+    ...event,
+    endTime: event.startTime + splitAt
+  }
   const newEvent: LocalTranscriptEvent = {
     startTime: event.startTime + splitAt,
-    endTime: oldEndTime,
+    endTime: event.endTime,
     eventId: makeEventId(),
     speakerEvents: {}
   }
-  event.endTime = event.startTime + splitAt
-  eventStore.events.splice(i + 1, 0, newEvent)
+  eventStore.events.splice(i, 1, oldEvent, newEvent)
+  history.push(
+    {
+      apply: true,
+      type: 'RESIZE',
+      events: [ oldEvent ],
+    },
+    {
+      apply: true,
+      type: 'ADD',
+      events: [ newEvent ]
+    }
+  )
   return [ event, newEvent ]
 }
 
@@ -310,8 +324,8 @@ function replaceEvents(oldEvents: LocalTranscriptEvent[], newEvents: LocalTransc
   eventStore.events.splice(startIndex, numDeletions, ...newEvents)
 }
 
-export function joinSelectedEvents(): LocalTranscriptEvent {
-  const events = getEventsByIds(eventStore.selectedEventIds)
+export function joinEvents(eventIds: number[]): LocalTranscriptEvent {
+  const events = getEventsByIds(eventIds)
   const speakerIds = getSpeakersFromEvents(events)
   const joinedEvent = {
     startTime: events[0].startTime,
@@ -337,6 +351,7 @@ export function joinSelectedEvents(): LocalTranscriptEvent {
     events: clone(events)
   })
   replaceEvents(events, [ joinedEvent ])
+  eventStore.selectedEventIds = [ joinedEvent.eventId ]
   return joinedEvent
 }
 
@@ -364,6 +379,16 @@ export function addEventsToSelection(es: LocalTranscriptEvent[]) {
   eventStore.selectedEventIds = eventStore.selectedEventIds.concat(es.map(e => e.eventId))
 }
 
+export function removeEventsFromSelection(es: LocalTranscriptEvent[]) {
+  const eIds = es.map(e => e.eventId)
+  eventStore.selectedEventIds = eventStore.selectedEventIds.filter((e) => eIds.indexOf(e) === -1)
+}
+
 export function getSelectedEvent(): LocalTranscriptEvent|undefined {
   return _.find(eventStore.events, (e) => e.eventId === eventStore.selectedEventIds[0])
+}
+
+export function toTime(time: number): string {
+  // seconds to readable time
+  return new Date(time * 1000).toISOString().substr(11, 8)
 }
