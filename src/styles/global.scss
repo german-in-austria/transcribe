@@ -71,9 +71,11 @@ img[lazy=loaded] {
   min-width: 40px;
   margin-left: -10px;
 }
-.menu__content .list--dense:not(.list--two-line) .list__tile:not(.list__tile--avatar)
-.context-menu .list--dense:not(.list--two-line) .list__tile:not(.list__tile--avatar){
-  height: 33px;
+.menu__content .list--dense:not(.list--two-line) a,
+.context-menu .list--dense:not(.list--two-line) a,
+.menu__content .list--dense .list__tile:not(.list__tile--avatar),
+.context-menu  .list--dense .list__tile:not(.list__tile--avatar){
+  height: 33px !important;
 }
 .tabs__item{
   background: rgba(0,0,0,.2);
