@@ -21,6 +21,8 @@
       @focus="focused = true"
       @input="updateLocalTokens"
       @blur="commit"
+      @keydown.enter.meta="playEvent(event)"
+      @keydown.enter.stop.prevent="viewAudioEvent(event)"
       contenteditable="true"
       v-text="segmentText"
       :style="textStyle"
@@ -40,7 +42,8 @@ import {
   LocalTranscriptEvent,
   eventStore,
   LocalTranscriptToken,
-  makeTokenId
+  makeTokenId,
+  playEvent
 } from '../store/transcript'
 import * as _ from 'lodash'
 import * as jsdiff from 'diff'
@@ -66,6 +69,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   @Prop() event: LocalTranscriptEvent
   @Prop() speaker: number
 
+  playEvent = playEvent
   localEvent = clone(this.event)
   localTokens = this.localEvent.speakerEvents[this.speaker]
     ? this.localEvent.speakerEvents[this.speaker].tokens
@@ -77,6 +81,11 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   tokenizeText(text: string) {
     return text.trim().split(' ')
+  }
+
+  viewAudioEvent(e: LocalTranscriptEvent) {
+    eventStore.selectedEventIds = [ e.eventId ]
+    eventStore.userState.viewingAudioEvent = e
   }
 
   get secondaryTiers() {

@@ -77,7 +77,7 @@
                 <v-list-tile-title>Play</v-list-tile-title>
               </v-list-tile-content>
               <v-list-tile-action>
-                &#9251;
+                ⌘&#9166;
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
@@ -137,7 +137,7 @@
           <div
             v-for="(result) in eventStore.searchResults"
             :key="result.eventId"
-            class="result-overview"
+            :class="['result-overview', isEventSelected(result.eventId) && 'result-selected']"
             :style="{ left: `${ result.startTime / audioElement.duration * 100}%` }" />
         </div>
       </div>
@@ -181,7 +181,8 @@ import {
   selectNextEvent,
   selectPreviousEvent,
   scrollToTranscriptEvent,
-  joinEvents
+  joinEvents,
+  isEventSelected
 } from '@store/transcript'
 
 @Component({
@@ -209,6 +210,7 @@ export default class Editor extends Vue {
   playEvent = playEvent
   getSelectedEvent = getSelectedEvent
   joinEvents = joinEvents
+  isEventSelected = isEventSelected
 
   // TODO: percentages are impractical. use pixels
   segmentBufferPercent = .01
@@ -425,16 +427,26 @@ export default class Editor extends Vue {
   top 18px
   opacity 0.5
   background #f00
-  width 5px
-  height 5px
+  width 7px
+  height 7px
   position absolute
-  border-radius 3px
+  border-radius 1px
 
 .result-overview
-  background green
-  width 5px
-  height 5px
+  background #447720
+  width 7px
+  height 7px
   position absolute
-  border-radius 3px
-  top 10px
+  border-radius 1px
+  top -59px
+  opacity 0
+  animation fadeIn
+  -webkit-animation fadeIn ease-in 1
+  animation-fill-mode forwards
+  -webkit-animation-duration .2s
+  -moz-animation-duration .2s
+  animation-duration .2s
+  &.result-selected
+    z-index 1
+    background #6BBB32
 </style>
