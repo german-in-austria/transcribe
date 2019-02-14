@@ -4,6 +4,7 @@
       <input
         type="text"
         ref="input"
+        :value="searchTerm"
         @keydown.esc="handleEsc"
         @keydown.enter.exact="findNext"
         @keydown.enter.shift.exact="findPrevious"
