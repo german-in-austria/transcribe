@@ -100,10 +100,7 @@
             @mousedown="startDragOverview"
             @mouseup="scrollFromOverview"
             @contextmenu="scrollBothFromOverview"
-            :style="{
-              transform: `translateX(${ overviewThumbOffset }px) translateY(7px)`,
-              transition: transitionOverviewThumb ? '.25s' : 'unset'
-            }" />
+            ref="overviewThumb"/>
           <div class="overview-cross" ref="overviewCross" />
           <div class="overview-time" ref="overviewTime" :style="{ width: overviewTimeWidth + 'px' }" />
         </div>
@@ -195,6 +192,7 @@ export default class Waveform extends Vue {
   }
 
   onMousewheel(e: MouseWheelEvent) {
+    this.updateOverviewThumb()
     if (settings.emulateHorizontalScrolling === true) {
       const c = this.$refs.svgContainer
       if (c instanceof HTMLElement) {
@@ -230,10 +228,10 @@ export default class Waveform extends Vue {
   }
 
   handleScroll(e: Event) {
+    this.updateOverviewThumb()
     this.$emit('scroll', e, (this.$refs.svgContainer as any).scrollWidth / this.pixelsPerSecond)
     this.updateSecondsMarkers()
     this.doMaybeRerender()
-    this.updateOverviewThumb()
   }
 
   updateSecondsMarkers() {
@@ -246,18 +244,17 @@ export default class Waveform extends Vue {
       .filter((s, i) => this.pixelsPerSecond > 60 || i % 2 === 0)
   }
 
-  updateOverviewThumb() {
+  updateOverviewThumb(seconds?: number) {
+    const e = (this.$refs.overviewThumb as Vue).$el
     const w = this.$refs.svgContainer
     const o = this.$refs.overview
-    if (w instanceof HTMLElement && o instanceof HTMLElement) {
-      requestAnimationFrame(() => {
-        this.overviewThumbWidth = Math.max(w.clientWidth / w.scrollWidth * o.clientWidth, 10)
-        this.overviewThumbOffset = (
-          (w.scrollLeft + w.clientWidth) / w.scrollWidth * o.clientWidth
-        )
+    requestAnimationFrame(() => {
+      if (w instanceof HTMLElement && o instanceof HTMLElement) {
+        const pixels = ((w.scrollLeft + w.clientWidth) / w.scrollWidth * o.clientWidth)
+        e.style.transform = `translateX(${ pixels }px)`
         localStorage.setItem('scrollPos', String(w.scrollLeft))
-      })
-    }
+      }
+    })
   }
 
   async drawSpectrogramPiece(i: number) {
@@ -425,13 +422,13 @@ export default class Waveform extends Vue {
   @Watch('userState.viewingAudioEvent')
   doScrollToSegment(e: LocalTranscriptEvent) {
     if (e !== null) {
-      const container = this.$refs.svgContainer
+      const el = this.$refs.svgContainer
       const duration = e.endTime - e.startTime
       const offset = (e.startTime + duration / 2) * this.pixelsPerSecond
-      if (container instanceof HTMLElement) {
-        const currentOffset = container.scrollLeft
+      if (el instanceof HTMLElement) {
+        const currentOffset = el.scrollLeft
         requestAnimationFrame(() => {
-          container.scrollTo({
+          el.scrollTo({
             left: offset - window.innerWidth / 2
           })
         })
@@ -619,7 +616,6 @@ export default class Waveform extends Vue {
 .overview-thumb
   top 0
   z-index 1
-  transition .25s transform
   &:focus
     outline 0
 
