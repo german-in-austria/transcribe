@@ -107,7 +107,7 @@ export default class Search extends Vue {
     this.searchTerm = (e.target as any).value
     if (this.searchTerm === '') {
       this.eventStore.searchResults = []
-    } else if (this.searchTerm.length >= 2) {
+    } else {
       console.time('search took')
       requestAnimationFrame(() => {
         const r = _(eventStore.events)
