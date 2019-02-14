@@ -3,8 +3,8 @@
     @click.exact.stop="selectEvent(event)"
     @mousedown.meta="selectOrDeselectEvent(event)"
     @dblclick="playEvent(event)"
-    @keydown.enter="scrollToTranscriptEvent(event)"
-    @keydown.space.stop.prevent="playEvent(event)"
+    @keydown.enter.meta.stop.prevent="playEvent(event)"
+    @keydown.enter.exact="scrollToTranscriptEvent(event)"
     tabindex="-1"
     :class="[ 'segment', isEventSelected(event.eventId) ? 'selected' : '' ]"
     :style="{ left: offset + 'px', width: width + 'px' }">
