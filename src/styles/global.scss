@@ -58,18 +58,21 @@ img[lazy=loaded] {
 .btn i {
   font-size: 1.4em !important;
 }
-.menu__content {
+.menu__content, .context-menu {
   border-radius: 4px;
   box-shadow: 0 5px 30px rgba(0,0,0,.2);
 }
-.menu__content .avatar i.icon {
+.menu__content .avatar i.icon,
+.context-menu .avatar i.icon {
   font-size: 1.1em;
 }
-.menu__content .list__tile__avatar {
+.menu__content .list__tile__avatar,
+.context-menu .list__tile__avatar{
   min-width: 40px;
   margin-left: -10px;
 }
-.menu__content .list--dense:not(.list--two-line) .list__tile:not(.list__tile--avatar){
+.menu__content .list--dense:not(.list--two-line) .list__tile:not(.list__tile--avatar)
+.context-menu .list--dense:not(.list--two-line) .list__tile:not(.list__tile--avatar){
   height: 33px;
 }
 .tabs__item{
@@ -77,4 +80,7 @@ img[lazy=loaded] {
 }
 .tabs__item--active{
   background: transparent
+}
+.application.theme--dark .text--disabled {
+  color: hsla(0,0%,100%,.7)!important;
 }

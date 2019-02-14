@@ -262,6 +262,15 @@ export function splitSegment(event: LocalTranscriptEvent, splitAt: number): Loca
   return [ event, newEvent ]
 }
 
+export function findNextSegmentAt(seconds: number, events = eventStore.events): LocalTranscriptEvent|undefined {
+  return _(events).find((e) => e.startTime >= seconds)
+}
+
+export function findPreviousSegmentAt(seconds: number, events = eventStore.events): LocalTranscriptEvent|undefined {
+  const i = _(events).findLastIndex((e) => e.startTime < seconds)
+  return events[Math.max(0, i - 1)]
+}
+
 export function findSegmentAt(seconds: number): LocalTranscriptEvent|undefined {
   return _(eventStore.events).find((e) => e.startTime <= seconds && e.endTime >= seconds)
 }
