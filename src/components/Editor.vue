@@ -17,7 +17,7 @@
           <v-btn slot="activator" class="mr-4" @click.stop="$emit('toggle-drawer')" icon flat>
             <v-badge color="error" overlap :value="errors.length > 0">
               <span class="custom-badge" slot="badge">{{ errors.length }}</span>
-              <v-icon>history</v-icon>
+              <v-icon style="margin-top: -2px">history</v-icon>
             </v-badge>
           </v-btn>
           <span>History & Errors</span>
@@ -346,18 +346,16 @@ export default class Editor extends Vue {
     if (this.settings.lockScroll && time) {
       this.scrollTranscriptTime = time
     }
-    if (this.eventStore.playingEvent === null) {
-      requestAnimationFrame(() => {
-        const el = (e.target as HTMLElement)
-        const w = el.scrollWidth
-        const l = el.scrollLeft
-        const cw = el.clientWidth
-        const scrollFactorLeft = l / w
-        const scrollFactorRight = (l + cw) / w
-        this.boundLeft = this.audioElement.duration * (scrollFactorLeft - this.segmentBufferPercent)
-        this.boundRight = this.audioElement.duration * (scrollFactorRight + this.segmentBufferPercent)
-      })
-    }
+    requestAnimationFrame(() => {
+      const el = (e.target as HTMLElement)
+      const w = el.scrollWidth
+      const l = el.scrollLeft
+      const cw = el.clientWidth
+      const scrollFactorLeft = l / w
+      const scrollFactorRight = (l + cw) / w
+      this.boundLeft = this.audioElement.duration * (scrollFactorLeft - this.segmentBufferPercent)
+      this.boundRight = this.audioElement.duration * (scrollFactorRight + this.segmentBufferPercent)
+    })
     if (this.showMenu) {
       this.showMenu = false
     }
@@ -424,7 +422,7 @@ export default class Editor extends Vue {
     cursor default !important
 
 .error-overview
-  top 18px
+  top 12px
   opacity 0.5
   background #f00
   width 7px
