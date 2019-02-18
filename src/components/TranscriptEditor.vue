@@ -1,7 +1,10 @@
 <template>
   <v-layout>
     <v-flex :style="theme" class="pt-4 speaker-panel" xs1>
-      <div :key="i" v-for="(speaker, i) in eventStore.metadata.speakers" class="speaker">
+      <div
+        :style="{height: speakerHeight}"
+        :key="i" v-for="(speaker, i) in eventStore.metadata.speakers"
+        class="speaker">
         <v-menu
           close-delay="500"
           close-on-content-click
@@ -104,6 +107,10 @@ export default class TranscriptEditor extends Vue {
     })
   }
 
+  get speakerHeight() {
+    return eventStore.metadata.tiers.filter(t => t.show === true).length * 25 + 1 + 'px'
+  }
+
   @Watch('eventStore.events')
   onUpdateSpeakerEvents() {
     this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
@@ -143,6 +150,7 @@ export default class TranscriptEditor extends Vue {
       return v.offsetLeft + v.offsetWidth > this.innerLeft * -1
     })
     const firstVisibleEvent = this.visibleEvents[firstVisibleIndex]
+    // console.log(firstVisibleIndex, firstVisibleEvent.startTime, firstVisibleEvent.eventId)
     return [ firstVisibleEvent, innerOffset, width ]
   }
 
@@ -152,6 +160,7 @@ export default class TranscriptEditor extends Vue {
     const progressFactor = innerOffset / width
     const progress = progressFactor * eventLength
     // console.log(currentEvent.startTime + progress, progress)
+    // console.log(firstVisibleEvent.startTime + progress)
     this.$emit('scroll', firstVisibleEvent.startTime + progress)
   }
 
@@ -182,16 +191,18 @@ export default class TranscriptEditor extends Vue {
     if (leftToRight) {
       // SCROLL LEFT TO RIGHT
       if (this.innerLeft <= -1500 && this.currentIndex + defaultLimit + 1 < this.eventStore.events.length) {
-        this.visibleEvents.push(this.eventStore.events[this.currentIndex + defaultLimit + 1])
-        const unrendered = this.visibleEvents.shift()
         this.currentIndex = this.currentIndex + 1
+        this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
+        // const unrendered = this.visibleEvents.shift()
+        // this.visibleEvents.push(this.eventStore.events[this.currentIndex + defaultLimit])
       }
     } else {
       // SCROLL RIGHT TO LEFT
       if (this.innerLeft >= -200 && this.currentIndex > 0) {
-        this.visibleEvents.unshift(this.eventStore.events[this.currentIndex - 1])
-        const unrendered = this.visibleEvents.pop()
         this.currentIndex = this.currentIndex - 1
+        this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
+        // const unrendered = this.visibleEvents.pop()
+        // this.visibleEvents.unshift(this.eventStore.events[this.currentIndex])
       }
     }
     // WAIT FOR THE ELEMENT TO RENDER,

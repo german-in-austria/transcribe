@@ -15,7 +15,7 @@
         @blur="focussed = false"
         placeholder="Search…"
       />
-      <v-card class="context-menu">
+      <v-card tab-index="-1" class="context-menu">
         <v-list class="context-menu-list" dense>
           <v-list-tile disabled>
             <v-list-tile-avatar />
@@ -174,7 +174,10 @@ export default class Search extends Vue {
 .outer
   position relative
   margin-right 12px
-
+  &:focus-within .context-menu
+    display block
+  &:focus-within input
+    width 200px
 input
   background rgba(255,255,255,.1)
   transition .25s width
@@ -183,8 +186,6 @@ input
   padding 0 10px
   border-radius 5px
   outline 0
-  &:focus
-    width 200px
 
 .context-menu
   top 100%
@@ -192,9 +193,6 @@ input
   position absolute
   display none
   width 100%
-
-input:focus+.context-menu
-  display block
-
+  outline 0
 </style>
 

@@ -12,6 +12,7 @@
     </div>
     <div
       class="speaker-segment"
+      :style="{ height: speakerHeight }"
       v-for="(speaker, speakerKey) in eventStore.metadata.speakers"
       :key="speakerKey">
       <speaker-segment-transcript
@@ -54,6 +55,10 @@ export default class SegmentTranscript extends Vue {
   selectOrDeselectEvent = selectOrDeselectEvent
   playEvent = playEvent
   toTime = toTime
+
+  get speakerHeight() {
+    return eventStore.metadata.tiers.filter(t => t.show === true).length * 25 + 'px'
+  }
 
   mounted() {
     this.offsetWidth = this.$el.offsetWidth + 1

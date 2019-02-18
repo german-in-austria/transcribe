@@ -46,8 +46,7 @@ function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
                       type: s.aTokens[id].tt
                     },
                     ortho: {
-                      // TODO: not "text_in_ortho", but "ortho".
-                      text: s.aTokens[id].to,
+                      text: s.aTokens[id].o || '',
                       type: null
                     }
                   }

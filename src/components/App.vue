@@ -52,8 +52,9 @@
                 Pick a Transcript
               </v-subheader>
               <v-list-tile
-                @click="loadTranscript(transcript.pk)"
                 :key="transcript.pk"
+                :disabled="loadingTranscriptId === transcript.pk"
+                @click="loadTranscript(transcript.pk)"
                 v-for="transcript in filteredTranscriptList">
                 <v-list-tile-content>
                   <v-list-tile-title>

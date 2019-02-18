@@ -8,13 +8,16 @@
         <span
           v-html="token.tiers.default.text"
           :class="['token-type-indicator', focused && 'focused']"
-          :style="{ backgroundColor: colorFromTokenType(token.tiers.default.type).color }">
-        </span><span class="secondary-token-tier" v-for="tier in secondaryTiers" :key="tier.name">
+          :style="{ backgroundColor: colorFromTokenType(token.tiers.default.type) }">
+        </span><span class="token-spacer" /><span class="secondary-token-tier" v-for="tier in secondaryTiers" :key="tier.name">
           <span
             v-if="event.speakerEvents[speaker] && event.speakerEvents[speaker].tokens[i]"
-            v-html="event.speakerEvents[speaker].tokens[i].tiers[tier.name].text"
+            v-text="event.speakerEvents[speaker].tokens[i].tiers[tier.name].text"
+            contenteditable="true"
+            @keydown.enter.meta="playEvent(event)"
+            @keydown.enter.stop.prevent="viewAudioEvent(event)"
             class="secondary-token-tier-text" />
-        </span><span class="token-spacer" />
+        </span>
       </span>
     </div>
     <div
@@ -96,10 +99,10 @@ export default class SpeakerSegmentTranscript extends Vue {
     return this.event.speakerEvents[this.speaker].tokens
   }
 
-  colorFromTokenType(id: number) {
+  colorFromTokenType(id: number): string {
     const c = this.settings.tokenTypes.find(tt => tt.id === id)
     if (c) {
-      return c
+      return c.color
     } else {
       return 'red'
     }
@@ -214,9 +217,28 @@ export default class SpeakerSegmentTranscript extends Vue {
 .secondary-token-tier
   color #777
   .secondary-token-tier-text
-  display inline-block
-    border-bottom 1px dotted #777
-    // margin-right .25em
+    margin-top 4px
+    position absolute
+    display block
+    margin-left -1px
+    padding-left 2px
+    background #272727
+    color #989898
+    width calc(100% - 2px)
+    overflow hidden
+    &:empty
+      background #3e3e3e
+    &:focus
+      box-shadow 5px 0 10px rgba(0,0,0,.5)
+      color #fff
+      background #777
+      outline 0
+      z-index 1
+      min-width 100%
+      width auto
+      overflow unset
+      border-right-width 1px
+      padding-right 2px
 
 .segment-editor
   position relative
@@ -227,9 +249,16 @@ export default class SpeakerSegmentTranscript extends Vue {
 
 .token-display
   .token
-    display inline
+    position relative
+    display inline-block
     color transparent
     vertical-align top
+    &:first-child .secondary-token-tier-text
+      border-top-left-radius 5px
+      border-bottom-left-radius 5px
+    &:last-child .secondary-token-tier-text
+      border-top-right-radius 5px
+      border-bottom-right-radius 5px
 
 .tokens-input
   top 0

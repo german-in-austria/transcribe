@@ -55,6 +55,7 @@ interface ServerToken {
   sr: number // sequence in sentence
   t: string // text
   to: string // text in ortho
+  o?: string // ortho
   s: number // sentence id
   i: number // inf id
   e: number // event id
