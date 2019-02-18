@@ -5,19 +5,28 @@
         type="text"
         ref="input"
         :value="searchTerm"
+        :style="{ color: useRegEx && !isValidRegex ? 'red' : undefined }"
         @keydown.esc="handleEsc"
         @keydown.enter.exact="findNext"
         @keydown.enter.shift.exact="findPrevious"
         @keydown.enter.meta.exact="playEvent"
         @keydown.enter.ctrl.exact="playEvent"
-        @input="handleSearch"
+        @input="(e) => handleSearch(e.target.value)"
         @focus="focussed = true"
         @blur="focussed = false"
         placeholder="Search…"
       />
-      <v-card tab-index="-1" class="context-menu">
+      <v-card tabindex="-1" class="context-menu">
         <v-list class="context-menu-list" dense>
-          <v-list-tile disabled>
+          <v-list-tile v-if="useRegEx && !isValidRegex" disabled>
+            <v-list-tile-avatar>
+              <v-icon>warning</v-icon>
+            </v-list-tile-avatar>
+            <v-list-tile-title>
+              Invalid Expression
+            </v-list-tile-title>
+          </v-list-tile>
+          <v-list-tile v-else disabled>
             <v-list-tile-avatar />
             <v-list-tile-title v-if="selectedResultIndex !== null">
               {{ selectedResultIndex }} of {{ eventStore.searchResults.length }} result(s)
@@ -43,6 +52,14 @@
               Case-Sensitive
             </v-list-tile-title>
           </v-list-tile>
+          <v-list-tile @click.prevent.stop="defaultTierOnly = !defaultTierOnly">
+            <v-list-tile-avatar>
+              <v-icon v-if="defaultTierOnly">check</v-icon>
+            </v-list-tile-avatar>
+            <v-list-tile-title>
+              Default Tier Only
+            </v-list-tile-title>
+          </v-list-tile>
         </v-list>
       </v-card>
     </div>
@@ -62,7 +79,8 @@ import {
   scrollToTranscriptEvent,
   selectEvent,
   playEvent,
-  toTime
+  toTime,
+LocalTranscriptToken
 } from '@store/transcript'
 
 @Component
@@ -75,10 +93,18 @@ export default class Search extends Vue {
   isMenuShown = false
   caseSensitive = true
   useRegEx = false
+  defaultTierOnly = false
 
   playEvent() {
     const i = findSegmentById(eventStore.selectedEventIds[0])
     playEvent(eventStore.events[i])
+  }
+
+  @Watch('useRegex')
+  @Watch('caseSensitive')
+  @Watch('defaultTierOnly')
+  onUpdateSearchSettings() {
+    this.handleSearch(this.searchTerm)
   }
 
   get selectedResultIndex() {
@@ -104,36 +130,50 @@ export default class Search extends Vue {
     this.isMenuShown = false
   }
 
-  handleSearch(e: Event) {
-    this.searchTerm = (e.target as any).value
+  handleSearch(term: string) {
+    const defaultOrAllTokenText = (t: LocalTranscriptToken) => {
+      if (this.defaultTierOnly) {
+        return t.tiers.default.text
+      } else {
+        return _(t.tiers).map(tier => tier.text).value().join(' ')
+      }
+    }
+    this.searchTerm = term
     if (this.searchTerm === '') {
       this.eventStore.searchResults = []
     } else {
       console.time('search took')
+      const search = this.caseSensitive ? term : term.toLowerCase()
+      const regex = new RegExp(search)
       requestAnimationFrame(() => {
         const r = _(eventStore.events)
           .filter((v) => {
             return _(v.speakerEvents).filter((se) => {
-              if (this.caseSensitive) {
-                return _(se.tokens)
-                  .map(t => t.tiers.default.text).value()
-                  .join(' ')
-                  .indexOf(this.searchTerm) > -1
+              let s = _(se.tokens).map(defaultOrAllTokenText).value().join(' ')
+              if (!this.caseSensitive) {
+                s = s.toLowerCase()
+              }
+              if (this.useRegEx && this.isValidRegex) {
+                return regex.test(s)
               } else {
-                return _(se.tokens)
-                  .map(t => t.tiers.default.text).value()
-                  .join(' ')
-                  .toLowerCase()
-                  .indexOf(this.searchTerm.toLowerCase()) > -1
+                return s.indexOf(search) > -1
               }
             }).value().length
-          })
-          .value()
-        console.timeEnd('search took')
+          }).value()
         this.eventStore.searchResults = r
       })
     }
   }
+
+  get isValidRegex() {
+    try {
+      const y = new RegExp(this.searchTerm)
+      return true
+    } catch (e) {
+      return false
+    }
+  }
+
   handleEsc() {
     if (this.searchTerm !== '') {
       this.searchTerm = ''

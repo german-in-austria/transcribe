@@ -294,17 +294,23 @@ export function timeToSeconds(time: string) {
   )
 }
 
-export async function playEvent(event: LocalTranscriptEvent) {
+export async function playEvents(events: LocalTranscriptEvent[]) {
   eventStore.playingEvent = null
+  const sortedEvents = _(events).sortBy((e) => e.startTime).value()
+
+  const synEvent = {
+    ..._(sortedEvents).first() as LocalTranscriptEvent,
+    endTime: (_(sortedEvents).last() as LocalTranscriptEvent).endTime
+  }
   if (audio.store.uint8Buffer.byteLength > 0) {
     const buffer = await audio.decodeBufferTimeSlice(
-      event.startTime,
-      event.endTime,
+      synEvent.startTime,
+      synEvent.endTime,
       audio.store.uint8Buffer.buffer
     )
     if (buffer !== undefined) {
       requestAnimationFrame(() => {
-        eventStore.playingEvent = event
+        eventStore.playingEvent = synEvent
         audio.playBuffer(buffer, audio.store.playbackRate)
           .addEventListener('ended', (e: Event) => {
             eventStore.playingEvent = null
@@ -312,6 +318,10 @@ export async function playEvent(event: LocalTranscriptEvent) {
       })
     }
   }
+}
+
+export async function playEvent(event: LocalTranscriptEvent) {
+  playEvents([ event])
 }
 
 function getSpeakersFromEvents(es: LocalTranscriptEvent[]): string[] {
