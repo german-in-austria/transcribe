@@ -130,14 +130,15 @@ export default class Search extends Vue {
     this.isMenuShown = false
   }
 
-  handleSearch(term: string) {
-    const defaultOrAllTokenText = (t: LocalTranscriptToken) => {
-      if (this.defaultTierOnly) {
-        return t.tiers.default.text
-      } else {
-        return _(t.tiers).map(tier => tier.text).value().join(' ')
-      }
+  defaultOrAllTokenText(t: LocalTranscriptToken) {
+    if (this.defaultTierOnly) {
+      return t.tiers.default.text
+    } else {
+      return _(t.tiers).map(tier => tier.text).value().join(' ')
     }
+  }
+
+  handleSearch(term: string) {
     this.searchTerm = term
     if (this.searchTerm === '') {
       this.eventStore.searchResults = []
@@ -149,7 +150,7 @@ export default class Search extends Vue {
         const r = _(eventStore.events)
           .filter((v) => {
             return _(v.speakerEvents).filter((se) => {
-              let s = _(se.tokens).map(defaultOrAllTokenText).value().join(' ')
+              let s = _(se.tokens).map(this.defaultOrAllTokenText).value().join(' ')
               if (!this.caseSensitive) {
                 s = s.toLowerCase()
               }
