@@ -206,6 +206,7 @@ export default class TranscriptEditor extends Vue {
     // RECURSION
     this.$nextTick(() => {
       requestAnimationFrame(() => {
+        this.emitScroll()
         if (
           (this.innerLeft <= -1500 || this.innerLeft >= -200) &&
           (this.currentIndex > 0 && this.currentIndex + defaultLimit + 1 < this.eventStore.events.length)
@@ -218,7 +219,6 @@ export default class TranscriptEditor extends Vue {
 
   handleMousewheel(e: MouseWheelEvent) {
     e.preventDefault()
-    this.emitScroll()
     this.lastScrollLeft = this.innerLeft
     this.innerLeft = this.innerLeft - (e.deltaX || e.deltaY) / (e.shiftKey === true ? 10 : 1)
     this.throttledRenderer(this.innerLeft <= this.lastScrollLeft)
