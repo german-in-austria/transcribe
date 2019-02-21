@@ -11,8 +11,8 @@
           :style="{ backgroundColor: colorFromTokenType(token.tiers.default.type) }">
         </span><span class="token-spacer" /><span class="secondary-token-tier" v-for="tier in secondaryTiers" :key="tier.name">
           <span
-            v-if="event.speakerEvents[speaker] && event.speakerEvents[speaker].tokens[i]"
-            v-text="event.speakerEvents[speaker].tokens[i].tiers[tier.name].text"
+            v-text="token.tiers[tier.name].text"
+            @blur="(e) => updateAndCommitLocalTokenTier(e, tier.name, i)"
             contenteditable="true"
             @keydown.enter.meta="playEvent(event)"
             @keydown.enter.stop.prevent="viewAudioEvent(event)"
@@ -23,7 +23,7 @@
     <div
       @focus="focused = true"
       @input="updateLocalTokens"
-      @blur="commit"
+      @blur="updateAndCommitLocalTokens"
       @keydown.enter.meta="playEvent(event)"
       @keydown.enter.stop.prevent="viewAudioEvent(event)"
       contenteditable="true"
@@ -39,7 +39,7 @@
 import contenteditableDirective from 'vue-contenteditable-directive'
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
-import { clone, isEqualDeep } from '../util'
+import { clone, isEqualDeep, requestFrameAsync } from '../util'
 import {
   updateSpeakerTokens,
   LocalTranscriptEvent,
@@ -122,70 +122,80 @@ export default class SpeakerSegmentTranscript extends Vue {
     }
   }
 
-  updateLocalTokens(e: Event) {
-    requestAnimationFrame(() => {
-      const newTokens = this.tokenizeText((e.target as HTMLDivElement).textContent as string).map((t, i) => {
-        return { text: t, index: i }
-      })
-      const oldTokens = this.localTokens.map((t, i) => ({ text: t.tiers.default.text, index: i }))
-      console.log({ newTokens, oldTokens })
-      const hunks = jsdiff.diffArrays(oldTokens, newTokens, { comparator: (l, r) => l.text === r.text })
+  updateAndCommitLocalTokenTier(e: Event, tier: string, i: number) {
+    this.localTokens[i].tiers[tier].text = (e.target as HTMLElement).textContent as string
+    this.commit()
+  }
 
-      const updates = _(hunks)
-        .filter((h) => h.added === true || h.removed === true)
-        .map((h) => h.value.map(v => ({
-          ...v,
-          type: (() => {
-            if (h.added === true) {
-              return 'add'
-            } else if (h.removed) {
-              return 'remove'
-            }
-          })()
-        })))
-        .flatten()
-        .groupBy('index')
-        .map((g) => {
-          if (g.length > 1) {
-            return [{
-              ...g[1],
-              type: 'update'
-            }]
-          } else {
-            return g
+  async updateAndCommitLocalTokens(e: Event) {
+    await this.updateLocalTokens(e)
+    this.commit()
+  }
+
+  async updateLocalTokens(e: Event) {
+    await requestFrameAsync()
+    const newTokens = this.tokenizeText((e.target as HTMLDivElement).textContent as string).map((t, i) => {
+      return { text: t, index: i }
+    })
+    const oldTokens = this.localTokens.map((t, i) => ({ text: t.tiers.default.text, index: i }))
+    console.log({ newTokens, oldTokens })
+    const hunks = jsdiff.diffArrays(oldTokens, newTokens, { comparator: (l, r) => l.text === r.text })
+    console.log({hunks})
+    const updates = _(hunks)
+      .filter((h) => h.added === true || h.removed === true)
+      .map((h) => h.value.map(v => ({
+        ...v,
+        type: (() => {
+          if (h.added === true) {
+            return 'add'
+          } else if (h.removed) {
+            return 'remove'
           }
-        })
-        .flatten()
-        .value()
-      console.log({updates})
-      const ts = this.localTokens
-      updates.forEach((u) => {
-        // DELETE
-        if (u.type === 'remove') {
-          ts.splice(u.index, 1)
-        // INSERT
-        } else if (u.type === 'add') {
-          ts.splice(u.index, 1, {
-            id: makeTokenId(),
-            tiers: {
-              default: {
-                text: u.text,
-                type: tokenTypeFromToken(u.text).id
-              },
-              ortho: {
-                text: '',
-                type: null
-              }
-            }
-          })
-        // UPDATE
-        } else if (u.type === 'update') {
-          ts[u.index].tiers.default = {
-            text: u.text,
-            type: tokenTypeFromToken(u.text).id
-          }
+        })()
+      })))
+      .flatten()
+      .groupBy('index')
+      .map((g) => {
+        if (g.length > 1) {
+          return [{
+            ...g[1],
+            type: 'update'
+          }]
+        } else {
+          return g
         }
       })
+      .flatten()
+      .value()
+    console.log({updates})
+    const ts = this.localTokens
+    updates.forEach((u) => {
+      // DELETE
+      if (u.type === 'remove') {
+        console.log('removed', u.text)
+        ts.splice(u.index, 1)
+      // INSERT
+      } else if (u.type === 'add') {
+        ts.splice(u.index, 0, {
+          id: makeTokenId(),
+          tiers: {
+            default: {
+              text: u.text,
+              type: tokenTypeFromToken(u.text).id
+            },
+            ortho: {
+              text: '',
+              type: null
+            }
+          }
+        })
+      // UPDATE
+      } else if (u.type === 'update') {
+        ts[u.index].tiers.default = {
+          text: u.text,
+          type: tokenTypeFromToken(u.text).id
+        }
+      }
     })
   }
 
