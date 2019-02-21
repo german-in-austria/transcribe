@@ -5,6 +5,20 @@ import Worker from '../service/buffer-concat.worker'
 const worker = new Worker('')
 const promiseWorker = new PromiseWorker(worker)
 
+export async function asyncForEach<T>(array: T[], callback: (e: T, i: number, l: T[]) => void) {
+  for (let index = 0; index < array.length; index++) {
+    await callback(array[index], index, array);
+  }
+}
+
+export function requestFrameAsync(): Promise<number> {
+  return new Promise((resolve) => {
+    requestAnimationFrame((time) => {
+      resolve(time)
+    })
+  })
+}
+
 export function clone<T>(t: T): T {
   return JSON.parse(JSON.stringify(t))
 }

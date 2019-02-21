@@ -1,4 +1,14 @@
-import { LocalTranscriptEvent, eventStore, ServerTranscript, LocalTranscript, timeToSeconds } from '@store/transcript'
+import {
+  LocalTranscriptEvent,
+  eventStore,
+  ServerTranscript,
+  LocalTranscript,
+  timeToSeconds,
+  timeFromSeconds,
+  HistoryEventAction,
+  ServerEvent
+} from '@store/transcript'
+
 import * as _ from 'lodash'
 
 function getMetadataFromServerTranscript(res: ServerTranscript) {
@@ -20,6 +30,26 @@ function getMetadataFromServerTranscript(res: ServerTranscript) {
         show: false
       }
     ]
+  }
+}
+
+// TODO:
+function historyToServerTranscript(hs: HistoryEventAction[], s: ServerTranscript): ServerTranscript {
+  return {
+    ...s,
+    aEvents: _(hs).reduce((m, e, i, l) => {
+      m.push({
+        pk: e.events[0].eventId,
+        e: timeFromSeconds(e.events[0].endTime),
+        s: timeFromSeconds(e.events[0].startTime),
+        l: 0,
+        tid: _(e.events[0].speakerEvents).mapValues((v, k) => {
+          return v.tokens.map((t) => t.id)
+        }).value()
+      })
+      return m
+    }, [] as ServerEvent[]),
+    // aTokens: [],
   }
 }
 

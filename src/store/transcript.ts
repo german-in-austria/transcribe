@@ -49,7 +49,7 @@ export interface ServerTranscript {
   aTmNr?: number
 }
 
-interface ServerToken {
+export interface ServerToken {
   tr: number // token reihung
   tt: number // token type
   sr: number // sequence in sentence
@@ -61,7 +61,7 @@ interface ServerToken {
   e: number // event id
 }
 
-interface ServerEvent {
+export interface ServerEvent {
   pk: number
   tid: {
     [speaker_id: string]: number[]
@@ -106,7 +106,7 @@ export interface LocalTranscriptTier {
 
 export type LocalTranscript = LocalTranscriptEvent[]
 
-interface HistoryEventAction {
+export interface HistoryEventAction {
   type: 'RESIZE'|'DELETE'|'CHANGE_TOKENS'|'ADD'|'JOIN'
   apply: boolean
   events: LocalTranscriptEvent[]
@@ -292,6 +292,12 @@ export function timeToSeconds(time: string) {
     + chunks[1] * 60      // minutes
     + chunks[2]           // seconds
   )
+}
+
+export function timeFromSeconds(seconds: number) {
+  const date = new Date()
+  date.setSeconds(seconds)
+  return date.toISOString().substr(11, 8)
 }
 
 export async function playEvents(events: LocalTranscriptEvent[]) {
