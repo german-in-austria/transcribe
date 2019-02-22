@@ -3,6 +3,7 @@
     <v-list-tile
       :key="i"
       v-for="(action, i) in history"
+      @dblclick="playEvent(action.events[0])"
       @click="showEventIfExists(action.events[0])">
       <v-tooltip lazy left>
         <v-list-tile-avatar slot="activator">
@@ -62,7 +63,7 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SegmentTranscript from './SegmentTranscript.vue'
 // tslint:disable-next-line:max-line-length
-import { history, toTime, scrollToAudioEvent, scrollToTranscriptEvent, findSegmentById, LocalTranscriptEvent, selectEvent } from '@store/transcript'
+import { history, toTime, scrollToAudioEvent, scrollToTranscriptEvent, findSegmentById, LocalTranscriptEvent, selectEvent, playEvent } from '@store/transcript'
 @Component({
   components: {
     SegmentTranscript
@@ -71,6 +72,7 @@ import { history, toTime, scrollToAudioEvent, scrollToTranscriptEvent, findSegme
 export default class EditHistory extends Vue {
   history = history
   toTime = toTime
+  playEvent = playEvent
   showEventIfExists(e: LocalTranscriptEvent) {
     const i = findSegmentById(e.eventId)
     if (i > -1) {
