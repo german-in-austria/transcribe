@@ -99,6 +99,10 @@ export interface LocalTranscriptEvent {
   }
 }
 
+export interface LocalTranscriptEditEvent extends LocalTranscriptEvent {
+  editType: 'UPDATE'|'DELETE'|'ADD'
+}
+
 export interface LocalTranscriptTier {
   name: string
   show: boolean
@@ -109,10 +113,12 @@ export type LocalTranscript = LocalTranscriptEvent[]
 export interface HistoryEventAction {
   type: 'RESIZE'|'DELETE'|'CHANGE_TOKENS'|'ADD'|'JOIN'
   apply: boolean
-  events: LocalTranscriptEvent[]
+  events: LocalTranscriptEditEvent[]
 }
 
-export const history: HistoryEventAction[] = []
+export const history: HistoryEventAction[] = [];
+
+(window as any).__history = history
 
 export const eventStore = {
   events: [] as LocalTranscriptEvent[],
@@ -174,12 +180,13 @@ export function updateSpeakerTokens(
   speaker: number,
   tokens: LocalTranscriptToken[],
 ) {
+  const isNew = event.speakerEvents[speaker] === undefined
   const newEvent = clone({
     ...event,
     speakerEvents: {
       ...event.speakerEvents,
       [speaker] : {
-        speakerEventId: event.speakerEvents[speaker].speakerEventId,
+        speakerEventId: isNew ? makeEventId() : event.speakerEvents[speaker].speakerEventId,
         tokens
       }
     }
@@ -187,7 +194,10 @@ export function updateSpeakerTokens(
   history.push({
     apply: true,
     type: 'CHANGE_TOKENS',
-    events: [ clone(newEvent) ]
+    events: [{
+      ...clone(newEvent),
+      editType: 'UPDATE'
+    }]
   })
   const index = findSegmentById(event.eventId)
   eventStore.events.splice(index, 1, newEvent)
@@ -198,7 +208,10 @@ export function resizeSegment(id: number, startTime: number, endTime: number) {
   history.push({
     apply: true,
     type: 'RESIZE',
-    events: [ clone(eventStore.events[i]) ]
+    events: [{
+      ...clone(eventStore.events[i]),
+      editType: 'UPDATE'
+    }]
   })
   eventStore.events[i].startTime = startTime
   eventStore.events[i].endTime = endTime
@@ -214,7 +227,10 @@ export function addSegment(atTime: number) {
   history.push({
     apply: true,
     type: 'ADD',
-    events: [ clone(newEvent) ]
+    events: [{
+      ...clone(newEvent),
+      editType: 'ADD'
+    }]
   })
   eventStore.events.push(newEvent)
   return newEvent
@@ -230,7 +246,10 @@ export function deleteEvent(event: LocalTranscriptEvent) {
   history.push({
     apply: true,
     type: 'DELETE',
-    events: [ clone(eventStore.events[i]) ]
+    events: [{
+      ...clone(eventStore.events[i]),
+      editType: 'DELETE'
+    }]
   })
   eventStore.events.splice(i, 1)
 }
@@ -252,12 +271,18 @@ export function splitSegment(event: LocalTranscriptEvent, splitAt: number): Loca
     {
       apply: true,
       type: 'RESIZE',
-      events: [ oldEvent ],
+      events: [{
+        ...clone(oldEvent),
+        editType: 'UPDATE'
+      }],
     },
     {
       apply: true,
       type: 'ADD',
-      events: [ newEvent ]
+      events: [{
+        ...clone(newEvent),
+        editType: 'ADD'
+      }]
     }
   )
   return [ event, newEvent ]
@@ -357,7 +382,7 @@ export function joinEvents(eventIds: number[]): LocalTranscriptEvent {
   const joinedEvent = {
     startTime: events[0].startTime,
     endTime: events[events.length - 1].endTime,
-    eventId: makeEventId(),
+    eventId: events[0].eventId,
     speakerEvents: speakerIds.reduce((speakerEvents, speakerId) => {
       speakerEvents[speakerId] = {
         speakerEventId: makeEventId(),
@@ -375,7 +400,10 @@ export function joinEvents(eventIds: number[]): LocalTranscriptEvent {
   history.push({
     type: 'JOIN',
     apply: true,
-    events: clone(events)
+    events: [
+      { ...joinedEvent, editType: 'UPDATE' },
+      ..._.tail(events).map((e) => ({ ...e, editType: 'DELETE'} as LocalTranscriptEditEvent))
+    ]
   })
   replaceEvents(events, [ joinedEvent ])
   eventStore.selectedEventIds = [ joinedEvent.eventId ]
