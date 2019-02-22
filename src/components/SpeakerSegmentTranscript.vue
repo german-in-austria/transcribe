@@ -110,8 +110,8 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   commit() {
     if (
-      // it exists
-      this.event.speakerEvents[this.speaker] &&
+      // it doesn’t exist
+      this.event.speakerEvents[this.speaker] === undefined ||
       // it changed
       !isEqualDeep(this.localTokens, this.event.speakerEvents[this.speaker].tokens)
     ) {
@@ -243,11 +243,13 @@ export default class SpeakerSegmentTranscript extends Vue {
       color #fff
       background #777
       outline 0
+      border-radius 2px
+      transform scale(1.1)
+      transition transfrom .2s
       z-index 1
       min-width 100%
       width auto
       overflow unset
-      border-right-width 1px
       padding-right 2px
 
 .segment-editor
