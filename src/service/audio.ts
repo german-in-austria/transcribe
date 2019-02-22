@@ -538,13 +538,13 @@ async function downloadAudioStream({
   }
 ) {
   metadata = await getAudioMetadata(url)
-  const x = await fetch(url, { credentials: 'include' }).then((res) => {
+  const x = await fetch(url, { credentials: 'include' }).then(async (res) => {
     onStart(metadata)
     let preBuffer = new Uint8Array(0)
     if (res.body instanceof ReadableStream) {
       const reader = res.body.getReader()
       console.log('total length in bytes', res.headers.get('Content-Length'))
-      reader.read().then(async function process(chunk: {value: Uint8Array, done: boolean}): Promise<any> {
+      await reader.read().then(async function process(chunk: {value: Uint8Array, done: boolean}): Promise<any> {
         if (chunk.value && chunk.value.buffer instanceof ArrayBuffer) {
           [ preBuffer ] = await util.concatUint8ArrayAsync(preBuffer, chunk.value)
           if (preBuffer.byteLength > chunkSize) {
