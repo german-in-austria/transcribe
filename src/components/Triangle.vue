@@ -25,7 +25,7 @@ export default class Triangle extends Vue {
   user-select none
   margin-top 0
   position absolute
-  background rgba(255,255,255,.2)
+  background #777
   width 20px
   margin-left -8px
   border-radius 1px
