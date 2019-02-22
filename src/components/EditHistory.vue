@@ -4,13 +4,16 @@
       :key="i"
       v-for="(action, i) in history"
       @click="showEventIfExists(action.events[0])">
-      <v-list-tile-avatar>
-        <v-icon v-if="action.type === 'RESIZE'">swap_horiz</v-icon>
-        <v-icon v-if="action.type === 'DELETE'">delete_forever</v-icon>
-        <v-icon v-if="action.type === 'ADD'">add_circle_outline</v-icon>
-        <v-icon v-if="action.type === 'CHANGE_TOKENS'">edit</v-icon>
-        <v-icon v-if="action.type === 'JOIN'">merge_type</v-icon>
-      </v-list-tile-avatar>
+      <v-tooltip left>
+        <v-list-tile-avatar slot="activator">
+          <v-icon v-if="action.type === 'RESIZE'">swap_horiz</v-icon>
+          <v-icon v-if="action.type === 'DELETE'">delete_forever</v-icon>
+          <v-icon v-if="action.type === 'ADD'">add_circle_outline</v-icon>
+          <v-icon v-if="action.type === 'CHANGE_TOKENS'">edit</v-icon>
+          <v-icon v-if="action.type === 'JOIN'">merge_type</v-icon>
+        </v-list-tile-avatar>
+        <segment-transcript :event="action.events[0]" />
+      </v-tooltip>
       <v-list-tile-content v-if="action.type === 'RESIZE'">
         <v-list-tile-title class="sidebar-title">resize segment</v-list-tile-title>
         <v-list-tile-sub-title class="subtitle">
@@ -57,15 +60,21 @@
 </template>
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import SegmentTranscript from './SegmentTranscript.vue'
 // tslint:disable-next-line:max-line-length
-import { history, toTime, scrollToAudioEvent, scrollToTranscriptEvent, findSegmentById, LocalTranscriptEvent } from '@store/transcript'
-@Component
+import { history, toTime, scrollToAudioEvent, scrollToTranscriptEvent, findSegmentById, LocalTranscriptEvent, selectEvent } from '@store/transcript'
+@Component({
+  components: {
+    SegmentTranscript
+  }
+})
 export default class EditHistory extends Vue {
   history = history
   toTime = toTime
   showEventIfExists(e: LocalTranscriptEvent) {
     const i = findSegmentById(e.eventId)
     if (i > -1) {
+      selectEvent(e)
       scrollToAudioEvent(e)
       scrollToTranscriptEvent(e)
     }
