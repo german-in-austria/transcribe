@@ -4,7 +4,7 @@
       :key="i"
       v-for="(action, i) in history"
       @click="showEventIfExists(action.events[0])">
-      <v-tooltip left>
+      <v-tooltip lazy left>
         <v-list-tile-avatar slot="activator">
           <v-icon v-if="action.type === 'RESIZE'">swap_horiz</v-icon>
           <v-icon v-if="action.type === 'DELETE'">delete_forever</v-icon>
