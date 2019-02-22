@@ -90,9 +90,42 @@ const spectrogramColors = [
   }
 ]
 
+const spectrogramPresets = [
+  {
+    name: 'Color Heat',
+    colors: spectrogramColors
+  },
+  {
+    name: 'Redscale',
+    colors: [
+      {
+        at: 0,
+        c: [ 250, 118, 118, 0 ]
+      },
+      {
+        at: 255,
+        c: [ 250, 118, 118, 1 ]
+      }
+    ]
+  },
+  {
+    name: 'Greyscale',
+    colors: [
+      {
+        at: 0,
+        c: [ 255, 255, 255, 0 ]
+      },
+      {
+        at: 255,
+        c: [ 255, 255, 255, 1 ]
+      }
+    ]
+  }
+]
+
 const settings: Settings = {
-  spectrogramGradient: makeGradient(spectrogramColors),
-  spectrogramColors,
+  spectrogramGradient: makeGradient(spectrogramPresets[1].colors),
+  spectrogramColors: spectrogramPresets[1].colors,
   waveFormColors: [ '#fb7676', '#6699CC' ],
   lockScroll: false,
   darkMode: true,
