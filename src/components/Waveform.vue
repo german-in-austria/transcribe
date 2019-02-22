@@ -168,7 +168,7 @@ export default class Waveform extends Vue {
   overviewHeight = 60
   visibleSeconds: number[] = []
   audioLength = 0
-  metadata: any = {} // TODO: get rid of this
+  metadata: any = {} // TODO: get rid of this / put into the store
 
   renderedWaveFormPieces: number[] = []
   totalWidth = this.audioLength * this.pixelsPerSecond
@@ -177,6 +177,12 @@ export default class Waveform extends Vue {
 
   mounted() {
     this.initWithAudio()
+  }
+
+  async cacheOverviewWaveform() {
+    await util.requestFrameAsync()
+    const el = (this.$el.querySelector('.overview-waveform svg') as HTMLElement)
+    localStorage.setItem(this.metadata.url + '_overview', el.innerHTML)
   }
 
   get containerStyle() {
@@ -436,6 +442,21 @@ export default class Waveform extends Vue {
     }
   }
 
+  initWithMetadata(m: any) {
+    const waveformCache = localStorage.getItem(m.url + '_overview')
+    const scrollLeft = localStorage.getItem('scrollPos')
+    this.metadata = m
+    if (waveformCache !== null) {
+      const overviewEl = (this.$el.querySelector('.overview-waveform svg') as HTMLElement);
+      overviewEl.innerHTML = waveformCache
+    }
+    this.loading = false
+    const el = this.$refs.svgContainer
+    if (scrollLeft !== null && el instanceof HTMLElement) {
+      el.scrollTo({ left : Number(scrollLeft) })
+    }
+  }
+
   @Watch('audioElement')
   async initWithAudio() {
     if (this.audioElement !== null && !isNaN(this.audioElement.duration)) {
@@ -450,18 +471,16 @@ export default class Waveform extends Vue {
         const buffer = await audio.downloadAudioStream({
           url: this.audioElement.src,
           onStart: (metadata: any) => {
-            this.metadata = metadata
-            this.loading = false
-            const scrollLeft = localStorage.getItem('scrollPos')
-            const el = that.$refs.svgContainer
-            if (scrollLeft !== null && el instanceof HTMLElement) {
-              el.scrollTo({ left : Number(scrollLeft) })
-            }
+            this.initWithMetadata(metadata)
           },
           onProgress: (chunk: AudioBuffer, from: number, to: number) => {
-            this.drawOverviewWaveformPiece(from, to, chunk)
+            if (localStorage.getItem(this.metadata.url + '_overview') === null) {
+              this.drawOverviewWaveformPiece(from, to, chunk)
+            }
           }
         })
+        this.cacheOverviewWaveform()
+        console.log('it’s done.')
       }
     }
   }
@@ -496,14 +515,13 @@ export default class Waveform extends Vue {
       audio.drawWavePathAsync(audioBuffer, width, this.overviewHeight, 0, left),
       audio.drawWavePathAsync(audioBuffer, width, this.overviewHeight, 1, left)
     ])
-    requestAnimationFrame(() => {
-      const el = (this.$el.querySelector('.overview-waveform svg') as HTMLElement);
-      const oldHTML = el.innerHTML
-      el.innerHTML = `
-        ${ oldHTML }
-        <path fill="${ settings.waveFormColors[0] }" d="${ svg1 }" />
-        <path fill="${ settings.waveFormColors[1] }" d="${ svg2 }" />`
-    })
+    await util.requestFrameAsync()
+    const el = (this.$el.querySelector('.overview-waveform svg') as HTMLElement);
+    const oldHTML = el.innerHTML
+    el.innerHTML = `
+      ${ oldHTML }
+      <path fill="${ settings.waveFormColors[0] }" d="${ svg1 }" />
+      <path fill="${ settings.waveFormColors[1] }" d="${ svg2 }" />`
   }
 
   async drawWaveFormPiece(i: number) {
