@@ -435,7 +435,7 @@ export default class Waveform extends Vue {
         const currentOffset = el.scrollLeft
         requestAnimationFrame(() => {
           el.scrollTo({
-            left: offset - window.innerWidth / 2
+            left: offset - this.$el.clientWidth / 2
           })
         })
       }
