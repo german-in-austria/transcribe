@@ -92,7 +92,7 @@
     "svg-sprite-loader": "^3.4.1",
     "swagger-ts-client-generator": "^1.12.0",
     "ts-loader": "^2.0.3",
-    "typescript": "^2.8.1",
+    "typescript": "^2.9.2",
     "vue-loader": "^12.0.3",
     "vue-template-compiler": "^2.5.2",
     "webpack": "^2.5.0",
