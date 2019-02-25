@@ -11,6 +11,8 @@ import {
 
 import * as _ from 'lodash'
 
+export let serverTranscript = null as ServerTranscript|null
+
 function getMetadataFromServerTranscript(res: ServerTranscript) {
   return {
     speakers: res.aInformanten!,
@@ -33,8 +35,27 @@ function getMetadataFromServerTranscript(res: ServerTranscript) {
   }
 }
 
-// TODO:
-function historyToServerTranscript(hs: HistoryEventAction[], s: ServerTranscript): ServerTranscript {
+export function mergeServerTranscript(s: ServerTranscript) {
+  if (serverTranscript === null) {
+    serverTranscript = s
+  } else {
+    serverTranscript = {
+      ...serverTranscript,
+      ...s,
+      aTokens: {
+        ...serverTranscript.aTokens,
+        ...s.aTokens
+      },
+      aEvents: [
+        ...serverTranscript.aEvents,
+        ...s.aEvents
+      ]
+    }
+  }
+}
+
+export function historyToServerTranscript(hs: HistoryEventAction[], s: ServerTranscript): ServerTranscript {
+  console.log({ hs })
   return {
     ...s,
     aEvents: _(hs).reduce((m, e, i, l) => {
@@ -93,7 +114,7 @@ function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
 
 export async function getTranscript(
   id: number,
-  onProgress: (v: number, es: LocalTranscriptEvent[]) => any,
+  onProgress: (v: number, es: LocalTranscriptEvent[], res: ServerTranscript) => any,
   chunk = 0,
   buffer: LocalTranscript = [],
   totalSteps?: number,
@@ -116,7 +137,7 @@ export async function getTranscript(
 
     // progress callback with data
     if (onProgress !== undefined && totalSteps !== undefined) {
-      onProgress(res.aNr / totalSteps, eventStore.events)
+      onProgress(res.aNr / totalSteps, eventStore.events, res)
     }
 
     // get next (recursion) or finish

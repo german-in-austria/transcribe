@@ -122,8 +122,11 @@ export default class SegmentBox extends Vue {
     z-index 1
     border: 2px solid cornflowerblue
     box-shadow 0 0 50px rgba(0,0,0,.4)
+    background transparent
   &:hover:not(.selected)
-    background rgba(0,0,0,.3)
+    background transparent
+    border-bottom 1px solid rgba(255,255,255,.2)
+    border-left 1px solid rgba(255,255,255,.2)
   .resizer
     transition .25s opacity
     opacity 0

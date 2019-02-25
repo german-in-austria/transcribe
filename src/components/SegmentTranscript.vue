@@ -17,6 +17,7 @@
       v-for="(speaker, speakerKey) in eventStore.metadata.speakers"
       :key="speakerKey">
       <speaker-segment-transcript
+        @focus="(e, event) => $emit('focus', e, event)"
         class="tokens"
         :event="event"
         :speaker="speakerKey"
@@ -92,6 +93,8 @@ export default class SegmentTranscript extends Vue {
   margin 0 auto
   padding 0 1em
   border-radius 10px
+  &:hover
+    background rgba(255,255,255,.1)
   &.error
     color white
 

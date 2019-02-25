@@ -108,7 +108,7 @@ import audio from '../service/audio'
 import settings from '../store/settings'
 // tslint:disable-next-line:max-line-length
 import { LocalTranscriptEvent, eventStore, speakerEventHasErrors } from '../store/transcript'
-import { getTranscript } from '../service/data-backend/server-backend'
+import { getTranscript, mergeServerTranscript } from '../service/data-backend/server-backend'
 import { loadExmeraldaFile } from '../service/data-backend/exmaralda-backend'
 
 interface FileReaderEventTarget extends EventTarget {
@@ -207,13 +207,14 @@ export default class App extends Vue {
   async loadTranscript(pk: number) {
     this.loadingTranscriptId = pk
     const y = document.createElement('audio')
-    getTranscript(pk, (p, es) => {
+    getTranscript(pk, (progress, events, serverTranscript) => {
+      mergeServerTranscript(serverTranscript)
       if (this.eventStore.metadata.audioUrl !== null) {
         console.log(this.eventStore.metadata)
         y.src = this.eventStore.metadata.audioUrl
         this.loadingTranscriptId = null
       }
-      console.log(p)
+      console.log(progress)
     })
 
     y.addEventListener('durationchange', (e) => {

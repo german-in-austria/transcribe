@@ -5,7 +5,7 @@
       <v-badge :value="errors.length > 0" color="grey">
         Errors <span slot="badge">{{ errors.length }}</span>
       </v-badge>
-      </v-tab>
+    </v-tab>
     <v-tab-item>
       <edit-history v-if="history.length > 0" />
       <div v-else class="text-xs-center grey--text mt-4">

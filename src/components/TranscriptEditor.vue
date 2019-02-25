@@ -1,5 +1,5 @@
 <template>
-  <v-layout>
+  <v-layout style="height: auto">
     <v-flex :style="theme" class="pt-4 speaker-panel" xs1>
       <div
         :style="{height: speakerHeight}"
@@ -33,7 +33,7 @@
         </v-menu>
       </div>
     </v-flex>
-    <v-flex class="tracks-outer pt-2">
+    <v-flex ref="outer" class="tracks-outer pt-2">
       <div
         @wheel="handleMousewheel"
         ref="tracks"
@@ -42,6 +42,7 @@
         <div :style="{transform: `translateX(${ innerLeft }px)`}" ref="inner" class="transcript-segments-inner">
           <segment-transcript
             v-for="(event, i) in visibleEvents"
+            @focus="scrollIntoView"
             :event="event"
             :key="event.eventId"
             :is-selected="isEventSelected(event.eventId)"
@@ -105,6 +106,14 @@ export default class TranscriptEditor extends Vue {
         }
       })
     })
+  }
+
+  scrollIntoView(e: Event, event: LocalTranscriptEvent) {
+    const r = (e.target as HTMLElement).getBoundingClientRect()
+    console.log(r)
+    if (r.left < 57 || r.left + r.width > (this.$refs.outer as HTMLElement).clientWidth) {
+      this.doScrollToEvent(event)
+    }
   }
 
   get speakerHeight() {
@@ -259,6 +268,8 @@ export default class TranscriptEditor extends Vue {
   font-weight 300
   font-size 90%
   line-height 1.6em
+  &:last-child
+    border-bottom 0
   &:hover
     background rgba(0,0,0,0)
   .speaker-name

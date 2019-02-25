@@ -13,6 +13,7 @@
           <span
             v-text="token.tiers[tier.name].text"
             @blur="(e) => updateAndCommitLocalTokenTier(e, tier.name, i)"
+            @focus="(e) => $emit('focus', e, event)"
             contenteditable="true"
             @keydown.enter.meta="playEvent(event)"
             @keydown.enter.stop.prevent="viewAudioEvent(event)"
@@ -21,7 +22,7 @@
       </span>
     </div>
     <div
-      @focus="focused = true"
+      @focus="(e) => $emit('focus', e, event)"
       @input="updateLocalTokens"
       @blur="updateAndCommitLocalTokens"
       @keydown.enter.meta="playEvent(event)"

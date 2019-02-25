@@ -2,6 +2,7 @@
 import * as _ from 'lodash'
 import audio from '../service/audio'
 import { clone, isEqualDeep  } from '../util'
+import { historyToServerTranscript, serverTranscript } from '../service/data-backend/server-backend'
 
 declare global {
   interface Window {
@@ -117,8 +118,6 @@ export interface HistoryEventAction {
 }
 
 export const history: HistoryEventAction[] = [];
-
-(window as any).__history = history
 
 export const eventStore = {
   events: [] as LocalTranscriptEvent[],
@@ -320,9 +319,7 @@ export function timeToSeconds(time: string) {
 }
 
 export function timeFromSeconds(seconds: number) {
-  const date = new Date()
-  date.setSeconds(seconds)
-  return date.toISOString().substr(11, 8)
+  return new Date(1000 * seconds).toISOString().substr(12, 11)
 }
 
 export async function playEvents(events: LocalTranscriptEvent[]) {
@@ -454,4 +451,11 @@ export function getSelectedEvent(): LocalTranscriptEvent|undefined {
 export function toTime(time: number): string {
   // seconds to readable time
   return new Date(time * 1000).toISOString().substr(11, 8)
+}
+
+export async function saveHistoryToServer() {
+  if (history.length > 0 && serverTranscript !== null) {
+    const x = historyToServerTranscript(history, serverTranscript)
+    console.log({x})
+  }
 }

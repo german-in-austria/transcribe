@@ -6,7 +6,7 @@
       <div>
         <search :show="showSearch" />
       </div>
-      <div>
+      <div class="pr-4">
         <v-tooltip transition="none" bottom>
           <v-btn slot="activator" @click.stop="showSettings = true" icon flat>
             <v-icon>settings</v-icon>
@@ -14,7 +14,13 @@
           <span>Settings</span>
         </v-tooltip>
         <v-tooltip transition="none" bottom>
-          <v-btn slot="activator" class="mr-4" @click.stop="$emit('toggle-drawer')" icon flat>
+          <v-btn @click="saveToServer" :disabled="history.length === 0" slot="activator" icon flat>
+            <v-icon>save_alt</v-icon>
+          </v-btn>
+          <span>Save</span>
+        </v-tooltip>
+        <v-tooltip transition="none" bottom>
+          <v-btn slot="activator" @click.stop="$emit('toggle-drawer')" icon flat>
             <v-badge color="error" overlap :value="errors.length > 0">
               <span class="custom-badge" slot="badge">{{ errors.length }}</span>
               <v-icon style="margin-top: -2px">history</v-icon>
@@ -182,7 +188,9 @@ import {
   selectPreviousEvent,
   scrollToTranscriptEvent,
   joinEvents,
-  isEventSelected
+  isEventSelected,
+  history,
+  saveHistoryToServer
 } from '@store/transcript'
 
 @Component({
@@ -211,6 +219,7 @@ export default class Editor extends Vue {
   getSelectedEvent = getSelectedEvent
   joinEvents = joinEvents
   isEventSelected = isEventSelected
+  history = history
 
   // TODO: percentages are impractical. use pixels
   segmentBufferPercent = .01
@@ -235,6 +244,12 @@ export default class Editor extends Vue {
   menuX = 0
   menuY = 0
   layerX = 0 // this is used for splitting
+
+  async saveToServer() {
+    if (this.history.length > 0) {
+      await saveHistoryToServer()
+    }
+  }
 
   handleTranscriptScroll(e: number) {
     const i = (this.$refs.transcriptScrollhandle as Vue).$el
