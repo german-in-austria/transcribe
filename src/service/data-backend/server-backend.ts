@@ -55,7 +55,10 @@ export function mergeServerTranscript(s: ServerTranscript) {
   }
 }
 
-export function historyToServerTranscript(hs: HistoryEventAction[], s: ServerTranscript): ServerTranscript {
+export function historyToServerTranscript(
+  hs: HistoryEventAction[],
+  s: ServerTranscript,
+  es: LocalTranscript): ServerTranscript {
   console.log({ hs })
   const aEvents = _(hs.slice().reverse())
     .uniqBy(h => h.events[0].eventId)
@@ -103,30 +106,125 @@ export function historyToServerTranscript(hs: HistoryEventAction[], s: ServerTra
   }
 }
 
+function reverseString(str: string) {
+  return str.split('').reverse().join('')
+}
+
+function replaceLastOccurrence(token: string, toReplace: string, replaceWith: string): string {
+  return reverseString(
+    reverseString(token).replace(
+      reverseString(toReplace),
+      reverseString(replaceWith)
+    )
+  )
+}
+
+function getPriorFragmentId(
+  tokenId: number,
+  tokenIndex: number,
+  speakerKey: string,
+  groupedEvents: ServerEvent[][],
+  groupedEventsIndex: number,
+  tokens: _.Dictionary<ServerToken>
+  ): number|undefined {
+    if (
+      // it’s the first token
+      tokenIndex === 0 &&
+      // this token is a fragment of something
+      tokens[tokenId].fo !== undefined &&
+      // there is exists a previous event
+      groupedEvents[groupedEventsIndex - 1] !== undefined &&
+      // that previous event also has tokens for this speaker
+      groupedEvents[groupedEventsIndex - 1].filter(e => e.tid[speakerKey] !== undefined)
+    ) {
+      const lastPreviousTokenId = _(groupedEvents[groupedEventsIndex - 1])
+        .filter(prevEvent => prevEvent.tid[speakerKey] !== undefined)
+        .flatMap(prevSpeakerEvent => prevSpeakerEvent.tid[speakerKey])
+        .last()
+      if (
+        // we found one
+        lastPreviousTokenId !== undefined &&
+        // it’s the one that’s been referred to
+        lastPreviousTokenId === tokens[tokenId].fo
+      ) {
+        return lastPreviousTokenId
+      } else {
+        return undefined
+      }
+    } else {
+      return undefined
+    }
+}
+
+function findNextFragmentOfId(
+  tokenId: number,
+  tokenIndex: number,
+  speakerKey: string,
+  groupedEvents: ServerEvent[][],
+  groupedEventsIndex: number,
+  tokens: _.Dictionary<ServerToken>
+): number|undefined {
+  const event = groupedEvents[groupedEventsIndex].find(e => e.tid[speakerKey] !== undefined)
+  if (
+    // speaker event exists
+    event !== undefined &&
+    // the speaker event has tokens
+    event.tid[speakerKey].length &&
+    // there is an event group after this one
+    groupedEvents[groupedEventsIndex + 1] !== undefined
+  ) {
+    const nextEvent = groupedEvents[groupedEventsIndex + 1].find(e => e.tid[speakerKey] !== undefined)
+    if (
+      // the next event group has an event for this speaker
+      nextEvent !== undefined &&
+      // there is a token for the first token id
+      tokens[nextEvent.tid[speakerKey][0]] &&
+      // it refers to the current token
+      tokens[nextEvent.tid[speakerKey][0]].fo === tokenId
+    ) {
+      // return the next event’s id
+      return nextEvent.tid[speakerKey][0]
+    } else {
+      return undefined
+    }
+  } else {
+    return undefined
+  }
+}
+
 function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
-  const x = _(s.aEvents)
-    .groupBy((e) => {
-      return e.s + '-' + e.e
-    })
-    .flatMap((e) => {
+  return _(s.aEvents)
+    // group into events by startTime and endTime
+    .groupBy((e) => e.s + '-' + e.e)
+    // so we can access it as a list
+    .toArray()
+    // generate unified local events
+    .map((eG, iG, lG) => {
       return {
-        eventId: e[0].pk,
-        startTime: timeToSeconds(e[0].s),
-        endTime: timeToSeconds(e[0].e),
-        speakerEvents: _.reduce(e, (m, se) => {
+        eventId: eG[0].pk,
+        startTime: timeToSeconds(eG[0].s),
+        endTime: timeToSeconds(eG[0].e),
+        speakerEvents: _.reduce(eG, (m, se, i, ses) => {
           _.map(se.tid, (tokenIds, speakerKey) => {
             m[speakerKey] = {
               speakerEventId: se.pk,
-              tokens: _.map(tokenIds, (id) => {
+              tokens: _.map(tokenIds, (tokenId, tokenIndex) => {
+                // replace fragment in previous token
+                const nextFragmentOfId = findNextFragmentOfId(tokenId, tokenIndex, speakerKey, lG, iG, s.aTokens)
+                if (nextFragmentOfId !== undefined) {
+                  s.aTokens[tokenId].t = replaceLastOccurrence(s.aTokens[tokenId].t, s.aTokens[nextFragmentOfId].t, '=')
+                  console.log('replaced FO', s.aTokens[tokenId].t, s.aTokens[nextFragmentOfId].t)
+                }
                 return {
-                  id,
+                  id: tokenId,
+                  fragmentOf: s.aTokens[tokenId].fo || null,
                   tiers : {
                     default: {
-                      text: s.aTokens[id].t,
-                      type: s.aTokens[id].tt
+                      text: s.aTokens[tokenId].t,
+                      type: s.aTokens[tokenId].tt
                     },
                     ortho: {
-                      text: s.aTokens[id].o || '',
+                      text: s.aTokens[tokenId].o || '',
                       type: null
                     }
                   }
@@ -138,7 +236,6 @@ function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
         }, {} as LocalTranscriptEvent['speakerEvents'])
       }
     }).value()
-  return x
 }
 
 export async function getTranscript(

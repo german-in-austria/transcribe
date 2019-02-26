@@ -44,6 +44,7 @@
             v-for="(event, i) in visibleEvents"
             @focus="scrollIntoView"
             :event="event"
+            :next-event="visibleEvents[i + 1]"
             :key="event.eventId"
             :is-selected="isEventSelected(event.eventId)"
             :class="['segment', isEventSelected(event.eventId) && 'segment-selected']"
@@ -159,7 +160,6 @@ export default class TranscriptEditor extends Vue {
       return v.offsetLeft + v.offsetWidth > this.innerLeft * -1
     })
     const firstVisibleEvent = this.visibleEvents[firstVisibleIndex]
-    // console.log(firstVisibleIndex, firstVisibleEvent.startTime, firstVisibleEvent.eventId)
     return [ firstVisibleEvent, innerOffset, width ]
   }
 

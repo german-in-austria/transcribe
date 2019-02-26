@@ -1,6 +1,6 @@
 <template>
-  <div class="segment-editor">
-    <div class="token-display segment-text">
+  <div :class="['segment-editor', isMarkedWithFragment && 'has-next-fragment']">
+    <div :class="['token-display', 'segment-text']">
       <span
         class="token"
         v-for="(token, i) in localTokens"
@@ -9,7 +9,7 @@
           v-html="token.tiers.default.text"
           :class="['token-type-indicator', focused && 'focused']"
           :style="{ backgroundColor: colorFromTokenType(token.tiers.default.type) }">
-        </span><span class="token-spacer" /><span class="secondary-token-tier" v-for="tier in secondaryTiers" :key="tier.name">
+        </span><span v-if="!(isMarkedWithFragment && i === localTokens.length - 1)" class="token-spacer" /><span class="secondary-token-tier" v-for="tier in secondaryTiers" :key="tier.name">
           <span
             v-text="token.tiers[tier.name].text"
             @blur="(e) => updateAndCommitLocalTokenTier(e, tier.name, i)"
@@ -71,6 +71,7 @@ function tokenTypeFromToken(token: string) {
 export default class SpeakerSegmentTranscript extends Vue {
 
   @Prop() event: LocalTranscriptEvent
+  @Prop() nextEvent: LocalTranscriptEvent|undefined
   @Prop() speaker: number
 
   playEvent = playEvent
@@ -82,6 +83,19 @@ export default class SpeakerSegmentTranscript extends Vue {
   focused = false
   settings = settings
   updateSpeakerTokens = updateSpeakerTokens
+
+  get isMarkedWithFragment(): boolean {
+    const last = _(this.localTokens).last()
+    return last !== undefined && last.tiers.default.text.endsWith('=')
+  }
+
+  // get hasNextFragementToken(): boolean {
+  //   return (
+  //     this.nextEvent !== undefined &&
+  //     this.nextEvent.speakerEvents[this.speaker] !== undefined &&
+  //     this.nextEvent.speakerEvents[this.speaker].tokens[0].fragmentOf !== null
+  //   )
+  // }
 
   tokenizeText(text: string) {
     return text.trim().split(' ')
@@ -179,6 +193,7 @@ export default class SpeakerSegmentTranscript extends Vue {
       } else if (u.type === 'add') {
         ts.splice(u.index, 0, {
           id: makeTokenId(),
+          fragmentOf: null, // how?
           tiers: {
             default: {
               text: u.text,
@@ -291,4 +306,7 @@ export default class SpeakerSegmentTranscript extends Vue {
 .token-spacer
   display inline-block
   width .25em
+
+.has-next-fragment
+  text-align right
 </style>

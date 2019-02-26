@@ -56,10 +56,11 @@ export interface ServerToken {
   sr: number // sequence in sentence
   t: string // text
   to: string // text in ortho
-  o?: string // ortho
   s: number // sentence id
   i: number // inf id
   e: number // event id
+  o?: string // ortho
+  fo?: number // fragment of
 }
 
 export interface ServerEvent {
@@ -82,6 +83,7 @@ type LocalTranscriptTokenTypes = ServerTranscript['aTokenTypes']
 
 export interface LocalTranscriptToken {
   id: number
+  fragmentOf: number|null
   tiers: {
     default: LocalTranscriptTokenTier
     [tier: string]: LocalTranscriptTokenTier
@@ -455,7 +457,7 @@ export function toTime(time: number): string {
 
 export async function saveHistoryToServer() {
   if (history.length > 0 && serverTranscript !== null) {
-    const x = historyToServerTranscript(history, serverTranscript)
+    const x = historyToServerTranscript(history, serverTranscript, eventStore.events)
     console.log({x})
   }
 }

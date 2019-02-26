@@ -19,6 +19,7 @@
       <speaker-segment-transcript
         @focus="(e, event) => $emit('focus', e, event)"
         class="tokens"
+        :next-event="nextEvent"
         :event="event"
         :speaker="speakerKey"
       />
@@ -49,6 +50,7 @@ import {
 export default class SegmentTranscript extends Vue {
 
   @Prop() event: LocalTranscriptEvent
+  @Prop() nextEvent: LocalTranscriptEvent|undefined
   @Prop({ default: false }) isSelected: boolean
 
   eventStore = eventStore
