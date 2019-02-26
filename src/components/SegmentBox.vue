@@ -101,6 +101,9 @@ export default class SegmentBox extends Vue {
   top -40px
   transform translateX(-50%)
   text-align center
+  padding 2px 10px
+  background rgba(50,50,50,.9)
+  border-radius 5px
   .inner
     font-weight 300
     white-space nowrap

@@ -14,7 +14,12 @@
           <span>Settings</span>
         </v-tooltip>
         <v-tooltip transition="none" bottom>
-          <v-btn @click="saveToServer" :disabled="history.length === 0" slot="activator" icon flat>
+          <v-btn
+            @click="saveToServer"
+            :loading="eventStore.status === 'loading' || isSaving"
+            :disabled="eventStore.status === 'loading' || isSaving || history.length === 0"
+            slot="activator"
+            icon flat>
             <v-icon>save_alt</v-icon>
           </v-btn>
           <span>Save</span>
@@ -241,6 +246,7 @@ export default class Editor extends Vue {
   showSettings = false
   showSearch = false
   showMenu = false
+  isSaving = false
   menuX = 0
   menuY = 0
   layerX = 0 // this is used for splitting
@@ -248,6 +254,10 @@ export default class Editor extends Vue {
   async saveToServer() {
     if (this.history.length > 0) {
       await saveHistoryToServer()
+      this.isSaving = true
+      setTimeout(() => {
+        this.isSaving = false
+      }, 2000)
     }
   }
 

@@ -6,7 +6,8 @@ import {
   timeToSeconds,
   timeFromSeconds,
   HistoryEventAction,
-  ServerEvent
+  ServerEvent,
+  ServerToken
 } from '@store/transcript'
 
 import * as _ from 'lodash'
@@ -56,21 +57,49 @@ export function mergeServerTranscript(s: ServerTranscript) {
 
 export function historyToServerTranscript(hs: HistoryEventAction[], s: ServerTranscript): ServerTranscript {
   console.log({ hs })
-  return {
-    ...s,
-    aEvents: _(hs).reduce((m, e, i, l) => {
-      m.push({
+  const aEvents = _(hs.slice().reverse())
+    .uniqBy(h => h.events[0].eventId)
+    .map((e) => {
+      return {
         pk: e.events[0].eventId,
         e: timeFromSeconds(e.events[0].endTime),
         s: timeFromSeconds(e.events[0].startTime),
-        l: 0,
+        l: 0 as 0,
         tid: _(e.events[0].speakerEvents).mapValues((v, k) => {
           return v.tokens.map((t) => t.id)
         }).value()
+      }
+    })
+    .value()
+  const aTokens = _(hs).reduce((m, e) => {
+    _(e.events[0].speakerEvents).mapValues((ev, speakerId) => {
+      return ev.tokens.map((t, i) => {
+        m[t.id] = {
+          e : e.events[0].eventId,
+          i : Number(speakerId),
+          o : t.tiers.ortho.text,
+          // sentence id? do i have to produce new sentences?
+          s : s.aTokens[t.id] ? s.aTokens[t.id].s : -1,
+          // sequence in sentence (how do i find that out?)
+          sr: s.aTokens[t.id] ? s.aTokens[t.id].sr : -1,
+          t : t.tiers.default.text,
+          // Text in ortho is basically useless.
+          to: s.aTokens[t.id] ? s.aTokens[t.id].to : '',
+          // TokenReihung must be relative to the entire Transcript
+          tr: s.aTokens[t.id] ? s.aTokens[t.id].tr : -1,
+          // TODO: this could be null
+          tt: t.tiers.default.type as number,
+        }
       })
-      return m
-    }, [] as ServerEvent[]),
-    // aTokens: [],
+    })
+    .value()
+    return m
+  }, {} as _.Dictionary<ServerToken>)
+  console.log({aTokens, aEvents})
+  return {
+    ...s,
+    aEvents,
+    aTokens
   }
 }
 

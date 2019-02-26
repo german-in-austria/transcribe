@@ -202,12 +202,18 @@ export default class TranscriptEditor extends Vue {
       if (this.innerLeft <= -1500 && this.currentIndex + defaultLimit + 1 < this.eventStore.events.length) {
         this.currentIndex = this.currentIndex + 1
         this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
+      } else {
+        // NORMAL SCROLL, NO UPDATES
+        this.emitScroll()
       }
     } else {
       // SCROLL RIGHT TO LEFT
       if (this.innerLeft >= -200 && this.currentIndex > 0) {
         this.currentIndex = this.currentIndex - 1
         this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
+      } else {
+        // NORMAL SCROLL, NO UPDATES
+        this.emitScroll()
       }
     }
     // WAIT FOR THE ELEMENT TO RENDER,
