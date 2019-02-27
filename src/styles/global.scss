@@ -71,6 +71,9 @@ img[lazy=loaded] {
   min-width: 40px;
   margin-left: -10px;
 }
+.navigation-drawer__border{
+  display: none;
+}
 .menu__content .list--dense:not(.list--two-line) a,
 .context-menu .list--dense:not(.list--two-line) a,
 .menu__content .list--dense .list__tile:not(.list__tile--avatar),
