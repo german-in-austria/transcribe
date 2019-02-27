@@ -468,7 +468,7 @@ export default class Waveform extends Vue {
       if (audio.store.isLocalFile === true) {
         console.log('local')
       } else {
-        const buffer = await audio.downloadAudioStream({
+        await audio.downloadAudioStream({
           url: this.audioElement.src,
           onStart: (metadata: any) => {
             this.initWithMetadata(metadata)
