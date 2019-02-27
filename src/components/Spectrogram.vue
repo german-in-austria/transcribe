@@ -5,7 +5,7 @@
     scrollable
     @input="$event === false && $emit('close')"
     :value="show"
-    max-width="1200">
+    max-width="100%">
     <v-card class="text-xs-center pt-3" style="background: #0a0a0a">
       <small>Spectrogram</small>
       <v-card-text class="pa-0" ref="canvasContainer"></v-card-text>
