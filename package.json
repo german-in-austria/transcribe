@@ -1,5 +1,5 @@
 {
-  "name": "sendmate-webclient",
+  "name": "dioe-transcribe",
   "version": "1.0.0",
   "private": true,
   "description": "",
@@ -16,7 +16,7 @@
   },
   "keywords": [],
   "author": {
-    "name": "Arni & Tom"
+    "name": "Arni"
   },
   "dependencies": {
     "@mdi/font": "^2.7.94",
