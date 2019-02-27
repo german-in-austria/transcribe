@@ -9,7 +9,7 @@
           v-html="token.tiers.default.text"
           :class="['token-type-indicator', focused && 'focused']"
           :style="{ backgroundColor: colorFromTokenType(token.tiers.default.type) }">
-        </span><span v-if="!(isMarkedWithFragment && i === localTokens.length - 1)" class="token-spacer" /><span class="secondary-token-tier" v-for="tier in secondaryTiers" :key="tier.name">
+        </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span class="secondary-token-tier" v-for="tier in secondaryTiers" :key="tier.name">
           <span
             v-text="token.tiers[tier.name].text"
             @blur="(e) => updateAndCommitLocalTokenTier(e, tier.name, i)"
@@ -72,6 +72,7 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   @Prop() event: LocalTranscriptEvent
   @Prop() nextEvent: LocalTranscriptEvent|undefined
+  @Prop() previousEvent: LocalTranscriptEvent|undefined
   @Prop() speaker: number
 
   playEvent = playEvent
@@ -89,6 +90,41 @@ export default class SpeakerSegmentTranscript extends Vue {
     return last !== undefined && last.tiers.default.text.endsWith('=')
   }
 
+  get firstTokenFragmentOf(): number|null {
+    if (this.previousEvent !== undefined) {
+      const nextSpeakerEvent = this.previousEvent.speakerEvents[this.speaker]
+      if (nextSpeakerEvent !== undefined) {
+        const lastToken = _(nextSpeakerEvent.tokens).last()
+        if (lastToken !== undefined && lastToken.tiers.default.text.endsWith('=')) {
+          return lastToken.id
+        } else {
+          return null
+        }
+      } else {
+        return null
+      }
+    } else {
+      return null
+    }
+  }
+
+  @Watch('previousEvent')
+  onPreviousEventLastTokenChange(
+    newPreviousEvent: LocalTranscriptEvent|undefined,
+    oldPreviousEvent: LocalTranscriptEvent|undefined
+  ) {
+    if (
+      oldPreviousEvent !== undefined &&
+      newPreviousEvent !== undefined &&
+      newPreviousEvent.eventId === oldPreviousEvent.eventId
+    ) {
+      if (this.localTokens[0] !== undefined) {
+        this.localTokens[0].fragmentOf = this.firstTokenFragmentOf
+        this.commit()
+      }
+    }
+  }
+
   // get hasNextFragementToken(): boolean {
   //   return (
   //     this.nextEvent !== undefined &&
@@ -98,7 +134,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   // }
 
   tokenizeText(text: string) {
-    return text.trim().split(' ')
+    return text.trim().split(' ').filter((t) => t !== '')
   }
 
   viewAudioEvent(e: LocalTranscriptEvent) {
@@ -193,7 +229,7 @@ export default class SpeakerSegmentTranscript extends Vue {
       } else if (u.type === 'add') {
         ts.splice(u.index, 0, {
           id: makeTokenId(),
-          fragmentOf: null, // how?
+          fragmentOf: u.index === 0 ? this.firstTokenFragmentOf : null,
           tiers: {
             default: {
               text: u.text,

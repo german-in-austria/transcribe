@@ -1,5 +1,5 @@
 <template>
-  <div :class="{ selected: isSelected }">
+  <div :class="{ selected: isSelected, segment: true, 'fragment-of': hasFragmentOfInAnyFirstToken }">
     <div
       style="outline: 0;"
       tabindex="-1"
@@ -11,6 +11,11 @@
       @mousedown.exact="selectAndScrollToEvent(event)">
       {{ toTime(event.startTime) }} - {{ toTime(event.endTime) }}
     </div>
+    <!-- <div class="connect-fragments">
+      <div class="ball-left" />
+      <div class="connection" />
+      <div class="ball-right" />
+    </div> -->
     <div
       class="speaker-segment"
       :style="{ height: speakerHeight }"
@@ -19,6 +24,7 @@
       <speaker-segment-transcript
         @focus="(e, event) => $emit('focus', e, event)"
         class="tokens"
+        :previous-event="previousEvent"
         :next-event="nextEvent"
         :event="event"
         :speaker="speakerKey"
@@ -29,6 +35,7 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SpeakerSegmentTranscript from '@components/SpeakerSegmentTranscript.vue'
+import * as _ from 'lodash'
 
 import {
   eventStore,
@@ -51,6 +58,7 @@ export default class SegmentTranscript extends Vue {
 
   @Prop() event: LocalTranscriptEvent
   @Prop() nextEvent: LocalTranscriptEvent|undefined
+  @Prop() previousEvent: LocalTranscriptEvent|undefined
   @Prop({ default: false }) isSelected: boolean
 
   eventStore = eventStore
@@ -62,6 +70,12 @@ export default class SegmentTranscript extends Vue {
 
   get speakerHeight() {
     return eventStore.metadata.tiers.filter(t => t.show === true).length * 25 + 'px'
+  }
+
+  get hasFragmentOfInAnyFirstToken(): boolean {
+    return _(this.event.speakerEvents).some((speakerEvent) => {
+      return speakerEvent.tokens[0] !== undefined && speakerEvent.tokens[0].fragmentOf !== null
+    })
   }
 
   mounted() {
@@ -84,6 +98,39 @@ export default class SegmentTranscript extends Vue {
 }
 </script>
 <style lang="stylus" scoped>
+.segment
+  display inline-block
+  vertical-align top
+  border-left 1px solid
+  border-color rgba(255,255,255,.2)
+  transition border-color .25s
+  padding 0 6px
+  color #444
+
+.segment.fragment-of
+  border-color rgba(255,255,255,0)
+
+.connect-fragments
+  position absolute
+  top -3px
+  opacity .4
+  transform translateX(-73%)
+  .ball-left, .ball-right
+    width 8px
+    height 8px
+    background white
+    border-radius 100%
+    display inline-block
+  .ball-left
+    margin-right -4px
+  .connection
+    display inline-block
+    height 3px
+    background white
+    width 15px
+    position relative
+    top -2px
+    margin-right -5px
 .time
   user-select none
   cursor default

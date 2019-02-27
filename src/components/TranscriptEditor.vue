@@ -44,6 +44,7 @@
             v-for="(event, i) in visibleEvents"
             @focus="scrollIntoView"
             :event="event"
+            :previous-event="visibleEvents[i - 1]"
             :next-event="visibleEvents[i + 1]"
             :key="event.eventId"
             :is-selected="isEventSelected(event.eventId)"
@@ -289,19 +290,5 @@ export default class TranscriptEditor extends Vue {
 
 .tracks
   width 100%
-
-.segment
-  display inline-block
-  vertical-align top
-  border-right 1px solid rgba(255,255,255,.1)
-  padding 0 6px
-  color #444
-
-.speaker-segment
-  display block
-  min-height 2em
-
-.segment-chunk
-  display inline-block
 
 </style>
