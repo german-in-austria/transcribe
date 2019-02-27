@@ -119,43 +119,6 @@ function replaceLastOccurrence(token: string, toReplace: string, replaceWith: st
   )
 }
 
-function getPriorFragmentId(
-  tokenId: number,
-  tokenIndex: number,
-  speakerKey: string,
-  groupedEvents: ServerEvent[][],
-  groupedEventsIndex: number,
-  tokens: _.Dictionary<ServerToken>
-  ): number|undefined {
-    if (
-      // it’s the first token
-      tokenIndex === 0 &&
-      // this token is a fragment of something
-      tokens[tokenId].fo !== undefined &&
-      // there is exists a previous event
-      groupedEvents[groupedEventsIndex - 1] !== undefined &&
-      // that previous event also has tokens for this speaker
-      groupedEvents[groupedEventsIndex - 1].filter(e => e.tid[speakerKey] !== undefined)
-    ) {
-      const lastPreviousTokenId = _(groupedEvents[groupedEventsIndex - 1])
-        .filter(prevEvent => prevEvent.tid[speakerKey] !== undefined)
-        .flatMap(prevSpeakerEvent => prevSpeakerEvent.tid[speakerKey])
-        .last()
-      if (
-        // we found one
-        lastPreviousTokenId !== undefined &&
-        // it’s the one that’s been referred to
-        lastPreviousTokenId === tokens[tokenId].fo
-      ) {
-        return lastPreviousTokenId
-      } else {
-        return undefined
-      }
-    } else {
-      return undefined
-    }
-}
-
 function findNextFragmentOfId(
   tokenId: number,
   tokenIndex: number,
