@@ -181,17 +181,24 @@ export function updateSpeakerTokens(
   speaker: number,
   tokens: LocalTranscriptToken[],
 ) {
+  const oldEvent = eventStore.events[findSegmentById(event.eventId)]
   const isNew = event.speakerEvents[speaker] === undefined
-  const newEvent = clone({
-    ...event,
-    speakerEvents: {
-      ...event.speakerEvents,
+  const deletedSpeaker = tokens.length === 0 ? speaker : undefined
+  const speakerEvents = _({
+      ...oldEvent.speakerEvents,
       [speaker] : {
         speakerEventId: isNew ? makeEventId() : event.speakerEvents[speaker].speakerEventId,
         tokens
       }
-    }
-  })
+    })
+    .reduce((m, e, k, l) => {
+      if (Number(k) !== Number(deletedSpeaker)) {
+        m[k] = e
+      }
+      return m
+    }, {} as LocalTranscriptEvent['speakerEvents'])
+  const newEvent = clone({...oldEvent, speakerEvents})
+  console.log({deletedSpeaker, speakerEvents})
   history.push({
     apply: true,
     type: 'CHANGE_TOKENS',
