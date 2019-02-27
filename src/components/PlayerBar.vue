@@ -108,7 +108,7 @@ export default class PlayerBar extends Vue {
 </script>
 <style lang="stylus" scoped>
 .playerbar
-  z-index 1
+  z-index 3
   position fixed
   left 0
   right 0
