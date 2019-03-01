@@ -472,6 +472,7 @@ export default class Waveform extends Vue {
           url: this.audioElement.src,
           onStart: (metadata: any) => {
             this.initWithMetadata(metadata)
+            this.doMaybeRerender()
           },
           onProgress: (chunk: AudioBuffer, from: number, to: number) => {
             if (localStorage.getItem(this.metadata.url + '_overview') === null) {
@@ -480,7 +481,7 @@ export default class Waveform extends Vue {
           }
         })
         this.cacheOverviewWaveform()
-        console.log('it’s done.')
+        console.log('download done.')
       }
     }
   }
