@@ -11,7 +11,6 @@ import {
 } from '@store/transcript'
 
 import * as _ from 'lodash'
-
 export let serverTranscript = null as ServerTranscript|null
 
 function getMetadataFromServerTranscript(res: ServerTranscript) {
@@ -37,29 +36,28 @@ function getMetadataFromServerTranscript(res: ServerTranscript) {
 }
 
 export function mergeServerTranscript(s: ServerTranscript) {
-  if (serverTranscript === null) {
-    serverTranscript = s
-  } else {
-    serverTranscript = {
-      ...serverTranscript,
-      ...s,
-      aTokens: {
-        ...serverTranscript.aTokens,
-        ...s.aTokens
-      },
-      aEvents: [
-        ...serverTranscript.aEvents,
-        ...s.aEvents
-      ]
-    }
+  const oldSt = (serverTranscript === null ? {aTokens: undefined, aEvents: []} : serverTranscript)
+  serverTranscript = {
+    ...oldSt,
+    ...s,
+    aTokens: {
+      ...oldSt.aTokens,
+      ...s.aTokens
+    },
+    aEvents: [
+      ...oldSt.aEvents,
+      ...s.aEvents
+    ]
   }
+  console.log({tokens: _(s.aTokens).toArray().sortBy(t => t.tr).value()})
 }
 
 export function historyToServerTranscript(
   hs: HistoryEventAction[],
-  s: ServerTranscript,
-  es: LocalTranscript): ServerTranscript {
+  oldServerTranscript: ServerTranscript,
+  localEvents: LocalTranscript): ServerTranscript {
   console.log({ hs })
+  const oldServerTokens = oldServerTranscript.aTokens
   const aEvents = _(hs.slice().reverse())
     .uniqBy(h => h.events[0].eventId)
     .map((e) => {
@@ -74,22 +72,22 @@ export function historyToServerTranscript(
       }
     })
     .value()
-  const aTokens = _(hs).reduce((m, e) => {
-    _(e.events[0].speakerEvents).mapValues((ev, speakerId) => {
-      return ev.tokens.map((t, i) => {
+  const newServerTokens = _(localEvents).reduce((m, e) => {
+    _(e.speakerEvents).mapValues((speakerEvent, speakerId) => {
+      return speakerEvent.tokens.map((t, i) => {
         m[t.id] = {
-          e : e.events[0].eventId,
+          e : e.eventId,
           i : Number(speakerId),
           o : t.tiers.ortho.text,
           // sentence id? do i have to produce new sentences?
-          s : s.aTokens[t.id] ? s.aTokens[t.id].s : -1,
+          s : oldServerTokens[t.id] ? oldServerTokens[t.id].s : -1,
           // sequence in sentence (how do i find that out?)
-          sr: s.aTokens[t.id] ? s.aTokens[t.id].sr : -1,
+          sr: oldServerTokens[t.id] ? oldServerTokens[t.id].sr : -1,
           t : t.tiers.default.text,
           // Text in ortho is basically useless.
-          to: s.aTokens[t.id] ? s.aTokens[t.id].to : '',
+          to: oldServerTokens[t.id] ? oldServerTokens[t.id].to : t.tiers.ortho.text,
           // TokenReihung must be relative to the entire Transcript
-          tr: s.aTokens[t.id] ? s.aTokens[t.id].tr : -1,
+          tr: t.order,
           // TODO: this could be null
           tt: t.tiers.default.type as number,
         }
@@ -98,12 +96,33 @@ export function historyToServerTranscript(
     .value()
     return m
   }, {} as _.Dictionary<ServerToken>)
-  console.log({aTokens, aEvents})
+  const newDiffable = tokensToDiffable(newServerTokens)
+  const oldDiffable = tokensToDiffable(oldServerTokens)
+  const diff = _.differenceWith(newDiffable, oldDiffable,
+    (l, r) => {
+      return (
+        l.id === r.id &&
+        l.tr === r.tr &&
+        l.tt === r.tt &&
+        l.t === r.t &&
+        l.i === r.i &&
+        l.e === r.e
+        // l.o === r.o &&
+        // l.fo === r.fo
+      )
+    }
+  )
+  const [addedTokens, updatedTokens] = _.partition(diff, (t) => Number(t.id) < 0)
+  const deletedTokens = _(oldDiffable).filter((t) => newServerTokens[t.id] === undefined).value()
+  console.log({addedTokens, updatedTokens, deletedTokens})
   return {
-    ...s,
-    aEvents,
-    aTokens
+    ...oldServerTranscript,
+    aTokens: newServerTokens
   }
+}
+
+function tokensToDiffable(sts: _.Dictionary<ServerToken>) {
+  return _(sts).map((st, id) => ({...st, id })).sortBy(['i', 'tr']).value()
 }
 
 function reverseString(str: string) {
@@ -176,7 +195,6 @@ function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
                 const nextFragmentOfId = findNextFragmentOfId(tokenId, tokenIndex, speakerKey, lG, iG, s.aTokens)
                 if (nextFragmentOfId !== undefined) {
                   s.aTokens[tokenId].t = replaceLastOccurrence(s.aTokens[tokenId].t, s.aTokens[nextFragmentOfId].t, '=')
-                  console.log('replaced FO', s.aTokens[tokenId].t, s.aTokens[nextFragmentOfId].t)
                 }
                 return {
                   id: tokenId,
@@ -227,8 +245,8 @@ export async function getTranscript(
     eventStore.events = buffer.concat(serverTranscriptToLocal(res))
 
     // progress callback with data
-    if (onProgress !== undefined && totalSteps !== undefined) {
-      onProgress(res.aNr / totalSteps, eventStore.events, res)
+    if (onProgress !== undefined) {
+      onProgress(res.aNr / (totalSteps || res.aTmNr || 10), eventStore.events, res)
     }
 
     // get next (recursion) or finish
