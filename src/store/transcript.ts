@@ -512,9 +512,9 @@ export function getSelectedEvent(): LocalTranscriptEvent|undefined {
   return _.find(eventStore.events, (e) => e.eventId === eventStore.selectedEventIds[0])
 }
 
-export function toTime(time: number): string {
+export function toTime(time: number, decimalPlaces = 0): string {
   // seconds to readable time
-  return new Date(time * 1000).toISOString().substr(11, 8)
+  return new Date(time * 1000).toISOString().substr(11, 8 + (decimalPlaces > 0 ? decimalPlaces + 1 : 0))
 }
 
 export async function saveHistoryToServer() {

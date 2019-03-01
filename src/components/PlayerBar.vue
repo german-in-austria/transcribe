@@ -22,7 +22,12 @@
             <v-icon v-else x-large>pause_circle_outline</v-icon>
           </v-btn>
           <div class="current-time">
-            {{ toTime(currentTime) }}
+            <span
+              v-for="(digit, i) in (toTime(currentTime, 3).split(''))"
+              :key="i"
+              class="digit">
+              {{ digit }}
+            </span>
           </div>
         </v-flex>
         <v-flex text-xs-left xs2>
