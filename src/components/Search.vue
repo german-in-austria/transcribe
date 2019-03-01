@@ -143,7 +143,7 @@ export default class Search extends Vue {
     if (this.searchTerm === '') {
       this.eventStore.searchResults = []
     } else {
-      console.time('search took')
+      // console.time('search took')
       const search = this.caseSensitive ? term : term.toLowerCase()
       const regex = new RegExp(search)
       requestAnimationFrame(() => {
