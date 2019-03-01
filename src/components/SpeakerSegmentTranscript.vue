@@ -100,15 +100,11 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   get firstTokenFragmentOf(): number|null {
-    if (this.previousEvent !== undefined) {
-      const nextSpeakerEvent = this.previousEvent.speakerEvents[this.speaker]
-      if (nextSpeakerEvent !== undefined) {
-        const lastToken = _(nextSpeakerEvent.tokens).last()
-        if (lastToken !== undefined && lastToken.tiers.default.text.endsWith('=')) {
-          return lastToken.id
-        } else {
-          return null
-        }
+    const speakerEvent = this.event.speakerEvents[this.speaker]
+    if (speakerEvent !== undefined) {
+      const firstToken = _(speakerEvent.tokens).first()
+      if (firstToken !== undefined && firstToken.fragmentOf) {
+        return firstToken.fragmentOf
       } else {
         return null
       }
@@ -116,33 +112,6 @@ export default class SpeakerSegmentTranscript extends Vue {
       return null
     }
   }
-
-  // @Watch('previousEvent')
-  // onPreviousEventLastTokenChange(
-  //   newPreviousEvent: LocalTranscriptEvent|undefined,
-  //   oldPreviousEvent: LocalTranscriptEvent|undefined
-  // ) {
-  //   if (
-  //     oldPreviousEvent !== undefined &&
-  //     newPreviousEvent !== undefined &&
-  //     newPreviousEvent.eventId === oldPreviousEvent.eventId
-  //   ) {
-  //     if (this.localTokens[0] !== undefined) {
-  //       this.localTokens[0].fragmentOf = this.firstTokenFragmentOf
-        // TODO: FIXME: this doesn’t work
-        // DO IT DIRECTLY IN THE STORE METHOD. WHEN UPDATING THE PREVIOUS EVENT
-        // this.commit()
-  //     }
-  //   }
-  // }
-
-  // get hasNextFragementToken(): boolean {
-  //   return (
-  //     this.nextEvent !== undefined &&
-  //     this.nextEvent.speakerEvents[this.speaker] !== undefined &&
-  //     this.nextEvent.speakerEvents[this.speaker].tokens[0].fragmentOf !== null
-  //   )
-  // }
 
   tokenizeText(text: string) {
     return text.trim().split(' ').filter((t) => t !== '')
@@ -286,10 +255,7 @@ export default class SpeakerSegmentTranscript extends Vue {
       }
     })
     this.localTokens = this.localTokens.map((t, i) => {
-      return {
-        ...t,
-        order: (this.firstTokenOrder || 0) + i
-      }
+      return { ...t, order: (this.firstTokenOrder || 0) + i }
     })
   }
 
