@@ -2,15 +2,20 @@ import * as sliceAudiobuffer from 'audiobuffer-slice'
 import * as concatBuffer from 'array-buffer-concat'
 import * as audioBufferToWav from 'audiobuffer-to-wav'
 import * as util from '../util'
-import settings from '../store/settings'
 import * as PromiseWorker from 'promise-worker-transferable'
+
+import settings from '../store/settings'
+
 import WaveformWorker from './waveform.worker'
 const waveformWorker = new PromiseWorker(new WaveformWorker(''))
 const waveformWorker2 = new PromiseWorker(new WaveformWorker(''))
+
 import GetFrequenciesWorker from './get-frequencies.worker'
 const getFrequenciesWorker = new PromiseWorker(new GetFrequenciesWorker(''))
+
 import OggIndexWorker from './oggindex.worker'
 const oggIndexWorker = new PromiseWorker(new OggIndexWorker(''))
+
 const textEncoder = new TextEncoder()
 const localAudioElement = document.createElement('audio')
 // import drawWaveWasm from './wasm/module.untouched.wasm'
@@ -114,7 +119,6 @@ export function getOggSampleRate(buffer: ArrayBuffer): number {
 async function getOggIndexAsync(buffer: ArrayBuffer): Promise<OggIndex> {
   const m = await oggIndexWorker.postMessage({ buffer })
   oggLength = m.oggLength
-  console.log(m)
   return m.oggIndex
 }
 
@@ -578,7 +582,6 @@ async function downloadAudioStream({
         if (chunk.done === false) {
           return reader.read().then(process)
         } else {
-          console.log('DONE.')
           audio.store.isBufferComplete = true
           audio.cacheOggIndex(audio.store.uint8Buffer.buffer)
         }
