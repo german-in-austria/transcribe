@@ -28,7 +28,6 @@ export function getOggSampleRate(buffer: ArrayBuffer): number {
 
 // Post data to parent thread
 registerPromiseWorker((message: { buffer: ArrayBuffer }): {oggLength: number, oggIndex: OggIndex} => {
-  console.time('indexing ogg async')
   const pages: OggIndex['pages'] = []
   const headers: OggIndex['headers'] = []
 
@@ -58,7 +57,6 @@ registerPromiseWorker((message: { buffer: ArrayBuffer }): {oggLength: number, og
       }
     }
   }
-  console.timeEnd('indexing ogg async')
   const oggLength = (pages[pages.length - 1] || { timestamp: 0 }).timestamp
   return {oggIndex: { headers, pages }, oggLength}
 })
