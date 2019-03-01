@@ -572,6 +572,5 @@ export function toTime(time: number, decimalPlaces = 0): string {
 export async function saveHistoryToServer() {
   if (history.length > 0 && serverTranscript !== null) {
     const x = historyToServerTranscript(history, serverTranscript, eventStore.events)
-    console.log({x})
   }
 }
