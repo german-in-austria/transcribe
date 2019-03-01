@@ -210,6 +210,52 @@ function updateSpeakerTokenOrderStartingAt(speakerId: number, startAtIndex = 0, 
   }).value()
 }
 
+function getLastEventToken(event: LocalTranscriptEvent, speakerId: number): LocalTranscriptToken|undefined {
+  const speakerEvent = event.speakerEvents[speakerId]
+  if (speakerEvent !== undefined && speakerEvent.tokens.length > 0) {
+    return _(speakerEvent.tokens).last()
+  } else {
+    return undefined
+  }
+}
+
+function hasNextFragmentMarker(event: LocalTranscriptEvent, speakerId: number): boolean {
+  const lastToken = getLastEventToken(event, speakerId)
+  if (lastToken !== undefined) {
+    return lastToken.tiers.default.text.endsWith('=')
+  } else {
+    return false
+  }
+}
+
+function setFirstTokenFragmentOf(
+  eventIndex: number,
+  speakerId: number,
+  lastEventToken?: LocalTranscriptToken
+): boolean {
+  if (lastEventToken === undefined) {
+    return false
+  } else {
+    const event = eventStore.events[eventIndex]
+    if (event !== undefined) {
+      const speakerEvent = event.speakerEvents[speakerId]
+      if (speakerEvent !== undefined) {
+        const firstToken = eventStore.events[eventIndex].speakerEvents[speakerId].tokens[0]
+        if (firstToken !== undefined) {
+          eventStore.events[eventIndex].speakerEvents[speakerId].tokens[0].fragmentOf = lastEventToken.id
+          return true
+        } else {
+          return false
+        }
+      } else {
+        return false
+      }
+    } else {
+      return true
+    }
+  }
+}
+
 export function updateSpeakerTokens(
   event: LocalTranscriptEvent,
   speakerId: number,
@@ -238,6 +284,12 @@ export function updateSpeakerTokens(
   const index = findSegmentById(event.eventId)
   // UPDATE EVENT
   eventStore.events.splice(index, 1, newEvent)
+  // IF IT HAS A FRAGMENT MARKER ("="),
+  // MARK THE FIRST TOKEN IN THE NEXT
+  // SPEAKER EVENT AS A FRAGMENT_OF
+  if (hasNextFragmentMarker(newEvent, speakerId)) {
+    setFirstTokenFragmentOf(index + 1, speakerId, getLastEventToken(newEvent, speakerId))
+  }
   // UPDATE TOKEN ORDER IF THE LENGTH CHANGED
   if (tokenCountDifference !== 0) {
     eventStore.events = updateSpeakerTokenOrderStartingAt(speakerId, index, tokenCountDifference)
