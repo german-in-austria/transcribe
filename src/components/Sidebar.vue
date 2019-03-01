@@ -61,9 +61,6 @@ export default class Sidebar extends Vue {
 
   beforeUpdate() {
     const el = this.$el.querySelector('.sidebar-scrollable')
-    if (el) {
-      console.log(el.scrollHeight - el.scrollTop - el.clientHeight, el.scrollHeight, el.scrollTop, el.clientHeight)
-    }
     if (el !== null && el.scrollHeight - el.scrollTop - el.clientHeight < 25) {
       this.stuckAtBottom = true
     } else {
