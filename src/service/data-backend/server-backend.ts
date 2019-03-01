@@ -76,7 +76,7 @@ export function historyToServerTranscript(
     _(e.speakerEvents).mapValues((speakerEvent, speakerId) => {
       return speakerEvent.tokens.map((t, i) => {
         m[t.id] = {
-          e : e.eventId,
+          e : speakerEvent.speakerEventId,
           i : Number(speakerId),
           o : t.tiers.ortho.text,
           // sentence id? do i have to produce new sentences?
@@ -85,7 +85,7 @@ export function historyToServerTranscript(
           sr: oldServerTokens[t.id] ? oldServerTokens[t.id].sr : -1,
           t : t.tiers.default.text,
           // Text in ortho is basically useless.
-          to: oldServerTokens[t.id] ? oldServerTokens[t.id].to : t.tiers.ortho.text,
+          to: t.tiers.ortho.text,
           // TokenReihung must be relative to the entire Transcript
           tr: t.order,
           // TODO: this could be null
