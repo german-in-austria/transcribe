@@ -169,6 +169,12 @@ const settings: Settings = {
       regex: /_?[a-zA-ZÜüÄäÖöß]+_?/u,
       color: 'transparent',
       id: 1
+    },
+    {
+      name: 'incomprehensible',
+      regex: /\((.+)\)/u,
+      color: '#6f6f6f',
+      id: 7
     }
   ],
   keyboardShortcuts: {
