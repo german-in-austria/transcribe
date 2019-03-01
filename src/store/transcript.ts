@@ -84,6 +84,8 @@ type LocalTranscriptTokenTypes = ServerTranscript['aTokenTypes']
 export interface LocalTranscriptToken {
   id: number
   fragmentOf: number|null
+  sentenceId: number|null
+  order: number
   tiers: {
     default: LocalTranscriptTokenTier
     [tier: string]: LocalTranscriptTokenTier
@@ -139,6 +141,8 @@ export const eventStore = {
   },
   status: 'empty' as 'empty'|'loading'|'finished'|'new'
 }
+;
+(window as any)._eventStore = eventStore
 
 export function scrollToAudioEvent(e: LocalTranscriptEvent) {
   eventStore.userState.viewingAudioEvent = e
@@ -176,29 +180,69 @@ export function speakerEventHasErrors(event: LocalTranscriptEvent): boolean {
   return !sentences.every(s => sentenceRules.every(r => r(s)))
 }
 
+function updateSpeakerTokenOrderStartingAt(speakerId: number, startAtIndex = 0, add: number) {
+  return _(eventStore.events).map((e, eventIndex) => {
+    if (eventIndex > startAtIndex) {
+      if (e.speakerEvents[speakerId] !== undefined) {
+        const tokens = e.speakerEvents[speakerId].tokens
+        if (tokens.length > 0) {
+          return {
+            ...e,
+            speakerEvents: {
+              ...e.speakerEvents,
+              [speakerId]: {
+                ...e.speakerEvents[speakerId],
+                tokens: tokens.map((t) => {
+                  return { ...t, order: t.order + add }
+                })
+              }
+            }
+          }
+        } else {
+          return e
+        }
+      } else {
+        return e
+      }
+    } else {
+      return e
+    }
+  }).value()
+}
+
 export function updateSpeakerTokens(
   event: LocalTranscriptEvent,
-  speaker: number,
+  speakerId: number,
   tokens: LocalTranscriptToken[],
 ) {
   const oldEvent = eventStore.events[findSegmentById(event.eventId)]
-  const isNew = event.speakerEvents[speaker] === undefined
-  const deletedSpeaker = tokens.length === 0 ? speaker : undefined
+  const isNew = oldEvent.speakerEvents[speakerId] === undefined
+  const deletedSpeakerId = tokens.length === 0 ? speakerId : undefined
+  const tokenCountDifference = isNew ? tokens.length : tokens.length - oldEvent.speakerEvents[speakerId].tokens.length
   const speakerEvents = _({
+    // MERGE-IN THE NEW SPEAKER
       ...oldEvent.speakerEvents,
-      [speaker] : {
-        speakerEventId: isNew ? makeEventId() : event.speakerEvents[speaker].speakerEventId,
+      [speakerId] : {
+        speakerEventId: isNew ? makeEventId() : oldEvent.speakerEvents[speakerId].speakerEventId,
         tokens
       }
     })
+    // REMOVE DELETED SPEAKER EVENTS
     .reduce((m, e, k, l) => {
-      if (Number(k) !== Number(deletedSpeaker)) {
+      if (Number(k) !== Number(deletedSpeakerId)) {
         m[k] = e
       }
       return m
     }, {} as LocalTranscriptEvent['speakerEvents'])
   const newEvent = clone({...oldEvent, speakerEvents})
-  console.log({deletedSpeaker, speakerEvents})
+  const index = findSegmentById(event.eventId)
+  // UPDATE EVENT
+  eventStore.events.splice(index, 1, newEvent)
+  // UPDATE TOKEN ORDER IF THE LENGTH CHANGED
+  if (tokenCountDifference !== 0) {
+    eventStore.events = updateSpeakerTokenOrderStartingAt(speakerId, index, tokenCountDifference)
+  }
+  // ADD HISTORY EVENT
   history.push({
     apply: true,
     type: 'CHANGE_TOKENS',
@@ -207,8 +251,6 @@ export function updateSpeakerTokens(
       editType: 'UPDATE'
     }]
   })
-  const index = findSegmentById(event.eventId)
-  eventStore.events.splice(index, 1, newEvent)
 }
 
 export function resizeSegment(id: number, startTime: number, endTime: number) {
@@ -226,6 +268,8 @@ export function resizeSegment(id: number, startTime: number, endTime: number) {
 }
 
 export function addSegment(atTime: number) {
+  const nextEvent = findNextSegmentAt(atTime)
+  console.log({nextEvent})
   const newEvent: LocalTranscriptEvent = {
     startTime: atTime,
     endTime: atTime + 1,
@@ -240,7 +284,13 @@ export function addSegment(atTime: number) {
       editType: 'ADD'
     }]
   })
-  eventStore.events.push(newEvent)
+  if (nextEvent !== undefined) {
+    const i = findSegmentById(nextEvent.eventId)
+    console.log({i})
+    eventStore.events.splice(i, 0, newEvent)
+  } else {
+    eventStore.events.push(newEvent)
+  }
   return newEvent
 }
 
@@ -311,6 +361,11 @@ export function findSegmentAt(seconds: number): LocalTranscriptEvent|undefined {
 
 export function findSegmentIndexAt(seconds: number): number {
   return _(eventStore.events).findIndex((e) => e.startTime <= seconds && e.endTime >= seconds)
+}
+
+export function findPreviousSpeakerEvent(speaker: number, eventId: number): number|undefined {
+  const i = findSegmentById(eventId)
+  return _(eventStore.events).findLastIndex((e, eventIndex) => eventIndex < i && e.speakerEvents[speaker] !== undefined)
 }
 
 export function deleteEventById(id: number) {

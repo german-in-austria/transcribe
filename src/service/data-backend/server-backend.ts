@@ -181,6 +181,8 @@ function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
                 return {
                   id: tokenId,
                   fragmentOf: s.aTokens[tokenId].fo || null,
+                  sentenceId: s.aTokens[tokenId].s || null,
+                  order: s.aTokens[tokenId].tr,
                   tiers : {
                     default: {
                       text: s.aTokens[tokenId].t,

@@ -22,6 +22,7 @@
       </span>
     </div>
     <div
+      :title="printableSpeakerTokens"
       @focus="(e) => $emit('focus', e, event)"
       @input="updateLocalTokens"
       @blur="updateAndCommitLocalTokens"
@@ -47,6 +48,7 @@ import {
   eventStore,
   LocalTranscriptToken,
   makeTokenId,
+  findPreviousSpeakerEvent,
   playEvent
 } from '../store/transcript'
 import * as _ from 'lodash'
@@ -90,6 +92,13 @@ export default class SpeakerSegmentTranscript extends Vue {
     return last !== undefined && last.tiers.default.text.endsWith('=')
   }
 
+  get printableSpeakerTokens() {
+    return this.event.speakerEvents[this.speaker]
+      ? JSON.stringify(this.event.speakerEvents[this.speaker].tokens
+        .map(t => t.order + ': ' + t.tiers.default.text), undefined, 4)
+      : ''
+  }
+
   get firstTokenFragmentOf(): number|null {
     if (this.previousEvent !== undefined) {
       const nextSpeakerEvent = this.previousEvent.speakerEvents[this.speaker]
@@ -108,22 +117,24 @@ export default class SpeakerSegmentTranscript extends Vue {
     }
   }
 
-  @Watch('previousEvent')
-  onPreviousEventLastTokenChange(
-    newPreviousEvent: LocalTranscriptEvent|undefined,
-    oldPreviousEvent: LocalTranscriptEvent|undefined
-  ) {
-    if (
-      oldPreviousEvent !== undefined &&
-      newPreviousEvent !== undefined &&
-      newPreviousEvent.eventId === oldPreviousEvent.eventId
-    ) {
-      if (this.localTokens[0] !== undefined) {
-        this.localTokens[0].fragmentOf = this.firstTokenFragmentOf
-        this.commit()
-      }
-    }
-  }
+  // @Watch('previousEvent')
+  // onPreviousEventLastTokenChange(
+  //   newPreviousEvent: LocalTranscriptEvent|undefined,
+  //   oldPreviousEvent: LocalTranscriptEvent|undefined
+  // ) {
+  //   if (
+  //     oldPreviousEvent !== undefined &&
+  //     newPreviousEvent !== undefined &&
+  //     newPreviousEvent.eventId === oldPreviousEvent.eventId
+  //   ) {
+  //     if (this.localTokens[0] !== undefined) {
+  //       this.localTokens[0].fragmentOf = this.firstTokenFragmentOf
+        // TODO: FIXME: this doesn’t work
+        // DO IT DIRECTLY IN THE STORE METHOD. WHEN UPDATING THE PREVIOUS EVENT
+        // this.commit()
+  //     }
+  //   }
+  // }
 
   // get hasNextFragementToken(): boolean {
   //   return (
@@ -183,6 +194,30 @@ export default class SpeakerSegmentTranscript extends Vue {
     this.commit()
   }
 
+  get firstTokenOrder() {
+    const speakerEvent = this.event.speakerEvents[this.speaker]
+    if (speakerEvent) {
+      const firstToken = this.event.speakerEvents[this.speaker].tokens[0]
+      if (firstToken) {
+        return firstToken.order
+      } else {
+        return undefined
+      }
+    } else {
+      const i = findPreviousSpeakerEvent(this.speaker, this.event.eventId)
+      if (i !== undefined) {
+        const prevLastToken = _(eventStore.events[i].speakerEvents[this.speaker].tokens).last()
+        if (prevLastToken) {
+          return prevLastToken.order + 1
+        } else {
+          return 0
+        }
+      } else {
+        return 0
+      }
+    }
+  }
+
   async updateLocalTokens(e: Event) {
     await requestFrameAsync()
     const newTokens = this.tokenizeText((e.target as HTMLDivElement).textContent as string).map((t, i) => {
@@ -219,17 +254,18 @@ export default class SpeakerSegmentTranscript extends Vue {
       .flatten()
       .value()
     console.log({updates})
-    const ts = this.localTokens
     updates.forEach((u) => {
       // DELETE
       if (u.type === 'remove') {
         console.log('removed', u.text)
-        ts.splice(u.index, 1)
+        this.localTokens.splice(u.index, 1)
       // INSERT
       } else if (u.type === 'add') {
-        ts.splice(u.index, 0, {
+        this.localTokens.splice(u.index, 0, {
           id: makeTokenId(),
           fragmentOf: u.index === 0 ? this.firstTokenFragmentOf : null,
+          order: -1,
+          sentenceId: -1, // how?
           tiers: {
             default: {
               text: u.text,
@@ -243,10 +279,16 @@ export default class SpeakerSegmentTranscript extends Vue {
         })
       // UPDATE
       } else if (u.type === 'update') {
-        ts[u.index].tiers.default = {
+        this.localTokens[u.index].tiers.default = {
           text: u.text,
           type: tokenTypeFromToken(u.text).id
         }
+      }
+    })
+    this.localTokens = this.localTokens.map((t, i) => {
+      return {
+        ...t,
+        order: (this.firstTokenOrder || 0) + i
       }
     })
   }
