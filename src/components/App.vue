@@ -223,9 +223,10 @@ export default class App extends Vue {
   }
 
   get errors() {
-    return eventStore.events.filter(e => {
-      return speakerEventHasErrors(e)
-    })
+    // return eventStore.events.filter(e => {
+    //   return speakerEventHasErrors(e)
+    // })
+    return []
   }
 
 }
