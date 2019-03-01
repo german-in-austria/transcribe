@@ -42,7 +42,7 @@
         <div :style="{transform: `translateX(${ innerLeft }px)`}" ref="inner" class="transcript-segments-inner">
           <segment-transcript
             v-for="(event, i) in visibleEvents"
-            @focus="scrollIntoView"
+            @focus=""
             :event="event"
             :previous-event="visibleEvents[i - 1]"
             :next-event="visibleEvents[i + 1]"
