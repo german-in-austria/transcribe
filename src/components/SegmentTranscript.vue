@@ -60,7 +60,6 @@ export default class SegmentTranscript extends Vue {
   @Prop() nextEvent: LocalTranscriptEvent|undefined
   @Prop() previousEvent: LocalTranscriptEvent|undefined
   @Prop({ default: false }) isSelected: boolean
-
   eventStore = eventStore
   offsetWidth = 0
   deleteSelectedEvents = deleteSelectedEvents
