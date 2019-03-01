@@ -291,7 +291,7 @@ export default class Editor extends Vue {
     this.spectrogramEvent = e
   }
 
-  handleKey(e: KeyboardEvent) {
+  async handleKey(e: KeyboardEvent) {
     console.log(this.playHeadPos)
     console.log(e)
     // _(settings.keyboardShortcuts).forEach((v, i) => {
@@ -302,9 +302,8 @@ export default class Editor extends Vue {
       const event = this.findSegmentAt(this.playHeadPos)
       if (event === undefined) {
         const s = this.addSegment(this.playHeadPos)
-        if (s !== undefined) {
-          this.$nextTick(() => selectEvent(s))
-        }
+        await this.$nextTick()
+        selectEvent(s)
       } else {
         const splitAt = this.playHeadPos - event.startTime
         this.splitSegment(event, splitAt)
