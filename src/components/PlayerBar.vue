@@ -122,6 +122,8 @@ export default class PlayerBar extends Vue {
   text-align center
 
 .play-button
+  position relative
+  top 3px
   margin-top -5px
 
 .current-time
