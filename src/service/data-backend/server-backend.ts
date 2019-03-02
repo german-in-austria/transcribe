@@ -11,6 +11,10 @@ import {
 } from '@store/transcript'
 
 import * as _ from 'lodash'
+const textEncoder = new TextEncoder()
+import * as PromiseWorker from 'promise-worker-transferable'
+import serverTranscriptDiff from './server-transcript-diff.worker'
+const diffWorker = new PromiseWorker(new serverTranscriptDiff(''))
 export let serverTranscript = null as ServerTranscript|null
 
 function getMetadataFromServerTranscript(res: ServerTranscript) {
@@ -52,10 +56,10 @@ export function mergeServerTranscript(s: ServerTranscript) {
   console.log({tokens: _(s.aTokens).toArray().sortBy(t => t.tr).value()})
 }
 
-export function historyToServerTranscript(
+export async function historyToServerTranscript(
   hs: HistoryEventAction[],
   oldServerTranscript: ServerTranscript,
-  localEvents: LocalTranscript): ServerTranscript {
+  localEvents: LocalTranscript): Promise<ServerTranscript> {
   console.log({ hs })
   const oldServerTokens = oldServerTranscript.aTokens
   const aEvents = _(hs.slice().reverse())
@@ -96,29 +100,11 @@ export function historyToServerTranscript(
     .value()
     return m
   }, {} as _.Dictionary<ServerToken>)
-  const newDiffable = tokensToDiffable(newServerTokens)
-  const oldDiffable = tokensToDiffable(oldServerTokens)
-  const diff = _.differenceWith(newDiffable, oldDiffable,
-    (l, r) => {
-      return (
-        l.id === r.id &&
-        l.tr === r.tr &&
-        l.tt === r.tt &&
-        l.t === r.t &&
-        l.i === r.i &&
-        l.e === r.e
-        // l.o === r.o &&
-        // l.fo === r.fo
-      )
-    }
-  )
-  const [addedTokens, updatedTokens] = _.partition(diff, (t) => Number(t.id) < 0)
-  const deletedTokens = _(oldDiffable).filter((t) => newServerTokens[t.id] === undefined).value()
-  console.log({addedTokens, updatedTokens, deletedTokens})
-  return {
-    ...oldServerTranscript,
-    aTokens: newServerTokens
-  }
+  const oldT = textEncoder.encode(JSON.stringify(oldServerTokens)).buffer
+  const newT = textEncoder.encode(JSON.stringify(newServerTokens)).buffer
+  const y = await diffWorker.postMessage({oldT, newT}, [oldT, newT])
+  console.log(y)
+  return oldServerTranscript
 }
 
 function tokensToDiffable(sts: _.Dictionary<ServerToken>) {
