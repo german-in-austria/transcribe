@@ -11,6 +11,21 @@ export async function asyncForEach<T>(array: T[], callback: (e: T, i: number, l:
   }
 }
 
+export function padEnd(string: string, targetLength: number, padString: string) {
+  // tslint:disable-next-line:no-bitwise
+  targetLength = targetLength >> 0
+  padString = String((typeof padString !== 'undefined' ? padString : ' '))
+  if (string.length > targetLength) {
+      return String(string)
+  } else {
+      targetLength = targetLength - string.length;
+      if (targetLength > padString.length) {
+          padString += padString.repeat(targetLength / padString.length)
+      }
+      return String(string) + padString.slice(0, targetLength)
+  }
+}
+
 export function requestFrameAsync(): Promise<number> {
   return new Promise((resolve) => {
     requestAnimationFrame((time) => {

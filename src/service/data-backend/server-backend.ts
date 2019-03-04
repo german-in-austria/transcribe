@@ -10,6 +10,8 @@ import {
   ServerToken
 } from '@store/transcript'
 
+import { padEnd } from '@util/index'
+
 import * as _ from 'lodash'
 const textEncoder = new TextEncoder()
 import * as PromiseWorker from 'promise-worker-transferable'
@@ -76,13 +78,24 @@ export async function historyToServerTranscript(
       }
     })
     .value()
+  const newServerEvents: ServerEvent[] = []
   const newServerTokens = _(localEvents).reduce((m, e) => {
     _(e.speakerEvents).mapValues((speakerEvent, speakerId) => {
+      newServerEvents.push({
+        pk: speakerEvent.speakerEventId,
+        s: padEnd(timeFromSeconds(e.startTime), 14, '0'),
+        e: padEnd(timeFromSeconds(e.endTime), 14, '0'),
+        l: 0,
+        tid: {
+          [speakerId]: speakerEvent.tokens.map(t => t.id)
+        }
+      })
       return speakerEvent.tokens.map((t, i) => {
         m[t.id] = {
           e : speakerEvent.speakerEventId,
           i : Number(speakerId),
-          o : t.tiers.ortho.text,
+          // this produces undefined for "" (empty strings)
+          o : t.tiers.ortho.text.trim() || undefined,
           // sentence id? do i have to produce new sentences?
           s : oldServerTokens[t.id] ? oldServerTokens[t.id].s : -1,
           // sequence in sentence (how do i find that out?)
@@ -90,25 +103,21 @@ export async function historyToServerTranscript(
           t : t.tiers.default.text,
           // Text in ortho is basically useless.
           to: t.tiers.ortho.text,
-          // TokenReihung must be relative to the entire Transcript
           tr: t.order,
           // TODO: this could be null
           tt: t.tiers.default.type as number,
+          // fo: t.fragmentOf || undefined
         }
       })
     })
     .value()
     return m
   }, {} as _.Dictionary<ServerToken>)
-  const oldT = textEncoder.encode(JSON.stringify(oldServerTokens)).buffer
-  const newT = textEncoder.encode(JSON.stringify(newServerTokens)).buffer
+  const oldT = textEncoder.encode(JSON.stringify(oldServerTranscript)).buffer
+  const newT = textEncoder.encode(JSON.stringify({ aTokens: newServerTokens, aEvents: newServerEvents })).buffer
   const y = await diffWorker.postMessage({oldT, newT}, [oldT, newT])
   console.log(y)
   return oldServerTranscript
-}
-
-function tokensToDiffable(sts: _.Dictionary<ServerToken>) {
-  return _(sts).map((st, id) => ({...st, id })).sortBy(['i', 'tr']).value()
 }
 
 function reverseString(str: string) {
