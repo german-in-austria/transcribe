@@ -18,147 +18,149 @@
           <v-tab>
             Shortcuts
           </v-tab>
-          <v-tab-item>
-            <v-list subheader class="pa-4">
-              <v-subheader>Interaction</v-subheader>
-              <v-divider />
-              <v-list-tile>
-                <v-list-tile-title>Mousewheel scrolls horizontally</v-list-tile-title>
-                <v-list-tile-action>
-                  <v-switch v-model="settings.emulateHorizontalScrolling" />
-                </v-list-tile-action>
-              </v-list-tile>
-              <v-list-tile>
-                <v-list-tile-title>Synchronize Scroll Position</v-list-tile-title>
-                <v-list-tile-action>
-                  <v-switch v-model="settings.lockScroll" />
-                </v-list-tile-action>
-              </v-list-tile>
-              <v-list-tile>
-                <v-list-tile-title>Dark Theme</v-list-tile-title>
-                <v-list-tile-action>
-                  <v-switch v-model="settings.darkMode" />
-                </v-list-tile-action>
-              </v-list-tile>
-              <v-subheader>Visualization</v-subheader>
-              <v-divider />
-              <v-list-tile>
-                <v-list-tile-title>Visualization Type</v-list-tile-title>
-                <v-list-tile-action class="no-flex-direction">
-                  <select v-model="settings.showSpectrograms">
-                    <option :value="false">Waveform</option>
-                    <option :value="true">Spectrogram</option>
-                  </select>
-                </v-list-tile-action>
-              </v-list-tile>
-              <v-list-tile v-if="!settings.showSpectrograms">
-                <v-list-tile-title>Use Mono Waveform</v-list-tile-title>
-                <v-list-tile-action>
-                  <v-switch v-model="settings.useMonoWaveForm" />
-                </v-list-tile-action>
-              </v-list-tile>
-              <v-list-tile>
-                <v-list-tile-title>Show Segments</v-list-tile-title>
-                <v-list-tile-action>
-                  <v-switch v-model="settings.showSegmentBoxes" />
-                </v-list-tile-action>
-              </v-list-tile>
-              <v-subheader v-if="settings.showSpectrograms">Spectrogram Colors</v-subheader>
-              <v-subheader v-else>Waveform Colors</v-subheader>
-              <v-divider />
-              <div v-if="settings.showSpectrograms" class="pt-3 pb-3 pl-3 pr-5">
-                <v-menu
-                  offset-y
-                  lazy
-                  :close-on-content-click="false"
-                  v-for="(color, i) in settings.spectrogramColors"
-                  :key="i">
-                  <v-btn
-                    small
-                    icon
-                    slot="activator"
-                    :style="{background: `rgba(${ color.c.join(', ') })`, border: '1px solid #ccc'}"
-                    dark />
-                  <color-picker
-                    @input="(e) => updateGradient(i, e)"
-                    :value="{ r: color.c[0], g: color.c[1], b: color.c[2], a: color.c[3] }" />
-                </v-menu>
-              </div>
-              <div v-if="!settings.showSpectrograms" class="pt-3 pb-3 pl-3 pr-5">
-                <v-menu
-                  offset-y
-                  lazy
-                  :close-on-content-click="false"
-                  v-for="(color, i) in settings.waveFormColors"
-                  :key="i">
-                  <v-btn
-                    small
-                    icon
-                    slot="activator"
-                    :style="{background: settings.waveFormColors[i], border: '1px solid #ccc'}"
-                    dark />
-                  <color-picker
-                    @input="(e) => settings.waveFormColors[i] = e.hex"
-                    :value="settings.waveFormColors[i]" />
-                </v-menu>
-              </div>
-            </v-list>
-          </v-tab-item>
-          <v-tab-item>
-            <v-list subheader class="pa-4">
-              <v-subheader>Token Types</v-subheader>
-              <v-divider class="mb-3" />
-              <v-layout class="ml-3" row :key="type.name" v-for="(type, i) in settings.tokenTypes">
-                <v-flex xs1>
+          <v-tabs-items>
+            <v-tab-item>
+              <v-list subheader class="pa-4">
+                <v-subheader>Interaction</v-subheader>
+                <v-divider />
+                <v-list-tile>
+                  <v-list-tile-title>Mousewheel scrolls horizontally</v-list-tile-title>
+                  <v-list-tile-action>
+                    <v-switch v-model="settings.emulateHorizontalScrolling" />
+                  </v-list-tile-action>
+                </v-list-tile>
+                <v-list-tile>
+                  <v-list-tile-title>Synchronize Scroll Position</v-list-tile-title>
+                  <v-list-tile-action>
+                    <v-switch v-model="settings.lockScroll" />
+                  </v-list-tile-action>
+                </v-list-tile>
+                <v-list-tile>
+                  <v-list-tile-title>Dark Theme</v-list-tile-title>
+                  <v-list-tile-action>
+                    <v-switch v-model="settings.darkMode" />
+                  </v-list-tile-action>
+                </v-list-tile>
+                <v-subheader>Visualization</v-subheader>
+                <v-divider />
+                <v-list-tile>
+                  <v-list-tile-title>Visualization Type</v-list-tile-title>
+                  <v-list-tile-action class="no-flex-direction">
+                    <select v-model="settings.showSpectrograms">
+                      <option :value="false">Waveform</option>
+                      <option :value="true">Spectrogram</option>
+                    </select>
+                  </v-list-tile-action>
+                </v-list-tile>
+                <v-list-tile v-if="!settings.showSpectrograms">
+                  <v-list-tile-title>Use Mono Waveform</v-list-tile-title>
+                  <v-list-tile-action>
+                    <v-switch v-model="settings.useMonoWaveForm" />
+                  </v-list-tile-action>
+                </v-list-tile>
+                <v-list-tile>
+                  <v-list-tile-title>Show Segments</v-list-tile-title>
+                  <v-list-tile-action>
+                    <v-switch v-model="settings.showSegmentBoxes" />
+                  </v-list-tile-action>
+                </v-list-tile>
+                <v-subheader v-if="settings.showSpectrograms">Spectrogram Colors</v-subheader>
+                <v-subheader v-else>Waveform Colors</v-subheader>
+                <v-divider />
+                <div v-if="settings.showSpectrograms" class="pt-3 pb-3 pl-3 pr-5">
                   <v-menu
-                    class="mt-2"
                     offset-y
                     lazy
-                    :close-on-content-click="false">
+                    :close-on-content-click="false"
+                    v-for="(color, i) in settings.spectrogramColors"
+                    :key="i">
                     <v-btn
                       small
                       icon
                       slot="activator"
-                      :style="{background: type.color, border: '1px solid #ccc'}"
+                      :style="{background: `rgba(${ color.c.join(', ') })`, border: '1px solid #ccc'}"
                       dark />
                     <color-picker
-                      :value="type.color" 
-                      @input="(e) => type.color = e.hex" />
+                      @input="(e) => updateGradient(i, e)"
+                      :value="{ r: color.c[0], g: color.c[1], b: color.c[2], a: color.c[3] }" />
                   </v-menu>
-                </v-flex>
-                <v-flex xs5>
-                  <v-text-field label="Name" :value="type.name" />
-                </v-flex>
-                <v-flex xs5>
-                  <v-text-field :rules="regExInputRules" @input="(e) => updateRegEx(i, e)" label="Regular Expression" :value="type.regex.toString()" />
-                </v-flex>
-              </v-layout>
-            </v-list>
-          </v-tab-item>
-          <v-tab-item>
-            <v-list class="pa-4">
-              <v-list-tile v-for="(e, i) in settings.keyboardShortcuts" :key="i">
-                <v-list-tile-content>
-                  <v-list-tile-title>{{ e.name }}</v-list-tile-title>
-                  <v-list-tile-sub-title>{{ e.description }}</v-list-tile-sub-title>
-                </v-list-tile-content>
-                <v-list-tile-action class="no-flex-direction">
-                  <select v-model="e.modifier">
-                    <option :value="null"></option>
-                    <option value="altKey">alt</option>
-                    <option value="ctrlKey">ctrl</option>
-                    <option value="metaKey">command</option>
-                    <option value="shiftKey">shift</option>
-                  </select>
-                  <select v-model="e.key">
-                    <option :value="l" :selected="i === 1" v-for="(l, i) in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')" :key="i">
-                      {{ l }}
-                    </option>
-                  </select>
-                </v-list-tile-action>
-              </v-list-tile>
-            </v-list>
-          </v-tab-item>
+                </div>
+                <div v-if="!settings.showSpectrograms" class="pt-3 pb-3 pl-3 pr-5">
+                  <v-menu
+                    offset-y
+                    lazy
+                    :close-on-content-click="false"
+                    v-for="(color, i) in settings.waveFormColors"
+                    :key="i">
+                    <v-btn
+                      small
+                      icon
+                      slot="activator"
+                      :style="{background: settings.waveFormColors[i], border: '1px solid #ccc'}"
+                      dark />
+                    <color-picker
+                      @input="(e) => settings.waveFormColors[i] = e.hex"
+                      :value="settings.waveFormColors[i]" />
+                  </v-menu>
+                </div>
+              </v-list>
+            </v-tab-item>
+            <v-tab-item>
+              <v-list subheader class="pa-4">
+                <v-subheader>Token Types</v-subheader>
+                <v-divider class="mb-3" />
+                <v-layout class="ml-3" row :key="type.name" v-for="(type, i) in settings.tokenTypes">
+                  <v-flex xs1>
+                    <v-menu
+                      class="mt-2"
+                      offset-y
+                      lazy
+                      :close-on-content-click="false">
+                      <v-btn
+                        small
+                        icon
+                        slot="activator"
+                        :style="{background: type.color, border: '1px solid #ccc'}"
+                        dark />
+                      <color-picker
+                        :value="type.color" 
+                        @input="(e) => type.color = e.hex" />
+                    </v-menu>
+                  </v-flex>
+                  <v-flex xs5>
+                    <v-text-field label="Name" :value="type.name" />
+                  </v-flex>
+                  <v-flex xs5>
+                    <v-text-field :rules="regExInputRules" @input="(e) => updateRegEx(i, e)" label="Regular Expression" :value="type.regex.toString()" />
+                  </v-flex>
+                </v-layout>
+              </v-list>
+            </v-tab-item>
+            <v-tab-item>
+              <v-list class="pa-4">
+                <v-list-tile v-for="(e, i) in settings.keyboardShortcuts" :key="i">
+                  <v-list-tile-content>
+                    <v-list-tile-title>{{ e.name }}</v-list-tile-title>
+                    <v-list-tile-sub-title>{{ e.description }}</v-list-tile-sub-title>
+                  </v-list-tile-content>
+                  <v-list-tile-action class="no-flex-direction">
+                    <select v-model="e.modifier">
+                      <option :value="null"></option>
+                      <option value="altKey">alt</option>
+                      <option value="ctrlKey">ctrl</option>
+                      <option value="metaKey">command</option>
+                      <option value="shiftKey">shift</option>
+                    </select>
+                    <select v-model="e.key">
+                      <option :value="l" :selected="i === 1" v-for="(l, i) in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')" :key="i">
+                        {{ l }}
+                      </option>
+                    </select>
+                  </v-list-tile-action>
+                </v-list-tile>
+              </v-list>
+            </v-tab-item>
+          </v-tabs-items>
         </v-tabs>
       </v-card-text>
     </v-card>
