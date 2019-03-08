@@ -6,7 +6,7 @@
     @keydown.enter.meta.stop.prevent="playEvent(event)"
     @keydown.enter.exact="scrollToTranscriptEvent(event)"
     tabindex="-1"
-    :class="[ 'segment', isEventSelected(event.eventId) ? 'selected' : '' ]"
+    :class="[ 'segment', isEventSelected(event.eventId) ? 'selected' : '', hasOverlap && 'has-overlap' ]"
     :style="{ left: offset + 'px', width: width + 'px' }">
     <div :style="{ left: width / 2 + 'px' }" class="transcript-tooltip" v-if="isEventSelected(event.eventId)">
       <div class="inner" :key="i" v-for="(se, i) in event.speakerEvents">
@@ -69,6 +69,16 @@ export default class SegmentBox extends Vue {
   isEventSelected = isEventSelected
   playEvent = playEvent
 
+  get hasOverlap() {
+    const x = (
+      this.previousEvent !== undefined && this.previousEvent.endTime > this.event.startTime
+    )
+    if (x) {
+      console.log('overlap', this.event, this.previousEvent, this.nextEvent)
+    }
+    return x
+  }
+
   get offset() {
     return Number(this.event.startTime) * this.pixelsPerSecond
   }
@@ -123,8 +133,11 @@ export default class SegmentBox extends Vue {
   user-select none
   &.selected
     z-index 1
-    border: 2px solid cornflowerblue
+    border 2px solid cornflowerblue
     box-shadow 0 0 50px rgba(0,0,0,.4)
+    background transparent
+  &.has-overlap
+    border 2px dashed #800
     background transparent
   &:hover:not(.selected)
     background transparent

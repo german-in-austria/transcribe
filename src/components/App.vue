@@ -5,7 +5,7 @@
       v-model="drawer"
       right
       app>
-      <sidebar :errors="errors" />
+      <sidebar/>
     </v-navigation-drawer>
     <v-content class="main-content">
       <v-container fluid fill-height class="pa-0">
@@ -81,7 +81,6 @@
           <v-flex xs12>
             <editor
               @toggle-drawer="e => drawer = !drawer"
-              :errors="errors"
               :audio-element="audioElement" />
             <router-view />
             <player-bar
@@ -221,14 +220,6 @@ export default class App extends Vue {
       this.audioElement = y
     })
   }
-
-  get errors() {
-    // return eventStore.events.filter(e => {
-    //   return speakerEventHasErrors(e)
-    // })
-    return []
-  }
-
 }
 </script>
 <style lang="stylus" scoped>

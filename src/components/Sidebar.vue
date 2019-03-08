@@ -14,17 +14,25 @@
         </div>
       </v-tab-item>
       <v-tab-item>
-        <v-list v-if="errors.length > 0" dense>
-          <v-list-tile v-for="(error) in errors" :key="error.eventId">
-            <v-list-tile-action>
-              <v-icon>error</v-icon>
-            </v-list-tile-action>
-            <v-list-tile-content>
-              <v-list-tile-title>error</v-list-tile-title>
-            </v-list-tile-content>
-          </v-list-tile>
+        <v-list dense>
+          <v-tooltip
+            v-for="(error) in errors"
+            :key="error.eventId"
+            lazy
+            left>
+            <v-list-tile slot="activator" @click="showEventIfExists(error)">
+              <v-list-tile-action>
+                <v-icon>error</v-icon>
+              </v-list-tile-action>
+              <v-list-tile-content>
+                <v-list-tile-title v-if="error.error_type === 'time_overlap'">Time Overlap</v-list-tile-title>
+                <v-list-tile-title v-if="error.error_type === 'unknow_token'">Unknown Token Type</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+            <segment-transcript :event="error" />
+          </v-tooltip>
         </v-list>
-        <div v-else class="text-xs-center grey--text mt-4">
+        <div v-if="errors.length === 0" class="text-xs-center grey--text mt-4">
           <small>Errors will appear here.</small>
         </div>
       </v-tab-item>
@@ -34,7 +42,8 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import editHistory from './EditHistory.vue'
-
+import * as _ from 'lodash'
+import SegmentTranscript from './SegmentTranscript.vue'
 import {
   history,
   LocalTranscriptEvent,
@@ -42,18 +51,23 @@ import {
   findSegmentById,
   scrollToTranscriptEvent,
   eventStore,
+  selectEvent,
   speakerEventHasErrors
 } from '../store/transcript'
 
+interface ErrorEvent extends LocalTranscriptEvent {
+  error_type: 'time_overlap'|'unknown_token'
+}
+
 @Component({
   components: {
-    editHistory
+    editHistory,
+    SegmentTranscript
   }
 })
 export default class Sidebar extends Vue {
 
-  @Prop() errors: LocalTranscriptEvent[]
-
+  errors: ErrorEvent[] = []
   history = history
   activeTab = 0
   eventStore = eventStore
@@ -66,6 +80,14 @@ export default class Sidebar extends Vue {
     } else {
       this.stuckAtBottom = false
     }
+  }
+
+  @Watch('eventStore.events')
+  onEventsUpdate(newEvents: LocalTranscriptEvent[]) {
+    this.errors = _(newEvents)
+      .filter((e, i) => newEvents[i - 1] && e.startTime < newEvents[i - 1].endTime)
+      .map((e) => ({...e, error_type: 'time_overlap'} as ErrorEvent))
+      .value()
   }
 
   updated() {
@@ -81,6 +103,7 @@ export default class Sidebar extends Vue {
   showEventIfExists(e: LocalTranscriptEvent) {
     const i = findSegmentById(e.eventId)
     if (i > -1) {
+      selectEvent(e)
       scrollToAudioEvent(e)
       scrollToTranscriptEvent(e)
     }
