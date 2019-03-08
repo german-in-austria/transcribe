@@ -2,7 +2,12 @@
 import * as _ from 'lodash'
 import audio from '../service/audio'
 import { clone, isEqualDeep  } from '../util'
-import { localTranscriptToServerTranscript, serverTranscript } from '../service/data-backend/server-backend'
+import {
+  localTranscriptToServerTranscript,
+  serverTranscript,
+  serverTranscriptToLocal,
+  updateServerTranscriptWithChanges
+} from '../service/data-backend/server-backend'
 
 declare global {
   interface Window {
@@ -19,6 +24,7 @@ declare global {
 interface SaveResponseEntity {
   status: 'update'|'delete'|'insert'
   newStatus: 'updated'|'deleted'|'inserted'
+  newPk?: number
 }
 
 export interface ServerTokenSaveResponse extends ServerToken, SaveResponseEntity {}
@@ -160,6 +166,7 @@ export const eventStore = {
     viewingTranscriptEvent: null as LocalTranscriptEvent|null,
     viewingAudioEvent: null as LocalTranscriptEvent|null
   },
+  transcriptDownloadProgress: 0 as number,
   status: 'empty' as 'empty'|'loading'|'finished'|'new'
 }
 ;
@@ -290,7 +297,7 @@ export function updateSpeakerTokens(
     // MERGE-IN THE NEW SPEAKER
       ...oldEvent.speakerEvents,
       [speakerId] : {
-        speakerEventId: isNew ? makeEventId() : oldEvent.speakerEvents[speakerId].speakerEventId,
+        speakerEventId: event.eventId,
         tokens
       }
     })
@@ -594,7 +601,8 @@ export async function saveChangesToServer() {
   if (serverTranscript !== null) {
     const x = await localTranscriptToServerTranscript(serverTranscript, eventStore.events)
     console.log({x})
-    const y = await (await fetch(`https://dissdb.dioe.at/routes/transcript/save/${ (x.aTranskript as any).pk }`, {
+    const serverChanges = await (
+      await fetch(`https://dissdb.dioe.at/routes/transcript/save/${ (x.aTranskript as any).pk }`, {
       credentials: 'include',
       method: 'POST',
       headers: {
@@ -603,6 +611,7 @@ export async function saveChangesToServer() {
       },
       body: JSON.stringify(x),
     })).json()
-    console.log({x, y})
+    console.log({x, serverChanges})
+    eventStore.events = serverTranscriptToLocal(updateServerTranscriptWithChanges(serverChanges))
   }
 }

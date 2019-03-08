@@ -2,16 +2,19 @@ import {
   LocalTranscriptEvent,
   eventStore,
   ServerTranscript,
+  ServerTranscriptSaveResponse,
+  ServerEventSaveResponse,
   LocalTranscript,
   timeToSeconds,
   timeFromSeconds,
   HistoryEventAction,
   ServerEvent,
   ServerToken,
-  LocalTranscriptToken
+  LocalTranscriptToken,
+  ServerTokenSaveResponse
 } from '@store/transcript'
 
-import { padEnd } from '@util/index'
+import { clone } from '@util/index'
 
 import * as _ from 'lodash'
 const textEncoder = new TextEncoder()
@@ -119,7 +122,104 @@ function findNextFragmentOfId(
   }
 }
 
-function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
+export function serverEventSaveResponseToServerEvent(e: ServerEventSaveResponse): ServerEvent {
+  return {
+    e: e.e,
+    l: e.l,
+    pk: e.newPk || e.pk,
+    s: e.s,
+    tid: e.tid
+  }
+}
+
+export function serverTokenSaveResponseToServerToken(
+  t: ServerTokenSaveResponse,
+  es: _.Dictionary<ServerEventSaveResponse>
+): ServerToken {
+  return {
+    e: t.e > 0
+      ? t.e             // it’s an existing event
+      : es[t.e].newPk!, // it’s a new event
+    fo: t.fo,
+    i: t.i,
+    o: t.o,
+    s: t.s,
+    sr: t.sr,
+    t: t.t,
+    to: t.to,
+    tr: t.tr,
+    tt: t.tt
+  }
+}
+
+function mergeTokenChanges(
+  ts: _.Dictionary<ServerToken>,
+  tcs: _.Dictionary<ServerTokenSaveResponse>,
+  es: ServerEventSaveResponse[]
+): _.Dictionary<ServerToken> {
+    const tokens = clone(ts)
+    const keyedEvents = _(es).keyBy('pk').value()
+    _(tcs).each((t, id) => {
+      if (t.newStatus === 'deleted') {
+        delete tokens[id]
+      } else if (t.newStatus === 'inserted') {
+        tokens[t.newPk!] = serverTokenSaveResponseToServerToken(t, keyedEvents)
+      } else if (t.newStatus === 'updated') {
+        tokens[id] = serverTokenSaveResponseToServerToken(t, keyedEvents)
+      }
+    })
+    return tokens
+}
+
+function mergeEventChanges(
+  es: ServerEvent[],
+  ecs: ServerEventSaveResponse[],
+  ts: _.Dictionary<ServerToken>
+): ServerEvent[] {
+  const keyedEvents = _(clone(es)).keyBy('pk').value()
+  // insert, update and delete events
+  _(ecs).each((e) => {
+    if (e.newStatus === 'deleted') {
+      delete keyedEvents[e.pk]
+    } else if (e.newStatus === 'inserted') {
+      keyedEvents[e.newPk!] = serverEventSaveResponseToServerEvent(e)
+      console.log('inserted event', keyedEvents[e.newPk!], e.newPk)
+    } else if (e.newStatus === 'updated') {
+      keyedEvents[e.pk] = serverEventSaveResponseToServerEvent(e)
+    }
+  })
+  // rebuild the token_id (tid) reference in their events
+  _(ts)
+    .mapValues((t, k) => ({...t, token_id: Number(k)}))
+    .groupBy(t => `${t.e}-${t.i}`)
+    .each((speakerTokens, speakerEventId) => {
+      const [ eventId, speakerId ] = speakerEventId.split('-')
+      if (keyedEvents[eventId] !== undefined) {
+        keyedEvents[eventId].tid[speakerId] = _(speakerTokens).orderBy(t => t.tr).map(t => t.token_id).value()
+      } else {
+        console.log('undefined event id', speakerEventId)
+      }
+    })
+  return _.toArray(keyedEvents)
+}
+
+export function updateServerTranscriptWithChanges(s: ServerTranscriptSaveResponse): ServerTranscript {
+  if (serverTranscript !== null) {
+    const newTokens = mergeTokenChanges(serverTranscript.aTokens, s.aTokens, s.aEvents)
+    const newEvents = mergeEventChanges(serverTranscript.aEvents, s.aEvents, newTokens)
+    const x = {
+      ...s,
+      aTokens: newTokens,
+      aEvents: newEvents
+    }
+    serverTranscript = x
+    return x
+  } else {
+    throw new Error('can’t handle null')
+  }
+}
+
+export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
   return _(s.aEvents)
     // group into events by startTime and endTime
     .groupBy((e) => e.s + '-' + e.e)
@@ -136,6 +236,9 @@ function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
             m[speakerKey] = {
               speakerEventId: se.pk,
               tokens: _.map(tokenIds, (tokenId) => {
+                if (s.aTokens[tokenId] === undefined) {
+                  console.log('not found', tokenId, se)
+                }
                 return {
                   id: tokenId,
                   fragmentOf: s.aTokens[tokenId].fo || null,
@@ -167,7 +270,9 @@ function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
           return m
         }, {} as LocalTranscriptEvent['speakerEvents'])
       }
-    }).value()
+    })
+    .orderBy(e => e.startTime)
+    .value()
 }
 
 export async function getTranscript(

@@ -17,18 +17,27 @@
           <v-btn
             @click="saveToServer"
             :loading="eventStore.status === 'loading' || isSaving"
-            :disabled="eventStore.status === 'loading' || isSaving || history.length === 0"
+            :disabled="eventStore.status === 'loading' || isSaving"
             slot="activator"
             icon flat>
             <v-icon>save_alt</v-icon>
+            <template v-slot:loader>
+              <v-progress-circular
+                color="#fff"
+                :size="16"
+                :rotate="-90"
+                :width="2"
+                :indeterminate="eventStore.transcriptDownloadProgress === 1"
+                :value="eventStore.transcriptDownloadProgress * 100" />
+            </template>
           </v-btn>
           <span>Save</span>
         </v-tooltip>
         <v-tooltip transition="none" bottom>
           <v-btn slot="activator" @click.stop="$emit('toggle-drawer')" icon flat>
             <v-badge color="error" overlap :value="errors.length > 0">
-              <span class="custom-badge" slot="badge">{{ errors.length }}</span>
-              <v-icon style="margin-top: -2px">history</v-icon>
+              <span slot="badge">{{ errors.length }}</span>
+              <v-icon>history</v-icon>
             </v-badge>
           </v-btn>
           <span>History & Errors</span>
@@ -271,8 +280,8 @@ export default class Editor extends Vue {
       if (settings.lockScroll) {
         this.scrollToSecond = e
       }
-      const pixels = e / this.audioElement.duration * o.clientWidth
-      i.style.transform = `translateX(${ pixels }px)`
+      const pixels = e / this.audioElement.duration * o.clientWidth;
+      (i as HTMLElement).style.transform = `translateX(${ pixels }px)`
     })
   }
 
