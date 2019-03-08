@@ -77,15 +77,26 @@ export default class SpeakerSegmentTranscript extends Vue {
   @Prop() previousEvent: LocalTranscriptEvent|undefined
   @Prop() speaker: number
 
-  playEvent = playEvent
   localEvent = clone(this.event)
   localTokens = this.localEvent.speakerEvents[this.speaker]
     ? this.localEvent.speakerEvents[this.speaker].tokens
     : []
   segmentText = this.localTokens ? this.localTokens.map(t => t.tiers.default.text).join(' ') : ''
   focused = false
+
   settings = settings
+  playEvent = playEvent
   updateSpeakerTokens = updateSpeakerTokens
+
+  @Watch('event')
+  onUpdateEvent(newEvent: LocalTranscriptEvent) {
+    // TODO: redundant.
+    this.localEvent = clone(newEvent)
+    this.localTokens = this.localEvent.speakerEvents[this.speaker]
+      ? this.localEvent.speakerEvents[this.speaker].tokens
+      : []
+    this.segmentText = this.localTokens ? this.localTokens.map(t => t.tiers.default.text).join(' ') : ''
+  }
 
   get isMarkedWithFragment(): boolean {
     const last = _(this.localTokens).last()
