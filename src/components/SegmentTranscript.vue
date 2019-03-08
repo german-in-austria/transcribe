@@ -78,7 +78,7 @@ export default class SegmentTranscript extends Vue {
   }
 
   mounted() {
-    this.offsetWidth = this.$el.offsetWidth + 1
+    this.offsetWidth = (this.$el as HTMLElement).offsetWidth + 1
     this.$emit('element-render', this.offsetWidth)
   }
 

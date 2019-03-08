@@ -256,8 +256,8 @@ export default class Waveform extends Vue {
     const o = this.$refs.overview
     requestAnimationFrame(() => {
       if (w instanceof HTMLElement && o instanceof HTMLElement) {
-        const pixels = ((w.scrollLeft + w.clientWidth) / w.scrollWidth * o.clientWidth)
-        e.style.transform = `translateX(${ pixels }px)`
+        const pixels = ((w.scrollLeft + w.clientWidth) / w.scrollWidth * o.clientWidth);
+        (e as HTMLElement).style.transform = `translateX(${ pixels }px)`
         localStorage.setItem('scrollPos', String(w.scrollLeft))
       }
     })
