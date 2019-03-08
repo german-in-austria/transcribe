@@ -85,7 +85,7 @@ export default class Sidebar extends Vue {
   @Watch('eventStore.events')
   onEventsUpdate(newEvents: LocalTranscriptEvent[]) {
     this.errors = _(newEvents)
-      .filter((e, i) => newEvents[i - 1] && e.startTime < newEvents[i - 1].endTime)
+      .filter((e, i) => newEvents[i - 1] !== undefined && e.startTime < newEvents[i - 1].endTime)
       .map((e) => ({...e, error_type: 'time_overlap'} as ErrorEvent))
       .value()
   }
