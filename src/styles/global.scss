@@ -55,35 +55,35 @@ img[lazy=loaded] {
   align-self: baseline;
   max-height: 400px;
 }
-.btn i {
+.v-btn i {
   font-size: 1.4em !important;
 }
-.menu__content, .context-menu {
+.v-menu__content, .context-menu {
   border-radius: 4px;
   box-shadow: 0 5px 30px rgba(0,0,0,.2);
 }
-.menu__content .avatar i.icon,
-.context-menu .avatar i.icon {
+.v-menu__content .avatar i.v-icon,
+.context-menu .avatar i.v-icon {
   font-size: 1.1em;
 }
-.menu__content .list__tile__avatar,
-.context-menu .list__tile__avatar{
+.v-menu__content .v-list__tile__avatar,
+.context-menu .v-list__tile__avatar{
   min-width: 40px;
   margin-left: -10px;
 }
-.navigation-drawer__border{
+.v-navigation-drawer__border{
   display: none;
 }
-.menu__content .list--dense:not(.list--two-line) a,
-.context-menu .list--dense:not(.list--two-line) a,
-.menu__content .list--dense .list__tile:not(.list__tile--avatar),
-.context-menu  .list--dense .list__tile:not(.list__tile--avatar){
+.v-menu__content .v-list--dense:not(.list--two-line) a,
+.context-menu .v-list--dense:not(.v-list--two-line) a,
+.v-menu__content .v-list--dense .v-list__tile:not(.v-list__tile--avatar),
+.context-menu .v-list--dense .v-list__tile:not(.v-list__tile--avatar){
   height: 33px !important;
 }
-.tabs__item{
+.v-tabs__item{
   background: rgba(0,0,0,.2);
 }
-.tabs__item--active{
+.v-tabs__item--active{
   background: transparent
 }
 .application.theme--dark .text--disabled {
