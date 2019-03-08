@@ -207,13 +207,13 @@ export default class App extends Vue {
     this.loadingTranscriptId = pk
     const y = document.createElement('audio')
     getTranscript(pk, (progress, events, serverTranscript) => {
+      this.eventStore.transcriptDownloadProgress = progress
       mergeServerTranscript(serverTranscript)
       if (this.eventStore.metadata.audioUrl !== null) {
         console.log(this.eventStore.metadata)
         y.src = this.eventStore.metadata.audioUrl
         this.loadingTranscriptId = null
       }
-      console.log(progress)
     })
 
     y.addEventListener('durationchange', (e) => {
