@@ -2,7 +2,7 @@
 import * as _ from 'lodash'
 import audio from '../service/audio'
 import { clone, isEqualDeep  } from '../util'
-import { historyToServerTranscript, serverTranscript } from '../service/data-backend/server-backend'
+import { localTranscriptToServerTranscript, serverTranscript } from '../service/data-backend/server-backend'
 
 declare global {
   interface Window {
@@ -14,6 +14,21 @@ declare global {
     ut: string
     n: string
   }
+}
+
+interface SaveResponseEntity {
+  status: 'update'|'delete'|'insert'
+  newStatus: 'updated'|'deleted'|'inserted'
+}
+
+export interface ServerTokenSaveResponse extends ServerToken, SaveResponseEntity {}
+export interface ServerEventSaveResponse extends ServerEvent, SaveResponseEntity {}
+
+export interface ServerTranscriptSaveResponse extends ServerTranscript {
+  aTokens: {
+    [token_id: string]: ServerTokenSaveResponse
+  }
+  aEvents: ServerEventSaveResponse[]
 }
 
 export interface ServerTranscript {
@@ -32,6 +47,12 @@ export interface ServerTranscript {
     [speaker_id: number]: {
       ka: string // name anonymized
       k: string // name
+    }
+  }
+  aTokenSets?: {
+    [setId: number]: {
+      ivt: number // starting at token id (von)
+      ibt: number // ending at token id (bis)
     }
   }
   aTranskript?: {
@@ -569,8 +590,19 @@ export function toTime(time: number, decimalPlaces = 0): string {
   return new Date(time * 1000).toISOString().substr(11, 8 + (decimalPlaces > 0 ? decimalPlaces + 1 : 0))
 }
 
-export async function saveHistoryToServer() {
-  if (history.length > 0 && serverTranscript !== null) {
-    const x = historyToServerTranscript(history, serverTranscript, eventStore.events)
+export async function saveChangesToServer() {
+  if (serverTranscript !== null) {
+    const x = await localTranscriptToServerTranscript(serverTranscript, eventStore.events)
+    console.log({x})
+    const y = await (await fetch(`https://dissdb.dioe.at/routes/transcript/save/${ (x.aTranskript as any).pk }`, {
+      credentials: 'include',
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(x),
+    })).json()
+    console.log({x, y})
   }
 }

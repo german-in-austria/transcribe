@@ -195,7 +195,7 @@ import {
   joinEvents,
   isEventSelected,
   history,
-  saveHistoryToServer
+  saveChangesToServer
 } from '@store/transcript'
 
 @Component({
@@ -213,8 +213,8 @@ import {
 export default class Editor extends Vue {
 
   @Prop() audioElement: HTMLAudioElement
-  @Prop() errors: LocalTranscriptEvent[]
 
+  errors: LocalTranscriptEvent[] = []
   eventStore = eventStore
   addSegment = addSegment
   deleteEvent = deleteEvent
@@ -253,11 +253,14 @@ export default class Editor extends Vue {
 
   async saveToServer() {
     if (this.history.length > 0) {
-      await saveHistoryToServer()
       this.isSaving = true
-      setTimeout(() => {
+      try {
+        await saveChangesToServer()
+      } catch (e) {
+        console.log(e)
+      } finally {
         this.isSaving = false
-      }, 2000)
+      }
     }
   }
 

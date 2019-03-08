@@ -7,7 +7,8 @@ import {
   timeFromSeconds,
   HistoryEventAction,
   ServerEvent,
-  ServerToken
+  ServerToken,
+  LocalTranscriptToken
 } from '@store/transcript'
 
 import { padEnd } from '@util/index'
@@ -58,66 +59,16 @@ export function mergeServerTranscript(s: ServerTranscript) {
   console.log({tokens: _(s.aTokens).toArray().sortBy(t => t.tr).value()})
 }
 
-export async function historyToServerTranscript(
-  hs: HistoryEventAction[],
+export async function localTranscriptToServerTranscript(
   oldServerTranscript: ServerTranscript,
   localEvents: LocalTranscript): Promise<ServerTranscript> {
-  console.log({ hs })
-  const oldServerTokens = oldServerTranscript.aTokens
-  const aEvents = _(hs.slice().reverse())
-    .uniqBy(h => h.events[0].eventId)
-    .map((e) => {
-      return {
-        pk: e.events[0].eventId,
-        e: timeFromSeconds(e.events[0].endTime),
-        s: timeFromSeconds(e.events[0].startTime),
-        l: 0 as 0,
-        tid: _(e.events[0].speakerEvents).mapValues((v, k) => {
-          return v.tokens.map((t) => t.id)
-        }).value()
-      }
-    })
-    .value()
-  const newServerEvents: ServerEvent[] = []
-  const newServerTokens = _(localEvents).reduce((m, e) => {
-    _(e.speakerEvents).mapValues((speakerEvent, speakerId) => {
-      newServerEvents.push({
-        pk: speakerEvent.speakerEventId,
-        s: padEnd(timeFromSeconds(e.startTime), 14, '0'),
-        e: padEnd(timeFromSeconds(e.endTime), 14, '0'),
-        l: 0,
-        tid: {
-          [speakerId]: speakerEvent.tokens.map(t => t.id)
-        }
-      })
-      return speakerEvent.tokens.map((t, i) => {
-        m[t.id] = {
-          e : speakerEvent.speakerEventId,
-          i : Number(speakerId),
-          // this produces undefined for "" (empty strings)
-          o : t.tiers.ortho.text.trim() || undefined,
-          // sentence id? do i have to produce new sentences?
-          s : oldServerTokens[t.id] ? oldServerTokens[t.id].s : -1,
-          // sequence in sentence (how do i find that out?)
-          sr: oldServerTokens[t.id] ? oldServerTokens[t.id].sr : -1,
-          t : t.tiers.default.text,
-          // Text in ortho is basically useless.
-          to: t.tiers.ortho.text,
-          tr: t.order,
-          // TODO: this could be null
-          tt: t.tiers.default.type as number,
-          // fo: t.fragmentOf || undefined
-        }
-      })
-    })
-    .value()
-    return m
-  }, {} as _.Dictionary<ServerToken>)
   const oldT = textEncoder.encode(JSON.stringify(oldServerTranscript)).buffer
-  const newT = textEncoder.encode(JSON.stringify({ aTokens: newServerTokens, aEvents: newServerEvents })).buffer
-  const y = await diffWorker.postMessage({oldT, newT}, [oldT, newT])
-  console.log(y)
-  return oldServerTranscript
+  const newT = textEncoder.encode(JSON.stringify(localEvents)).buffer
+  const tokensAndEvents = await diffWorker.postMessage({oldT, newT}, [oldT, newT])
+  return {
+    ...oldServerTranscript,
+    ...tokensAndEvents
+  }
 }
 
 function reverseString(str: string) {
@@ -135,7 +86,6 @@ function replaceLastOccurrence(token: string, toReplace: string, replaceWith: st
 
 function findNextFragmentOfId(
   tokenId: number,
-  tokenIndex: number,
   speakerKey: string,
   groupedEvents: ServerEvent[][],
   groupedEventsIndex: number,
@@ -182,15 +132,10 @@ function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
         startTime: timeToSeconds(eG[0].s),
         endTime: timeToSeconds(eG[0].e),
         speakerEvents: _.reduce(eG, (m, se, i, ses) => {
-          _.map(se.tid, (tokenIds, speakerKey) => {
+          _.each(se.tid, (tokenIds, speakerKey) => {
             m[speakerKey] = {
               speakerEventId: se.pk,
-              tokens: _.map(tokenIds, (tokenId, tokenIndex) => {
-                // replace fragment in previous token
-                const nextFragmentOfId = findNextFragmentOfId(tokenId, tokenIndex, speakerKey, lG, iG, s.aTokens)
-                if (nextFragmentOfId !== undefined) {
-                  s.aTokens[tokenId].t = replaceLastOccurrence(s.aTokens[tokenId].t, s.aTokens[nextFragmentOfId].t, '=')
-                }
+              tokens: _.map(tokenIds, (tokenId) => {
                 return {
                   id: tokenId,
                   fragmentOf: s.aTokens[tokenId].fo || null,
@@ -198,7 +143,16 @@ function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
                   order: s.aTokens[tokenId].tr,
                   tiers : {
                     default: {
-                      text: s.aTokens[tokenId].t,
+                      // replace fragment in current token,
+                      // if next token has fragment of marker
+                      text: (() => {
+                        const nextFragmentOfId = findNextFragmentOfId(tokenId, speakerKey, lG, iG, s.aTokens)
+                        if (nextFragmentOfId !== undefined) {
+                          return replaceLastOccurrence(s.aTokens[tokenId].t, s.aTokens[nextFragmentOfId].t, '=')
+                        } else {
+                          return s.aTokens[tokenId].t
+                        }
+                      })(),
                       type: s.aTokens[tokenId].tt
                     },
                     ortho: {
