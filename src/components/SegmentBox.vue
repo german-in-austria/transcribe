@@ -71,7 +71,8 @@ export default class SegmentBox extends Vue {
 
   get hasOverlap() {
     const x = (
-      this.previousEvent !== undefined && this.previousEvent.endTime > this.event.startTime
+      this.previousEvent !== undefined &&
+      Number(this.previousEvent.endTime.toPrecision(2)) > Number(this.event.startTime.toPrecision(2))
     )
     if (x) {
       console.log('overlap', this.event, this.previousEvent, this.nextEvent)
@@ -131,14 +132,15 @@ export default class SegmentBox extends Vue {
   will-change width left
   transform-origin 0 0
   user-select none
+  &.has-overlap
+    border 1px dashed #af0202
   &.selected
     z-index 1
     border 2px solid cornflowerblue
     box-shadow 0 0 50px rgba(0,0,0,.4)
     background transparent
-  &.has-overlap
-    border 2px dashed #800
-    background transparent
+    &.has-overlap
+      border-color #af0202
   &:hover:not(.selected)
     background transparent
     border-bottom 1px solid rgba(255,255,255,.2)
