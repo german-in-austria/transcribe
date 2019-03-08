@@ -491,7 +491,7 @@ async function getOrFetchAudioBuffer(
 }
 
 async function serverAcceptsRanges(url: string): Promise<boolean> {
-  const res = (await fetch(url, {method: 'HEAD', mode: 'cors', credentials: 'include'}))
+  const res = (await fetch(url, {method: 'HEAD', credentials: 'include'}))
   // return res.headers.has('Accept-Ranges')
   return true
 }
