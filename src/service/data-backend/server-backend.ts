@@ -6,11 +6,8 @@ import {
   ServerEventSaveResponse,
   LocalTranscript,
   timeToSeconds,
-  timeFromSeconds,
-  HistoryEventAction,
   ServerEvent,
   ServerToken,
-  LocalTranscriptToken,
   ServerTokenSaveResponse
 } from '@store/transcript'
 
@@ -139,7 +136,7 @@ export function serverTokenSaveResponseToServerToken(
   return {
     e: t.e > 0
       ? t.e             // it’s an existing event
-      : es[t.e].newPk!, // it’s a new event
+      : es[t.e].newPk!, // it’s a new event, use the server-supplied primary key.
     fo: t.fo,
     i: t.i,
     o: t.o,
@@ -247,7 +244,7 @@ export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
                   tiers : {
                     default: {
                       // replace fragment in current token,
-                      // if next token has fragment of marker
+                      // if next token has a "fragment_of" marker
                       text: (() => {
                         const nextFragmentOfId = findNextFragmentOfId(tokenId, speakerKey, lG, iG, s.aTokens)
                         if (nextFragmentOfId !== undefined) {

@@ -88,9 +88,9 @@ export default class SpeakerSegmentTranscript extends Vue {
   playEvent = playEvent
   updateSpeakerTokens = updateSpeakerTokens
 
+  // TODO: redundant.
   @Watch('event')
   onUpdateEvent(newEvent: LocalTranscriptEvent) {
-    // TODO: redundant.
     this.localEvent = clone(newEvent)
     this.localTokens = this.localEvent.speakerEvents[this.speaker]
       ? this.localEvent.speakerEvents[this.speaker].tokens
@@ -124,6 +124,38 @@ export default class SpeakerSegmentTranscript extends Vue {
     }
   }
 
+  get secondaryTiers() {
+    return eventStore.metadata.tiers.filter(t => t.name !== 'default' && t.show === true)
+  }
+
+  get tokens() {
+    return this.event.speakerEvents[this.speaker].tokens
+  }
+
+  get firstTokenOrder() {
+    const speakerEvent = this.event.speakerEvents[this.speaker]
+    if (speakerEvent) {
+      const firstToken = this.event.speakerEvents[this.speaker].tokens[0]
+      if (firstToken) {
+        return firstToken.order
+      } else {
+        return undefined
+      }
+    } else {
+      const i = findPreviousSpeakerEvent(this.speaker, this.event.eventId)
+      if (i !== undefined) {
+        const prevLastToken = _(eventStore.events[i].speakerEvents[this.speaker].tokens).last()
+        if (prevLastToken) {
+          return prevLastToken.order + 1
+        } else {
+          return 0
+        }
+      } else {
+        return 0
+      }
+    }
+  }
+
   tokenizeText(text: string) {
     return text.trim().split(' ').filter((t) => t !== '')
   }
@@ -131,14 +163,6 @@ export default class SpeakerSegmentTranscript extends Vue {
   viewAudioEvent(e: LocalTranscriptEvent) {
     eventStore.selectedEventIds = [ e.eventId ]
     eventStore.userState.viewingAudioEvent = e
-  }
-
-  get secondaryTiers() {
-    return eventStore.metadata.tiers.filter(t => t.name !== 'default' && t.show === true)
-  }
-
-  get tokens() {
-    return this.event.speakerEvents[this.speaker].tokens
   }
 
   colorFromTokenType(id: number): string {
@@ -172,30 +196,6 @@ export default class SpeakerSegmentTranscript extends Vue {
   async updateAndCommitLocalTokens(e: Event) {
     await this.updateLocalTokens(e)
     this.commit()
-  }
-
-  get firstTokenOrder() {
-    const speakerEvent = this.event.speakerEvents[this.speaker]
-    if (speakerEvent) {
-      const firstToken = this.event.speakerEvents[this.speaker].tokens[0]
-      if (firstToken) {
-        return firstToken.order
-      } else {
-        return undefined
-      }
-    } else {
-      const i = findPreviousSpeakerEvent(this.speaker, this.event.eventId)
-      if (i !== undefined) {
-        const prevLastToken = _(eventStore.events[i].speakerEvents[this.speaker].tokens).last()
-        if (prevLastToken) {
-          return prevLastToken.order + 1
-        } else {
-          return 0
-        }
-      } else {
-        return 0
-      }
-    }
   }
 
   async updateLocalTokens(e: Event) {
