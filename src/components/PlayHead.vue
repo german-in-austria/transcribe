@@ -32,8 +32,25 @@ export default class PlayHead extends Vue {
   left = 10
   transition = 'unset'
 
+  @Watch('eventStore.playAllFrom')
+  async onPlayAllFromChange(from: number|null) {
+    if (from !== null) {
+      const endTime = this.audioElement.duration
+      const playbackTimeInSeconds = (endTime - from) * (1 / (this.audioStore.playbackRate / 100))
+      this.transition = 'unset'
+      await this.$nextTick()
+      this.left = from * this.pixelsPerSecond
+      await this.$nextTick()
+      this.transition = `transform ${playbackTimeInSeconds}s linear`
+      this.left = endTime * this.pixelsPerSecond
+    } else {
+      this.left = this.audioElement.currentTime
+      this.transition = 'unset'
+    }
+  }
+
   @Watch('eventStore.playingEvent')
-  moveOnSegment() {
+  onPlayingEventChange() {
     const s = this.eventStore.playingEvent
     if (s !== null) {
       this.transition = 'unset'

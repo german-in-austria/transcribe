@@ -167,7 +167,9 @@ export const eventStore = {
     viewingAudioEvent: null as LocalTranscriptEvent|null
   },
   transcriptDownloadProgress: 0 as number,
-  status: 'empty' as 'empty'|'loading'|'finished'|'new'
+  status: 'empty' as 'empty'|'loading'|'finished'|'new',
+  playAllFrom: null as number|null,
+  backEndUrl: localStorage.getItem('backEndUrl') || 'https://dissdb.dioe.at'
 }
 ;
 (window as any)._eventStore = eventStore
@@ -602,7 +604,7 @@ export async function saveChangesToServer() {
     const x = await localTranscriptToServerTranscript(serverTranscript, eventStore.events)
     console.log({x})
     const serverChanges = await (
-      await fetch(`https://dissdb.dioe.at/routes/transcript/save/${ (x.aTranskript as any).pk }`, {
+      await fetch(`${ eventStore.backEndUrl }/routes/transcript/save/${ (x.aTranskript as any).pk }`, {
       credentials: 'include',
       method: 'POST',
       headers: {

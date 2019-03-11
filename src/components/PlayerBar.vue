@@ -54,7 +54,7 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '@store/settings'
 import audio from '../service/audio'
-import { toTime } from '@store/transcript'
+import { toTime, eventStore } from '@store/transcript'
 
 @Component
 export default class PlayerBar extends Vue {
@@ -63,14 +63,17 @@ export default class PlayerBar extends Vue {
 
   isPaused = true
   currentTime = this.audioElement.currentTime
+  eventStore = eventStore
   audioStore = audio.store
   volume = 100
   settings = settings
   toTime = toTime
   playPause(e: Event) {
     if (this.isPaused) {
+      this.eventStore.playAllFrom = this.audioElement.currentTime
       this.audioElement.play()
     } else {
+      this.eventStore.playAllFrom = null
       this.audioElement.pause()
     }
   }

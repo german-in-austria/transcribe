@@ -18,60 +18,76 @@
           v-if="audioElement === null && eventStore.status === 'empty'"
           class="max-width pick-transcript-container"
           :align-center="transcriptList === null"
-          justify-center>
+          justify-center
+          column>
+          <v-flex xs1>
+            <v-combobox
+              style="width: 300px; margin: 20px auto 0 auto"
+              @change="updateBackEndUrl"
+              :error-messages="this.errorMessage !==  null ? [ this.errorMessage ] : []"
+              auto-select-first
+              v-model="eventStore.backEndUrl"
+              :items="backEndUrls"
+              label="Select a Back End"
+            ></v-combobox>
+          </v-flex>
           <div v-if="loggedIn === false">
-            Please <a href="https://dissdb.dioe.at/login" target="_blank">login</a> and <a href="/">refresh</a>
+            Please <a :href="`${ eventStore.backEndUrl }/login`" target="_blank">login</a> and <a @click="loadTranscriptList">refresh</a>
           </div>
           <v-progress-circular
             indeterminate
             v-if="transcriptList === null && loggedIn === true"/>
-          <v-flex class="pt-5" xs6 md4 v-if="transcriptList !== null">
-            <h1 class="title text-xs-center text-light text-uppercase mt-3 mb-4">
-              Transcribe
-            </h1>
-            <v-text-field
-              v-model="searchTerm"
-              placeholder="search…"
-              prepend-icon="search"
-              autofocus />
-            <v-list
-              class="transparent scrollable"
-              dense
-              subheader
-              two-line>
-              <v-list-tile
-                disabled
-                @click="initializeEmptyTranscript()">
-                <v-list-tile-content>
-                  <v-list-tile-title>
-                    Create new Transcript
-                  </v-list-tile-title>
-                </v-list-tile-content>
-              </v-list-tile>
-              <v-subheader>
-                Pick a Transcript
-              </v-subheader>
-              <v-list-tile
-                :key="transcript.pk"
-                :disabled="loadingTranscriptId === transcript.pk"
-                @click="loadTranscript(transcript.pk)"
-                v-for="transcript in filteredTranscriptList">
-                <v-list-tile-content>
-                  <v-list-tile-title>
-                    {{ transcript.n }}
-                  </v-list-tile-title>
-                  <v-list-tile-sub-title>
-                    {{ transcript.ut }}
-                  </v-list-tile-sub-title>
-                  <v-progress-linear class="ma-0 pa-0" height="2" v-if="loadingTranscriptId === transcript.pk" indeterminate />
-                </v-list-tile-content>
-              </v-list-tile>
-              <v-list-tile class="text-xs-center" v-if="filteredTranscriptList.length === 0">
-                <span class="caption">
-                  no matching transcripts found
-                </span>
-              </v-list-tile>
-            </v-list>
+            <v-flex v-if="transcriptList !== null">
+              <v-layout justify-center row>
+              <v-flex class="pt-5" xs6 md4>
+                <h1 class="title text-xs-center text-light text-uppercase mt-3 mb-4">
+                  Transcribe
+                </h1>
+                <v-text-field
+                  v-model="searchTerm"
+                  placeholder="search…"
+                  prepend-icon="search"
+                  autofocus />
+                <v-list
+                  class="transparent scrollable"
+                  dense
+                  subheader
+                  two-line>
+                  <v-list-tile
+                    disabled
+                    @click="initializeEmptyTranscript()">
+                    <v-list-tile-content>
+                      <v-list-tile-title>
+                        Create new Transcript
+                      </v-list-tile-title>
+                    </v-list-tile-content>
+                  </v-list-tile>
+                  <v-subheader>
+                    Pick a Transcript
+                  </v-subheader>
+                  <v-list-tile
+                    :key="transcript.pk"
+                    :disabled="loadingTranscriptId === transcript.pk"
+                    @click="loadTranscript(transcript.pk)"
+                    v-for="transcript in filteredTranscriptList">
+                    <v-list-tile-content>
+                      <v-list-tile-title>
+                        {{ transcript.n }}
+                      </v-list-tile-title>
+                      <v-list-tile-sub-title>
+                        {{ transcript.ut }}
+                      </v-list-tile-sub-title>
+                      <v-progress-linear class="ma-0 pa-0" height="2" v-if="loadingTranscriptId === transcript.pk" indeterminate />
+                    </v-list-tile-content>
+                  </v-list-tile>
+                  <v-list-tile class="text-xs-center" v-if="filteredTranscriptList.length === 0">
+                    <span class="caption">
+                      no matching transcripts found
+                    </span>
+                  </v-list-tile>
+                </v-list>
+              </v-flex>
+            </v-layout>
           </v-flex>
         </v-layout>
         <v-layout
@@ -134,15 +150,39 @@ export default class App extends Vue {
   searchTerm = ''
   loggedIn = true
   eventStore = eventStore
+  log = console.log
+  errorMessage: string|null = null
+  backEndUrls = [
+    'https://dissdb.dioe.at',
+    'http://localhost:8000',
+    'https://dioedb.dioe.at'
+  ]
+
+  updateBackEndUrl(url: string) {
+    localStorage.setItem('backEndUrl', url)
+    this.loadTranscriptList()
+  }
 
   async mounted() {
-    const res = (await (await fetch('https://dissdb.dioe.at/routes/transcripts', {
-      credentials: 'include'
-    })).json())
-    if (res.transcripts !== undefined) {
-      this.transcriptList = res.transcripts
-    } else if (res.error === 'login') {
+    this.loadTranscriptList()
+  }
+
+  async loadTranscriptList() {
+    try {
+      this.errorMessage = null
+      const res = (await (await fetch(`${ this.eventStore.backEndUrl }/routes/transcripts`, {
+        credentials: 'include'
+      })).json())
+      if (res.transcripts !== undefined) {
+        this.loggedIn = true
+        this.transcriptList = res.transcripts
+      } else if (res.error === 'login') {
+        this.loggedIn = false
+      }
+    } catch (e) {
       this.loggedIn = false
+      this.transcriptList = null
+      this.errorMessage = 'could not load transcripts from back end.'
     }
   }
 

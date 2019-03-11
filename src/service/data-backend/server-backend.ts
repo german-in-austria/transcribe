@@ -25,7 +25,7 @@ function getMetadataFromServerTranscript(res: ServerTranscript) {
     speakers: res.aInformanten!,
     tokenTypes: res.aTokenTypes!,
     transcriptName: res.aTranskript!.n,
-    audioUrl: 'https://dissdb.dioe.at/private-media'
+    audioUrl: `${ eventStore.backEndUrl }/private-media`
       + res.aEinzelErhebung!.dp.split('\\').join('/')
       + res.aEinzelErhebung!.af
       + '.ogg',
@@ -282,7 +282,7 @@ export async function getTranscript(
   try {
 
     // download transcript page
-    const res = await (await fetch(`https://dissdb.dioe.at/routes/transcript/${ id }/${ chunk }`, {
+    const res = await (await fetch(`${ eventStore.backEndUrl }/routes/transcript/${ id }/${ chunk }`, {
       credentials: 'include'
     })).json() as ServerTranscript
 
