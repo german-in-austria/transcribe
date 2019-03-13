@@ -289,7 +289,6 @@ export async function getTranscript(
     // when it’s the first page
     if (res.aNr === 0) {
       eventStore.metadata = getMetadataFromServerTranscript(res)
-      eventStore.status = 'loading'
     }
 
     // convert and concat

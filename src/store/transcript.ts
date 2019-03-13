@@ -169,7 +169,8 @@ export const eventStore = {
   transcriptDownloadProgress: 0 as number,
   status: 'empty' as 'empty'|'loading'|'finished'|'new',
   playAllFrom: null as number|null,
-  backEndUrl: localStorage.getItem('backEndUrl') || 'https://dissdb.dioe.at'
+  backEndUrl: localStorage.getItem('backEndUrl') || 'https://dissdb.dioe.at',
+  audioElement: document.createElement('audio')
 }
 ;
 (window as any)._eventStore = eventStore
