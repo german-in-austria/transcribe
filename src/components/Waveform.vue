@@ -37,15 +37,7 @@
       ref="svgContainer"
       @mousewheel="onMousewheel"
       @scroll="onScroll">
-      <div class="second-marker-row">
-        <div
-          v-for="i in visibleSeconds"
-          :key="i"
-          :style="{ transform: `translateX(${ i * pixelsPerSecond }px)` }"
-          class="second-marker">
-            {{ toTime(i) }}
-        </div>
-      </div>
+      <div class="second-marker-row" />
       <div
         :style="stageStyle"
         class="wave-form-inner">
@@ -139,7 +131,6 @@ const queue = new Queue({
 })
 export default class Waveform extends Vue {
 
-  @Prop() audioElement: HTMLAudioElement
   @Prop() audioUrl: string
   @Prop({ default: 200 }) height: number
   @Prop({ default: null }) scrollToSecond: number|null
@@ -240,14 +231,20 @@ export default class Waveform extends Vue {
     this.doMaybeRerender()
   }
 
-  updateSecondsMarkers() {
-    // compute and set visible seconds
+  async updateSecondsMarkers() {
     // (it’s dependent on browser geometry, so a computed getter doesn’t work here.)
     const [left, right] = this.getRenderBoundaries(10000)
     const [startSecond, endSecond] = [Math.floor(left / this.pixelsPerSecond), Math.floor(right / this.pixelsPerSecond)]
-    this.visibleSeconds = util
+    const visibleSeconds = util
       .range(Math.max(startSecond, 0), Math.min(endSecond, this.audioLength))
       .filter((s, i) => this.pixelsPerSecond > 60 || i % 2 === 0)
+    await util.requestFrameAsync()
+    const el = this.$el.querySelector('.second-marker-row') as HTMLElement
+    el.innerHTML = visibleSeconds.map(s => {
+        return `<div style="transform: translateX(${ s * this.pixelsPerSecond }px)" class="second-marker">`
+          + toTime(s)
+          + '</div>'
+      }).join('')
   }
 
   updateOverviewThumb(seconds?: number) {
@@ -274,7 +271,7 @@ export default class Waveform extends Vue {
       to,
       this.metadata.fileSize,
       this.audioLength,
-      this.audioElement.src
+      eventStore.audioElement.src
     )
     console.log({ from, to, duration: to - from })
     const width = isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth
@@ -286,8 +283,8 @@ export default class Waveform extends Vue {
     console.timeEnd('render')
   }
 
-  doMaybeRerender() {
-    const piecesToRender = util.findAllNotIn(this.renderedWaveFormPieces, this.shouldRenderWaveFormPieces())
+  async doMaybeRerender() {
+    const piecesToRender = util.findAllNotIn(this.renderedWaveFormPieces, await this.shouldRenderWaveFormPieces())
     if (piecesToRender.length > 0) {
       console.log('now rendering:', piecesToRender)
       piecesToRender.forEach((p) => {
@@ -457,19 +454,21 @@ export default class Waveform extends Vue {
     }
   }
 
-  @Watch('audioElement')
+  @Watch('eventStore.audioElement')
   async initWithAudio() {
-    if (this.audioElement !== null && !isNaN(this.audioElement.duration)) {
+    console.log('init with audio 1')
+    if (eventStore.audioElement !== null && !isNaN(eventStore.audioElement.duration)) {
+      console.log('init with audio 2')
       this.loading = true
-      console.log('this.audioElement.duration', this.audioElement.duration)
-      this.audioLength = this.audioElement.duration
+      console.log('this.audioElement.duration', eventStore.audioElement.duration)
+      this.audioLength = eventStore.audioElement.duration
       this.totalWidth = this.audioLength * this.pixelsPerSecond
       const that = this
       if (audio.store.isLocalFile === true) {
         console.log('local')
       } else {
         await audio.downloadAudioStream({
-          url: this.audioElement.src,
+          url: eventStore.audioElement.src,
           onStart: (metadata: any) => {
             this.initWithMetadata(metadata)
             this.doMaybeRerender()
@@ -502,7 +501,7 @@ export default class Waveform extends Vue {
     }
   }
 
-  shouldRenderWaveFormPieces(): number[] {
+  async shouldRenderWaveFormPieces(): Promise<number[]> {
     const [ left, right ] = this.getRenderBoundaries()
     const [ startPiece, endPiece ] = [ Math.floor(left / this.drawWidth), Math.floor(right / this.drawWidth) ]
     return util.range(startPiece, endPiece)
@@ -537,7 +536,7 @@ export default class Waveform extends Vue {
       to,
       this.metadata.fileSize,
       this.audioLength,
-      this.audioElement.src
+      eventStore.audioElement.src
     )
 
     let svg: string
@@ -574,6 +573,18 @@ export default class Waveform extends Vue {
 @-webkit-keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 @-moz-keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+.second-marker
+  min-width: 1px;
+  height: 10px;
+  top: 32.5px;
+  position: absolute;
+  border-left: 1px solid #6f6f6f;
+  user-select none
+  font-size: 10px;
+  line-height: 12px;
+  padding-left: 7px;
+  color: #6f6f6f;
 
 .overview-waveform
   z-index -1
@@ -666,18 +677,6 @@ export default class Waveform extends Vue {
   background rgba(0,0,0,.2)
   border-radius 10px
   line-height 20px
-
-.second-marker
-  min-width: 1px;
-  height: 10px;
-  top: 32.5px;
-  position: absolute;
-  border-left: 1px solid #6f6f6f;
-  user-select none
-  font-size: 10px;
-  line-height: 12px;
-  padding-left: 7px;
-  color: #6f6f6f;
 
 .scale-y
   position absolute

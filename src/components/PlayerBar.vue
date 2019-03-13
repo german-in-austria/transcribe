@@ -19,15 +19,15 @@
         <v-flex class="pt-3" xs12 align-content-center>
           <v-btn class="play-button" @click="playPause" large icon flat>
             <v-icon v-if="isPaused" x-large>play_arrow</v-icon>
-            <v-icon v-else x-large>pause_circle_outline</v-icon>
+            <v-icon v-else x-large>pause</v-icon>
           </v-btn>
           <div class="current-time">
-            <span
+            <!-- <span
               v-for="(digit, i) in (toTime(currentTime, 3).split(''))"
               :key="i"
               class="digit">
               {{ digit }}
-            </span>
+            </span> -->
           </div>
         </v-flex>
         <v-flex text-xs-left xs2>
@@ -59,38 +59,31 @@ import { toTime, eventStore } from '@store/transcript'
 @Component
 export default class PlayerBar extends Vue {
 
-  @Prop() audioElement: HTMLAudioElement
-
   isPaused = true
-  currentTime = this.audioElement.currentTime
   eventStore = eventStore
   audioStore = audio.store
+  currentTime = eventStore.audioElement.currentTime
   volume = 100
   settings = settings
   toTime = toTime
+
   playPause(e: Event) {
     if (this.isPaused) {
-      this.eventStore.playAllFrom = this.audioElement.currentTime
-      this.audioElement.play()
+      this.eventStore.playAllFrom = eventStore.audioElement.currentTime
+      eventStore.audioElement.play()
     } else {
       this.eventStore.playAllFrom = null
-      this.audioElement.pause()
+      eventStore.audioElement.pause()
     }
   }
 
-  @Watch('playbackRate')
-  onPlaybackRateChange(rate: number) {
-    this.setPlaybackRate(rate)
-  }
-
   setPlaybackRate(rate: number) {
-    this.audioElement.playbackRate = rate / 100
-    console.log(this.audioElement)
+    eventStore.audioElement.playbackRate = rate / 100
   }
 
   @Watch('volume')
   onVolumeChange(volume: number) {
-    this.audioElement.volume = volume / 100
+    eventStore.audioElement.volume = volume / 100
   }
 
   get theme() {
@@ -102,15 +95,27 @@ export default class PlayerBar extends Vue {
   }
 
   mounted() {
-    this.audioElement.addEventListener('play', () => {
+    eventStore.audioElement.addEventListener('play', () => {
       this.isPaused = false
+      const t = eventStore.audioElement.currentTime
+      const e = this.$el.querySelector('.current-time')!
+      const startTime = performance.now()
+      const step = () => {
+        const ellapsed = (performance.now() - startTime) / 1000
+        const newT = toTime(t + ellapsed, 3)
+        e.innerHTML = newT.split('').map(d => `<span>${d}</span>\n`).join('')
+        if (this.isPaused === false) {
+          requestAnimationFrame(step)
+        }
+      }
+      step()
     })
-    this.audioElement.addEventListener('pause', () => {
+    eventStore.audioElement.addEventListener('pause', () => {
       this.isPaused = true
     })
-    this.audioElement.addEventListener('timeupdate', (e) => {
-      this.currentTime = this.audioElement.currentTime
-    })
+    // eventStore.audioElement.addEventListener('timeupdate', (e) => {
+    //   this.currentTime = eventStore.audioElement.currentTime
+    // })
   }
 }
 </script>
@@ -136,6 +141,7 @@ export default class PlayerBar extends Vue {
   background rgba(0,0,0,.15)
   margin 0 auto
   border-radius 1em
-
+  span:nth-last-child(-n+4)
+    opacity .5
 </style>
 
