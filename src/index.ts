@@ -1,22 +1,17 @@
 import Vue from 'vue'
 import Main from './components/Main.vue'
-import Vuex from 'vuex'
 import router from './router'
 import VueRouter from 'vue-router'
 import * as fontLoader from 'webfontloader'
 import Vuetify from 'vuetify'
 // import store from './store'
 import VueLazyload from 'vue-lazyload'
-import VueInputAutowidth from 'vue-input-autowidth'
-import vuescroll from 'vue-scroll'
-Vue.use(VueInputAutowidth)
 
+
+Vue.config.devtools = true
+Vue.config.performance = true
 Vue.config.productionTip = true
 // Vue.use(VueAnalytics)
-
-Vue.use(vuescroll)
-
-Vue.use(Vuex)
 
 Vue.use(VueRouter)
 
