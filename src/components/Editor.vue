@@ -63,10 +63,8 @@
       @add-segment="addSegment"
       :height="300"
       :scroll-to-event="scrollToEvent"
-      :scroll-to-second="scrollToSecond"
-      :audio-element="audioElement">
+      :scroll-to-second="scrollToSecond" >
       <play-head
-        :audio-element="audioElement"
         @change-position="scrub"
         :metadata="metadata" />
       <div
@@ -74,8 +72,8 @@
         class="absolute">
         <segment-box
           v-for="(event, i) in visibleEvents"
-          :key="event.eventId"
           @contextmenu.native.stop.prevent="doShowMenu"
+          :key="event.eventId"
           :event="event"
           :previous-event="visibleEvents[i - 1]"
           :next-event="visibleEvents[i + 1]"
@@ -146,19 +144,19 @@
           up
           class="transcript-scrollhandle"
           ref="transcriptScrollhandle" />
-        <div v-if="this.audioElement !== undefined" class="error-overview-container">
+        <div v-if="eventStore.audioElement !== undefined" class="error-overview-container">
           <div
             v-for="(error) in errors"
             :key="error.eventId"
             class="error-overview"
-            :style="{ left: `${ error.startTime / audioElement.duration * 100}%` }" />
+            :style="{ left: `${ error.startTime / eventStore.audioElement.duration * 100}%` }" />
         </div>
-        <div v-if="this.audioElement !== undefined" class="search-overview-container">
+        <div v-if="eventStore.audioElement !== undefined" class="search-overview-container">
           <div
             v-for="(result) in eventStore.searchResults"
             :key="result.eventId"
             :class="['result-overview', isEventSelected(result.eventId) && 'result-selected']"
-            :style="{ left: `${ result.startTime / audioElement.duration * 100}%` }" />
+            :style="{ left: `${ result.startTime / eventStore.audioElement.duration * 100}%` }" />
         </div>
       </div>
     </wave-form>
@@ -186,6 +184,7 @@ import playHead from '@components/PlayHead.vue'
 import * as _ from 'lodash'
 import * as fns from 'date-fns'
 import audio from '../service/audio'
+import { requestFrameAsync } from '@util/index'
 
 import {
   getSelectedEvent,
@@ -207,6 +206,9 @@ import {
   saveChangesToServer
 } from '@store/transcript'
 
+let boundLeft = 0
+let boundRight = 100
+
 @Component({
   components: {
     waveForm,
@@ -220,8 +222,6 @@ import {
   }
 })
 export default class Editor extends Vue {
-
-  @Prop() audioElement: HTMLAudioElement
 
   errors: LocalTranscriptEvent[] = []
   eventStore = eventStore
@@ -238,8 +238,6 @@ export default class Editor extends Vue {
   // TODO: percentages are impractical. use pixels
   segmentBufferPercent = .01
   metadata: any = null
-  boundLeft = 0
-  boundRight = 100
   scrollToEvent: LocalTranscriptEvent|null = null
   segmentPlayingTimeout: any = null
   scrollToSecond: number|null = null
@@ -259,6 +257,14 @@ export default class Editor extends Vue {
   menuX = 0
   menuY = 0
   layerX = 0 // this is used for splitting
+
+  visibleEvents: LocalTranscriptEvent[] = []
+
+  @Watch('eventStore.events')
+  async onEventsChange(newEs: LocalTranscriptEvent[]) {
+    console.log('EVENT CHANGE')
+    this.visibleEvents = await this.getVisibleEvents(boundLeft, boundRight, newEs)
+  }
 
   async saveToServer() {
     if (this.history.length > 0) {
@@ -280,7 +286,7 @@ export default class Editor extends Vue {
       if (settings.lockScroll) {
         this.scrollToSecond = e
       }
-      const pixels = e / this.audioElement.duration * o.clientWidth;
+      const pixels = e / eventStore.audioElement.duration * o.clientWidth;
       (i as HTMLElement).style.transform = `translateX(${ pixels }px)`
     })
   }
@@ -345,10 +351,9 @@ export default class Editor extends Vue {
 
   mounted() {
     console.log('mounted')
-    console.log(this.audioElement)
-    if (this.audioElement instanceof HTMLAudioElement) {
+    if (eventStore.audioElement instanceof HTMLAudioElement) {
       console.log('inner')
-      this.audioElement.addEventListener('pause', () => {
+      eventStore.audioElement.addEventListener('pause', () => {
         if (this.segmentPlayingTimeout !== null) {
           clearTimeout(this.segmentPlayingTimeout)
           this.segmentPlayingTimeout = null
@@ -359,7 +364,7 @@ export default class Editor extends Vue {
 
   scrub(time: number) {
     this.playHeadPos = time
-    this.audioElement.currentTime = time
+    eventStore.audioElement.currentTime = time
   }
 
   selectAndScrollToEvent(e: LocalTranscriptEvent) {
@@ -369,30 +374,31 @@ export default class Editor extends Vue {
     })
   }
 
-  get visibleEvents() {
-    return _(this.eventStore.events)
+  async getVisibleEvents(l: number, r: number, es = this.eventStore.events): Promise<LocalTranscriptEvent[]> {
+    await requestFrameAsync()
+    return _(es)
       .filter((s) => {
-        return s.startTime >= this.boundLeft && s.endTime <= this.boundRight
+        return s.startTime >= l && s.endTime <= r
       })
       .sortBy('startTime')
       .value()
   }
 
-  handleScroll(e: MouseEvent, time?: number) {
+  async handleScroll(e: MouseEvent, time?: number) {
     if (this.settings.lockScroll && time) {
       this.scrollTranscriptTime = time
     }
-    requestAnimationFrame(() => {
-      const el = (e.target as HTMLElement)
-      const w = el.scrollWidth
-      const l = el.scrollLeft
-      const cw = el.clientWidth
-      const scrollFactorLeft = l / w
-      const scrollFactorRight = (l + cw) / w
-      this.boundLeft = this.audioElement.duration * (scrollFactorLeft - this.segmentBufferPercent)
-      this.boundRight = this.audioElement.duration * (scrollFactorRight + this.segmentBufferPercent)
-    })
-    if (this.showMenu) {
+    await requestFrameAsync()
+    const el = (e.target as HTMLElement)
+    const w = el.scrollWidth
+    const l = el.scrollLeft
+    const cw = el.clientWidth
+    const scrollFactorLeft = l / w
+    const scrollFactorRight = (l + cw) / w
+    boundLeft = eventStore.audioElement.duration * (scrollFactorLeft - this.segmentBufferPercent)
+    boundRight = eventStore.audioElement.duration * (scrollFactorRight + this.segmentBufferPercent)
+    this.visibleEvents = await this.getVisibleEvents(boundLeft, boundRight)
+    if (this.showMenu === true) {
       this.showMenu = false
     }
   }

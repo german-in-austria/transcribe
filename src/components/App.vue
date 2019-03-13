@@ -15,7 +15,7 @@
           &nbsp;
         </vue-full-screen-file-drop>
         <v-layout
-          v-if="audioElement === null && eventStore.status === 'empty'"
+          v-if="eventStore.status === 'empty'"
           class="max-width pick-transcript-container"
           :align-center="transcriptList === null"
           justify-center
@@ -91,17 +91,13 @@
           </v-flex>
         </v-layout>
         <v-layout
-          v-if="eventStore.status !== 'empty'"
+          v-if="eventStore.status !== 'empty' && eventStore.audioElement !== null"
           class="max-width"
           justify-center>
           <v-flex xs12>
-            <editor
-              @toggle-drawer="e => drawer = !drawer"
-              :audio-element="audioElement" />
+            <editor @toggle-drawer="e => drawer = !drawer" />
             <router-view />
-            <player-bar
-              v-if="audioElement"
-              :audioElement="audioElement" />
+            <player-bar />
           </v-flex>
         </v-layout>
       </v-container>
@@ -141,7 +137,6 @@ interface FileReaderEventTarget extends EventTarget {
 export default class App extends Vue {
 
   drawer = false
-  audioElement: HTMLAudioElement|null = null
   xmlText: string|null = null
   xml: any = null
   settings = settings
@@ -220,7 +215,7 @@ export default class App extends Vue {
           audio.store.uint8Buffer = new Uint8Array(this.result as ArrayBuffer)
         }
         y.addEventListener('durationchange', () => {
-          this.audioElement = y
+          eventStore.audioElement = y
         })
         // initialize with empty transcript,
         // if there is none.
@@ -244,6 +239,7 @@ export default class App extends Vue {
   }
 
   async loadTranscript(pk: number) {
+    // TODO: ugly
     this.loadingTranscriptId = pk
     const y = document.createElement('audio')
     getTranscript(pk, (progress, events, serverTranscript) => {
@@ -252,12 +248,14 @@ export default class App extends Vue {
       if (this.eventStore.metadata.audioUrl !== null) {
         console.log(this.eventStore.metadata)
         y.src = this.eventStore.metadata.audioUrl
-        this.loadingTranscriptId = null
+        y.addEventListener('durationchange', (e) => {
+          this.loadingTranscriptId = null
+          eventStore.audioElement = y
+          if (eventStore.status !== 'finished') {
+            eventStore.status = 'loading'
+          }
+        })
       }
-    })
-
-    y.addEventListener('durationchange', (e) => {
-      this.audioElement = y
     })
   }
 }
