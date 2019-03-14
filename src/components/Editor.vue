@@ -60,6 +60,7 @@
       @keydown.native="handleKey"
       @change-metadata="changeMetadata"
       @scroll="handleScroll"
+      @show-menu="doShowMenu"
       @add-segment="addSegment"
       :height="300"
       :scroll-to-event="scrollToEvent"
@@ -70,15 +71,6 @@
       <div
         v-if="settings.showSegmentBoxes"
         class="absolute">
-        <segment-box
-          v-for="(event, i) in visibleEvents"
-          @contextmenu.native.stop.prevent="doShowMenu"
-          :key="event.eventId"
-          :event="event"
-          :previous-event="visibleEvents[i - 1]"
-          :next-event="visibleEvents[i + 1]"
-          :pixels-per-second="pixelsPerSecond">
-        </segment-box>
         <v-menu
           min-width="150"
           lazy
@@ -178,7 +170,6 @@ import settings from '../store/settings'
 import spectrogram from './Spectrogram.vue'
 import search from './Search.vue'
 import transcriptEditor from '@components/TranscriptEditor.vue'
-import segmentBox from '@components/SegmentBox.vue'
 import triangle from '@components/Triangle.vue'
 import playHead from '@components/PlayHead.vue'
 import * as _ from 'lodash'
@@ -206,9 +197,6 @@ import {
   saveChangesToServer
 } from '@store/transcript'
 
-let boundLeft = 0
-let boundRight = 100
-
 @Component({
   components: {
     waveForm,
@@ -216,7 +204,6 @@ let boundRight = 100
     settingsView,
     spectrogram,
     playHead,
-    segmentBox,
     search,
     triangle
   }
@@ -235,8 +222,6 @@ export default class Editor extends Vue {
   isEventSelected = isEventSelected
   history = history
 
-  // TODO: percentages are impractical. use pixels
-  segmentBufferPercent = .01
   metadata: any = null
   scrollToEvent: LocalTranscriptEvent|null = null
   segmentPlayingTimeout: any = null
@@ -257,14 +242,6 @@ export default class Editor extends Vue {
   menuX = 0
   menuY = 0
   layerX = 0 // this is used for splitting
-
-  visibleEvents: LocalTranscriptEvent[] = []
-
-  @Watch('eventStore.events')
-  async onEventsChange(newEs: LocalTranscriptEvent[]) {
-    console.log('EVENT CHANGE')
-    this.visibleEvents = await this.getVisibleEvents(boundLeft, boundRight, newEs)
-  }
 
   async saveToServer() {
     if (this.history.length > 0) {
@@ -374,30 +351,10 @@ export default class Editor extends Vue {
     })
   }
 
-  async getVisibleEvents(l: number, r: number, es = this.eventStore.events): Promise<LocalTranscriptEvent[]> {
-    await requestFrameAsync()
-    return _(es)
-      .filter((s) => {
-        return s.startTime >= l && s.endTime <= r
-      })
-      .sortBy('startTime')
-      .value()
-  }
-
   async handleScroll(e: MouseEvent, time?: number) {
     if (this.settings.lockScroll && time) {
       this.scrollTranscriptTime = time
     }
-    await requestFrameAsync()
-    const el = (e.target as HTMLElement)
-    const w = el.scrollWidth
-    const l = el.scrollLeft
-    const cw = el.clientWidth
-    const scrollFactorLeft = l / w
-    const scrollFactorRight = (l + cw) / w
-    boundLeft = eventStore.audioElement.duration * (scrollFactorLeft - this.segmentBufferPercent)
-    boundRight = eventStore.audioElement.duration * (scrollFactorRight + this.segmentBufferPercent)
-    this.visibleEvents = await this.getVisibleEvents(boundLeft, boundRight)
     if (this.showMenu === true) {
       this.showMenu = false
     }

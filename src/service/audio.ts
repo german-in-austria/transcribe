@@ -244,13 +244,13 @@ function findOggPages(from: number, to: number, pages: OggIndex['pages']) {
 //   }
 // }
 
-export function playBuffer(buffer: AudioBuffer, speed = 100, start = 0, offset?: number, duration?: number) {
+export function playBuffer(buffer: AudioBuffer, speed = 1, start = 0, offset?: number, duration?: number) {
   const src = audio.store.audioContext.createBufferSource()
-  if (speed !== 100) {
+  if (speed !== 1) {
     const wav = audio.audioBufferToWav(buffer)
     const blob = new Blob([new Uint8Array(wav)])
     localAudioElement.src = URL.createObjectURL(blob)
-    localAudioElement.playbackRate = speed / 100
+    localAudioElement.playbackRate = speed
     localAudioElement.crossOrigin = 'anonymous'
     localAudioElement.play()
     return src
@@ -262,16 +262,25 @@ export function playBuffer(buffer: AudioBuffer, speed = 100, start = 0, offset?:
   }
 }
 
-async function drawSpectrogramAsync(buffer: AudioBuffer, width: number, height: number): Promise<HTMLCanvasElement> {
-  const monoBuffer = sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
+async function drawSpectrogramAsync(
+  buffer: AudioBuffer,
+  width: number,
+  height: number,
+  channel?: number
+): Promise<[HTMLCanvasElement, Uint8Array[]]> {
+
+  const b = channel === undefined
+    ? sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
+    : buffer.getChannelData(channel)
+
   const [f, i] = await getFrequenciesWorker.postMessage({
     fftSamples: 2048,
-    buffer: monoBuffer,
+    buffer: b,
     length: buffer.length,
     sampleRate: buffer.sampleRate,
     width,
     gradient: settings.spectrogramGradient
-  }, [ monoBuffer ])
+  }, [ b ])
 
   const canvas = document.createElement('canvas')
   canvas.width = width
@@ -287,7 +296,7 @@ async function drawSpectrogramAsync(buffer: AudioBuffer, width: number, height: 
   ctx.drawImage(fakeCanvas, 0, 0)
   // console.log(f.length)
   // console.log(f[0].length)
-  return canvas
+  return [canvas, f]
 }
 
 function sumChannels(first: Float32Array, second: Float32Array): Float32Array {

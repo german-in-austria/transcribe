@@ -55,6 +55,17 @@
           <div class="wave-form-placeholder" />
         </div>
         <slot />
+        <div v-if="settings.showSegmentBoxes">
+          <segment-box
+            v-for="(event, i) in visibleEvents"
+            @contextmenu.native.stop.prevent="(e) => $emit('show-menu', e)"
+            :key="event.eventId"
+            :event="event"
+            :previous-event="visibleEvents[i - 1]"
+            :next-event="visibleEvents[i + 1]"
+            :pixels-per-second="pixelsPerSecond">
+          </segment-box>
+        </div>
       </div>
     </div>
     <v-layout row>
@@ -112,6 +123,7 @@ import * as Queue from 'simple-promise-queue'
 
 import scrollLockButton from '@components/ScrollLockButton.vue'
 import triangle from '@components/Triangle.vue'
+import segmentBox from '@components/SegmentBox.vue'
 
 import settings from '../store/settings'
 import audio, { OggIndex } from '../service/audio'
@@ -123,10 +135,16 @@ const queue = new Queue({
   autoStart: true
 })
 
+// TODO: percentages are impractical. use pixels
+const segmentBufferPercent = .01
+let boundLeft = 0
+let boundRight = 100
+
 @Component({
   components: {
     triangle,
-    scrollLockButton
+    scrollLockButton,
+    segmentBox
   }
 })
 export default class Waveform extends Vue {
@@ -146,7 +164,7 @@ export default class Waveform extends Vue {
   settings = settings
   userState = eventStore.userState
   toTime = toTime
-
+  eventStore = eventStore
   // state
   pixelsPerSecond = this.initialPixelsPerSecond // copied on init, not bound.
   disabled = false
@@ -158,6 +176,7 @@ export default class Waveform extends Vue {
   overviewThumbWidth = 0
   overviewHeight = 60
   visibleSeconds: number[] = []
+  visibleEvents: LocalTranscriptEvent[] = []
   audioLength = 0
   metadata: any = {} // TODO: get rid of this / put into the store
 
@@ -168,6 +187,12 @@ export default class Waveform extends Vue {
 
   mounted() {
     this.initWithAudio()
+  }
+
+  @Watch('eventStore.events')
+  async onEventsChange(newEs: LocalTranscriptEvent[]) {
+    console.log('EVENTS CHANGE')
+    this.visibleEvents = await this.getVisibleEvents(boundLeft, boundRight, newEs)
   }
 
   async cacheOverviewWaveform() {
@@ -224,16 +249,44 @@ export default class Waveform extends Vue {
     return 5000 * this.scaleFactorX
   }
 
-  handleScroll(e: Event) {
+  async handleScroll(e: Event) {
+    await util.requestFrameAsync()
     this.updateOverviewThumb()
     this.$emit('scroll', e, (this.$refs.svgContainer as any).scrollWidth / this.pixelsPerSecond)
     this.updateSecondsMarkers()
     this.doMaybeRerender()
+    this.updateSegments(e)
+  }
+
+  async updateSegments(e: Event) {
+    await util.requestFrameAsync()
+    const el = (e.target as HTMLElement)
+    const w = el.scrollWidth
+    const l = el.scrollLeft
+    const cw = el.clientWidth
+    const scrollFactorLeft = l / w
+    const scrollFactorRight = (l + cw) / w
+    boundLeft = eventStore.audioElement.duration * (scrollFactorLeft - segmentBufferPercent)
+    boundRight = eventStore.audioElement.duration * (scrollFactorRight + segmentBufferPercent)
+    const ves = await this.getVisibleEvents(boundLeft, boundRight)
+    this.visibleEvents = ves
+  }
+
+  async getVisibleEvents(l: number, r: number, es = eventStore.events): Promise<LocalTranscriptEvent[]> {
+    // await util.requestFrameAsync()
+    const ves = _(es)
+      .filter((s) => {
+        return s.startTime >= l && s.endTime <= r
+      })
+      .sortBy('startTime')
+      .value()
+    await util.requestFrameAsync()
+    return ves
   }
 
   async updateSecondsMarkers() {
     // (it’s dependent on browser geometry, so a computed getter doesn’t work here.)
-    const [left, right] = this.getRenderBoundaries(10000)
+    const [left, right] = await this.getRenderBoundaries(10000)
     const [startSecond, endSecond] = [Math.floor(left / this.pixelsPerSecond), Math.floor(right / this.pixelsPerSecond)]
     const visibleSeconds = util
       .range(Math.max(startSecond, 0), Math.min(endSecond, this.audioLength))
@@ -241,23 +294,23 @@ export default class Waveform extends Vue {
     await util.requestFrameAsync()
     const el = this.$el.querySelector('.second-marker-row') as HTMLElement
     el.innerHTML = visibleSeconds.map(s => {
-        return `<div style="transform: translateX(${ s * this.pixelsPerSecond }px)" class="second-marker">`
-          + toTime(s)
-          + '</div>'
-      }).join('')
+      return `<div style="transform: translateX(${ s * this.pixelsPerSecond }px)" class="second-marker">`
+        + toTime(s)
+        + '</div>'
+    }).join('')
   }
 
   updateOverviewThumb(seconds?: number) {
     const e = (this.$refs.overviewThumb as Vue).$el
     const w = this.$refs.svgContainer
     const o = this.$refs.overview
-    requestAnimationFrame(() => {
-      if (w instanceof HTMLElement && o instanceof HTMLElement) {
-        const pixels = ((w.scrollLeft + w.clientWidth) / w.scrollWidth * o.clientWidth);
+    if (w instanceof HTMLElement && o instanceof HTMLElement) {
+      const pixels = ((w.scrollLeft + w.clientWidth) / w.scrollWidth * o.clientWidth)
+      requestAnimationFrame(() => {
         (e as HTMLElement).style.transform = `translateX(${ pixels }px)`
         localStorage.setItem('scrollPos', String(w.scrollLeft))
-      }
-    })
+      })
+    }
   }
 
   async drawSpectrogramPiece(i: number) {
@@ -275,7 +328,7 @@ export default class Waveform extends Vue {
     )
     console.log({ from, to, duration: to - from })
     const width = isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth
-    const c = (await audio.drawSpectrogramAsync(buffer, width, this.height)) as HTMLCanvasElement
+    const [c, f] = (await audio.drawSpectrogramAsync(buffer, width, this.height))
     const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
     console.time('render')
     el.innerHTML = ''
@@ -489,7 +542,8 @@ export default class Waveform extends Vue {
     return Math.ceil(this.audioLength * this.pixelsPerSecond / this.drawWidth)
   }
 
-  getRenderBoundaries(distance = this.drawDistance): number[] {
+  async getRenderBoundaries(distance = this.drawDistance): Promise<number[]> {
+    await util.requestFrameAsync()
     const el = this.$refs.svgContainer
     if (el instanceof HTMLElement) {
       return [
@@ -502,7 +556,7 @@ export default class Waveform extends Vue {
   }
 
   async shouldRenderWaveFormPieces(): Promise<number[]> {
-    const [ left, right ] = this.getRenderBoundaries()
+    const [ left, right ] = await this.getRenderBoundaries()
     const [ startPiece, endPiece ] = [ Math.floor(left / this.drawWidth), Math.floor(right / this.drawWidth) ]
     return util.range(startPiece, endPiece)
   }
@@ -575,16 +629,17 @@ export default class Waveform extends Vue {
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 
 .second-marker
-  min-width: 1px;
-  height: 10px;
-  top: 32.5px;
-  position: absolute;
-  border-left: 1px solid #6f6f6f;
+  will-change transform
+  min-width 1px
+  height 10px
+  top 32.5px
+  position absolute
+  border-left 1px solid #6f6f6f
   user-select none
-  font-size: 10px;
-  line-height: 12px;
-  padding-left: 7px;
-  color: #6f6f6f;
+  font-size 10px
+  line-height 12px
+  padding-left 7px
+  color #6f6f6f
 
 .overview-waveform
   z-index -1

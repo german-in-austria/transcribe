@@ -120,6 +120,8 @@ export default class SegmentBox extends Vue {
     white-space nowrap
 
 .segment
+  // performance of "Composite Layers"
+  will-change left
   min-width 12px
   height 150px
   top 75px

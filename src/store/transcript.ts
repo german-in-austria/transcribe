@@ -486,7 +486,7 @@ export async function playEvents(events: LocalTranscriptEvent[]) {
     if (buffer !== undefined) {
       requestAnimationFrame(() => {
         eventStore.playingEvent = synEvent
-        audio.playBuffer(buffer, audio.store.playbackRate)
+        audio.playBuffer(buffer, eventStore.audioElement.playbackRate)
           .addEventListener('ended', (e: Event) => {
             eventStore.playingEvent = null
           })

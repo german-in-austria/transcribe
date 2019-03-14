@@ -86,6 +86,7 @@ img[lazy=loaded] {
 .v-tabs__item--active{
   background: transparent
 }
-.application.theme--dark .text--disabled {
+.application.theme--dark .text--disabled,
+.theme--dark.v-list .v-list--disabled {
   color: hsla(0,0%,100%,.7)!important;
 }

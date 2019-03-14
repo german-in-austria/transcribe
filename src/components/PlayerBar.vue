@@ -12,7 +12,8 @@
               :max="100"
               thumb-label
               dark
-              v-model="audioStore.playbackRate" />
+              :value="100"
+              @input="eventStore.audioElement.playbackRate = $event / 100" />
             Playback Speed
           </div>
         </v-flex>
@@ -55,6 +56,7 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '@store/settings'
 import audio from '../service/audio'
 import { toTime, eventStore } from '@store/transcript'
+import { requestFrameAsync } from '@util/index'
 
 @Component
 export default class PlayerBar extends Vue {
@@ -77,10 +79,6 @@ export default class PlayerBar extends Vue {
     }
   }
 
-  setPlaybackRate(rate: number) {
-    eventStore.audioElement.playbackRate = rate / 100
-  }
-
   @Watch('volume')
   onVolumeChange(volume: number) {
     eventStore.audioElement.volume = volume / 100
@@ -94,16 +92,25 @@ export default class PlayerBar extends Vue {
     }
   }
 
+  updateTimeDisplay(seconds: number, e: HTMLElement) {
+    const newT = toTime(seconds, 3)
+    e.innerHTML = newT.split('').reduce((m, d) => {
+      m += `<span>${d}</span>\n`
+      return m
+    }, '' as string)
+  }
+
   mounted() {
     eventStore.audioElement.addEventListener('play', () => {
       this.isPaused = false
       const t = eventStore.audioElement.currentTime
-      const e = this.$el.querySelector('.current-time')!
+      const e = this.$el.querySelector('.current-time') as HTMLElement
       const startTime = performance.now()
       const step = () => {
-        const ellapsed = (performance.now() - startTime) / 1000
-        const newT = toTime(t + ellapsed, 3)
-        e.innerHTML = newT.split('').map(d => `<span>${d}</span>\n`).join('')
+        const ellapsed = (performance.now() - startTime) / 1000 * eventStore.audioElement.playbackRate
+        if (ellapsed >= .005) {
+          this.updateTimeDisplay(t + ellapsed, e)
+        }
         if (this.isPaused === false) {
           requestAnimationFrame(step)
         }
@@ -113,9 +120,13 @@ export default class PlayerBar extends Vue {
     eventStore.audioElement.addEventListener('pause', () => {
       this.isPaused = true
     })
-    // eventStore.audioElement.addEventListener('timeupdate', (e) => {
-    //   this.currentTime = eventStore.audioElement.currentTime
-    // })
+    eventStore.audioElement.addEventListener('seeking', async (e) => {
+      await requestFrameAsync()
+      this.updateTimeDisplay(
+        eventStore.audioElement.currentTime,
+        this.$el.querySelector('.current-time') as HTMLElement
+      )
+    })
   }
 }
 </script>

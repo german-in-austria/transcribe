@@ -66,24 +66,25 @@ export default class PlayHead extends Vue {
     const w = document.querySelector('.wave-form')!
     const p = this.$refs.playHead as HTMLElement
     const wStart = w.scrollLeft
-    const wTargetPosition = (
-      (startAtTime * this.pixelsPerSecond + this.pixelsPerSecond * catchUpTime) - (w.clientWidth / 2)
-    )
+    const wTargetPosition = (startAtTime + catchUpTime) * this.pixelsPerSecond - w.clientWidth / 2
     const wDistanceToCover = wTargetPosition - w.scrollLeft
     const step = () => {
-      const timeEllapsed = (performance.now() - startTime) / 1000
+      const timeEllapsed = (performance.now() - startTime) / 1000 * eventStore.audioElement.playbackRate
       const playHeadLeft = (startAtTime + timeEllapsed) * this.pixelsPerSecond
-      if (timeEllapsed <= catchUpTime) {
-        w.scrollLeft = easeInOutQuad(timeEllapsed, wStart, wDistanceToCover, catchUpTime)
-      } else {
-        w.scrollLeft = playHeadLeft - w.clientWidth / 2
-      }
-      p.style.transform = `translateX(${ playHeadLeft }px)`
-      if (eventStore.playAllFrom !== null) {
-        requestAnimationFrame(step)
-      } else {
-        this.left = playHeadLeft
-      }
+      const viewPortLeft = playHeadLeft - w.clientWidth / 2
+      requestAnimationFrame(() => {
+        if (timeEllapsed <= catchUpTime) {
+          w.scrollLeft = easeInOutQuad(timeEllapsed, wStart, wDistanceToCover, catchUpTime)
+        } else {
+          w.scrollLeft = viewPortLeft
+        }
+        p.style.transform = `translateX(${ playHeadLeft }px)`
+        if (eventStore.playAllFrom !== null) {
+          requestAnimationFrame(step)
+        } else {
+          this.left = playHeadLeft
+        }
+      })
     }
     step()
   }
@@ -147,6 +148,8 @@ export default class PlayHead extends Vue {
 </script>
 <style lang="stylus" scoped>
 .play-head
+  // performance of "Composite Layers"
+  will-change transform
   width 1px
   background white
   height 100%
