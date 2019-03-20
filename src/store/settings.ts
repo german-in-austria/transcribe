@@ -96,6 +96,23 @@ const spectrogramPresets = [
     colors: spectrogramColors
   },
   {
+    name: 'Color Cool',
+    colors: [
+      {
+        at: 0,
+        c: [247, 32, 71, 0]
+      },
+      {
+        at : 128,
+        c: [31, 234, 234, 1]
+      },
+      {
+        at: 255,
+        c: [255, 210, 0, 1]
+      }
+    ]
+  },
+  {
     name: 'Redscale',
     colors: [
       {

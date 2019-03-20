@@ -7,17 +7,17 @@
     :value="show"
     style="height: 90%"
     max-width="100%">
-    <v-card class="spectrogram-main pt-3" style="background: rgb(27, 27, 27);">
+    <v-card class="spectrogram-main pt-3" style="background: rgb(10, 10, 10);">
       <small class="text-xs-center pb-2">Spectrogram</small>
       <v-card-text class="pa-0">
         <v-layout column>
           <v-flex>
             <v-layout style="background: rgb(10,10,10)" row>
-              <v-flex class="pl-0" style="min-height: 300px" xs6>
+              <v-flex class="pl-0" style="min-height: 300px" xs8>
                 <div style="overflow-x: scroll;" :class="{ 'fit-size': fitSize, 'mt-4': true }" ref="canvasContainer" />
                 <v-checkbox class="ml-4" v-model="fitSize" label="fit size" />
               </v-flex>
-              <v-flex xs6>
+              <v-flex xs4>
                  <v-sparkline
                   style="height: 100%"
                   :smooth="0"
@@ -29,12 +29,12 @@
               </v-flex>
             </v-layout>
           </v-flex>
-          <v-flex class="pt-5 text-xs-center">
-            <segment-transcript class="text-xs-left" :event="event" />
+          <v-flex class="pt-3 pb-3 text-xs-center" style="background: rgb(27,27,27)">
+            <segment-transcript class="text-xs-left" style="border-left: 0;" :event="event" />
           </v-flex>
         </v-layout>
       </v-card-text>
-      <v-card-actions>
+      <v-card-actions style="background: rgb(37, 37, 37)">
         <v-spacer></v-spacer>
         <v-btn
           color="grey lighten-1"

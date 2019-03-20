@@ -116,7 +116,7 @@
             </v-list-tile>
             <v-list-tile
               @click="showSpectrogram(getSelectedEvent())">
-              <v-list-tile-title>Show Spectrogram…</v-list-tile-title>
+              <v-list-tile-title>Inspect Audio…</v-list-tile-title>
             </v-list-tile>
             <v-divider />
             <v-list-tile
