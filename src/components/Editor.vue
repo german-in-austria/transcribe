@@ -144,11 +144,7 @@
             :style="{ left: `${ error.startTime / eventStore.audioElement.duration * 100}%` }" />
         </div>
         <div v-if="eventStore.audioElement !== undefined" class="search-overview-container">
-          <div
-            v-for="(result) in eventStore.searchResults"
-            :key="result.eventId"
-            :class="['result-overview', isEventSelected(result.eventId) && 'result-selected']"
-            :style="{ left: `${ result.startTime / eventStore.audioElement.duration * 100}%` }" />
+          <search-results />
         </div>
       </div>
     </wave-form>
@@ -169,6 +165,7 @@ import settingsView from './Settings.vue'
 import settings from '../store/settings'
 import spectrogram from './Spectrogram.vue'
 import search from './Search.vue'
+import searchResults from './SearchResults.vue'
 import transcriptEditor from '@components/TranscriptEditor.vue'
 import triangle from '@components/Triangle.vue'
 import playHead from '@components/PlayHead.vue'
@@ -205,6 +202,7 @@ import {
     spectrogram,
     playHead,
     search,
+    searchResults,
     triangle
   }
 })
@@ -429,21 +427,4 @@ export default class Editor extends Vue {
   position absolute
   border-radius 1px
 
-.result-overview
-  background #447720
-  width 7px
-  height 7px
-  position absolute
-  border-radius 1px
-  top -59px
-  opacity 0
-  animation fadeIn
-  -webkit-animation fadeIn ease-in 1
-  animation-fill-mode forwards
-  -webkit-animation-duration .2s
-  -moz-animation-duration .2s
-  animation-duration .2s
-  &.result-selected
-    z-index 1
-    background #6BBB32
 </style>
