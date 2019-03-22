@@ -39,21 +39,17 @@
             v-if="transcriptList === null && loggedIn === true"/>
             <v-flex v-if="transcriptList !== null">
               <v-layout justify-center row>
-              <v-flex class="pt-5" xs6 md4>
-                <h1 class="title text-xs-center text-light text-uppercase mt-3 mb-4">
+              <v-flex class="pt-5" xs12 md6>
+                <h1 class="text-xs-center text-light text-uppercase mt-3 mb-4">
                   Transcribe
                 </h1>
                 <v-text-field
+                  solo
                   v-model="searchTerm"
                   placeholder="search…"
-                  prepend-icon="search"
+                  prepend-inner-icon="search"
                   autofocus />
-                <v-list
-                  class="transparent scrollable"
-                  dense
-                  subheader
-                  two-line>
-                  <v-list-tile
+                  <!-- <v-list-tile
                     disabled
                     @click="initializeEmptyTranscript()">
                     <v-list-tile-content>
@@ -64,28 +60,41 @@
                   </v-list-tile>
                   <v-subheader>
                     Pick a Transcript
-                  </v-subheader>
-                  <v-list-tile
-                    :key="transcript.pk"
-                    :disabled="loadingTranscriptId === transcript.pk"
-                    @click="loadTranscript(transcript.pk)"
-                    v-for="transcript in filteredTranscriptList">
-                    <v-list-tile-content>
-                      <v-list-tile-title>
-                        {{ transcript.n }}
-                      </v-list-tile-title>
-                      <v-list-tile-sub-title>
-                        {{ transcript.ut }}
-                      </v-list-tile-sub-title>
-                      <v-progress-linear class="ma-0 pa-0" height="2" v-if="loadingTranscriptId === transcript.pk" indeterminate />
-                    </v-list-tile-content>
-                  </v-list-tile>
-                  <v-list-tile class="text-xs-center" v-if="filteredTranscriptList.length === 0">
-                    <span class="caption">
-                      no matching transcripts found
-                    </span>
-                  </v-list-tile>
-                </v-list>
+                  </v-subheader> -->
+                <v-btn class="mb-2 elevation-0" style="height: 40px;" block>
+                  Open/Import File
+                </v-btn>
+                <v-sheet
+                  :key="transcript.pk"
+                  v-for="transcript in filteredTranscriptList"
+                  v-ripple
+                  color="#333"
+                  class="pt-2 pb-2 pl-3 mb-2 elevation-0 cursor-pointer"
+                  :disabled="loadingTranscriptId === transcript.pk"
+                  @click="loadTranscript(transcript.pk)">
+                  <v-layout class="pt-2 pb-1" align-content-space-around>
+                    <v-flex class="pr-3" fill-height align-center xs1>
+                      <v-progress-circular
+                        class="mb-2"
+                        size="20"
+                        width="2"
+                        v-if="loadingTranscriptId === transcript.pk"
+                        indeterminate />
+                      <v-icon color="grey" v-else>cloud_queue</v-icon>
+                    </v-flex>
+                    <v-flex class="pl-2">
+                      {{ transcript.n }}
+                    </v-flex>
+                    <v-flex class="pl-2 pr-3 text-xs-right caption grey--text">
+                      {{ transcript.ut }}
+                    </v-flex>
+                  </v-layout>
+                </v-sheet>
+                <v-list-tile class="text-xs-center" v-if="filteredTranscriptList.length === 0">
+                  <span class="caption">
+                    no matching transcripts found
+                  </span>
+                </v-list-tile>
               </v-flex>
             </v-layout>
           </v-flex>
