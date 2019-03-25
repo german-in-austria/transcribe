@@ -13,12 +13,12 @@ Vue.config.performance = true
 Vue.config.productionTip = true
 
 if (platform() === 'windows') {
-  Vue.config.keyCodes.cmdOrCtrl = 17
+  Vue.config.keyCodes.meta = 17
 } else if (platform() === 'mac') {
   // FIREFOX, OPERA, WEBKIT/BLINK
-  Vue.config.keyCodes.cmdOrCtrl = [ 224, 17, 91, 93 ]
+  Vue.config.keyCodes.meta = [ 224, 17, 91, 93 ]
 } else {
-  Vue.config.keyCodes.cmdOrCtrl = 17
+  Vue.config.keyCodes.meta = 17
 }
 
 Vue.use(VueRouter)

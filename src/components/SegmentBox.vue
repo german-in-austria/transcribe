@@ -1,9 +1,9 @@
 <template>
   <div
     @click.exact.stop="selectEvent(event)"
-    @mousedown.cmdOrCtrl="selectOrDeselectEvent(event)"
+    @mousedown.meta="selectOrDeselectEvent(event)"
     @dblclick="playEvent(event)"
-    @keydown.enter.cmdOrCtrl.stop.prevent="playEvent(event)"
+    @keydown.enter.meta.stop.prevent="playEvent(event)"
     @keydown.enter.exact="scrollToTranscriptEvent(event)"
     tabindex="-1"
     :class="[ 'segment', isEventSelected(event.eventId) ? 'selected' : '', hasOverlap && 'has-overlap' ]"

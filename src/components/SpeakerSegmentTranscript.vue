@@ -15,7 +15,7 @@
             @blur="(e) => updateAndCommitLocalTokenTier(e, tier.name, i)"
             @focus="(e) => $emit('focus', e, event)"
             contenteditable="true"
-            @keydown.enter.cmdOrCtrl="playEvent(event)"
+            @keydown.enter.meta="playEvent(event)"
             @keydown.enter.stop.prevent="viewAudioEvent(event)"
             class="secondary-token-tier-text" />
         </span>
@@ -26,7 +26,7 @@
       @focus="(e) => $emit('focus', e, event)"
       @input="updateLocalTokens"
       @blur="updateAndCommitLocalTokens"
-      @keydown.enter.cmdOrCtrl="playEvent(event)"
+      @keydown.enter.meta="playEvent(event)"
       @keydown.enter.stop.prevent="viewAudioEvent(event)"
       contenteditable="true"
       v-text="segmentText"
