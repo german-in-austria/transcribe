@@ -111,13 +111,13 @@ export default class TranscriptEditor extends Vue {
 
   scrollLockedScroll(t: number) {
     if (settings.lockScroll) {
-      this.onScrollToSecond(t)
+      this.scrollToSecond(t)
     }
   }
 
-  async onScrollToSecond(seconds: number) {
+  async scrollToSecond(seconds: number) {
     const i = findSegmentIndexAt(seconds)
-    if (i !== undefined) {
+    if (i !== -1) {
       if (i !== this.currentIndex) {
         this.visibleEvents = this.eventStore.events.slice(i, i + defaultLimit)
         this.currentIndex = i
@@ -140,7 +140,7 @@ export default class TranscriptEditor extends Vue {
       width = v.clientWidth
       return v.offsetLeft + v.offsetWidth > this.innerLeft * -1
     })
-    const firstVisibleEvent = this.visibleEvents[firstVisibleIndex]
+    const firstVisibleEvent = firstVisibleIndex === -1 ? this.visibleEvents[0] : this.visibleEvents[firstVisibleIndex]
     return [ firstVisibleEvent, innerOffset, width ]
   }
 
