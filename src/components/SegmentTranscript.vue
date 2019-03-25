@@ -4,10 +4,10 @@
       style="outline: 0;"
       tabindex="-1"
       :class="{time: true, error: hasErrors}"
-      @keydown.enter.meta="playEvent(event)"
+      @keydown.enter.cmdOrCtrl="playEvent(event)"
       @keydown.delete="deleteSelectedEvents"
       @dblclick="playEvent(event)"
-      @mousedown.meta.stop="selectOrDeselectEvent(event)"
+      @mousedown.cmdOrCtrl.stop="selectOrDeselectEvent(event)"
       @mousedown.exact="selectAndScrollToEvent(event)">
       {{ toTime(event.startTime) }} - {{ toTime(event.endTime) }}
     </div>

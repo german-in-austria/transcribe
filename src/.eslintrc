@@ -1,0 +1,6 @@
+{
+  "extends": "vue",
+  "rules": {
+    "vue/valid-v-on": 0
+  }
+}

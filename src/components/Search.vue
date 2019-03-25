@@ -9,7 +9,7 @@
         @keydown.esc.exact="handleEsc"
         @keydown.enter.exact="findNext"
         @keydown.enter.shift.exact="findPrevious"
-        @keydown.enter.meta.exact="playEvent"
+        @keydown.enter.cmdOrCtrl.exact="playEvent"
         @keydown.enter.ctrl.exact="playEvent"
         @input="(e) => handleSearch(e.target.value)"
         @focus="focussed = true"

@@ -5,6 +5,16 @@ import Worker from '../service/buffer-concat.worker'
 const worker = new Worker('')
 const promiseWorker = new PromiseWorker(worker)
 
+export function platform(): string {
+  if (navigator.platform.toLowerCase() === 'win32' || navigator.platform.toLowerCase() === 'win64') {
+    return 'windows'
+  } else if (navigator.platform.toLowerCase() === 'macintel') {
+    return 'mac'
+  } else {
+    return 'linux'
+  }
+}
+
 export async function asyncForEach<T>(array: T[], callback: (e: T, i: number, l: T[]) => void) {
   for (let index = 0; index < array.length; index++) {
     await callback(array[index], index, array);
