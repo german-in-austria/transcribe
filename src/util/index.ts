@@ -11,6 +11,20 @@ export async function asyncForEach<T>(array: T[], callback: (e: T, i: number, l:
   }
 }
 
+export function easeOutQuad(t: number, b: number, c: number, d: number) {
+  t /= d
+  return -c * t * (t - 2) + b
+}
+
+export function easeInOutQuad(t: number, b: number, c: number, d: number): number {
+  t /= d / 2
+  if (t < 1) {
+    return c / 2 * t * t + b
+  }
+  t--
+  return -c / 2 * ( t * ( t - 2 ) - 1) + b
+}
+
 export function padEnd(string: string, targetLength: number, padString: string) {
   // tslint:disable-next-line:no-bitwise
   targetLength = targetLength >> 0

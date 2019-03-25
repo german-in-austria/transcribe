@@ -13,12 +13,17 @@
           </v-btn>
           <span>Settings</span>
         </v-tooltip>
-        <v-tooltip transition="none" bottom>
+        <v-menu
+          open-on-hover
+          min-width="150"
+          nudge-bottom="10"
+          transition="none"
+          offset-y>
           <v-btn
+            slot="activator"
             @click="saveToServer"
             :loading="eventStore.status === 'loading' || isSaving"
             :disabled="eventStore.status === 'loading' || isSaving"
-            slot="activator"
             icon flat>
             <v-icon>save_alt</v-icon>
             <template v-slot:loader>
@@ -31,8 +36,25 @@
                 :value="eventStore.transcriptDownloadProgress * 100" />
             </template>
           </v-btn>
-          <span>Save</span>
-        </v-tooltip>
+          <v-list dense class="context-menu-list">
+            <v-list-tile @click="exportJSON">
+              <v-list-tile-content>
+                <v-list-tile-title>Export Transcript…</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+            <v-list-tile @click="exportZip">
+              <v-list-tile-content>
+                <v-list-tile-title>Export Project ({{projectFileSize }})</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+            <v-divider />
+            <v-list-tile @click="saveToServer">
+              <v-list-tile-content>
+                <v-list-tile-title>Save To Server</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+          </v-list>
+        </v-menu>
         <v-tooltip transition="none" bottom>
           <v-btn slot="activator" @click.stop="$emit('toggle-drawer')" icon flat>
             <v-badge color="error" overlap :value="errors.length > 0">
@@ -171,6 +193,9 @@ import triangle from '@components/Triangle.vue'
 import playHead from '@components/PlayHead.vue'
 import * as _ from 'lodash'
 import * as fns from 'date-fns'
+import * as jszip from 'jszip'
+import { saveAs } from 'file-saver'
+import * as humanSize from 'human-size'
 import audio from '../service/audio'
 import { requestFrameAsync } from '@util/index'
 
@@ -193,6 +218,7 @@ import {
   history,
   saveChangesToServer
 } from '@store/transcript'
+import { localTranscriptToServerTranscript, serverTranscript } from '../service/data-backend/server-backend'
 
 @Component({
   components: {
@@ -240,6 +266,28 @@ export default class Editor extends Vue {
   menuX = 0
   menuY = 0
   layerX = 0 // this is used for splitting
+
+  async exportJSON() {
+    if (serverTranscript !== null) {
+      const s = await localTranscriptToServerTranscript(serverTranscript, eventStore.events)
+      console.log(s)
+    }
+  }
+
+  get projectFileSize() {
+    return humanSize(audio.store.uint8Buffer.buffer.byteLength)
+  }
+
+  async exportZip() {
+    this.isSaving = true
+    console.log(audio.store.uint8Buffer)
+    const zip = new jszip()
+    zip.file('audio.ogg', audio.store.uint8Buffer.buffer, {compression: 'STORE'})
+    zip.file('transcript.json', JSON.stringify(eventStore))
+    const f = await zip.generateAsync({ type: 'blob'})
+    this.isSaving = false
+    saveAs(f, 'hello.zip')
+  }
 
   async saveToServer() {
     if (this.history.length > 0) {

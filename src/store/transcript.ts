@@ -153,7 +153,9 @@ export const history: HistoryEventAction[] = [];
 export const eventStore = {
   events: [] as LocalTranscriptEvent[],
   selectedEventIds: [] as number[],
+  selectedSearchResult: null as LocalTranscriptEvent|null,
   searchResults: [] as LocalTranscriptEvent[],
+  searchTerm: '',
   playingEvent: null as LocalTranscriptEvent|null,
   metadata: {
     speakers: {} as LocalTranscriptSpeakers,
@@ -174,6 +176,13 @@ export const eventStore = {
 }
 ;
 (window as any)._eventStore = eventStore
+
+export function selectSearchResult(e: LocalTranscriptEvent) {
+  eventStore.selectedSearchResult  = e
+  scrollToAudioEvent(e)
+  scrollToTranscriptEvent(e)
+  selectEvent(e)
+}
 
 export function scrollToAudioEvent(e: LocalTranscriptEvent) {
   eventStore.userState.viewingAudioEvent = e

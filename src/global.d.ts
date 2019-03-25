@@ -26,6 +26,8 @@ declare module 'vue-scrollto' {
   const x: any
   export default x
 }
+
+declare module 'human-size'
 declare module 'vue-full-screen-file-drop'
 declare module 'promise-worker-transferable'
 declare module '@rgrove/parse-xml'

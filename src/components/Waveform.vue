@@ -477,17 +477,53 @@ export default class Waveform extends Vue {
 
   @Watch('userState.viewingAudioEvent')
   doScrollToSegment(e: LocalTranscriptEvent) {
+    // TODO: too long, refactor (scroll to second, etc)
     if (e !== null) {
       const el = this.$refs.svgContainer
       const duration = e.endTime - e.startTime
       const offset = (e.startTime + duration / 2) * this.pixelsPerSecond
+      const animationDuration = .3
+      const animationDistance = 600
       if (el instanceof HTMLElement) {
+        const startTime = performance.now()
         const currentOffset = el.scrollLeft
-        requestAnimationFrame(() => {
-          el.scrollTo({
-            left: offset - this.$el.clientWidth / 2
+        const targetOffset = offset - this.$el.clientWidth / 2
+        const realDistance = Math.abs(currentOffset - targetOffset)
+        // SCROLL DIRECTLY TO IT (SHORT DISTANCE)
+        if (realDistance < this.$el.clientWidth) {
+          const step = () => {
+            const timeEllapsed = (performance.now() - startTime) / 1000
+            if (timeEllapsed <= animationDuration) {
+              el.scrollLeft = util.easeInOutQuad(
+                timeEllapsed,
+                currentOffset,
+                targetOffset - currentOffset,
+                animationDuration
+              )
+              requestAnimationFrame(step)
+            }
+          }
+          requestAnimationFrame(step)
+        // JUMP, THEN SCROLL (LONG DISTANCE)
+        } else {
+          const distance = currentOffset < targetOffset ? animationDistance : animationDistance * -1
+          el.scrollLeft = targetOffset - distance
+          requestAnimationFrame(() => {
+            const step = () => {
+              const timeEllapsed = (performance.now() - startTime) / 1000
+              if (timeEllapsed <= animationDuration) {
+                el.scrollLeft = util.easeOutQuad(
+                  timeEllapsed,
+                  targetOffset - distance,
+                  distance,
+                  animationDuration
+                )
+                requestAnimationFrame(step)
+              }
+            }
+            requestAnimationFrame(step)
           })
-        })
+        }
       }
     }
   }
@@ -571,11 +607,11 @@ export default class Waveform extends Vue {
     ])
     await util.requestFrameAsync()
     const el = (this.$el.querySelector('.overview-waveform svg') as HTMLElement);
-    const oldHTML = el.innerHTML
-    el.innerHTML = `
-      ${ oldHTML }
-      <path fill="${ settings.waveFormColors[0] }" d="${ svg1 }" />
-      <path fill="${ settings.waveFormColors[1] }" d="${ svg2 }" />`
+    el.insertAdjacentHTML(
+      'beforeend',
+      `<path fill="${ settings.waveFormColors[0] }" d="${ svg1 }" />
+       <path fill="${ settings.waveFormColors[1] }" d="${ svg2 }" />`
+    )
   }
 
   async drawWaveFormPiece(i: number) {

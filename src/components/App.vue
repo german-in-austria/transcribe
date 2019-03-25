@@ -49,19 +49,7 @@
                   placeholder="search…"
                   prepend-inner-icon="search"
                   autofocus />
-                  <!-- <v-list-tile
-                    disabled
-                    @click="initializeEmptyTranscript()">
-                    <v-list-tile-content>
-                      <v-list-tile-title>
-                        Create new Transcript
-                      </v-list-tile-title>
-                    </v-list-tile-content>
-                  </v-list-tile>
-                  <v-subheader>
-                    Pick a Transcript
-                  </v-subheader> -->
-                <v-btn class="mb-2 elevation-0" style="height: 40px;" block>
+                <v-btn @click="openFile" class="mb-2 elevation-0" style="height: 40px;" block>
                   Open/Import File
                 </v-btn>
                 <v-sheet
@@ -123,7 +111,7 @@ import 'vue-full-screen-file-drop/dist/vue-full-screen-file-drop.css'
 import VueFullScreenFileDrop from 'vue-full-screen-file-drop'
 import editor from './Editor.vue'
 import sidebar from './Sidebar.vue'
-
+import * as jszip from 'jszip'
 import audio from '../service/audio'
 import settings from '../store/settings'
 // tslint:disable-next-line:max-line-length
@@ -207,6 +195,37 @@ export default class App extends Vue {
   // TODO: better sanity check.
   isXML(file: File) {
     return file.type.includes('/xml') || file.name.includes('.exb')
+  }
+
+  openFile() {
+    const x = document.createElement('input')
+    x.type = 'file'
+    x.accept = '.zip,.transcript,.json,.exb'
+    x.addEventListener('change', async (e) => {
+      console.log(e)
+      console.log(x.files)
+      if (x.files !== null && x.files[0].type === 'application/zip') {
+        const f = x.files[0]
+        const zip = new jszip()
+        await zip.loadAsync(f)
+        const audioBuffer = await zip.file('audio.ogg').async('uint8array')
+        const transcript = JSON.parse(await zip.file('transcript.json').async('text'))
+        const blob = new Blob([audioBuffer], { type: 'audio/ogg' });
+        const u = URL.createObjectURL(blob)
+        const a = document.createElement('audio')
+        audio.store.uint8Buffer = audioBuffer
+        a.src = u
+        a.addEventListener('durationchange', () => {
+          this.loadingTranscriptId = null
+          eventStore.audioElement = a
+          if (eventStore.status !== 'finished') {
+            eventStore.status = 'loading'
+          }
+        })
+        console.log({audioBuffer, transcript})
+      }
+    })
+    x.click()
   }
 
   onFileDrop(formData: FormData, files: FileList) {

@@ -4,9 +4,9 @@
       <input
         type="text"
         ref="input"
-        :value="searchTerm"
+        :value="eventStore.searchTerm"
         :style="{ color: useRegEx && !isValidRegex ? 'red' : undefined }"
-        @keydown.esc="handleEsc"
+        @keydown.esc.exact="handleEsc"
         @keydown.enter.exact="findNext"
         @keydown.enter.shift.exact="findPrevious"
         @keydown.enter.meta.exact="playEvent"
@@ -80,14 +80,14 @@ import {
   selectEvent,
   playEvent,
   toTime,
-LocalTranscriptToken
+  LocalTranscriptToken,
+  selectSearchResult
 } from '@store/transcript'
 
 @Component
 export default class Search extends Vue {
 
   focussed = false
-  searchTerm = ''
   eventStore = eventStore
   toTime = toTime
   isMenuShown = false
@@ -100,11 +100,17 @@ export default class Search extends Vue {
     playEvent(eventStore.events[i])
   }
 
-  @Watch('useRegex')
-  @Watch('caseSensitive')
-  @Watch('defaultTierOnly')
+  get searchSettings() {
+    return {
+      caseSensitive: this.caseSensitive,
+      useRegEx: this.useRegEx,
+      defaultTierOnly: this.defaultTierOnly
+    }
+  }
+
+  @Watch('searchSettings')
   onUpdateSearchSettings() {
-    this.handleSearch(this.searchTerm)
+    this.handleSearch(eventStore.searchTerm)
   }
 
   get selectedResultIndex() {
@@ -139,8 +145,8 @@ export default class Search extends Vue {
   }
 
   handleSearch(term: string) {
-    this.searchTerm = term
-    if (this.searchTerm === '') {
+    eventStore.searchTerm = term
+    if (eventStore.searchTerm === '') {
       this.eventStore.searchResults = []
     } else {
       // console.time('search took')
@@ -168,7 +174,7 @@ export default class Search extends Vue {
 
   get isValidRegex() {
     try {
-      const y = new RegExp(this.searchTerm)
+      const y = new RegExp(eventStore.searchTerm)
       return true
     } catch (e) {
       return false
@@ -176,18 +182,16 @@ export default class Search extends Vue {
   }
 
   handleEsc() {
-    if (this.searchTerm !== '') {
-      this.searchTerm = ''
-      this.eventStore.searchResults = []
+    if (eventStore.searchTerm !== '') {
+      eventStore.searchTerm = ''
+      eventStore.searchResults = []
     } else {
       (this.$refs.input as any).blur()
     }
   }
   goToResult(e: LocalTranscriptEvent|undefined) {
     if (e !== undefined) {
-      scrollToAudioEvent(e)
-      scrollToTranscriptEvent(e)
-      selectEvent(e)
+      selectSearchResult(e)
     }
   }
   findNext() {
