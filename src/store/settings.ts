@@ -1,5 +1,6 @@
 
 import { makeGradient, Color } from '../lib/gradient'
+import { platform } from '../util'
 
 export interface Settings {
   spectrogramGradient: number[][]
@@ -146,7 +147,7 @@ const settings: Settings = {
   waveFormColors: [ '#fb7676', '#6699CC' ],
   lockScroll: false,
   darkMode: true,
-  emulateHorizontalScrolling: false, // set to true when finished
+  emulateHorizontalScrolling: platform() === 'windows' || platform() === 'linux',
   showSegmentBoxes: true,
   showSpectrograms: false,
   useMonoWaveForm: false,
