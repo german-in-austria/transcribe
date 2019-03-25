@@ -14,6 +14,7 @@
           <span>Settings</span>
         </v-tooltip>
         <v-menu
+          :disabled="eventStore.status === 'loading' || isSaving"
           open-on-hover
           min-width="150"
           nudge-bottom="10"
@@ -85,8 +86,7 @@
       @show-menu="doShowMenu"
       @add-segment="addSegment"
       :height="300"
-      :scroll-to-event="scrollToEvent"
-      :scroll-to-second="scrollToSecond" >
+      :scroll-to-event="scrollToEvent" >
       <play-head
         @change-position="scrub"
         :metadata="metadata" />
@@ -249,7 +249,6 @@ export default class Editor extends Vue {
   metadata: any = null
   scrollToEvent: LocalTranscriptEvent|null = null
   segmentPlayingTimeout: any = null
-  scrollToSecond: number|null = null
   scrollTranscriptIndex: number = 0
   scrollTranscriptTime: number = 0
 
@@ -304,12 +303,9 @@ export default class Editor extends Vue {
 
   handleTranscriptScroll(e: number) {
     const i = (this.$refs.transcriptScrollhandle as Vue).$el
-    const o = this.$refs.transcriptScrollbar as HTMLElement
+    const outerWidth = (this.$refs.transcriptScrollbar as HTMLElement).clientWidth
     requestAnimationFrame(() => {
-      if (settings.lockScroll) {
-        this.scrollToSecond = e
-      }
-      const pixels = e / eventStore.audioElement.duration * o.clientWidth;
+      const pixels = e / eventStore.audioElement.duration * outerWidth;
       (i as HTMLElement).style.transform = `translateX(${ pixels }px)`
     })
   }
@@ -398,9 +394,6 @@ export default class Editor extends Vue {
   }
 
   async handleScroll(e: MouseEvent, time?: number) {
-    if (this.settings.lockScroll && time) {
-      this.scrollTranscriptTime = time
-    }
     if (this.showMenu === true) {
       this.showMenu = false
     }

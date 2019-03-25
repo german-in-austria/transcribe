@@ -1,8 +1,13 @@
 <template>
-  <v-btn :color="value ? 'grey darken-2' : undefined" @click="$emit('input', !value)" class="lock-scroll-btn" icon>
+  <v-btn
+    fab
+    small
+    :color="value ? 'grey darken-2' : undefined"
+    @click="$emit('input', !value)"
+    class="lock-scroll-btn elevation-0">
     <div>
-      <v-icon :color="!value ? 'grey' : undefined" :style="{transform: `translateX(${ value ? 0 : -3 }px)`}" class="down">arrow_drop_down</v-icon>
-      <v-icon :color="!value ? 'grey' : undefined" :style="{transform: `translateX(${ value ? 0 :  3 }px)`}" class="up">arrow_drop_up</v-icon>
+      <div class="bar" :style="{transform: `translateX(${ value ? 0 : -3 }px)`}" />
+      <div class="bar" :style="{top: '1px', transform: `translateX(${ value ? 0 :  3 }px)`}" />
     </div>
   </v-btn>
 </template>
@@ -16,11 +21,12 @@ export default class ScrollLockButton extends Vue {
 }
 </script>
 <style lang="stylus" scoped>
-.lock-scroll-btn
-  > div
-    display initial
-  i.icon
-    display block
-    &:last-child
-      margin-top -14px
+// .lock-scroll-btn
+.bar
+  position relative !important
+  opacity .6 !important
+  width 10px
+  height 4px
+  background white
+
 </style>

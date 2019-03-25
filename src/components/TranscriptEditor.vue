@@ -1,38 +1,6 @@
 <template>
   <v-layout style="height: auto">
-    <v-flex :style="theme" class="pt-4 speaker-panel" xs1>
-      <div
-        :style="{height: speakerHeight}"
-        :key="i" v-for="(speaker, i) in eventStore.metadata.speakers"
-        class="speaker">
-        <v-menu
-          close-delay="500"
-          close-on-content-click
-          transition="fade-transition"
-          right
-          offset-x
-          nudge-right="12"
-          nudge-top="5">
-          <div slot="activator" class="speaker-name">
-            <span class="speaker-triangle">▶</span> {{ speaker.k }}
-          </div>
-          <v-list class="context-menu-list" dense>
-            <v-list-tile
-              v-for="(tier, i) in eventStore.metadata.tiers"
-              :key="i"
-              :disabled="tier.name === 'default'"
-              @click="tier.show = !tier.show">
-              <v-list-tile-avatar>
-                <v-icon v-if="tier.show">check</v-icon>
-              </v-list-tile-avatar>
-              <v-list-tile-content>
-                <v-list-tile-title>{{ tier.name }}</v-list-tile-title>
-              </v-list-tile-content>
-            </v-list-tile>
-          </v-list>
-        </v-menu>
-      </div>
-    </v-flex>
+    <speaker-panel />
     <v-flex ref="outer" class="tracks-outer pt-2">
       <div
         @wheel="handleMousewheel"
@@ -63,15 +31,26 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SegmentTranscript from '@components/SegmentTranscript.vue'
+import SpeakerPanel from './SpeakerPanel.vue'
 import settings from '@store/settings'
 import * as _ from 'lodash'
+import EventBus from '../service/event-bus'
 // tslint:disable-next-line:max-line-length
-import { eventStore, LocalTranscriptEvent, isEventSelected, findSegmentById, findSegmentAt, findSegmentIndexAt } from '@store/transcript'
+import {
+  eventStore,
+  LocalTranscriptEvent,
+  isEventSelected,
+  findSegmentById,
+  findSegmentAt,
+  findSegmentIndexAt
+} from '@store/transcript'
+import { requestFrameAsync } from '../util'
 
 const defaultLimit = 20
 
 @Component({
   components: {
+    SpeakerPanel,
     SegmentTranscript
   }
 })
@@ -89,7 +68,6 @@ export default class TranscriptEditor extends Vue {
   lastScrollLeft = 0
   visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
   throttledRenderer = _.throttle(this.updateList, 60)
-  throttledEmitter = _.throttle(this.emitScroll, 60)
   isEventSelected = isEventSelected
 
   @Watch('userState.viewingTranscriptEvent')
@@ -118,37 +96,39 @@ export default class TranscriptEditor extends Vue {
     }
   }
 
-  get speakerHeight() {
-    return eventStore.metadata.tiers.filter(t => t.show === true).length * 25 + 1 + 'px'
-  }
-
   @Watch('eventStore.events')
   onUpdateSpeakerEvents() {
     this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
   }
 
   mounted() {
-    // this.emitScroll()
+    EventBus.$on('scrollWaveform', this.scrollLockedScroll)
   }
 
-  @Watch('scrollToTime')
+  beforeDestroy() {
+    EventBus.$off('scrollWaveform', this.scrollLockedScroll)
+  }
+
+  scrollLockedScroll(t: number) {
+    if (settings.lockScroll) {
+      this.onScrollToSecond(t)
+    }
+  }
+
   async onScrollToSecond(seconds: number) {
-    // TODO: re-enable
-    // const i = findSegmentIndexAt(seconds)
-    // // const event = this.eventStore.events[i]
-    // if (i !== undefined) {
-    //   if (i !== this.currentIndex) {
-    //     this.visibleEvents = this.eventStore.events.slice(i, i + defaultLimit)
-    //     this.currentIndex = i
-    //     await this.$nextTick()
-    //   }
-    //   const [ firstVisibleEvent, innerOffset, width ] = this.findFirstVisibleEventAndDimensions()
-    //   const eventLength = firstVisibleEvent.endTime - firstVisibleEvent.startTime
-    //   const progressFactor = (firstVisibleEvent.startTime - seconds) / eventLength
-    //   const offsetLeft = width * progressFactor
-    //   console.log({offsetLeft, progressFactor, i})
-    //   this.innerLeft = offsetLeft
-    // }
+    const i = findSegmentIndexAt(seconds)
+    if (i !== undefined) {
+      if (i !== this.currentIndex) {
+        this.visibleEvents = this.eventStore.events.slice(i, i + defaultLimit)
+        this.currentIndex = i
+        await this.$nextTick()
+      }
+      const [ firstVisibleEvent, innerOffset, width ] = this.findFirstVisibleEventAndDimensions()
+      const eventLength = firstVisibleEvent.endTime - firstVisibleEvent.startTime
+      const progressFactor = (firstVisibleEvent.startTime - seconds) / eventLength
+      const offsetLeft = width * progressFactor
+      this.innerLeft = offsetLeft
+    }
   }
 
   findFirstVisibleEventAndDimensions(): [LocalTranscriptEvent, number, number] {
@@ -169,8 +149,7 @@ export default class TranscriptEditor extends Vue {
     const eventLength = firstVisibleEvent.endTime - firstVisibleEvent.startTime
     const progressFactor = innerOffset / width
     const progress = progressFactor * eventLength
-    // console.log(currentEvent.startTime + progress, progress)
-    // console.log(firstVisibleEvent.startTime + progress)
+    EventBus.$emit('scrollTranscript', firstVisibleEvent.startTime + progress)
     this.$emit('scroll', firstVisibleEvent.startTime + progress)
   }
 
@@ -222,11 +201,11 @@ export default class TranscriptEditor extends Vue {
     // RECURSION
     this.$nextTick(() => {
       requestAnimationFrame(() => {
-        this.emitScroll()
         if (
           (this.innerLeft <= -1500 || this.innerLeft >= -200) &&
           (this.currentIndex > 0 && this.currentIndex + defaultLimit + 1 < this.eventStore.events.length)
         ) {
+          this.emitScroll()
           this.updateList(leftToRight)
         }
       })
@@ -239,13 +218,6 @@ export default class TranscriptEditor extends Vue {
     this.innerLeft = this.innerLeft - (e.deltaX || e.deltaY) / (e.shiftKey === true ? 10 : 1)
     this.throttledRenderer(this.innerLeft <= this.lastScrollLeft)
     this.lastScrollLeft = this.innerLeft
-  }
-  get theme() {
-    if (this.settings.darkMode) {
-      return { background: 'rgb(50, 50, 50)' }
-    } else {
-      return { background: '#efefef' }
-    }
   }
 }
 </script>
@@ -263,30 +235,6 @@ export default class TranscriptEditor extends Vue {
 .tracks-outer
   overflow hidden
   white-space nowrap
-
-.speaker-panel
-  z-index 1
-
-.speaker
-  cursor default
-  padding .2em 1em
-  border-radius 1px
-  border-bottom 1px solid rgba(255,255,255,.1)
-  font-weight 300
-  font-size 90%
-  line-height 1.6em
-  &:last-child
-    border-bottom 0
-  &:hover
-    background rgba(0,0,0,0)
-  .speaker-name
-    opacity .7
-    white-space nowrap
-  .speaker-triangle
-    font-size 70%
-    display inline-block
-    vertical-align middle
-    margin-right .2em
 
 .tracks
   width 100%

@@ -128,7 +128,14 @@ import segmentBox from '@components/SegmentBox.vue'
 import settings from '../store/settings'
 import audio, { OggIndex } from '../service/audio'
 import * as util from '../util'
-import { eventStore, findSegmentAt, LocalTranscriptEvent, scrollToTranscriptEvent, toTime } from '../store/transcript'
+import EventBus from '../service/event-bus'
+import {
+  eventStore,
+  findSegmentAt,
+  LocalTranscriptEvent,
+  scrollToTranscriptEvent,
+  toTime
+} from '../store/transcript'
 
 const queue = new Queue({
   concurrency: 1,
@@ -151,7 +158,6 @@ export default class Waveform extends Vue {
 
   @Prop() audioUrl: string
   @Prop({ default: 200 }) height: number
-  @Prop({ default: null }) scrollToSecond: number|null
 
   // config
   zoomLevels = [.25, .5, .75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4]
@@ -179,14 +185,24 @@ export default class Waveform extends Vue {
   visibleEvents: LocalTranscriptEvent[] = []
   audioLength = 0
   metadata: any = {} // TODO: get rid of this / put into the store
-
   renderedWaveFormPieces: number[] = []
   totalWidth = this.audioLength * this.pixelsPerSecond
 
   onScroll = _.throttle((e) => this.handleScroll(e), 350)
 
   mounted() {
+    EventBus.$on('scrollTranscript', this.scrollLockedScroll)
     this.initWithAudio()
+  }
+
+  beforeDestroy() {
+    EventBus.$off('scrollTranscript', this.scrollLockedScroll)
+  }
+
+  scrollLockedScroll(t: number) {
+    if (settings.lockScroll) {
+      this.scrollToSecond(t)
+    }
   }
 
   @Watch('eventStore.events')
@@ -210,11 +226,11 @@ export default class Waveform extends Vue {
   addSegmentAt(e: MouseEvent) {
     const c = this.$refs.svgContainer as HTMLDivElement
     this.$emit('add-segment', (c.scrollLeft + e.pageX) / this.pixelsPerSecond)
-    console.log(e)
   }
 
   onMousewheel(e: MouseWheelEvent) {
     this.updateOverviewThumb()
+    EventBus.$emit('scrollWaveform', (this.$refs.svgContainer as HTMLElement).scrollLeft / this.pixelsPerSecond)
     if (settings.emulateHorizontalScrolling === true) {
       const c = this.$refs.svgContainer
       if (c instanceof HTMLElement) {
@@ -464,11 +480,10 @@ export default class Waveform extends Vue {
     }
   }
 
-  @Watch('scrollToSecond')
-  doScrollToSecond(newVal: number|null, oldVal: number|null) {
+  scrollToSecond(t: number) {
     const el = this.$refs.svgContainer
-    if (newVal !== null && el instanceof HTMLElement) {
-      const left = this.pixelsPerSecond * newVal
+    if (t !== null && el instanceof HTMLElement) {
+      const left = this.pixelsPerSecond * t
       requestAnimationFrame(() => {
         el.scrollTo({ left })
       })
