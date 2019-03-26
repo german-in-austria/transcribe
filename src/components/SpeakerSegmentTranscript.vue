@@ -16,7 +16,7 @@
             @focus="(e) => $emit('focus', e, event)"
             contenteditable="true"
             @keydown.enter.meta="playEvent(event)"
-            @keydown.enter.stop.prevent="viewAudioEvent(event)"
+            @keydown.enter.exact.stop.prevent="viewAudioEvent(event)"
             class="secondary-token-tier-text" />
         </span>
       </span>
@@ -27,7 +27,7 @@
       @input="updateLocalTokens"
       @blur="updateAndCommitLocalTokens"
       @keydown.enter.meta="playEvent(event)"
-      @keydown.enter.stop.prevent="viewAudioEvent(event)"
+      @keydown.enter.exact.stop.prevent="viewAudioEvent(event)"
       contenteditable="true"
       v-text="segmentText"
       :style="textStyle"
