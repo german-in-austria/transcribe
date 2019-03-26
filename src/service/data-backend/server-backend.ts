@@ -8,7 +8,8 @@ import {
   timeToSeconds,
   ServerEvent,
   ServerToken,
-  ServerTokenSaveResponse
+  ServerTokenSaveResponse,
+  ServerTranscriptSaveRequest
 } from '@store/transcript'
 
 import { clone } from '@util/index'
@@ -17,7 +18,7 @@ import * as _ from 'lodash'
 const textEncoder = new TextEncoder()
 import * as PromiseWorker from 'promise-worker-transferable'
 import serverTranscriptDiff from './server-transcript-diff.worker'
-const diffWorker = new PromiseWorker(new serverTranscriptDiff(''))
+const diffWorker = new PromiseWorker(new serverTranscriptDiff())
 export let serverTranscript = null as ServerTranscript|null
 
 function getMetadataFromServerTranscript(res: ServerTranscript) {
@@ -61,7 +62,7 @@ export function mergeServerTranscript(s: ServerTranscript) {
 
 export async function localTranscriptToServerTranscript(
   oldServerTranscript: ServerTranscript,
-  localEvents: LocalTranscript): Promise<ServerTranscript> {
+  localEvents: LocalTranscript): Promise<ServerTranscriptSaveRequest> {
   const oldT = textEncoder.encode(JSON.stringify(oldServerTranscript)).buffer
   const newT = textEncoder.encode(JSON.stringify(localEvents)).buffer
   const tokensAndEvents = await diffWorker.postMessage({oldT, newT}, [oldT, newT])
