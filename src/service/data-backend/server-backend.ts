@@ -62,13 +62,25 @@ export function mergeServerTranscript(s: ServerTranscript) {
 
 export async function localTranscriptToServerTranscript(
   oldServerTranscript: ServerTranscript,
+  localEvents: LocalTranscript): Promise<ServerTranscript> {
+  const oldT = textEncoder.encode(JSON.stringify(oldServerTranscript)).buffer
+  const newT = textEncoder.encode(JSON.stringify(localEvents)).buffer
+  const [ tokensAndEventsDiff, newServerTranscript ] = await diffWorker
+    .postMessage({oldT, newT}, [oldT, newT]) as [ServerTranscriptSaveRequest, ServerTranscript]
+  return newServerTranscript
+}
+
+export async function localTranscriptToServerSaveRequest(
+  oldServerTranscript: ServerTranscript,
   localEvents: LocalTranscript): Promise<ServerTranscriptSaveRequest> {
   const oldT = textEncoder.encode(JSON.stringify(oldServerTranscript)).buffer
   const newT = textEncoder.encode(JSON.stringify(localEvents)).buffer
-  const tokensAndEvents = await diffWorker.postMessage({oldT, newT}, [oldT, newT])
+  const [
+    tokensAndEventsDiff,
+  ] = await diffWorker.postMessage({oldT, newT}, [oldT, newT]) as [ServerTranscriptSaveRequest, ServerTranscript]
   return {
     ...oldServerTranscript,
-    ...tokensAndEvents
+    ...tokensAndEventsDiff
   }
 }
 

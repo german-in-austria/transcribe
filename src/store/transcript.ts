@@ -1,9 +1,10 @@
 
 import * as _ from 'lodash'
 import audio from '../service/audio'
-import { clone, isEqualDeep  } from '../util'
+import { clone } from '../util'
 import {
   localTranscriptToServerTranscript,
+  localTranscriptToServerSaveRequest,
   serverTranscript,
   serverTranscriptToLocal,
   updateServerTranscriptWithChanges
@@ -623,9 +624,17 @@ export function toTime(time: number, decimalPlaces = 0): string {
   return new Date(time * 1000).toISOString().substr(11, 8 + (decimalPlaces > 0 ? decimalPlaces + 1 : 0))
 }
 
+export async function convertToServerTranscript(es: LocalTranscriptEvent[]): Promise<ServerTranscript|null> {
+  if (serverTranscript !== null) {
+    return localTranscriptToServerTranscript(serverTranscript, es)
+  } else {
+    return null
+  }
+}
+
 export async function saveChangesToServer() {
   if (serverTranscript !== null) {
-    const x = await localTranscriptToServerTranscript(serverTranscript, eventStore.events)
+    const x = await localTranscriptToServerSaveRequest(serverTranscript, eventStore.events)
     const serverChanges = await (
       await fetch(`${ eventStore.backEndUrl }/routes/transcript/save/${ (x.aTranskript as any).pk }`, {
       credentials: 'include',
@@ -637,6 +646,7 @@ export async function saveChangesToServer() {
       body: JSON.stringify(x),
     })).json() as ServerTranscriptSaveResponse
     console.log({
+      localChanges: _(x.aTokens).toArray().value(),
       localDeletionsAndInserts: _(x.aTokens).toArray().filter((t) => {
         return t.status === 'delete' || t.status === 'insert'
       }).value(),

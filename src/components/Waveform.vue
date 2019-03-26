@@ -71,11 +71,20 @@
     <v-layout row>
       <v-flex class="ml-3">
         <div
+          @mousedown="startDragOverview"
+          @mouseup="scrollFromOverview"
+          class="scrollbar-track">
+          <triangle
+            down
+            class="scrollbar-handle"
+            tabindex="-1"
+            ref="overviewThumb"/>
+        </div>
+        <div
           @mousemove="moveOverviewCrossAndTime"
           class="overview"
           :style="{height: overviewHeight + 'px'}">
           <div
-            @mousedown="startDragOverview"
             ref="overview"
             class="overview-waveform">
             <svg
@@ -96,14 +105,6 @@
                 y2="40" />
             </svg>
           </div>
-          <triangle
-            down
-            class="overview-thumb"
-            tabindex="-1"
-            @mousedown="startDragOverview"
-            @mouseup="scrollFromOverview"
-            @contextmenu="scrollBothFromOverview"
-            ref="overviewThumb"/>
           <div class="overview-cross" ref="overviewCross" />
           <div class="overview-time" ref="overviewTime" :style="{ width: overviewTimeWidth + 'px' }" />
         </div>
@@ -175,11 +176,8 @@ export default class Waveform extends Vue {
   pixelsPerSecond = this.initialPixelsPerSecond // copied on init, not bound.
   disabled = false
   loading = false
-  overviewThumbOffset = 0
   scaleFactorY = 1
   scaleFactorX = 1
-  transitionOverviewThumb = true
-  overviewThumbWidth = 0
   overviewHeight = 60
   visibleSeconds: number[] = []
   visibleEvents: LocalTranscriptEvent[] = []
@@ -187,7 +185,7 @@ export default class Waveform extends Vue {
   metadata: any = {} // TODO: get rid of this / put into the store
   renderedWaveFormPieces: number[] = []
   totalWidth = this.audioLength * this.pixelsPerSecond
-
+  log = console.log
   onScroll = _.throttle((e) => this.handleScroll(e), 350)
 
   mounted() {
@@ -321,7 +319,7 @@ export default class Waveform extends Vue {
     const w = this.$refs.svgContainer
     const o = this.$refs.overview
     if (w instanceof HTMLElement && o instanceof HTMLElement) {
-      const pixels = ((w.scrollLeft + w.clientWidth) / w.scrollWidth * o.clientWidth)
+      const pixels = ((w.scrollLeft + w.clientWidth) / w.scrollWidth * (o.clientWidth - e.clientWidth))
       requestAnimationFrame(() => {
         (e as HTMLElement).style.transform = `translateX(${ pixels }px)`
         localStorage.setItem('scrollPos', String(w.scrollLeft))
@@ -438,13 +436,9 @@ export default class Waveform extends Vue {
   }
 
   startDragOverview(e: MouseEvent) {
-    this.transitionOverviewThumb = false
-    document.addEventListener('mousemove', this.onDragOverview)
-    document.addEventListener('mouseup', this.scrollFromOverview)
+    document.addEventListener('mousemove', this.scrollFromOverview)
   }
-  onDragOverview(e: MouseEvent) {
-    this.overviewThumbOffset = e.pageX - this.overviewThumbWidth / 2
-  }
+
   scrollBothFromOverview(e: MouseEvent) {
     this.scrollFromOverview(e)
     this.scrollTranscriptFromOverview()
@@ -459,23 +453,21 @@ export default class Waveform extends Vue {
     }
   }
   scrollFromOverview(e: MouseEvent) {
-    this.transitionOverviewThumb = true
-    document.removeEventListener('mousemove', this.onDragOverview)
-    document.removeEventListener('mouseup', this.scrollFromOverview)
-    // this.overviewThumbOffset = e.pageX
+    document.removeEventListener('mousemove', this.scrollFromOverview)
     const o = this.$refs.overview
     if (o instanceof HTMLElement) {
-      const scrollToPercentage = (e.pageX - this.overviewThumbWidth / 2) / o.clientWidth
-      this.doScrollToPercentage(scrollToPercentage)
+      requestAnimationFrame(() => {
+        const scrollToPercentage = (e.pageX - 50 / 2) / o.clientWidth
+        this.doScrollToPercentage(scrollToPercentage)
+      })
     }
   }
   doScrollToPercentage(percentage: number) {
-    const el = this.$refs.svgContainer
+    const el = (this.$refs.svgContainer as HTMLElement)
+    const w = el.scrollWidth
     if (el instanceof HTMLDivElement) {
       requestAnimationFrame(() => {
-        el.scrollTo({
-          left: el.scrollWidth * percentage
-        })
+        el.scrollLeft = w * percentage
       })
     }
   }
@@ -560,16 +552,13 @@ export default class Waveform extends Vue {
 
   @Watch('eventStore.audioElement')
   async initWithAudio() {
-    console.log('init with audio 1')
     if (eventStore.audioElement !== null && !isNaN(eventStore.audioElement.duration)) {
-      console.log('init with audio 2')
       this.loading = true
-      console.log('this.audioElement.duration', eventStore.audioElement.duration)
       this.audioLength = eventStore.audioElement.duration
       this.totalWidth = this.audioLength * this.pixelsPerSecond
       const that = this
       if (audio.store.isLocalFile === true) {
-        console.log('local')
+        this.loading = false
       } else {
         await audio.downloadAudioStream({
           url: eventStore.audioElement.src,
@@ -749,11 +738,19 @@ export default class Waveform extends Vue {
 .fade-slow-enter, .fade-slow-leave-to
   opacity 0
 
-.overview-thumb
+.scrollbar-handle
   top 0
   z-index 1
   &:focus
     outline 0
+
+.scrollbar-track
+  border-radius 6px
+
+.scrollbar-track:hover
+  background rgba(255,255,255,.1)
+  .scrollbar-handle
+    background white
 
 .overview:hover
   .overview-cross
@@ -832,4 +829,5 @@ input[type=range]
     border 2px solid #555
     background-color #555
     margin-top: -4.5px
+
 </style>

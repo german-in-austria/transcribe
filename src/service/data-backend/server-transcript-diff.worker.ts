@@ -3,7 +3,6 @@ import {
   ServerTranscript,
   ServerEvent,
   LocalTranscript,
-  LocalTranscriptEvent,
   LocalTranscriptToken,
   ServerTranscriptSaveRequest,
   ServerEventSaveRequest,
@@ -91,28 +90,25 @@ function hasEventChanged(l: ServerEvent, r: ServerEvent): boolean {
   )
 }
 
-registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTransferList: (...args: any[]) => any) => {
+// tslint:disable-next-line:max-line-length
+registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTransferList: (...args: any[]) => any): [ServerTranscriptSaveRequest, ServerTranscript] => {
   const { oldT, newT } = message
   const oldTranscript = JSON.parse(textDecoder.decode(oldT)) as ServerTranscript
   const localTranscript = JSON.parse(textDecoder.decode(newT)) as LocalTranscript
 
   const newServerEvents: ServerEvent[] = []
-  const newServerTokens = reduce(localTranscript, (
-    m: _.Dictionary<ServerToken>,
-    event: LocalTranscriptEvent,
-    eventIndex: number
-  ) => {
-    mapValues(event.speakerEvents, (speakerEvent: any, speakerId: string) => {
+  const newServerTokens = reduce(localTranscript, (m, event) => {
+    mapValues(event.speakerEvents, (speakerEvent, speakerId) => {
       newServerEvents.push({
         pk: speakerEvent.speakerEventId,
         s: padEnd(timeFromSeconds(event.startTime), 14, '0'),
         e: padEnd(timeFromSeconds(event.endTime), 14, '0'),
         l: 0,
         tid: {
-          [speakerId]: speakerEvent.tokens.map((t: LocalTranscriptToken) => t.id)
+          [speakerId]: speakerEvent.tokens.map((t) => t.id)
         }
       })
-      return speakerEvent.tokens.map((t: LocalTranscriptToken, i: number, tokens: LocalTranscriptToken[]) => {
+      return speakerEvent.tokens.map((t, i, tokens) => {
         const token = {
           e : speakerEvent.speakerEventId,
           i : Number(speakerId),
@@ -138,16 +134,12 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
       })
     })
     return m
-  }, {} as _.Dictionary<ServerToken>) as _.Dictionary<ServerToken>
+  }, {} as _.Dictionary<ServerToken>)
 
   const oldIndexedEvents = keyBy(oldTranscript.aEvents, 'pk')
   const newIndexedEvents = keyBy(newServerEvents, 'pk')
 
-  const tokenUpdatesAndInserts = reduce(newServerTokens, (
-    m: _.Dictionary<ServerTokenSaveRequest>,
-    t: ServerToken,
-    id: string
-  ) => {
+  const tokenUpdatesAndInserts = reduce(newServerTokens, (m, t, id) => {
     if (Number(id) < 0) {
       m[id] = {
         ...t,
@@ -164,13 +156,9 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
       }
     }
     return m
-  }, {} as _.Dictionary<ServerTokenSaveRequest>) as _.Dictionary<ServerTokenSaveRequest>
+  }, {} as _.Dictionary<ServerTokenSaveRequest>)
 
-  const tokenDeletions = reduce(oldTranscript.aTokens, (
-    m: _.Dictionary<ServerTokenSaveRequest>,
-    t: ServerToken,
-    id: string
-  ) => {
+  const tokenDeletions = reduce(oldTranscript.aTokens, (m, t, id) => {
     if (newServerTokens[id] === undefined) {
       m[id] = {
         ...t,
@@ -178,12 +166,9 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
       }
     }
     return m
-  }, {} as _.Dictionary<ServerTokenSaveRequest>) as _.Dictionary<ServerTokenSaveRequest>
+  }, {} as _.Dictionary<ServerTokenSaveRequest>)
 
-  const eventUpdatesAndInserts = reduce(newIndexedEvents, (
-    m: ServerEventSaveRequest[],
-    e: ServerEvent
-  ) => {
+  const eventUpdatesAndInserts = reduce(newIndexedEvents, (m, e) => {
     if (e.pk < 0) {
       m.push({
         ...e,
@@ -199,12 +184,9 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
       })
     }
     return m
-  }, [] as ServerEventSaveRequest[]) as ServerEventSaveRequest[]
+  }, [] as ServerEventSaveRequest[])
 
-  const eventDeletions = reduce(oldIndexedEvents, (
-    m: ServerEventSaveRequest[],
-    e: ServerEvent
-  ) => {
+  const eventDeletions = reduce(oldIndexedEvents, (m, e) => {
     if (newIndexedEvents[e.pk] === undefined) {
       m.push({
         ...e,
@@ -212,23 +194,32 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
       })
     }
     return m
-  }, [] as ServerEventSaveRequest[]) as ServerEventSaveRequest[]
+  }, [] as ServerEventSaveRequest[])
 
-  return {
-    ...oldTranscript,
-    aTokens: {
-      ...tokenDeletions,
-      ...tokenUpdatesAndInserts
+  return [
+    // DIFF
+    {
+      ...oldTranscript,
+      aTokens: {
+        ...tokenDeletions,
+        ...tokenUpdatesAndInserts
+      },
+      aEvents: [
+        ...eventDeletions,
+        ...eventUpdatesAndInserts
+      ]
     },
-    aEvents: [
-      ...eventDeletions,
-      ...eventUpdatesAndInserts
-    ]
-  }
+    // NEW, FULL SERVER TRANSCRIPT
+    {
+      ...oldTranscript,
+      aTokens: newServerTokens,
+      aEvents: newServerEvents
+    }
+  ]
 })
 
 export default class ServerTranscriptSaveRequestMaker {
   postMessage() {
-    return {} as Promise<ServerTranscriptSaveRequest>
+    return {} as Promise<[ServerTranscriptSaveRequest, ServerTranscript]>
   }
 }

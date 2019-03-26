@@ -49,7 +49,7 @@
                   placeholder="search…"
                   prepend-inner-icon="search"
                   autofocus />
-                <v-btn @click="openFile" class="mb-2 elevation-0" style="height: 40px;" block>
+                <v-btn :loading="importingLocalFile" @click="openFile" class="mb-2 elevation-0" style="height: 40px;" block>
                   Open/Import File
                 </v-btn>
                 <v-sheet
@@ -115,7 +115,7 @@ import * as jszip from 'jszip'
 import audio from '../service/audio'
 import settings from '../store/settings'
 // tslint:disable-next-line:max-line-length
-import { LocalTranscriptEvent, eventStore, speakerEventHasErrors } from '../store/transcript'
+import { LocalTranscriptEvent, eventStore, speakerEventHasErrors, ServerTranscript } from '../store/transcript'
 import { getTranscript, mergeServerTranscript } from '../service/data-backend/server-backend'
 import { loadExmeraldaFile } from '../service/data-backend/exmaralda-backend'
 
@@ -133,6 +133,7 @@ interface FileReaderEventTarget extends EventTarget {
 })
 export default class App extends Vue {
 
+  importingLocalFile = false
   drawer = false
   xmlText: string|null = null
   xml: any = null
@@ -204,25 +205,38 @@ export default class App extends Vue {
     x.addEventListener('change', async (e) => {
       console.log(e)
       console.log(x.files)
-      if (x.files !== null && x.files[0].type === 'application/zip') {
+      if (x.files !== null && x.files[0].name.endsWith('.transcript')) {
+        this.importingLocalFile = true
         const f = x.files[0]
         const zip = new jszip()
         await zip.loadAsync(f)
         const audioBuffer = await zip.file('audio.ogg').async('uint8array')
-        const transcript = JSON.parse(await zip.file('transcript.json').async('text'))
-        const blob = new Blob([audioBuffer], { type: 'audio/ogg' });
+        const sT = JSON.parse(await zip.file('transcript.json').async('text')) as ServerTranscript
+        const eS = JSON.parse(await zip.file('eventStore.json').async('text'))
+        const overviewSvg = await zip.file('overview.svg').async('text')
+        const blob = new Blob([audioBuffer], { type: 'audio/ogg' })
         const u = URL.createObjectURL(blob)
         const a = document.createElement('audio')
         audio.store.uint8Buffer = audioBuffer
         a.src = u
         a.addEventListener('durationchange', () => {
+          this.importingLocalFile = false
           this.loadingTranscriptId = null
+          eventStore.events = eS.events
+          mergeServerTranscript(sT)
+          localStorage.setItem(u + '_overview', overviewSvg)
+          audio.store.isLocalFile = true
+          eventStore.selectedEventIds = eS.selectedEventIds
+          eventStore.backEndUrl = eS.backEndUrl
+          eventStore.selectedSearchResult = eS.selectedSearchResult
+          eventStore.searchResults = eS.searchResults
+          eventStore.searchTerm = eS.searchTerm
+          eventStore.metadata = eS.metadata
+          eventStore.userState = eS.userState
+          eventStore.transcriptDownloadProgress = eS.transcriptDownloadProgress
           eventStore.audioElement = a
-          if (eventStore.status !== 'finished') {
-            eventStore.status = 'loading'
-          }
+          eventStore.status = 'finished'
         })
-        console.log({audioBuffer, transcript})
       }
     })
     x.click()

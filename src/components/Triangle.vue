@@ -21,12 +21,11 @@ export default class Triangle extends Vue {
 </script>
 <style lang="stylus" scoped>
 .transcript-scrollhandle
-  height 7px
+  border-radius 6px
+  height 11px
   user-select none
   margin-top 0
-  position absolute
   background #777
-  width 20px
+  width 50px
   margin-left -8px
-  border-radius 1px
 </style>

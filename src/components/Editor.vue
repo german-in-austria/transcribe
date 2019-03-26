@@ -43,7 +43,7 @@
                 <v-list-tile-title>Export Transcript…</v-list-tile-title>
               </v-list-tile-content>
             </v-list-tile>
-            <v-list-tile @click="exportZip">
+            <v-list-tile @click="exportProject">
               <v-list-tile-content>
                 <v-list-tile-title>Export Project ({{projectFileSize }})</v-list-tile-title>
               </v-list-tile-content>
@@ -216,9 +216,10 @@ import {
   joinEvents,
   isEventSelected,
   history,
-  saveChangesToServer
+  saveChangesToServer,
+  convertToServerTranscript
 } from '@store/transcript'
-import { localTranscriptToServerTranscript, serverTranscript } from '../service/data-backend/server-backend'
+import { serverTranscript } from '../service/data-backend/server-backend'
 
 @Component({
   components: {
@@ -279,15 +280,20 @@ export default class Editor extends Vue {
     return humanSize(audio.store.uint8Buffer.buffer.byteLength)
   }
 
-  async exportZip() {
+  async exportProject() {
     this.isSaving = true
-    console.log(audio.store.uint8Buffer)
     const zip = new jszip()
+    const overviewWave = (document.querySelector('.overview-waveform svg') as HTMLElement).innerHTML
+    const newServerTranscript = await convertToServerTranscript(eventStore.events)
+    zip.file('overview.svg', overviewWave)
+    zip.file('settings.json', JSON.stringify(settings))
     zip.file('audio.ogg', audio.store.uint8Buffer.buffer, {compression: 'STORE'})
-    zip.file('transcript.json', JSON.stringify(eventStore))
+    zip.file('transcript.json', JSON.stringify(newServerTranscript))
+    zip.file('eventStore.json', JSON.stringify(eventStore))
+    zip.file('VERSION', '1')
     const f = await zip.generateAsync({ type: 'blob'})
     this.isSaving = false
-    saveAs(f, 'hello.zip')
+    saveAs(f, eventStore.metadata.transcriptName! + '.transcript')
   }
 
   async saveToServer() {
@@ -307,7 +313,7 @@ export default class Editor extends Vue {
     const i = (this.$refs.transcriptScrollhandle as Vue).$el
     const outerWidth = (this.$refs.transcriptScrollbar as HTMLElement).clientWidth
     requestAnimationFrame(() => {
-      const pixels = e / eventStore.audioElement.duration * outerWidth;
+      const pixels = e / (eventStore.audioElement.duration * outerWidth);
       (i as HTMLElement).style.transform = `translateX(${ pixels }px)`
     })
   }
