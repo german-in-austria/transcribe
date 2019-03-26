@@ -21,13 +21,20 @@ declare global {
   }
 }
 
-interface SaveResponseEntity {
+interface SaveRequestEntity {
   status: 'update'|'delete'|'insert'
-  newStatus: 'updated'|'deleted'|'inserted'
+}
+
+interface SaveResponseEntity extends SaveRequestEntity {
+  newStatus: 'updated'|'deleted'|'inserted'|'error'
+  error?: string
   newPk?: number
 }
 
+export interface ServerTokenSaveRequest extends ServerToken, SaveRequestEntity {}
 export interface ServerTokenSaveResponse extends ServerToken, SaveResponseEntity {}
+
+export interface ServerEventSaveRequest extends ServerEvent, SaveRequestEntity {}
 export interface ServerEventSaveResponse extends ServerEvent, SaveResponseEntity {}
 
 export interface ServerTranscriptSaveResponse extends ServerTranscript {
@@ -35,6 +42,13 @@ export interface ServerTranscriptSaveResponse extends ServerTranscript {
     [token_id: string]: ServerTokenSaveResponse
   }
   aEvents: ServerEventSaveResponse[]
+}
+
+export interface ServerTranscriptSaveRequest extends ServerTranscript {
+  aTokens: {
+    [token_id: string]: ServerTokenSaveRequest
+  }
+  aEvents: ServerEventSaveRequest[]
 }
 
 export interface ServerTranscript {
@@ -612,7 +626,6 @@ export function toTime(time: number, decimalPlaces = 0): string {
 export async function saveChangesToServer() {
   if (serverTranscript !== null) {
     const x = await localTranscriptToServerTranscript(serverTranscript, eventStore.events)
-    console.log({x})
     const serverChanges = await (
       await fetch(`${ eventStore.backEndUrl }/routes/transcript/save/${ (x.aTranskript as any).pk }`, {
       credentials: 'include',
@@ -622,8 +635,18 @@ export async function saveChangesToServer() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(x),
-    })).json()
-    console.log({x, serverChanges})
+    })).json() as ServerTranscriptSaveResponse
+    console.log({
+      localDeletionsAndInserts: _(x.aTokens).toArray().filter((t) => {
+        return t.status === 'delete' || t.status === 'insert'
+      }).value(),
+      serverDeletionsAndErrorsAndInserts: _(serverChanges.aTokens).toArray().filter((t) => {
+        return t.newStatus === 'deleted' || t.newStatus === 'inserted' || t.newStatus === 'error'
+      }).value(),
+      groupedErrors: _(serverChanges.aTokens).toArray().groupBy(t => {
+        return t.error
+      }).value()
+    })
     eventStore.events = serverTranscriptToLocal(updateServerTranscriptWithChanges(serverChanges))
   }
 }
