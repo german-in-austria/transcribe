@@ -415,38 +415,38 @@ async function decodeBufferSegment(fromByte: number, toByte: number, buffer: Arr
 }
 
 async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuffer) {
-  console.time('decode buffer segment from ' + from + ' to ' + to)
+  // console.time('decode buffer segment from ' + from + ' to ' + to)
   // TODO: this is could possible be solved a little better.
   let startPage
   let endPage
   if (oggPages.length === 0) {
     const adHocIndex = (await getOggIndexAsync(buffer)).pages
-    console.log({ adHocIndex })
+    // console.log({ adHocIndex })
     const pages = findOggPages(from, to + 1, adHocIndex)
     startPage = pages.startPage
     endPage = pages.endPage
   } else {
-    console.log({oggPages})
+    // console.log({oggPages})
     const pages = findOggPages(from, to + 1, oggPages)
     startPage = pages.startPage
     endPage = pages.endPage
   }
   // TODO: WHY IS THERE STILL AN OFFSET OF .2?
   const overflowStart = Math.max(0, from - startPage.timestamp + .2)
-  console.log({
-    pageDuration: endPage.timestamp - startPage.timestamp,
-    start: overflowStart,
-    end: to - from + overflowStart,
-    duration: to - from
-  })
-  console.log('bytes', endPage.byteOffset - startPage.byteOffset)
+  // console.log({
+  //   pageDuration: endPage.timestamp - startPage.timestamp,
+  //   start: overflowStart,
+  //   end: to - from + overflowStart,
+  //   duration: to - from
+  // })
+  // console.log('bytes', endPage.byteOffset - startPage.byteOffset)
   const decodedBuffer = await decodeBufferSegment(startPage.byteOffset, endPage.byteOffset, buffer)
-  console.log('decoded buffer duration', decodedBuffer.duration)
+  // console.log('decoded buffer duration', decodedBuffer.duration)
   // tslint:disable-next-line:max-line-length
-  console.log('start end', overflowStart * 1000, (to - from + overflowStart) * 1000)
+  // console.log('start end', overflowStart * 1000, (to - from + overflowStart) * 1000)
   const slicedBuffer = await sliceAudioBuffer(decodedBuffer, overflowStart * 1000, (to - from + overflowStart) * 1000)
-  console.timeEnd('decode buffer segment from ' + from + ' to ' + to)
-  console.log({slicedDuration: slicedBuffer.duration})
+  // console.timeEnd('decode buffer segment from ' + from + ' to ' + to)
+  // console.log({slicedDuration: slicedBuffer.duration})
   return slicedBuffer
 }
 
@@ -480,20 +480,21 @@ async function getOrFetchAudioBuffer(
   try {
     return await audio.decodeBufferTimeSlice(from, to, audio.store.uint8Buffer.buffer)
   } catch (e) {
-    console.log(e)
+    // console.log(e)
     const headerBuffer = await getOrFetchHeaderBuffer(url)
     const startByte = Math.max(fileSize * (from / audioLength) - 1024 * 1024, 0).toFixed(0)
     const endByte   = Math.min(fileSize * (to / audioLength) + 1024 * 1024, fileSize).toFixed(0)
-    console.log('DOWNLOADING AUDIO SEGMENT', {startByte, endByte}, (Number(endByte) - Number(startByte)) / 1024, 'MB')
-    console.time('buffer segment download')
+    // tslint:disable-next-line:max-line-length
+    // console.log('DOWNLOADING AUDIO SEGMENT', {startByte, endByte}, (Number(endByte) - Number(startByte)) / 1024, 'MB')
+    // console.time('buffer segment download')
     const buffer = await (await fetch(url, {
       credentials: 'include',
       headers: { Range: `bytes=${startByte}-${endByte}` }
     })).arrayBuffer()
-    console.timeEnd('buffer segment download')
+    // console.timeEnd('buffer segment download')
     const { pages } = await audio.getOggIndexAsync(buffer)
     const trimmedBuffer = buffer.slice(pages[0].byteOffset, pages[pages.length - 1].byteOffset)
-    console.log({ headerBuffer, trimmedBuffer })
+    // console.log({ headerBuffer, trimmedBuffer })
     const combinedBuffer = audio.concatBuffer(headerBuffer, trimmedBuffer)
     return await audio.decodeBufferTimeSlice(from, to, combinedBuffer)
   }
