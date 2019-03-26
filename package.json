@@ -82,6 +82,7 @@
   "devDependencies": {
     "@types/diff": "^3.5.2",
     "@types/jszip": "^3.1.5",
+    "@types/lodash-es": "^4.17.3",
     "@types/node": "^8.0.58",
     "arraybuffer-loader": "^1.0.6",
     "assemblyscript": "github:AssemblyScript/assemblyscript",

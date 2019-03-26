@@ -4,6 +4,7 @@
         "sourceMap": true,
         "strict": true,
         "strictPropertyInitialization": false,
+        "allowSyntheticDefaultImports": true,
         "noImplicitAny": true,
         "module": "es2015",
         "lib": ["webworker", "es2015", "dom"],
@@ -11,7 +12,14 @@
         "target": "es5",
         "experimentalDecorators": true,
         "baseUrl": "src",
+        "typeRoots": [
+          "node_modules/@types",
+          "manual_typings"
+        ],
         "paths": {
+            "lodash/*": [
+              "node_modules/@types/lodash-es/*"
+            ],
             "@components/*": [
                 "components/*"
             ],

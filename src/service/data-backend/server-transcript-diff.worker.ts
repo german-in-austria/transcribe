@@ -5,16 +5,17 @@ import {
   LocalTranscript,
   LocalTranscriptEvent,
   LocalTranscriptToken,
+  ServerTranscriptSaveRequest,
+  ServerEventSaveRequest,
+  ServerTokenSaveRequest
 } from '@store/transcript'
 
 const registerPromiseWorker = require('promise-worker-transferable/register')
 const textDecoder = new TextDecoder('utf-8')
 
-// this is annoying. lodash loses typings when imported in this way,
-// but it’s also the only way to get webpack 2 to tree-shake it.
-const reduce = require('lodash/reduce')
-const keyBy = require('lodash/keyBy')
-const mapValues = require('lodash/mapValues')
+import reduce from 'lodash/reduce'
+import keyBy from 'lodash/keyBy'
+import mapValues from 'lodash/mapValues'
 
 function padEnd(string: string, targetLength: number, padString: string) {
   // tslint:disable-next-line:no-bitwise
@@ -33,14 +34,6 @@ function padEnd(string: string, targetLength: number, padString: string) {
 
 function timeFromSeconds(seconds: number) {
   return new Date(1000 * seconds).toISOString().substr(12, 11)
-}
-
-interface ServerTokenWithStatus extends ServerToken {
-  status: 'delete'|'insert'|'update'
-}
-
-interface ServerEventWithStatus extends ServerEvent {
-  status: 'delete'|'insert'|'update'
 }
 
 function tokenHasFragment(text: string): boolean {
@@ -151,7 +144,7 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
   const newIndexedEvents = keyBy(newServerEvents, 'pk')
 
   const tokenUpdatesAndInserts = reduce(newServerTokens, (
-    m: _.Dictionary<ServerTokenWithStatus>,
+    m: _.Dictionary<ServerTokenSaveRequest>,
     t: ServerToken,
     id: string
   ) => {
@@ -171,10 +164,10 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
       }
     }
     return m
-  }, {} as _.Dictionary<ServerTokenWithStatus>) as _.Dictionary<ServerTokenWithStatus>
+  }, {} as _.Dictionary<ServerTokenSaveRequest>) as _.Dictionary<ServerTokenSaveRequest>
 
   const tokenDeletions = reduce(oldTranscript.aTokens, (
-    m: _.Dictionary<ServerTokenWithStatus>,
+    m: _.Dictionary<ServerTokenSaveRequest>,
     t: ServerToken,
     id: string
   ) => {
@@ -185,10 +178,10 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
       }
     }
     return m
-  }, {} as _.Dictionary<ServerTokenWithStatus>) as _.Dictionary<ServerTokenWithStatus>
+  }, {} as _.Dictionary<ServerTokenSaveRequest>) as _.Dictionary<ServerTokenSaveRequest>
 
   const eventUpdatesAndInserts = reduce(newIndexedEvents, (
-    m: ServerEventWithStatus[],
+    m: ServerEventSaveRequest[],
     e: ServerEvent
   ) => {
     if (e.pk < 0) {
@@ -206,10 +199,10 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
       })
     }
     return m
-  }, [] as ServerEventWithStatus[]) as ServerEventWithStatus[]
+  }, [] as ServerEventSaveRequest[]) as ServerEventSaveRequest[]
 
   const eventDeletions = reduce(oldIndexedEvents, (
-    m: ServerEventWithStatus[],
+    m: ServerEventSaveRequest[],
     e: ServerEvent
   ) => {
     if (newIndexedEvents[e.pk] === undefined) {
@@ -219,7 +212,7 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
       })
     }
     return m
-  }, [] as ServerEventWithStatus[]) as ServerEventWithStatus[]
+  }, [] as ServerEventSaveRequest[]) as ServerEventSaveRequest[]
 
   return {
     ...oldTranscript,
@@ -234,4 +227,8 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
   }
 })
 
-export default null as any
+export default class ServerTranscriptSaveRequestMaker {
+  postMessage() {
+    return {} as Promise<ServerTranscriptSaveRequest>
+  }
+}
