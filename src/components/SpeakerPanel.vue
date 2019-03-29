@@ -6,7 +6,6 @@
       class="speaker">
       <v-menu
         close-delay="500"
-        close-on-content-click
         transition="fade-transition"
         right
         offset-x
@@ -14,6 +13,12 @@
         nudge-top="5">
         <div slot="activator" class="speaker-name">
           <span class="speaker-triangle">▶</span> {{ speaker.k }}
+          <div
+            class="secondary-tiers"
+            :style="{ lineHeight: tierHeight + 'px' }"
+            v-for="tier in secondaryVisibleTiers" :key="tier.name">
+            {{ tier.name }}
+          </div>
         </div>
         <v-list class="context-menu-list" dense>
           <v-list-tile
@@ -45,9 +50,14 @@ export default class SpeakerPanel extends Vue {
   @Prop() prop: string|null
   settings = settings
   eventStore = eventStore
+  tierHeight = 25
 
   get speakerHeight() {
-    return eventStore.metadata.tiers.filter(t => t.show === true).length * 25 + 1 + 'px'
+    return eventStore.metadata.tiers.filter(t => t.show === true).length * this.tierHeight + 1 + 'px'
+  }
+
+  get secondaryVisibleTiers() {
+    return eventStore.metadata.tiers.filter(t => t.name !== 'default' && t.show === true)
   }
 
   get theme() {
@@ -62,6 +72,10 @@ export default class SpeakerPanel extends Vue {
 <style lang="stylus" scoped>
 .speaker-panel
   z-index 1
+
+.secondary-tiers
+  text-align right
+  opacity .5
 
 .speaker
   cursor default
