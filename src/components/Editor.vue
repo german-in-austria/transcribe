@@ -40,12 +40,12 @@
           <v-list dense class="context-menu-list">
             <v-list-tile @click="exportJSON">
               <v-list-tile-content>
-                <v-list-tile-title>Export Transcript…</v-list-tile-title>
+                <v-list-tile-title>Export Transcript</v-list-tile-title>
               </v-list-tile-content>
             </v-list-tile>
             <v-list-tile @click="exportProject">
               <v-list-tile-content>
-                <v-list-tile-title>Export Project ({{projectFileSize }})</v-list-tile-title>
+                <v-list-tile-title>Export Project</v-list-tile-title>
               </v-list-tile-content>
             </v-list-tile>
             <v-divider />
@@ -170,12 +170,8 @@
         </div>
       </div>
     </wave-form>
-    <transcript-editor
-      :pixels-per-second="pixelsPerSecond"
-      @scroll="handleTranscriptScroll"
-      @scroll-to-event="(e) => scrollToEvent = e"
-      :scroll-to-time="scrollTranscriptTime"
-      :scroll-to-index="scrollTranscriptIndex"/>
+    <transcript-editor @scroll="handleTranscriptScroll"
+    />
   </div>
 </template>
 <script lang="ts">
@@ -274,10 +270,6 @@ export default class Editor extends Vue {
       })
       saveAs(b, this.eventStore.metadata.transcriptName! + '.json')
     }
-  }
-
-  get projectFileSize() {
-    return humanSize(audio.store.uint8Buffer.buffer.byteLength)
   }
 
   async exportProject() {
@@ -401,7 +393,7 @@ export default class Editor extends Vue {
     })
   }
 
-  async handleScroll(e: MouseEvent, time?: number) {
+  async handleScroll() {
     if (this.showMenu === true) {
       this.showMenu = false
     }
