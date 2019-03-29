@@ -1,7 +1,7 @@
 import parseTree, { ParsedXML } from '../transcript-parser'
 import { makeEventId } from '../../store/transcript'
 import * as parseXML from '@rgrove/parse-xml'
-import * as _ from 'lodash'
+import _ from 'lodash'
 
 interface Segment {
   color?: string
@@ -29,8 +29,10 @@ interface SpeakerEvent {
 
 let transcript: Transcript|null = null
 
-export function loadExmeraldaFile(fileName: string, xml: string) {
-  return transcriptTreeToTranscribable(parseTree(parseXML(xml)), fileName)
+export function loadExmeraldaFile(fileName: string, xml: string): ParsedXML {
+  const tree = parseTree(parseXML(xml))
+  return tree
+  // return transcriptTreeToTranscribable(tree, fileName)
 }
 
 export function transcriptTreeToTranscribable(tree: ParsedXML, name: string): Transcript {
