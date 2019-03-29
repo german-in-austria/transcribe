@@ -10,14 +10,12 @@
         <div :style="{transform: `translateX(${ innerLeft }px)`}" ref="inner" class="transcript-segments-inner">
           <segment-transcript
             v-for="(event, i) in visibleEvents"
-            @focus=""
             :event="event"
             :previous-event="visibleEvents[i - 1]"
             :next-event="visibleEvents[i + 1]"
             :key="event.eventId"
             :is-selected="isEventSelected(event.eventId)"
             :class="['segment', isEventSelected(event.eventId) && 'segment-selected']"
-            @scroll-to-event="(e) => $emit('scroll-to-event', e)"
             @element-unrender="(width) => handleUnrender(width, i, event.eventId)"
             @element-render="(width) => handleRender(width, i, event.eventId)"
           />
@@ -56,17 +54,14 @@ const defaultLimit = 20
 })
 export default class TranscriptEditor extends Vue {
 
-  @Prop({ default: 0 }) scrollToIndex: number
-  @Prop() pixelsPerSecond: number
-  @Prop({ default: 0 }) scrollToTime: number
-
   eventStore = eventStore
   userState = eventStore.userState
   settings = settings
   innerLeft = 0
-  currentIndex = this.scrollToIndex
+  currentIndex = 0
   lastScrollLeft = 0
   visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
+  emitScrollDebouncer: number|null = null
   throttledRenderer = _.throttle(this.updateList, 60)
   isEventSelected = isEventSelected
 
@@ -82,7 +77,7 @@ export default class TranscriptEditor extends Vue {
         const c = this.$refs.tracks
         if (c instanceof HTMLElement && el instanceof HTMLElement) {
           this.innerLeft = el.offsetLeft * -1 + c.clientWidth / 2 - el.clientWidth / 2
-          this.emitScroll()
+          this.debouncedEmitScroll()
         }
       })
     })
@@ -118,6 +113,7 @@ export default class TranscriptEditor extends Vue {
   async scrollToSecond(seconds: number) {
     const i = findSegmentIndexAt(seconds)
     if (i !== -1) {
+      await requestFrameAsync()
       if (i !== this.currentIndex) {
         this.visibleEvents = this.eventStore.events.slice(i, i + defaultLimit)
         this.currentIndex = i
@@ -144,13 +140,18 @@ export default class TranscriptEditor extends Vue {
     return [ firstVisibleEvent, innerOffset, width ]
   }
 
-  emitScroll() {
+  debouncedEmitScroll() {
+    // if (this.emitScrollDebouncer !== null) {
+    //   cancelAnimationFrame(this.emitScrollDebouncer)
+    // }
+    // this.emitScrollDebouncer = requestAnimationFrame(() => {
     const [firstVisibleEvent, innerOffset, width] = this.findFirstVisibleEventAndDimensions()
     const eventLength = firstVisibleEvent.endTime - firstVisibleEvent.startTime
     const progressFactor = innerOffset / width
     const progress = progressFactor * eventLength
     EventBus.$emit('scrollTranscript', firstVisibleEvent.startTime + progress)
     this.$emit('scroll', firstVisibleEvent.startTime + progress)
+    // })
   }
 
   handleRender(width: number, index: number, segment_id: string) {
@@ -184,7 +185,6 @@ export default class TranscriptEditor extends Vue {
         this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
       } else {
         // NORMAL SCROLL, NO UPDATES
-        this.emitScroll()
       }
     } else {
       // SCROLL RIGHT TO LEFT
@@ -193,7 +193,6 @@ export default class TranscriptEditor extends Vue {
         this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
       } else {
         // NORMAL SCROLL, NO UPDATES
-        this.emitScroll()
       }
     }
     // WAIT FOR THE ELEMENT TO RENDER,
@@ -205,7 +204,7 @@ export default class TranscriptEditor extends Vue {
           (this.innerLeft <= -1500 || this.innerLeft >= -200) &&
           (this.currentIndex > 0 && this.currentIndex + defaultLimit + 1 < this.eventStore.events.length)
         ) {
-          this.emitScroll()
+          this.debouncedEmitScroll()
           this.updateList(leftToRight)
         }
       })
@@ -216,6 +215,7 @@ export default class TranscriptEditor extends Vue {
     e.preventDefault()
     this.lastScrollLeft = this.innerLeft
     this.innerLeft = this.innerLeft - (e.deltaX || e.deltaY) / (e.shiftKey === true ? 10 : 1)
+    this.debouncedEmitScroll()
     this.throttledRenderer(this.innerLeft <= this.lastScrollLeft)
     this.lastScrollLeft = this.innerLeft
   }
@@ -232,6 +232,8 @@ export default class TranscriptEditor extends Vue {
   50%
     opacity 0
 
+.transcript-segments-inner
+  will-change transform
 .tracks-outer
   overflow hidden
   white-space nowrap

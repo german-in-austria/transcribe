@@ -5,6 +5,23 @@ declare interface process {
   }
 }
 
+type RequestIdleCallbackHandle = any
+type RequestIdleCallbackOptions = {
+  timeout: number;
+}
+type RequestIdleCallbackDeadline = {
+  readonly didTimeout: boolean
+  timeRemaining: (() => number)
+}
+
+interface Window {
+  requestIdleCallback: ((
+    callback: ((deadline: RequestIdleCallbackDeadline) => void),
+    opts?: RequestIdleCallbackOptions,
+  ) => RequestIdleCallbackHandle);
+  cancelIdleCallback: ((handle: RequestIdleCallbackHandle) => void);
+}
+
 declare module "*.wasm" {
   const value: ArrayBuffer
   export default value;
