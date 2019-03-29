@@ -73,15 +73,21 @@
         <div
           @mousedown="startDragOverview"
           @mouseup="scrollFromOverview"
-          class="scrollbar-track">
+          @mousemove="updateOverviewTime"
+          ref="scrollbarTrack"
+          :class="['scrollbar-track', isScrollingFromOverview && 'scrolling']">
           <triangle
             down
             class="scrollbar-handle"
             tabindex="-1"
             ref="overviewThumb"/>
+          <div
+            class="overview-time"
+            ref="overviewTime"
+            :style="{ width: overviewTimeWidth + 'px' }"
+          />
         </div>
         <div
-          @mousemove="moveOverviewCrossAndTime"
           class="overview"
           :style="{height: overviewHeight + 'px'}">
           <div
@@ -105,8 +111,6 @@
                 y2="40" />
             </svg>
           </div>
-          <div class="overview-cross" ref="overviewCross" />
-          <div class="overview-time" ref="overviewTime" :style="{ width: overviewTimeWidth + 'px' }" />
         </div>
         <slot name="overview" />
       </v-flex>
@@ -139,7 +143,7 @@ import {
 } from '../store/transcript'
 
 const queue = new Queue({
-  concurrency: 1,
+  concurrency: 2,
   autoStart: true
 })
 
@@ -147,6 +151,7 @@ const queue = new Queue({
 const segmentBufferPercent = .01
 let boundLeft = 0
 let boundRight = 100
+let scrollTimer: number|null = null
 
 @Component({
   components: {
@@ -173,6 +178,7 @@ export default class Waveform extends Vue {
   toTime = toTime
   eventStore = eventStore
   // state
+  isScrollingFromOverview = false
   pixelsPerSecond = this.initialPixelsPerSecond // copied on init, not bound.
   disabled = false
   loading = false
@@ -186,7 +192,8 @@ export default class Waveform extends Vue {
   renderedWaveFormPieces: number[] = []
   totalWidth = this.audioLength * this.pixelsPerSecond
   log = console.log
-  onScroll = _.throttle((e) => this.handleScroll(e), 350)
+  scrollTimeout = null
+  onScroll = _.throttle(this.handleScroll, 350)
 
   mounted() {
     EventBus.$on('scrollTranscript', this.scrollLockedScroll)
@@ -238,11 +245,10 @@ export default class Waveform extends Vue {
     }
   }
 
-  moveOverviewCrossAndTime(e: MouseEvent) {
-    const o = this.$refs.overview
+  updateOverviewTime(e: MouseEvent) {
+    const o = this.$refs.scrollbarTrack
     const t = this.$refs.overviewTime
-    const c = this.$refs.overviewCross
-    if (o instanceof HTMLElement && t instanceof HTMLElement && c instanceof HTMLElement) {
+    if (o instanceof HTMLElement && t instanceof HTMLElement) {
       requestAnimationFrame(() => {
         const w = o.clientWidth
         const secondsIn = this.audioLength / w * e.layerX
@@ -252,8 +258,7 @@ export default class Waveform extends Vue {
         )
         requestAnimationFrame(() => {
           t.innerHTML = this.toTime(secondsIn)
-          t.style.transform = `translateX(${offsetT}px)`
-          c.style.transform = `translateX(${e.layerX}px)`
+          t.style.transform = `translateX(${ offsetT }px)`
         })
       })
     }
@@ -263,18 +268,28 @@ export default class Waveform extends Vue {
     return 5000 * this.scaleFactorX
   }
 
-  async handleScroll(e: Event) {
-    await util.requestFrameAsync()
-    this.updateOverviewThumb()
-    this.$emit('scroll', e, (this.$refs.svgContainer as any).scrollWidth / this.pixelsPerSecond)
-    this.updateSecondsMarkers()
-    this.doMaybeRerender()
-    this.updateSegments(e)
+  async handleScroll() {
+    if (scrollTimer !== null) {
+      window.cancelAnimationFrame(scrollTimer)
+    }
+    scrollTimer = window.requestAnimationFrame(async () => {
+      if (!this.isScrollingFromOverview) {
+        this.updateOverviewThumb()
+      }
+      await util.requestFrameAsync()
+      this.$emit('scroll')
+      await util.requestFrameAsync()
+      this.updateSecondsMarkers()
+      await util.requestFrameAsync()
+      window.requestIdleCallback(this.doMaybeRerender)
+      await util.requestFrameAsync()
+      window.requestIdleCallback(this.updateSegments)
+    })
   }
 
-  async updateSegments(e: Event) {
+  async updateSegments() {
     await util.requestFrameAsync()
-    const el = (e.target as HTMLElement)
+    const el = this.$refs.svgContainer as HTMLElement
     const w = el.scrollWidth
     const l = el.scrollLeft
     const cw = el.clientWidth
@@ -314,7 +329,7 @@ export default class Waveform extends Vue {
     }).join('')
   }
 
-  updateOverviewThumb(seconds?: number) {
+  updateOverviewThumb() {
     const e = (this.$refs.overviewThumb as Vue).$el
     const w = this.$refs.svgContainer
     const o = this.$refs.overview
@@ -353,8 +368,10 @@ export default class Waveform extends Vue {
   async doMaybeRerender() {
     const piecesToRender = util.findAllNotIn(this.renderedWaveFormPieces, await this.shouldRenderWaveFormPieces())
     if (piecesToRender.length > 0) {
-      console.log('now rendering:', piecesToRender)
       piecesToRender.forEach((p) => {
+        if (queue.length >= 10) {
+          queue.pop()
+        }
         queue.unshiftTask(async (resolve: any, reject: any) => {
           this.renderedWaveFormPieces.push(p)
           try {
@@ -436,7 +453,15 @@ export default class Waveform extends Vue {
   }
 
   startDragOverview(e: MouseEvent) {
+    this.isScrollingFromOverview = true
     document.addEventListener('mousemove', this.scrollFromOverview)
+    document.addEventListener('mouseup', this.endDragOverview)
+  }
+
+  endDragOverview() {
+    this.isScrollingFromOverview = false
+    document.removeEventListener('mousemove', this.scrollFromOverview)
+    document.removeEventListener('mouseup', this.endDragOverview)
   }
 
   scrollBothFromOverview(e: MouseEvent) {
@@ -453,12 +478,15 @@ export default class Waveform extends Vue {
     }
   }
   scrollFromOverview(e: MouseEvent) {
-    document.removeEventListener('mousemove', this.scrollFromOverview)
     const o = this.$refs.overview
+    this.updateOverviewThumb()
+    this.updateSegments()
+    this.updateOverviewTime(e)
     if (o instanceof HTMLElement) {
       requestAnimationFrame(() => {
         const scrollToPercentage = (e.pageX - 50 / 2) / o.clientWidth
         this.doScrollToPercentage(scrollToPercentage)
+        this.handleScroll()
       })
     }
   }
@@ -477,61 +505,64 @@ export default class Waveform extends Vue {
     if (t !== null && el instanceof HTMLElement) {
       const left = this.pixelsPerSecond * t
       requestAnimationFrame(() => {
-        el.scrollTo({ left })
+        el.scrollLeft = left
       })
     }
   }
 
-  @Watch('userState.viewingAudioEvent')
-  doScrollToSegment(e: LocalTranscriptEvent) {
-    // TODO: too long, refactor (scroll to second, etc)
-    if (e !== null) {
-      const el = this.$refs.svgContainer
-      const duration = e.endTime - e.startTime
-      const offset = (e.startTime + duration / 2) * this.pixelsPerSecond
-      const animationDuration = .3
-      const animationDistance = 600
-      if (el instanceof HTMLElement) {
-        const startTime = performance.now()
-        const currentOffset = el.scrollLeft
-        const targetOffset = offset - this.$el.clientWidth / 2
-        const realDistance = Math.abs(currentOffset - targetOffset)
-        // SCROLL DIRECTLY TO IT (SHORT DISTANCE)
-        if (realDistance < this.$el.clientWidth) {
+  scrollToSecondSmooth(targetOffset: number) {
+    const el = this.$refs.svgContainer
+    const animationDuration = .3
+    const animationDistance = 600
+    if (el instanceof HTMLElement) {
+      const startTime = performance.now()
+      const currentOffset = el.scrollLeft
+      const realDistance = Math.abs(currentOffset - targetOffset)
+      // SCROLL DIRECTLY TO IT (SHORT DISTANCE)
+      if (realDistance < this.$el.clientWidth) {
+        const step = () => {
+          const timeEllapsed = (performance.now() - startTime) / 1000
+          if (timeEllapsed <= animationDuration) {
+            el.scrollLeft = util.easeInOutQuad(
+              timeEllapsed,
+              currentOffset,
+              targetOffset - currentOffset,
+              animationDuration
+            )
+            requestAnimationFrame(step)
+          }
+        }
+        requestAnimationFrame(step)
+      // JUMP, THEN SCROLL (LONG DISTANCE)
+      } else {
+        const distance = currentOffset < targetOffset ? animationDistance : animationDistance * -1
+        el.scrollLeft = targetOffset - distance
+        requestAnimationFrame(() => {
           const step = () => {
             const timeEllapsed = (performance.now() - startTime) / 1000
             if (timeEllapsed <= animationDuration) {
-              el.scrollLeft = util.easeInOutQuad(
+              el.scrollLeft = util.easeOutQuad(
                 timeEllapsed,
-                currentOffset,
-                targetOffset - currentOffset,
+                targetOffset - distance,
+                distance,
                 animationDuration
               )
               requestAnimationFrame(step)
             }
           }
           requestAnimationFrame(step)
-        // JUMP, THEN SCROLL (LONG DISTANCE)
-        } else {
-          const distance = currentOffset < targetOffset ? animationDistance : animationDistance * -1
-          el.scrollLeft = targetOffset - distance
-          requestAnimationFrame(() => {
-            const step = () => {
-              const timeEllapsed = (performance.now() - startTime) / 1000
-              if (timeEllapsed <= animationDuration) {
-                el.scrollLeft = util.easeOutQuad(
-                  timeEllapsed,
-                  targetOffset - distance,
-                  distance,
-                  animationDuration
-                )
-                requestAnimationFrame(step)
-              }
-            }
-            requestAnimationFrame(step)
-          })
-        }
+        })
       }
+    }
+  }
+
+  @Watch('userState.viewingAudioEvent')
+  doScrollToSegment(e: LocalTranscriptEvent) {
+    if (e !== null) {
+      const duration = e.endTime - e.startTime
+      const offset = (e.startTime + duration / 2) * this.pixelsPerSecond
+      const targetOffset = offset - this.$el.clientWidth / 2
+      this.scrollToSecondSmooth(targetOffset)
     }
   }
 
@@ -619,7 +650,7 @@ export default class Waveform extends Vue {
   }
 
   async drawWaveFormPiece(i: number) {
-
+    console.log('drawing', i)
     const isLast = i + 1 === this.amountDrawSegments
     const secondsPerDrawWidth = this.drawWidth / this.pixelsPerSecond
     const from = i * secondsPerDrawWidth
@@ -720,14 +751,6 @@ export default class Waveform extends Vue {
     transition .5s transform
     overflow-y hidden
     position relative
-    .wave-form-segment
-      opacity 0
-      animation fadeIn
-      -webkit-animation fadeIn ease-in 1
-      animation-fill-mode forwards
-      -webkit-animation-duration 1s
-      -moz-animation-duration 1s
-      animation-duration 1s
 
 .overview
   position relative
@@ -745,36 +768,26 @@ export default class Waveform extends Vue {
     outline 0
 
 .scrollbar-track
+  position relative
   border-radius 6px
-
-.scrollbar-track:hover
-  background rgba(255,255,255,.1)
-  .scrollbar-handle
-    background white
-
-.overview:hover
-  .overview-cross
-  .overview-time
-    opacity 1
-
-.overview-cross
-  transition opacity .5s
-  opacity 0
-  pointer-events none
-  top 0px
-  z-index 1
-  background #ccc
-  height 80%
-  width 1px
-  position absolute
+  background rgba(255,255,255,0)
+  transition .25s background
+  &:hover, &.scrolling
+    background rgba(255,255,255,.1)
+    .overview-time
+      opacity 1
+    .scrollbar-handle
+      background white
 
 .overview-time
+  top -200%
+  will-change transfrom
   pointer-events none
+  transition .25s opacity 
   opacity 0
   position absolute
   color #ccc
   z-index 2
-  top -25px
   font-size 80%
   text-align center
   background rgba(0,0,0,.2)
