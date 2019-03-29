@@ -6,7 +6,7 @@
         v-for="(token, i) in localTokens"
         :key="token.id">
         <span
-          v-html="token.tiers.default.text"
+          v-text="token.tiers.default.text"
           :class="['token-type-indicator', focused && 'focused']"
           :style="{ backgroundColor: colorFromTokenType(token.tiers.default.type) }">
         </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span class="secondary-token-tier" v-for="tier in secondaryTiers" :key="tier.name">
