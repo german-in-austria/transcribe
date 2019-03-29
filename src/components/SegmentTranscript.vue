@@ -5,7 +5,8 @@
       tabindex="-1"
       :class="{time: true, error: hasErrors}"
       @keydown.enter.meta="playEvent(event)"
-      @keydown.delete="deleteSelectedEvents"
+      @keydown.delete.exact="deleteSelectedEvents"
+      @keydown.backspace.exact="deleteSelectedEvents"
       @dblclick="playEvent(event)"
       @mousedown.meta.stop="selectOrDeselectEvent(event)"
       @mousedown.exact="selectAndScrollToEvent(event)">
