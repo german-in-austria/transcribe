@@ -83,13 +83,21 @@ img[lazy=loaded] {
 .v-tabs__item{
   background: rgba(0,0,0,.2);
 }
-.v-tabs__item--active{
+.v-tabs__item--active {
   background: transparent
 }
 .application.theme--dark .text--disabled,
 .theme--dark.v-list .v-list--disabled {
-  color: hsla(0,0%,100%,.7)!important;
+  color: hsla(0,0%,100%,.3)!important;
 }
+
+.application.theme--dark .text--disabled
+.theme--dark.v-icon,
+.theme--dark.v-list .v-list--disabled
+.theme--dark.v-icon {
+  color: #666
+}
+
 .cursor-pointer{
   cursor: pointer;
 }

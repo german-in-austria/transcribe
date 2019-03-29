@@ -9,10 +9,11 @@
           v-text="token.tiers.default.text"
           :class="['token-type-indicator', focused && 'focused']"
           :style="{ backgroundColor: colorFromTokenType(token.tiers.default.type) }">
-        </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span class="secondary-token-tier" v-for="tier in secondaryTiers" :key="tier.name">
+        </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span class="secondary-token-tier" v-for="(tokenTier, i) in secondaryTokenTiers" :key="tokenTier.name">
           <span
-            v-text="token.tiers[tier.name].text"
-            @blur="(e) => updateAndCommitLocalTokenTier(e, tier.name, i)"
+            :style="{top: (i + 1) * tierHeight + 'px'}"
+            v-text="token.tiers[tokenTier.name] !== undefined ? token.tiers[tokenTier.name].text : ''"
+            @blur="(e) => updateAndCommitLocalTokenTier(e, tokenTier.name, i)"
             @focus="(e) => $emit('focus', e, event)"
             contenteditable="true"
             @keydown.enter.meta="playEvent(event)"
@@ -33,6 +34,17 @@
       :style="textStyle"
       class="tokens-input segment-text">
     </div>
+    <div v-for="(tier, i) in secondaryTiers" :key="i" class="secondary-free-text-tier">
+      <span
+        v-if="localTokens.length && tier.type === 'freeText'"
+        v-text="getTierFreeTextText(tier.name)"
+        @blur="(e) => updateAndCommitLocalTier(e, tier.name, tier.type)"
+        @focus="(e) => $emit('focus', e, event)"
+        contenteditable="true"
+        @keydown.enter.meta="playEvent(event)"
+        @keydown.enter.exact.stop.prevent="viewAudioEvent(event)"
+        class="secondary-free-text-tier-text" />
+    </div>
   </div>
 </template>
 
@@ -49,7 +61,8 @@ import {
   LocalTranscriptToken,
   makeTokenId,
   findPreviousSpeakerEvent,
-  playEvent
+  playEvent,
+  TierFreeText
 } from '../store/transcript'
 import * as _ from 'lodash'
 import * as jsdiff from 'diff'
@@ -77,6 +90,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   @Prop() previousEvent: LocalTranscriptEvent|undefined
   @Prop() speaker: number
 
+  tierHeight = 25
   localEvent = clone(this.event)
   localTokens = this.localEvent.speakerEvents[this.speaker]
     ? this.localEvent.speakerEvents[this.speaker].tokens
@@ -96,6 +110,15 @@ export default class SpeakerSegmentTranscript extends Vue {
       ? this.localEvent.speakerEvents[this.speaker].tokens
       : []
     this.segmentText = this.localTokens ? this.localTokens.map(t => t.tiers.default.text).join(' ') : ''
+  }
+
+  getTierFreeTextText(tierName: string) {
+    return (
+      this.localEvent.speakerEvents[this.speaker] !== undefined &&
+      this.localEvent.speakerEvents[this.speaker].speakerEventTiers[tierName] !== undefined
+        ? (this.localEvent.speakerEvents[this.speaker].speakerEventTiers[tierName] as TierFreeText).text
+        : ''
+    )
   }
 
   get isMarkedWithFragment(): boolean {
@@ -122,6 +145,14 @@ export default class SpeakerSegmentTranscript extends Vue {
     } else {
       return null
     }
+  }
+
+  get secondaryTokenTiers() {
+    return this.secondaryTiers.filter(t => t.type === 'token')
+  }
+
+  get secondaryFreeTextTiers() {
+    return this.secondaryTiers.filter(t => t.type === 'freeText')
   }
 
   get secondaryTiers() {
@@ -188,8 +219,22 @@ export default class SpeakerSegmentTranscript extends Vue {
     }
   }
 
-  updateAndCommitLocalTokenTier(e: Event, tier: string, i: number) {
-    this.localTokens[i].tiers[tier].text = (e.target as HTMLElement).textContent as string
+  updateAndCommitLocalTier(e: Event, tierName: string, tierType: string) {
+    if (this.localEvent.speakerEvents[this.speaker] !== undefined) {
+      if (tierType === 'freeText') {
+        (this.localEvent
+          .speakerEvents[this.speaker]
+          .speakerEventTiers[tierName] as TierFreeText
+        ).text = (e.target as HTMLElement).textContent as string
+      }
+      this.commit()
+    } else {
+      // does not yet exists
+    }
+  }
+
+  updateAndCommitLocalTokenTier(e: Event, tierName: string, i: number) {
+    this.localTokens[i].tiers[tierName].text = (e.target as HTMLElement).textContent as string
     this.commit()
   }
 
@@ -295,10 +340,27 @@ export default class SpeakerSegmentTranscript extends Vue {
 </script>
 
 <style lang="stylus" scoped>
+
+.secondary-free-text-tier
+  color #777
+  .secondary-free-text-tier-text
+    display inline-block
+    min-width 1.6em
+    margin-left -1px
+    padding 0 2px
+    border-radius 2px
+    background #272727
+    white-space nowrap
+    &:empty
+      background #3e3e3e
+    &:focus
+      outline 0
+      color #fff
+      background #777
+
 .secondary-token-tier
   color #777
   .secondary-token-tier-text
-    margin-top 4px
     position absolute
     display block
     margin-left -1px

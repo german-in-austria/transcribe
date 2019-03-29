@@ -1,3 +1,6 @@
+import _ from 'lodash'
+import PromiseWorker from 'promise-worker-transferable'
+
 import {
   LocalTranscriptEvent,
   eventStore,
@@ -9,16 +12,15 @@ import {
   ServerEvent,
   ServerToken,
   ServerTokenSaveResponse,
-  ServerTranscriptSaveRequest
+  ServerTranscriptSaveRequest,
+  LocalTranscriptTier
 } from '@store/transcript'
-
 import { clone } from '@util/index'
-
-import * as _ from 'lodash'
-const textEncoder = new TextEncoder()
-import * as PromiseWorker from 'promise-worker-transferable'
 import serverTranscriptDiff from './server-transcript-diff.worker'
+
 const diffWorker = new PromiseWorker(new serverTranscriptDiff())
+const textEncoder = new TextEncoder()
+
 export let serverTranscript = null as ServerTranscript|null
 
 function getMetadataFromServerTranscript(res: ServerTranscript) {
@@ -32,14 +34,26 @@ function getMetadataFromServerTranscript(res: ServerTranscript) {
       + '.ogg',
     tiers: [
       {
+        type: 'basic',
         name: 'default',
         show: true
       },
       {
+        type: 'token',
         name: 'ortho',
         show: false
+      },
+      {
+        type: 'token',
+        name: 'test',
+        show: false
+      },
+      {
+        type: 'freeText',
+        name: 'comment',
+        show: false
       }
-    ]
+    ] as LocalTranscriptTier[]
   }
 }
 
@@ -244,6 +258,14 @@ export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
         speakerEvents: _.reduce(eG, (m, se, i, ses) => {
           _.each(se.tid, (tokenIds, speakerKey) => {
             m[speakerKey] = {
+              // for now, the server doesn’t
+              // return speakerEventTiers
+              speakerEventTiers: {
+                comment: {
+                  type: 'freeText',
+                  text: 'bla bla non-tokenized text'
+                }
+              },
               speakerEventId: se.pk,
               tokens: _.map(tokenIds, (tokenId) => {
                 if (s.aTokens[tokenId] === undefined) {

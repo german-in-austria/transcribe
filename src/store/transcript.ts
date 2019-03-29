@@ -134,6 +134,22 @@ export interface LocalTranscriptToken {
   }
 }
 
+export interface TierFreeText {
+  type: 'freeText'
+  text: string
+}
+
+export interface TierAnnotation {
+  type: 'annotation',
+  tags: number[]
+}
+
+export type LocalTranscriptSpeakerEventTier = TierFreeText|TierAnnotation
+
+export interface LocalTranscriptSpeakerEventTiers {
+  [tierName: string]: LocalTranscriptSpeakerEventTier
+}
+
 export interface LocalTranscriptEvent {
   eventId: number
   startTime: number
@@ -142,6 +158,7 @@ export interface LocalTranscriptEvent {
     [speakerId: string]: {
       speakerEventId: number
       tokens: LocalTranscriptToken[]
+      speakerEventTiers: LocalTranscriptSpeakerEventTiers
     }
   }
 }
@@ -151,6 +168,7 @@ export interface LocalTranscriptEditEvent extends LocalTranscriptEvent {
 }
 
 export interface LocalTranscriptTier {
+  type: 'basic'|'token'|'freeText'
   name: string
   show: boolean
 }
@@ -553,6 +571,12 @@ export function joinEvents(eventIds: number[]): LocalTranscriptEvent {
     eventId: events[0].eventId,
     speakerEvents: speakerIds.reduce((speakerEvents, speakerId) => {
       speakerEvents[speakerId] = {
+        speakerEventTiers: _(events).reduce((ts, ev, tn) => {
+          if (ev.speakerEvents[speakerId]) {
+            ts = { ...ts,  ...ev.speakerEvents[speakerId].speakerEventTiers}
+          }
+          return ts
+        }, {} as LocalTranscriptSpeakerEventTiers),
         speakerEventId: makeEventId(),
         tokens: events.reduce((ts, ev) => {
           if (ev.speakerEvents[speakerId]) {
