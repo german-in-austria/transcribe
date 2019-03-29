@@ -70,7 +70,12 @@ export default class PlayHead extends Vue {
         } else {
           w.scrollLeft = viewPortLeft
         }
-        p.style.transform = `translateX(${ playHeadLeft }px)`
+        if (Math.abs(startAtTime + timeEllapsed - eventStore.audioElement.currentTime) < .1) {
+          p.style.transform = `translateX(${ playHeadLeft }px)`
+        } else {
+          console.log('corrected playhead position')
+          p.style.transform = `translateX(${ this.pixelsPerSecond * eventStore.audioElement.currentTime }px)`
+        }
         if (eventStore.playAllFrom !== null) {
           requestAnimationFrame(step)
         } else {
