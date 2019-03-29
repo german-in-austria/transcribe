@@ -9,6 +9,9 @@
     </v-navigation-drawer>
     <v-content class="main-content">
       <v-container fluid fill-height class="pa-0">
+        <exmeralda-importer
+          v-if="parsedExmeraldaFile !== null"
+          :tree="parsedExmeraldaFile" />
         <vue-full-screen-file-drop
           class="file-dropper"
           @drop='onFileDrop'>
@@ -111,10 +114,11 @@ import 'vue-full-screen-file-drop/dist/vue-full-screen-file-drop.css'
 import VueFullScreenFileDrop from 'vue-full-screen-file-drop'
 import editor from './Editor.vue'
 import sidebar from './Sidebar.vue'
+import exmeraldaImporter from './ExmeraldaImporter.vue'
 import * as jszip from 'jszip'
 import audio from '../service/audio'
 import settings from '../store/settings'
-// tslint:disable-next-line:max-line-length
+import { ParsedXML } from '../service/transcript-parser'
 import { LocalTranscriptEvent, eventStore, speakerEventHasErrors, ServerTranscript } from '../store/transcript'
 import { getTranscript, mergeServerTranscript } from '../service/data-backend/server-backend'
 import { loadExmeraldaFile } from '../service/data-backend/exmaralda-backend'
@@ -126,6 +130,7 @@ interface FileReaderEventTarget extends EventTarget {
 @Component({
   components : {
     editor,
+    exmeraldaImporter,
     sidebar,
     VueFullScreenFileDrop,
     playerBar
@@ -144,6 +149,7 @@ export default class App extends Vue {
   loggedIn = true
   eventStore = eventStore
   log = console.log
+  parsedExmeraldaFile: ParsedXML|null = null
   errorMessage: string|null = null
   backEndUrls = [
     'https://dissdb.dioe.at',
@@ -237,6 +243,9 @@ export default class App extends Vue {
           eventStore.audioElement = a
           eventStore.status = 'finished'
         })
+      } else if (x.files !== null && x.files[0].name.endsWith('.exb')) {
+        this.importingLocalFile = true
+        const f = x.files[0]
       }
     })
     x.click()
@@ -263,11 +272,10 @@ export default class App extends Vue {
         // if there is none.
       } else if (this.isXML(file)) {
         const reader = new FileReader()
-        reader.onload = (e: Event) => {
-          // tslint:disable-next-line:max-line-length
-          loadExmeraldaFile((e.target as FileReaderEventTarget).result, file.name)
+        reader.onload = (e: FileReaderProgressEvent) => {
+          this.parsedExmeraldaFile = loadExmeraldaFile(file.name, e.target!.result)
         }
-        reader.readAsText(file)
+        reader.readAsText(file, 'UTF-8')
         console.log('xml')
       } else {
         alert('unsupported file type')
