@@ -6,8 +6,8 @@
     @click="$emit('input', !value)"
     class="lock-scroll-btn elevation-0">
     <div>
-      <div class="bar" :style="{transform: `translateX(${ value ? 0 : -3 }px)`}" />
-      <div class="bar" :style="{top: '1px', transform: `translateX(${ value ? 0 :  3 }px)`}" />
+      <div class="bar" :style="{transform: `translate3d(${ value ? 0 : -3 }px, 0, 0)`}" />
+      <div class="bar" :style="{top: '1px', transform: `translate3d(${ value ? 0 :  3 }px, 0, 0)`}" />
     </div>
   </v-btn>
 </template>

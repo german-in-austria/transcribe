@@ -5,7 +5,7 @@
       ref="playHead"
       :style="{
         transition: transition,
-        transform: `translateX(${ left }px)`
+        transform: `translate3d(${ left }px, 0, 0)`
       }">
     </div>
     <div
@@ -74,9 +74,9 @@ export default class PlayHead extends Vue {
         const difference = Math.abs(startAtTime + timeEllapsed - eventStore.audioElement.currentTime)
         if (difference > .1) {
           console.log('corrected playhead position')
-          p.style.transform = `translateX(${ this.pixelsPerSecond * eventStore.audioElement.currentTime }px)`
+          p.style.transform = `translate3d(${ this.pixelsPerSecond * eventStore.audioElement.currentTime }px, 0, 0)`
         } else {
-          p.style.transform = `translateX(${ playHeadLeft }px)`
+          p.style.transform = `translate3d(${ playHeadLeft }px, 0, 0)`
         }
         if (eventStore.playAllFrom !== null) {
           requestAnimationFrame(step)

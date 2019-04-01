@@ -258,7 +258,7 @@ export default class Waveform extends Vue {
         )
         requestAnimationFrame(() => {
           t.innerHTML = this.toTime(secondsIn)
-          t.style.transform = `translateX(${ offsetT }px)`
+          t.style.transform = `translate3d(${ offsetT }px, 0, 0)`
         })
       })
     }
@@ -323,7 +323,7 @@ export default class Waveform extends Vue {
     await util.requestFrameAsync()
     const el = this.$el.querySelector('.second-marker-row') as HTMLElement
     el.innerHTML = visibleSeconds.map(s => {
-      return `<div style="transform: translateX(${ s * this.pixelsPerSecond }px)" class="second-marker">`
+      return `<div style="transform: translate3d(${ s * this.pixelsPerSecond }px, 0, 0)" class="second-marker">`
         + toTime(s)
         + '</div>'
     }).join('')
@@ -336,7 +336,7 @@ export default class Waveform extends Vue {
     if (w instanceof HTMLElement && o instanceof HTMLElement) {
       const pixels = ((w.scrollLeft + w.clientWidth) / w.scrollWidth * (o.clientWidth - e.clientWidth))
       requestAnimationFrame(() => {
-        (e as HTMLElement).style.transform = `translateX(${ pixels }px)`
+        (e as HTMLElement).style.transform = `translate3d(${ pixels }px, 0, 0)`
         localStorage.setItem('scrollPos', String(w.scrollLeft))
       })
     }

@@ -110,7 +110,7 @@ export default class SegmentBox extends Vue {
 .transcript-tooltip
   position absolute
   top -40px
-  transform translateX(-50%)
+  transform translate3d(-50%, 0, 0)
   text-align center
   padding 2px 10px
   background rgba(50,50,50,.9)

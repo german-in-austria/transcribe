@@ -7,7 +7,7 @@
         ref="tracks"
         class="tracks"
         v-if="eventStore.events.length">
-        <div :style="{transform: `translateX(${ innerLeft }px)`}" ref="inner" class="transcript-segments-inner">
+        <div :style="{transform: `translate3d(${ innerLeft }px, 0, 0)`}" ref="inner" class="transcript-segments-inner">
           <segment-transcript
             v-for="(event, i) in visibleEvents"
             :event="event"

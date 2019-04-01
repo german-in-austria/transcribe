@@ -306,7 +306,7 @@ export default class Editor extends Vue {
     const outerWidth = (this.$refs.transcriptScrollbar as HTMLElement).clientWidth
     requestAnimationFrame(() => {
       const pixels = e / (eventStore.audioElement.duration * outerWidth);
-      (i as HTMLElement).style.transform = `translateX(${ pixels }px)`
+      (i as HTMLElement).style.transform = `translate3d(${ pixels }px, 0, 0)`
     })
   }
 
