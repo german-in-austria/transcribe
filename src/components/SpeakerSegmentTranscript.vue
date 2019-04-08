@@ -9,10 +9,10 @@
           v-text="token.tiers.default.text"
           :class="['token-type-indicator', focused && 'focused']"
           :style="{ backgroundColor: colorFromTokenType(token.tiers.default.type) }">
-        </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span class="secondary-token-tier" v-for="(tokenTier, i) in secondaryTokenTiers" :key="tokenTier.name">
+        </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span class="secondary-token-tier" v-for="(tokenTier, tierIndex) in secondaryTokenTiers" :key="tokenTier.name">
           <span
-            :style="{top: (i + 1) * tierHeight + 'px'}"
-            v-text="token.tiers[tokenTier.name] !== undefined ? token.tiers[tokenTier.name].text : ''"
+            :style="{top: (tierIndex + 1) * tierHeight + 'px'}"
+            v-text="token.tiers[tokenTier.name] !== undefined ? token.tiers[tokenTier.name].text : undefined"
             @blur="(e) => updateAndCommitLocalTokenTier(e, tokenTier.name, i)"
             @focus="(e) => $emit('focus', e, event)"
             contenteditable="true"
