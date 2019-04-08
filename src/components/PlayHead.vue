@@ -21,6 +21,7 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import { eventStore } from '../store/transcript'
 import audio from '../service/audio'
 import { easeInOutQuad } from '../util'
+import settings from '../store/settings'
 
 @Component
 export default class PlayHead extends Vue {
@@ -38,6 +39,7 @@ export default class PlayHead extends Vue {
   async onPlayAllFromChange(from: number|null) {
     if (from !== null) {
       this.transition = 'unset'
+      settings.lockPlayHead = true
       this.scrollAtSpeed(from)
       // const endTime = eventStore.audioElement.duration
       // const playbackTimeInSeconds = (endTime - from) * (1 / (this.audioStore.playbackRate / 100))
@@ -62,13 +64,17 @@ export default class PlayHead extends Vue {
     const wDistanceToCover = wTargetPosition - w.scrollLeft
     const step = () => {
       const timeEllapsed = (performance.now() - startTime) / 1000 * eventStore.audioElement.playbackRate
-      const playHeadLeft = (startAtTime + timeEllapsed) * this.pixelsPerSecond
+      const playHeadLeft = Math.round((startAtTime + timeEllapsed) * this.pixelsPerSecond)
       const viewPortLeft = playHeadLeft - w.clientWidth / 2
       requestAnimationFrame(() => {
-        if (timeEllapsed <= catchUpTime) {
-          w.scrollLeft = easeInOutQuad(timeEllapsed, wStart, wDistanceToCover, catchUpTime)
-        } else {
-          w.scrollLeft = viewPortLeft
+        // IF PLAYHEAD IS LOCKED
+        if (settings.lockPlayHead === true) {
+          // CATCH UP USING QUADRATIC EASE IN OUT
+          if (timeEllapsed <= catchUpTime) {
+            w.scrollLeft = easeInOutQuad(timeEllapsed, wStart, wDistanceToCover, catchUpTime)
+          } else {
+            w.scrollLeft = viewPortLeft
+          }
         }
         // CORRECT PLAYHEAD POSITION IF IT FALLS BEHIND
         const difference = Math.abs(startAtTime + timeEllapsed - eventStore.audioElement.currentTime)
@@ -78,6 +84,7 @@ export default class PlayHead extends Vue {
         } else {
           p.style.transform = `translate3d(${ playHeadLeft }px, 0, 0)`
         }
+        // KEEP GOING IF IT’S SUPPOSED TO PLAY
         if (eventStore.playAllFrom !== null) {
           requestAnimationFrame(step)
         } else {

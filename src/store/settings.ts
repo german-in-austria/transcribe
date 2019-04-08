@@ -7,6 +7,7 @@ export interface Settings {
   spectrogramColors: Color[]
   waveFormColors: string[]
   lockScroll: boolean,
+  lockPlayHead: boolean,
   emulateHorizontalScrolling: boolean,
   darkMode: boolean,
   showSegmentBoxes: boolean,
@@ -146,6 +147,7 @@ const settings: Settings = {
   spectrogramColors: spectrogramPresets[1].colors,
   waveFormColors: [ '#fb7676', '#6699CC' ],
   lockScroll: false,
+  lockPlayHead: true,
   darkMode: true,
   emulateHorizontalScrolling: platform() === 'windows' || platform() === 'linux',
   showSegmentBoxes: true,
@@ -183,17 +185,23 @@ const settings: Settings = {
       id: 6
     },
     {
-      name: 'word',
-      regex: /_?[a-zA-ZÜüÄäÖöß]+_?/u,
-      color: 'transparent',
-      id: 1
+      name: 'contraction',
+      regex: /_[a-zA-ZÜüÄäÖöß]+|[a-zA-ZÜüÄäÖöß]+_/,
+      color: '#d47d0f',
+      id: 8
     },
     {
       name: 'incomprehensible',
       regex: /\((.+)\)/u,
       color: '#6f6f6f',
       id: 7
-    }
+    },
+    {
+      name: 'word',
+      regex: /[a-zA-ZÜüÄäÖöß]+/u,
+      color: 'transparent',
+      id: 1
+    },
   ],
   keyboardShortcuts: {
     split: {
