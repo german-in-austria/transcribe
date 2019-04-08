@@ -23,7 +23,6 @@
       </span>
     </div>
     <div
-      :title="printableSpeakerTokens"
       @focus="(e) => $emit('focus', e, event)"
       @input="updateLocalTokens"
       @blur="updateAndCommitLocalTokens"
@@ -34,7 +33,11 @@
       :style="textStyle"
       class="tokens-input segment-text">
     </div>
-    <div v-for="(tier, i) in secondaryTiers" :key="i" class="secondary-free-text-tier">
+    <div
+      v-for="(tier, i) in secondaryTiers"
+      :key="i"
+      :style="{ height: tierHeight + 1 + 'px' }"
+      class="secondary-free-text-tier">
       <span
         v-if="localTokens.length && tier.type === 'freeText'"
         v-text="getTierFreeTextText(tier.name)"
@@ -348,7 +351,7 @@ export default class SpeakerSegmentTranscript extends Vue {
     min-width 1.6em
     margin-left -1px
     padding 0 2px
-    border-radius 2px
+    border-radius 5px
     background #272727
     white-space nowrap
     &:empty
@@ -390,6 +393,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   position relative
 
 .token-type-indicator
+  transition .25s background-color
   border-radius 2px
   display inline
 

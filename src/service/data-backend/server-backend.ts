@@ -263,7 +263,7 @@ export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
               speakerEventTiers: {
                 comment: {
                   type: 'freeText',
-                  text: 'bla bla non-tokenized text'
+                  text: 'comment'
                 }
               },
               speakerEventId: se.pk,
