@@ -1,5 +1,5 @@
 <template>
-  <div :style="containerStyle" :class="{ disabled, loading }">
+  <div class="waveform-outer" :style="containerStyle" :class="{ disabled, loading }">
     <v-layout class="pa-3" style="position: relative;">
       <v-flex xs2 text-xs-left>
         <label for="scaleFactorY" class="caption grey--text lighten-2">
@@ -68,25 +68,9 @@
         </div>
       </div>
     </div>
-    <v-layout row>
+    <v-layout row style="margin-top: -40px; padding-bottom: 20px;">
       <v-flex class="ml-3">
-        <div
-          @mousedown="startDragOverview"
-          @mouseup="scrollFromOverview"
-          @mousemove="updateOverviewTime"
-          ref="scrollbarTrack"
-          :class="['scrollbar-track', isScrollingFromOverview && 'scrolling']">
-          <triangle
-            down
-            class="scrollbar-handle"
-            tabindex="-1"
-            ref="overviewThumb"/>
-          <div
-            class="overview-time"
-            ref="overviewTime"
-            :style="{ width: overviewTimeWidth + 'px' }"
-          />
-        </div>
+        <scrollbar class="scrollbar" update-on="scrollWaveform" @scroll="scrollFromScrollbar" />
         <div
           class="overview"
           :style="{height: overviewHeight + 'px'}">
@@ -127,7 +111,7 @@ import * as _ from 'lodash'
 import * as Queue from 'simple-promise-queue'
 
 import scrollLockButton from '@components/ScrollLockButton.vue'
-import triangle from '@components/Triangle.vue'
+import scrollbar from '@components/Scrollbar.vue'
 import segmentBox from '@components/SegmentBox.vue'
 
 import settings from '../store/settings'
@@ -155,7 +139,7 @@ let scrollTimer: number|null = null
 
 @Component({
   components: {
-    triangle,
+    scrollbar,
     scrollLockButton,
     segmentBox
   }
@@ -163,19 +147,17 @@ let scrollTimer: number|null = null
 export default class Waveform extends Vue {
 
   @Prop() audioUrl: string
-  @Prop({ default: 200 }) height: number
+  @Prop({ default: 300 }) height: number
 
   // config
   zoomLevels = [.25, .5, .75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4]
   drawDistance = 5000 // pixels in both directions from the center of the viewport (left and right)
   initialPixelsPerSecond = 150
   overviewSvgWidth = 1500 // width of the overview waveform in logical pixels
-  overviewTimeWidth = 70 // width of the time preview tooltip above the overview waveform
 
   // bind stores
   settings = settings
   userState = eventStore.userState
-  toTime = toTime
   eventStore = eventStore
   // state
   isScrollingFromOverview = false
@@ -208,6 +190,9 @@ export default class Waveform extends Vue {
     if (settings.lockScroll) {
       this.scrollToSecond(t)
     }
+    if (eventStore.playAllFrom !== null) {
+      this.disableAutoScrollDuringPlayback()
+    }
   }
 
   @Watch('eventStore.events')
@@ -233,8 +218,11 @@ export default class Waveform extends Vue {
     this.$emit('add-segment', (c.scrollLeft + e.pageX) / this.pixelsPerSecond)
   }
 
+  disableAutoScrollDuringPlayback() {
+    settings.lockPlayHead = false
+  }
+
   onMousewheel(e: MouseWheelEvent) {
-    this.updateOverviewThumb()
     EventBus.$emit('scrollWaveform', (this.$refs.svgContainer as HTMLElement).scrollLeft / this.pixelsPerSecond)
     if (settings.emulateHorizontalScrolling === true) {
       const c = this.$refs.svgContainer
@@ -243,24 +231,8 @@ export default class Waveform extends Vue {
         c.scrollLeft = c.scrollLeft + (e.deltaY) / (e.shiftKey === true ? 10 : 1)
       }
     }
-  }
-
-  updateOverviewTime(e: MouseEvent) {
-    const o = this.$refs.scrollbarTrack
-    const t = this.$refs.overviewTime
-    if (o instanceof HTMLElement && t instanceof HTMLElement) {
-      requestAnimationFrame(() => {
-        const w = o.clientWidth
-        const secondsIn = this.audioLength / w * e.layerX
-        const offsetT = Math.min(
-          Math.max(e.layerX - this.overviewTimeWidth / 2, 0),
-          w - this.overviewTimeWidth
-        )
-        requestAnimationFrame(() => {
-          t.innerHTML = this.toTime(secondsIn)
-          t.style.transform = `translate3d(${ offsetT }px, 0, 0)`
-        })
-      })
+    if (eventStore.playAllFrom !== null) {
+      this.disableAutoScrollDuringPlayback()
     }
   }
 
@@ -273,9 +245,6 @@ export default class Waveform extends Vue {
       window.cancelAnimationFrame(scrollTimer)
     }
     scrollTimer = window.requestAnimationFrame(async () => {
-      if (!this.isScrollingFromOverview) {
-        this.updateOverviewThumb()
-      }
       await util.requestFrameAsync()
       this.$emit('scroll')
       await util.requestFrameAsync()
@@ -327,19 +296,6 @@ export default class Waveform extends Vue {
         + toTime(s)
         + '</div>'
     }).join('')
-  }
-
-  updateOverviewThumb() {
-    const e = (this.$refs.overviewThumb as Vue).$el
-    const w = this.$refs.svgContainer
-    const o = this.$refs.overview
-    if (w instanceof HTMLElement && o instanceof HTMLElement) {
-      const pixels = ((w.scrollLeft + w.clientWidth) / w.scrollWidth * (o.clientWidth - e.clientWidth))
-      requestAnimationFrame(() => {
-        (e as HTMLElement).style.transform = `translate3d(${ pixels }px, 0, 0)`
-        localStorage.setItem('scrollPos', String(w.scrollLeft))
-      })
-    }
   }
 
   async drawSpectrogramPiece(i: number) {
@@ -431,7 +387,6 @@ export default class Waveform extends Vue {
       // clear cache
       this.clearRenderCache()
       this.doMaybeRerender()
-      this.doScrollToPercentage(oldCenterPercent)
       this.totalWidth = this.audioLength * this.pixelsPerSecond
       this.$emit('change-metadata', {
         totalWidth: this.totalWidth,
@@ -452,22 +407,6 @@ export default class Waveform extends Vue {
     }
   }
 
-  startDragOverview(e: MouseEvent) {
-    this.isScrollingFromOverview = true
-    document.addEventListener('mousemove', this.scrollFromOverview)
-    document.addEventListener('mouseup', this.endDragOverview)
-  }
-
-  endDragOverview() {
-    this.isScrollingFromOverview = false
-    document.removeEventListener('mousemove', this.scrollFromOverview)
-    document.removeEventListener('mouseup', this.endDragOverview)
-  }
-
-  scrollBothFromOverview(e: MouseEvent) {
-    this.scrollFromOverview(e)
-    this.scrollTranscriptFromOverview()
-  }
   scrollTranscriptFromOverview() {
     console.log('scrollTranscriptFromOverview')
     const c = this.$refs.svgContainer as HTMLElement
@@ -477,27 +416,8 @@ export default class Waveform extends Vue {
       scrollToTranscriptEvent(e)
     }
   }
-  scrollFromOverview(e: MouseEvent) {
-    const o = this.$refs.overview
-    this.updateOverviewThumb()
-    this.updateSegments()
-    this.updateOverviewTime(e)
-    if (o instanceof HTMLElement) {
-      requestAnimationFrame(() => {
-        const scrollToPercentage = (e.pageX - 50 / 2) / o.clientWidth
-        this.doScrollToPercentage(scrollToPercentage)
-        this.handleScroll()
-      })
-    }
-  }
-  doScrollToPercentage(percentage: number) {
-    const el = (this.$refs.svgContainer as HTMLElement)
-    const w = el.scrollWidth
-    if (el instanceof HTMLDivElement) {
-      requestAnimationFrame(() => {
-        el.scrollLeft = w * percentage
-      })
-    }
+  scrollFromScrollbar(s: number) {
+    this.scrollToSecond(s)
   }
 
   scrollToSecond(t: number) {
@@ -558,6 +478,9 @@ export default class Waveform extends Vue {
 
   @Watch('userState.viewingAudioEvent')
   doScrollToSegment(e: LocalTranscriptEvent) {
+    if (eventStore.playAllFrom !== null) {
+      this.disableAutoScrollDuringPlayback()
+    }
     if (e !== null) {
       const duration = e.endTime - e.startTime
       const offset = (e.startTime + duration / 2) * this.pixelsPerSecond
@@ -761,67 +684,16 @@ export default class Waveform extends Vue {
 .fade-slow-enter, .fade-slow-leave-to
   opacity 0
 
-.scrollbar-handle
-  top 0
-  z-index 1
-  &:focus
-    outline 0
-
-.scrollbar-track
-  position relative
-  border-radius 6px
-  background rgba(255,255,255,0)
-  transition .25s background
-  &:hover, &.scrolling
-    background rgba(255,255,255,.1)
-    .overview-time
-      opacity 1
-    .scrollbar-handle
-      background white
-
-.overview-time
-  top -200%
-  will-change transfrom
-  pointer-events none
-  transition .25s opacity 
-  opacity 0
-  position absolute
-  color #ccc
-  z-index 2
-  font-size 80%
-  text-align center
-  background rgba(0,0,0,.2)
-  border-radius 10px
-  line-height 20px
-
-.scale-y
-  position absolute
-  right 20px
-  z-index 9
-  bottom -20px
-  input[type=range]
-    width 80px
-    position relative
-    top -2px
-  span
-    display inline-block
-    margin 9px
-
-.scale-x
-  position absolute
-  right 20px
-  z-index 9
-  bottom -20px
-  input[type=range]
-    width 80px
-    position relative
-    top -2px
-  span
-    display inline-block
-    margin 9px
-
 select
   background #303030
+
+.waveform-outer
+  .scrollbar
+    transition opacity .25s
+    opacity 0
+  &:hover
+    .scrollbar
+      opacity 1
 
 input[type=range]
   -webkit-appearance none

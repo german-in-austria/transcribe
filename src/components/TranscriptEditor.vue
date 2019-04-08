@@ -1,5 +1,5 @@
 <template>
-  <v-layout style="height: auto">
+  <v-layout class="transcript-editor-outer" style="height: auto">
     <speaker-panel />
     <v-flex ref="outer" class="tracks-outer pt-2">
       <div
@@ -21,6 +21,7 @@
           />
         </div>
       </div>
+      <scrollbar class="scrollbar" @scroll="scrollToSecond" update-on="scrollTranscript"/>
     </v-flex>
   </v-layout>
 </template>
@@ -30,6 +31,7 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SegmentTranscript from '@components/SegmentTranscript.vue'
 import SpeakerPanel from './SpeakerPanel.vue'
+import Scrollbar from './Scrollbar.vue'
 import settings from '@store/settings'
 import * as _ from 'lodash'
 import EventBus from '../service/event-bus'
@@ -48,6 +50,7 @@ const defaultLimit = 20
 
 @Component({
   components: {
+    Scrollbar,
     SpeakerPanel,
     SegmentTranscript
   }
@@ -85,7 +88,6 @@ export default class TranscriptEditor extends Vue {
 
   scrollIntoView(e: Event, event: LocalTranscriptEvent) {
     const r = (e.target as HTMLElement).getBoundingClientRect()
-    console.log(r)
     if (r.left < 57 || r.left + r.width > (this.$refs.outer as HTMLElement).clientWidth) {
       this.doScrollToEvent(event)
     }
@@ -141,17 +143,11 @@ export default class TranscriptEditor extends Vue {
   }
 
   debouncedEmitScroll() {
-    // if (this.emitScrollDebouncer !== null) {
-    //   cancelAnimationFrame(this.emitScrollDebouncer)
-    // }
-    // this.emitScrollDebouncer = requestAnimationFrame(() => {
     const [firstVisibleEvent, innerOffset, width] = this.findFirstVisibleEventAndDimensions()
     const eventLength = firstVisibleEvent.endTime - firstVisibleEvent.startTime
     const progressFactor = innerOffset / width
     const progress = progressFactor * eventLength
     EventBus.$emit('scrollTranscript', firstVisibleEvent.startTime + progress)
-    this.$emit('scroll', firstVisibleEvent.startTime + progress)
-    // })
   }
 
   handleRender(width: number, index: number, segment_id: string) {
@@ -224,16 +220,19 @@ export default class TranscriptEditor extends Vue {
 
 <style lang="stylus" scoped>
 
-@keyframes blink-animation
-  50%
+.transcript-editor-outer
+  .scrollbar
     opacity 0
+    margin-top 10px
+    transition opacity .25s
+  &:hover
+    .scrollbar
+      opacity 1
 
-@-webkit-keyframes blink-animation
-  50%
-    opacity 0
 
 .transcript-segments-inner
   will-change transform
+
 .tracks-outer
   overflow hidden
   white-space nowrap

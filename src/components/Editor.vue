@@ -153,11 +153,7 @@
           </v-list>
         </v-menu>
       </div>
-      <div slot="overview" ref="transcriptScrollbar" class="transcript-scrollbar">
-        <triangle
-          up
-          class="transcript-scrollhandle"
-          ref="transcriptScrollhandle" />
+      <div slot="overview">
         <div v-if="eventStore.audioElement !== undefined" class="error-overview-container">
           <div
             v-for="(error) in errors"
@@ -170,8 +166,7 @@
         </div>
       </div>
     </wave-form>
-    <transcript-editor @scroll="handleTranscriptScroll"
-    />
+    <transcript-editor />
   </div>
 </template>
 <script lang="ts">
@@ -184,9 +179,9 @@ import settings from '../store/settings'
 import spectrogram from './Spectrogram.vue'
 import search from './Search.vue'
 import searchResults from './SearchResults.vue'
-import transcriptEditor from '@components/TranscriptEditor.vue'
-import triangle from '@components/Triangle.vue'
-import playHead from '@components/PlayHead.vue'
+import transcriptEditor from './TranscriptEditor.vue'
+import playHead from './PlayHead.vue'
+import scrollbar from './Scrollbar.vue'
 import * as _ from 'lodash'
 import * as fns from 'date-fns'
 import * as jszip from 'jszip'
@@ -226,7 +221,7 @@ import { serverTranscript } from '../service/data-backend/server-backend'
     playHead,
     search,
     searchResults,
-    triangle
+    scrollbar
   }
 })
 export default class Editor extends Vue {
@@ -299,15 +294,6 @@ export default class Editor extends Vue {
         this.isSaving = false
       }
     }
-  }
-
-  handleTranscriptScroll(e: number) {
-    const i = (this.$refs.transcriptScrollhandle as Vue).$el
-    const outerWidth = (this.$refs.transcriptScrollbar as HTMLElement).clientWidth
-    requestAnimationFrame(() => {
-      const pixels = e / (eventStore.audioElement.duration * outerWidth);
-      (i as HTMLElement).style.transform = `translate3d(${ pixels }px, 0, 0)`
-    })
   }
 
   doShowMenu(e: MouseEvent) {
