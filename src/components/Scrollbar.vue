@@ -25,6 +25,7 @@ import EventBus from '../service/event-bus'
 @Component
 export default class Scrollbar extends Vue {
 
+  // global events to listen to
   @Prop() updateOn: string|string[]
 
   overviewTimeWidth = 70 // width of the time preview tooltip above the overview waveform
@@ -36,6 +37,21 @@ export default class Scrollbar extends Vue {
 
   beforeDestroy() {
     EventBus.$off(this.updateOn, this.moveThumbToTime)
+  }
+
+  getOffsets(x: number) {
+    const thumb = this.$refs.scrollbarThumb
+    const track = this.$refs.scrollbarTrack
+    const maxTime = eventStore.audioElement.duration
+    if (track instanceof HTMLElement && thumb instanceof HTMLElement) {
+      const scrollbarWidth = track.offsetWidth - thumb.offsetWidth
+      const offset = x - track.offsetLeft
+      const time = Math.max(0, Math.min(offset / scrollbarWidth * maxTime, maxTime))
+      const limitedOffset = Math.max(0, Math.min(offset, scrollbarWidth))
+      return { time, limitedOffset }
+    } else {
+      throw new Error('Elements not found')
+    }
   }
 
   moveThumbToTime(t: number) {
@@ -62,34 +78,25 @@ export default class Scrollbar extends Vue {
     this.updateOverviewTime(ev)
     const thumb = this.$refs.scrollbarThumb
     const track = this.$refs.scrollbarTrack
-    if (track instanceof HTMLElement && thumb instanceof HTMLElement) {
-      const scrollbarWidth = track.offsetWidth - thumb.offsetWidth
-      const offset = ev.x - track.offsetLeft
-      const time = offset / scrollbarWidth * eventStore.audioElement.duration
-      const limitedOffset = Math.max(0, Math.min(offset, scrollbarWidth))
-      this.$emit('scroll', time)
-      requestAnimationFrame(() => {
-        thumb.style.transform = `translate3d(${ limitedOffset }px, 0, 0)`
-        // localStorage.setItem('scrollPos', String(w.scrollLeft))
-      })
-    }
+    const { time, limitedOffset } = this.getOffsets(ev.x)
+    this.$emit('scroll', time)
+    requestAnimationFrame(() => {
+      (thumb as HTMLElement).style.transform = `translate3d(${ limitedOffset }px, 0, 0)`
+    })
   }
 
-  endDrag() {
+  endDrag(ev: MouseEvent) {
     this.isDragging = false
     document.removeEventListener('mousemove', this.handleDrag)
     document.removeEventListener('mouseup', this.endDrag)
+    const { time } = this.getOffsets(ev.x)
+    this.$emit('scrollend', time)
   }
 
   updateOverviewTime(e: MouseEvent) {
-    const track = this.$refs.scrollbarTrack
-    const thumb = this.$refs.scrollbarThumb
     const timer = this.$refs.overviewTime
-    if (track instanceof HTMLElement && timer instanceof HTMLElement && thumb instanceof HTMLElement) {
-      const scrollbarWidth = track.offsetWidth - thumb.offsetWidth
-      const offset = e.x - track.offsetLeft
-      const time = Math.max(0, Math.min(offset / scrollbarWidth, 1) * eventStore.audioElement.duration)
-      const limitedOffset = Math.max(0, Math.min(offset, scrollbarWidth))
+    if (timer instanceof HTMLElement) {
+      const { time, limitedOffset } = this.getOffsets(e.x)
       requestAnimationFrame(() => {
         timer.innerHTML = toTime(time)
         timer.style.transform = `translate3d(${ limitedOffset }px, 0, 0)`
