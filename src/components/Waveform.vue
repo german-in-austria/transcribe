@@ -378,12 +378,13 @@ export default class Waveform extends Vue {
     this.clearRenderCache()
   }
   endScaleX() {
-    document.removeEventListener('mouseup', this.endScaleX)
     const el = (this.$refs.svgContainer as HTMLElement)
-    const oldCenterPercent =  (el.scrollLeft + el.clientWidth / 2) / this.totalWidth
-    // console.log({oldCenterPercent})
+    const oldProgress = el.scrollLeft / this.pixelsPerSecond
     requestAnimationFrame(() => {
       this.pixelsPerSecond = this.initialPixelsPerSecond * this.scaleFactorX
+      this.$nextTick(() => {
+        this.scrollToSecond(oldProgress)
+      })
       // clear cache
       this.clearRenderCache()
       this.doMaybeRerender()
@@ -485,6 +486,7 @@ export default class Waveform extends Vue {
       const duration = e.endTime - e.startTime
       const offset = (e.startTime + duration / 2) * this.pixelsPerSecond
       const targetOffset = offset - this.$el.clientWidth / 2
+      EventBus.$emit('scrollWaveform', targetOffset / this.pixelsPerSecond)
       this.scrollToSecondSmooth(targetOffset)
     }
   }
