@@ -421,7 +421,7 @@ async function drawWave(
 }
 
 // tslint:disable-next-line:max-line-length
-async function decodeBufferSegment(fromByte: number, toByte: number, buffer: ArrayBuffer): Promise<AudioBuffer> {
+async function decodeBufferByteRange(fromByte: number, toByte: number, buffer: ArrayBuffer): Promise<AudioBuffer> {
   const headerBuffer    = getOggHeaderBuffer(buffer)
   const contentBuffer   = buffer.slice(fromByte, toByte)
   const combinedBuffer  = concatBuffer(headerBuffer, contentBuffer)
@@ -456,7 +456,7 @@ async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuff
     //   duration: to - from
     // })
     // console.log('bytes', endPage.byteOffset - startPage.byteOffset)
-    const decodedBuffer = await decodeBufferSegment(startPage.byteOffset, endPage.byteOffset, buffer)
+    const decodedBuffer = await decodeBufferByteRange(startPage.byteOffset, endPage.byteOffset, buffer)
     // TODO: WHY .2?
     const overflowStart = Math.max(0, from - startPage.timestamp + .2)
     const overflowEnd = Math.min(to - from + overflowStart, decodedBuffer.duration - overflowStart)
@@ -575,7 +575,7 @@ async function processAndStoreAudioDownloadChunk(
     if (firstPage && lastPage && audio.store.uint8Buffer.byteLength > 0) {
       try {
         console.log({lastPage})
-        audio.decodeBufferSegment(
+        audio.decodeBufferByteRange(
           audio.store.uint8Buffer.byteLength - lastPage.byteOffset,
           audio.store.uint8Buffer.byteLength,
           audio.store.uint8Buffer.buffer
@@ -645,7 +645,7 @@ const audio = {
   audioBufferToWav,
   cacheOggIndex,
   concatBuffer,
-  decodeBufferSegment,
+  decodeBufferByteRange,
   decodeBufferTimeSlice,
   downloadAudioStream,
   drawSpectrogramAsync,
