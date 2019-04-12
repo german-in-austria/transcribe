@@ -17,21 +17,14 @@
             Playback Speed
           </div>
         </v-flex>
-        <v-flex class="pt-3" xs12 align-content-center>
+        <v-flex class="pt-3 display-area" offset-xs2 xs4 align-content-center>
           <v-btn class="play-button" @click="playPause" large icon flat>
             <v-icon v-if="isPaused" x-large>play_arrow</v-icon>
             <v-icon v-else x-large>pause</v-icon>
           </v-btn>
-          <div class="current-time">
-            <!-- <span
-              v-for="(digit, i) in (toTime(currentTime, 3).split(''))"
-              :key="i"
-              class="digit">
-              {{ digit }}
-            </span> -->
-          </div>
+          <div class="current-time"></div>
         </v-flex>
-        <v-flex text-xs-left xs2>
+        <v-flex text-xs-left offset-xs2 xs2>
           <div class="caption grey--text lighten-2">
             <v-slider
               color="grey darken-4"
@@ -130,7 +123,22 @@ export default class PlayerBar extends Vue {
   }
 }
 </script>
+<style lang="stylus">
+.playerbar
+  .current-time
+    font-size 110%
+    display inline-block
+    width 155px
+    margin 0 auto
+    border-radius 1em
+    span:nth-last-child(-n+4)
+      opacity .5
+</style>
+
 <style lang="stylus" scoped>
+.display-area
+  background rgba(0,0,0,.3)
+
 .playerbar
   z-index 3
   position fixed
@@ -143,16 +151,8 @@ export default class PlayerBar extends Vue {
 .play-button
   position relative
   top 3px
-  margin-top -5px
+  margin-left -10px
+  margin-top -7px
 
-.current-time
-  font-size 110%
-  display inline-block
-  width 185px
-  background rgba(0,0,0,.15)
-  margin 0 auto
-  border-radius 1em
-  span:nth-last-child(-n+4)
-    opacity .5
 </style>
 
