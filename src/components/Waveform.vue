@@ -115,7 +115,7 @@ import scrollbar from '@components/Scrollbar.vue'
 import segmentBox from '@components/SegmentBox.vue'
 
 import settings from '../store/settings'
-import audio, { OggIndex } from '../service/audio'
+import audio from '../service/audio'
 import * as util from '../util'
 import EventBus from '../service/event-bus'
 import {

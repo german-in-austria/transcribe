@@ -1,6 +1,6 @@
 
 const registerPromiseWorker = require('promise-worker-transferable/register')
-import { OggIndex } from './audio'
+import { OggIndex, OggHeader, OggPage } from './audio'
 
 let sampleRate: number|null = null
 
@@ -28,8 +28,8 @@ export function getOggSampleRate(buffer: ArrayBuffer): number {
 
 // Post data to parent thread
 registerPromiseWorker((message: { buffer: ArrayBuffer }): {oggLength: number, oggIndex: OggIndex} => {
-  const pages: OggIndex['pages'] = []
-  const headers: OggIndex['headers'] = []
+  const pages: OggPage[] = []
+  const headers: OggHeader[] = []
 
   const uint8Array = new Uint8Array(message.buffer)
   const length = uint8Array.length

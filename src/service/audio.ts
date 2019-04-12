@@ -7,8 +7,10 @@ import * as PromiseWorker from 'promise-worker-transferable'
 import settings from '../store/settings'
 
 import WaveformWorker from './waveform.worker'
-const waveformWorker = new PromiseWorker(new WaveformWorker(''))
-const waveformWorker2 = new PromiseWorker(new WaveformWorker(''))
+const [waveformWorker1, waveformWorker2] = [
+  new PromiseWorker(new WaveformWorker('')),
+  new PromiseWorker(new WaveformWorker(''))
+]
 
 import GetFrequenciesWorker from './get-frequencies.worker'
 const getFrequenciesWorker = new PromiseWorker(new GetFrequenciesWorker(''))
@@ -32,9 +34,19 @@ export interface AudioMetaData {
   headerBuffer: ArrayBuffer|null
 }
 
+export interface OggPage {
+  byteOffset: number
+  granulePosition: number
+  timestamp: number
+}
+
+export interface OggHeader {
+  byteOffset: number
+}
+
 export interface OggIndex {
-  pages: Array<{ byteOffset: number, granulePosition: number, timestamp: number }>
-  headers: Array<{ byteOffset: number }>
+  pages: OggPage[]
+  headers: OggHeader[]
 }
 
 const ctxClass: any = (window as any).AudioContext || (window as any).webkitAudioContext
@@ -324,7 +336,7 @@ async function drawWavePathAsync(
   })()
   const options = textEncoder.encode(JSON.stringify({ width, height, offsetLeft})).buffer
   if (channel === 0) {
-    return await waveformWorker.postMessage({ buffer: buf, options }, [ buf, options ])
+    return await waveformWorker1.postMessage({ buffer: buf, options }, [ buf, options ])
   } else {
     return await waveformWorker2.postMessage({ buffer: buf, options }, [ buf, options ])
   }
@@ -420,12 +432,14 @@ async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuff
   let startPage
   let endPage
   if (oggPages.length === 0) {
+    console.log('oggPages 0')
     const adHocIndex = (await getOggIndexAsync(buffer)).pages
     // console.log({ adHocIndex })
     const pages = findOggPages(from, to + 1, adHocIndex)
     startPage = pages.startPage
     endPage = pages.endPage
   } else {
+    console.log('oggPages 0', oggPages.length)
     // console.log({oggPages})
     const pages = findOggPages(from, to + 1, oggPages)
     startPage = pages.startPage
@@ -480,7 +494,7 @@ async function getOrFetchAudioBuffer(
   try {
     return await audio.decodeBufferTimeSlice(from, to, audio.store.uint8Buffer.buffer)
   } catch (e) {
-    // console.log(e)
+    console.log(e, 'in getOrFetchAudioBuffer')
     const headerBuffer = await getOrFetchHeaderBuffer(url)
     const startByte = Math.max(fileSize * (from / audioLength) - 1024 * 1024, 0).toFixed(0)
     const endByte   = Math.min(fileSize * (to / audioLength) + 1024 * 1024, fileSize).toFixed(0)
