@@ -580,7 +580,7 @@ export default class Waveform extends Vue {
     const secondsPerDrawWidth = this.drawWidth / this.pixelsPerSecond
     const from = i * secondsPerDrawWidth
     const to = isLast ? this.audioLength : from + secondsPerDrawWidth
-    const width = isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth
+    const width = isLast ? (to - from) * this.pixelsPerSecond : this.drawWidth
     const buffer = await audio.getOrFetchAudioBuffer(
       from,
       to,
@@ -597,6 +597,7 @@ export default class Waveform extends Vue {
         audio.drawWave(buffer, width, this.height, settings.waveFormColors[0], 0),
         audio.drawWave(buffer, width, this.height, settings.waveFormColors[1], 1)
       ])
+      // console.log({from, to, svg1, svg2, width, buffer})
       svg = svg1 + svg2
     }
     if (this.$refs.svgContainer instanceof HTMLElement) {
@@ -604,6 +605,7 @@ export default class Waveform extends Vue {
         const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
         console.time('render')
         el.innerHTML = svg
+        el.style.width = `${(to - from) * this.pixelsPerSecond}px`
         console.timeEnd('render')
         this.$emit('change-metadata', {
           totalWidth: this.totalWidth,

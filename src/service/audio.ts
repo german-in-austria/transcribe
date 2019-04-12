@@ -8,8 +8,7 @@ import settings from '../store/settings'
 
 import WaveformWorker from './waveform.worker'
 const [waveformWorker1, waveformWorker2] = [
-  new PromiseWorker(new WaveformWorker('')),
-  new PromiseWorker(new WaveformWorker(''))
+  new PromiseWorker(new WaveformWorker('')), new PromiseWorker(new WaveformWorker(''))
 ]
 
 import GetFrequenciesWorker from './get-frequencies.worker'
@@ -171,10 +170,11 @@ function getOggIndex(buffer: ArrayBuffer): OggIndex {
   return { headers, pages }
 }
 
-async function cacheOggIndex(buffer: ArrayBuffer) {
+async function cacheOggIndex(buffer: ArrayBuffer): Promise<OggIndex> {
   const {pages, headers} = await getOggIndexAsync(buffer)
   oggHeaders = headers
   oggPages = pages
+  return {pages, headers}
 }
 
 function sliceAudioBuffer(buffer: AudioBuffer, start: number, end: number): Promise<AudioBuffer> {
@@ -189,7 +189,10 @@ function sliceAudioBuffer(buffer: AudioBuffer, start: number, end: number): Prom
   })
 }
 
-function findOggPages(from: number, to: number, pages: OggIndex['pages']) {
+function findOggPages(from: number, to: number, pages: OggIndex['pages']): {
+  startPage: OggPage|null,
+  endPage: OggPage|null
+} {
 
   console.time('find pages')
   // some timestamps are just too big.
@@ -198,8 +201,8 @@ function findOggPages(from: number, to: number, pages: OggIndex['pages']) {
   const errorTimestampTooBig = Math.pow(10, 6) // 1 million seconds
 
   const countPages = pages.length
-  let startPage: any = null
-  let endPage: any = null
+  let startPage: OggPage|null = null
+  let endPage: OggPage|null = null
   let i = 0
   while (i < countPages) {
     if (
@@ -426,42 +429,50 @@ async function decodeBufferSegment(fromByte: number, toByte: number, buffer: Arr
   return decodedBuffer
 }
 
-async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuffer) {
+async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuffer): Promise<AudioBuffer> {
   // console.time('decode buffer segment from ' + from + ' to ' + to)
   // TODO: this is could possible be solved a little better.
   let startPage
   let endPage
   if (oggPages.length === 0) {
-    console.log('oggPages 0')
     const adHocIndex = (await getOggIndexAsync(buffer)).pages
-    // console.log({ adHocIndex })
     const pages = findOggPages(from, to + 1, adHocIndex)
     startPage = pages.startPage
     endPage = pages.endPage
   } else {
-    console.log('oggPages 0', oggPages.length)
-    // console.log({oggPages})
     const pages = findOggPages(from, to + 1, oggPages)
+    console.log({oggPages, from, to})
     startPage = pages.startPage
     endPage = pages.endPage
   }
-  // TODO: WHY IS THERE STILL AN OFFSET OF .2?
-  const overflowStart = Math.max(0, from - startPage.timestamp + .2)
-  // console.log({
-  //   pageDuration: endPage.timestamp - startPage.timestamp,
-  //   start: overflowStart,
-  //   end: to - from + overflowStart,
-  //   duration: to - from
-  // })
-  // console.log('bytes', endPage.byteOffset - startPage.byteOffset)
-  const decodedBuffer = await decodeBufferSegment(startPage.byteOffset, endPage.byteOffset, buffer)
-  // console.log('decoded buffer duration', decodedBuffer.duration)
-  // tslint:disable-next-line:max-line-length
-  // console.log('start end', overflowStart * 1000, (to - from + overflowStart) * 1000)
-  const slicedBuffer = await sliceAudioBuffer(decodedBuffer, overflowStart * 1000, (to - from + overflowStart) * 1000)
-  // console.timeEnd('decode buffer segment from ' + from + ' to ' + to)
-  // console.log({slicedDuration: slicedBuffer.duration})
-  return slicedBuffer
+  if (startPage === null || endPage === null) {
+    console.log({startPage, endPage})
+    throw new Error('Could not find all required pages')
+  } else {
+    // console.log({
+    //   pageDuration: endPage.timestamp - startPage.timestamp,
+    //   start: overflowStart,
+    //   end: to - from + overflowStart,
+    //   duration: to - from
+    // })
+    // console.log('bytes', endPage.byteOffset - startPage.byteOffset)
+    const decodedBuffer = await decodeBufferSegment(startPage.byteOffset, endPage.byteOffset, buffer)
+    // TODO: WHY .2?
+    const overflowStart = Math.max(0, from - startPage.timestamp + .2)
+    const overflowEnd = Math.min(to - from + overflowStart, decodedBuffer.duration - overflowStart)
+    console.log('decoded buffer duration', decodedBuffer.duration)
+    console.log('start end', overflowStart, overflowEnd)
+    try {
+      const slicedBuffer = await sliceAudioBuffer(decodedBuffer, overflowStart * 1000, overflowEnd * 1000)
+      console.log(slicedBuffer.duration, 'sliced buffer duration')
+      // console.timeEnd('decode buffer segment from ' + from + ' to ' + to)
+      // console.log({slicedDuration: slicedBuffer.duration})
+      return slicedBuffer
+    } catch (e) {
+      console.error(e)
+      return decodedBuffer
+    }
+  }
 }
 
 async function getOrFetchHeaderBuffer(url: string): Promise<ArrayBuffer|null> {
@@ -494,21 +505,16 @@ async function getOrFetchAudioBuffer(
   try {
     return await audio.decodeBufferTimeSlice(from, to, audio.store.uint8Buffer.buffer)
   } catch (e) {
-    console.log(e, 'in getOrFetchAudioBuffer')
+    console.log('could not find audio range locally, attempting download…', {from, to, audioLength}, e)
     const headerBuffer = await getOrFetchHeaderBuffer(url)
     const startByte = Math.max(fileSize * (from / audioLength) - 1024 * 1024, 0).toFixed(0)
     const endByte   = Math.min(fileSize * (to / audioLength) + 1024 * 1024, fileSize).toFixed(0)
-    // tslint:disable-next-line:max-line-length
-    // console.log('DOWNLOADING AUDIO SEGMENT', {startByte, endByte}, (Number(endByte) - Number(startByte)) / 1024, 'MB')
-    // console.time('buffer segment download')
     const buffer = await (await fetch(url, {
       credentials: 'include',
       headers: { Range: `bytes=${startByte}-${endByte}` }
     })).arrayBuffer()
-    // console.timeEnd('buffer segment download')
     const { pages } = await audio.getOggIndexAsync(buffer)
     const trimmedBuffer = buffer.slice(pages[0].byteOffset, pages[pages.length - 1].byteOffset)
-    // console.log({ headerBuffer, trimmedBuffer })
     const combinedBuffer = audio.concatBuffer(headerBuffer, trimmedBuffer)
     return await audio.decodeBufferTimeSlice(from, to, combinedBuffer)
   }
@@ -553,6 +559,36 @@ async function getAudioMetadata(url: string): Promise<AudioMetaData> {
   }
 }
 
+async function processAndStoreAudioDownloadChunk(
+  b: Uint8Array,
+  c: (chunk: AudioBuffer, from: number, to: number) => any
+) {
+  const {headers, pages} = await audio.getOggIndexAsync(b.buffer)
+  const buffers = await util.concatUint8ArrayAsync(audio.store.uint8Buffer, b)
+  audio.store.uint8Buffer = buffers[0]
+  if (headers.length > 0) {
+    audio.store.oggHeaders = audio.store.oggHeaders.concat(headers)
+  }
+  if (pages.length > 0) {
+    const firstPage = pages[0]
+    const lastPage = pages[pages.length - 1]
+    if (firstPage && lastPage && audio.store.uint8Buffer.byteLength > 0) {
+      try {
+        console.log({lastPage})
+        audio.decodeBufferSegment(
+          audio.store.uint8Buffer.byteLength - lastPage.byteOffset,
+          audio.store.uint8Buffer.byteLength,
+          audio.store.uint8Buffer.buffer
+        ).then((decoded) => {
+          c(decoded, firstPage.timestamp, lastPage.timestamp)
+        })
+      } catch (e) {
+        console.log('streaming decoder error', e)
+      }
+    }
+  }
+}
+
 async function downloadAudioStream({
     url,
     chunkSize = 2048 * 1024,
@@ -576,29 +612,8 @@ async function downloadAudioStream({
         if (chunk.value && chunk.value.buffer instanceof ArrayBuffer) {
           [ preBuffer ] = await util.concatUint8ArrayAsync(preBuffer, chunk.value)
           if (preBuffer.byteLength > chunkSize) {
-            const {headers, pages} = await audio.getOggIndexAsync(preBuffer.buffer)
-            const buffers = await util.concatUint8ArrayAsync(audio.store.uint8Buffer, preBuffer)
-            audio.store.uint8Buffer = buffers[0]
+            await processAndStoreAudioDownloadChunk(preBuffer, onProgress)
             preBuffer = new Uint8Array(0)
-            if (headers.length > 0) {
-              audio.store.oggHeaders = audio.store.oggHeaders.concat(headers)
-            }
-            if (pages.length > 0) {
-              const firstPage = pages[0]
-              const lastPage = pages[pages.length - 1]
-              if (firstPage && lastPage && audio.store.uint8Buffer.byteLength > 0) {
-                try {
-                  const decoded = await audio.decodeBufferSegment(
-                    audio.store.uint8Buffer.byteLength - lastPage.byteOffset,
-                    audio.store.uint8Buffer.byteLength,
-                    audio.store.uint8Buffer.buffer
-                  )
-                  onProgress(decoded, firstPage.timestamp, lastPage.timestamp)
-                } catch (e) {
-                  console.log('streaming decoder error', e)
-                }
-              }
-            }
           }
         } else {
           console.log('received non-buffer', chunk)
@@ -606,6 +621,7 @@ async function downloadAudioStream({
         if (chunk.done === false) {
           return reader.read().then(process)
         } else {
+          await processAndStoreAudioDownloadChunk(preBuffer, onProgress)
           audio.store.isBufferComplete = true
           audio.cacheOggIndex(audio.store.uint8Buffer.buffer)
         }
@@ -646,6 +662,6 @@ const audio = {
 }
 
 ;
-(window as any)._audio = audio
+(window as any)._audioStore = audio.store
 
 export default audio
