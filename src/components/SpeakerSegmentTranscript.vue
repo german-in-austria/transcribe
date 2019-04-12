@@ -58,7 +58,7 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
 import { clone, isEqualDeep, requestFrameAsync } from '../util'
 import {
-  updateSpeakerTokens,
+  updateSpeakerEvent,
   LocalTranscriptEvent,
   eventStore,
   LocalTranscriptToken,
@@ -103,7 +103,7 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   settings = settings
   playEvent = playEvent
-  updateSpeakerTokens = updateSpeakerTokens
+  updateSpeakerEvent = updateSpeakerEvent
 
   // TODO: redundant.
   @Watch('event')
@@ -118,6 +118,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   getTierFreeTextText(tierName: string) {
     return (
       this.localEvent.speakerEvents[this.speaker] !== undefined &&
+      this.localEvent.speakerEvents[this.speaker].speakerEventTiers !== undefined &&
       this.localEvent.speakerEvents[this.speaker].speakerEventTiers[tierName] !== undefined
         ? (this.localEvent.speakerEvents[this.speaker].speakerEventTiers[tierName] as TierFreeText).text
         : ''
@@ -216,7 +217,7 @@ export default class SpeakerSegmentTranscript extends Vue {
       !isEqualDeep(this.localTokens, this.event.speakerEvents[this.speaker].tokens)
     ) {
       // perform update
-      updateSpeakerTokens(this.localEvent, this.speaker, this.localTokens)
+      updateSpeakerEvent(this.localEvent, this.speaker, this.localTokens)
     } else {
       // nothing to update
     }
@@ -237,7 +238,8 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   updateAndCommitLocalTokenTier(e: Event, tierName: string, i: number) {
-    this.localTokens[i].tiers[tierName].text = (e.target as HTMLElement).textContent as string
+    const text = (e.target as HTMLElement).textContent as string
+    this.localTokens[i].tiers[tierName] = { text, type: null }
     this.commit()
   }
 
@@ -322,8 +324,7 @@ export default class SpeakerSegmentTranscript extends Vue {
     this.focused = false
     const text = (e.target as HTMLDivElement).textContent
     if (text !== null && text !== '') {
-      updateSpeakerTokens(this.event, this.speaker, this.tokens)
-      this.$emit('update-speaker-event', this.tokens)
+      updateSpeakerEvent(this.event, this.speaker, this.tokens)
     }
   }
 

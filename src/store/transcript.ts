@@ -329,7 +329,7 @@ function setFirstTokenFragmentOf(
   }
 }
 
-export function updateSpeakerTokens(
+export function updateSpeakerEvent(
   event: LocalTranscriptEvent,
   speakerId: number,
   tokens: LocalTranscriptToken[],
@@ -343,6 +343,7 @@ export function updateSpeakerTokens(
       ...oldEvent.speakerEvents,
       [speakerId] : {
         speakerEventId: event.eventId,
+        speakerEventTiers: {},
         tokens
       }
     })
