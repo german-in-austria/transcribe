@@ -1,4 +1,4 @@
-import * as _ from 'lodash'
+import _ from 'lodash'
 
 interface BasicNode {
   attributes: object
@@ -49,13 +49,22 @@ interface TierEvent {
   text: string
 }
 
+interface Tier {
+  category: string
+  display_name: string
+  events: TierEvent[]
+  type: string
+}
+
+interface SpeakerTier extends Tier {
+  speaker_name: string
+  select_for_import: boolean
+  to_tier_type: string|null
+  to_speaker: string|null
+}
+
 interface Tiers {
-  [key: string]: {
-    category: string
-    display_name: string
-    events: TierEvent[]
-    type: string
-  }
+  [key: string]: Tier
 }
 
 interface Timeline {
@@ -69,6 +78,7 @@ interface Speakers {
 export interface ParsedXML {
   timeline: Timeline
   speakers: Speakers
+  speakerTiers: SpeakerTier[]
 }
 
 export default function parseTree(xmlTree: BasicNode): ParsedXML {
@@ -114,7 +124,16 @@ export default function parseTree(xmlTree: BasicNode): ParsedXML {
           .value()
         return {
           timeline: commonTimelineByTli,
-          speakers: tiersBySpeakers
+          speakers: tiersBySpeakers,
+          speakerTiers: _(tiersBySpeakers).reduce((m, el, i, l) => {
+            return m.concat(_(el).map(v => ({
+              speaker_name: i,
+              select_for_import: true,
+              to_speaker: null,
+              to_tier_type: null,
+              ...v
+            })).value())
+          }, [] as any[])
         }
       } else {
         throw new Error('cannot parse xml')

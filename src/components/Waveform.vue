@@ -152,15 +152,15 @@ export default class Waveform extends Vue {
   // config
   zoomLevels = [.25, .5, .75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4]
   drawDistance = 5000 // pixels in both directions from the center of the viewport (left and right)
-  initialPixelsPerSecond = 150
-  overviewSvgWidth = 1500 // width of the overview waveform in logical pixels
+  initialPixelsPerSecond = 150 // this the initial real zoom value
+  overviewSvgWidth = 1500 // width of the overview waveform in pixels
 
   // bind stores
   settings = settings
   userState = eventStore.userState
   eventStore = eventStore
+
   // state
-  isScrollingFromOverview = false
   pixelsPerSecond = this.initialPixelsPerSecond // copied on init, not bound.
   disabled = false
   loading = false

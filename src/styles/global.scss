@@ -59,6 +59,7 @@ img[lazy=loaded] {
   font-size: 1.4em !important;
 }
 .v-menu__content, .context-menu {
+  border: 1px solid #616161;
   border-radius: 4px;
   box-shadow: 0 5px 30px rgba(0,0,0,.2);
 }
@@ -96,6 +97,12 @@ img[lazy=loaded] {
 .theme--dark.v-list .v-list--disabled
 .theme--dark.v-icon {
   color: #666
+}
+
+.ellipsis{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cursor-pointer{

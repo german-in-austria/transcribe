@@ -10,6 +10,7 @@
     <v-content class="main-content">
       <v-container fluid fill-height class="pa-0">
         <exmeralda-importer
+          @close="parsedExmeraldaFile = null"
           v-if="parsedExmeraldaFile !== null"
           :tree="parsedExmeraldaFile" />
         <vue-full-screen-file-drop
@@ -118,7 +119,7 @@ import exmeraldaImporter from './ExmeraldaImporter.vue'
 import * as jszip from 'jszip'
 import audio from '../service/audio'
 import settings from '../store/settings'
-import { ParsedXML } from '../service/transcript-parser'
+import { ParsedXML } from '../service/exmeralda-parser'
 import { LocalTranscriptEvent, eventStore, speakerEventHasErrors, ServerTranscript } from '../store/transcript'
 import { getTranscript, mergeServerTranscript } from '../service/data-backend/server-backend'
 import { loadExmeraldaFile } from '../service/data-backend/exmaralda-backend'
@@ -204,48 +205,61 @@ export default class App extends Vue {
     return file.type.includes('/xml') || file.name.includes('.exb')
   }
 
+  async openProjectFile(f: File) {
+    this.importingLocalFile = true
+    const zip = new jszip()
+    await zip.loadAsync(f)
+    const audioBuffer = await zip.file('audio.ogg').async('uint8array')
+    const sT = JSON.parse(await zip.file('transcript.json').async('text')) as ServerTranscript
+    const eS = JSON.parse(await zip.file('eventStore.json').async('text'))
+    const overviewSvg = await zip.file('overview.svg').async('text')
+    const blob = new Blob([audioBuffer], { type: 'audio/ogg' })
+    const u = URL.createObjectURL(blob)
+    const a = document.createElement('audio')
+    audio.store.uint8Buffer = audioBuffer
+    a.src = u
+    a.addEventListener('durationchange', () => {
+      this.importingLocalFile = false
+      this.loadingTranscriptId = null
+      eventStore.events = eS.events
+      mergeServerTranscript(sT)
+      localStorage.setItem(u + '_overview', overviewSvg)
+      audio.store.isLocalFile = true
+      eventStore.selectedEventIds = eS.selectedEventIds
+      eventStore.backEndUrl = eS.backEndUrl
+      eventStore.selectedSearchResult = eS.selectedSearchResult
+      eventStore.searchResults = eS.searchResults
+      eventStore.searchTerm = eS.searchTerm
+      eventStore.metadata = eS.metadata
+      eventStore.userState = eS.userState
+      eventStore.transcriptDownloadProgress = eS.transcriptDownloadProgress
+      eventStore.audioElement = a
+      eventStore.status = 'finished'
+    })
+  }
+
+  openExmeraldaFile(f: File) {
+    this.importingLocalFile = true
+    const reader = new FileReader()
+    reader.onload = (e: ProgressEvent) => {
+      this.parsedExmeraldaFile = loadExmeraldaFile(f.name, (e.target as FileReaderEventTarget).result)
+      // console.log(x)
+      this.importingLocalFile = false
+    }
+    reader.readAsText(f, 'UTF-8')
+  }
+
   openFile() {
     const x = document.createElement('input')
     x.type = 'file'
     x.accept = '.zip,.transcript,.json,.exb'
     x.addEventListener('change', async (e) => {
-      console.log(e)
-      console.log(x.files)
-      if (x.files !== null && x.files[0].name.endsWith('.transcript')) {
-        this.importingLocalFile = true
-        const f = x.files[0]
-        const zip = new jszip()
-        await zip.loadAsync(f)
-        const audioBuffer = await zip.file('audio.ogg').async('uint8array')
-        const sT = JSON.parse(await zip.file('transcript.json').async('text')) as ServerTranscript
-        const eS = JSON.parse(await zip.file('eventStore.json').async('text'))
-        const overviewSvg = await zip.file('overview.svg').async('text')
-        const blob = new Blob([audioBuffer], { type: 'audio/ogg' })
-        const u = URL.createObjectURL(blob)
-        const a = document.createElement('audio')
-        audio.store.uint8Buffer = audioBuffer
-        a.src = u
-        a.addEventListener('durationchange', () => {
-          this.importingLocalFile = false
-          this.loadingTranscriptId = null
-          eventStore.events = eS.events
-          mergeServerTranscript(sT)
-          localStorage.setItem(u + '_overview', overviewSvg)
-          audio.store.isLocalFile = true
-          eventStore.selectedEventIds = eS.selectedEventIds
-          eventStore.backEndUrl = eS.backEndUrl
-          eventStore.selectedSearchResult = eS.selectedSearchResult
-          eventStore.searchResults = eS.searchResults
-          eventStore.searchTerm = eS.searchTerm
-          eventStore.metadata = eS.metadata
-          eventStore.userState = eS.userState
-          eventStore.transcriptDownloadProgress = eS.transcriptDownloadProgress
-          eventStore.audioElement = a
-          eventStore.status = 'finished'
-        })
-      } else if (x.files !== null && x.files[0].name.endsWith('.exb')) {
-        this.importingLocalFile = true
-        const f = x.files[0]
+      if (x.files !== null) {
+        if (x.files[0].name.endsWith('.transcript')) {
+          this.openProjectFile(x.files[0])
+        } else if (x.files[0].name.endsWith('.exb')) {
+          this.openExmeraldaFile(x.files[0])
+        }
       }
     })
     x.click()
