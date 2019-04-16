@@ -5,8 +5,7 @@ import { platform } from './util'
 import VueRouter from 'vue-router'
 import * as fontLoader from 'webfontloader'
 import Vuetify from 'vuetify'
-// import store from './store'
-import VueLazyload from 'vue-lazyload'
+import * as VueLazyload from 'vue-lazyload'
 
 Vue.config.devtools = true
 Vue.config.performance = true
