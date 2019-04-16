@@ -44,6 +44,10 @@ declare module 'vue-scrollto' {
   export default x
 }
 
+declare module 'vue-virtual-scroller' {
+  const x: any
+  export default x
+}
 declare module 'human-size'
 declare module 'vue-full-screen-file-drop'
 declare module 'promise-worker-transferable'
