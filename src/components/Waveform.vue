@@ -69,7 +69,7 @@
       </div>
     </div>
     <v-layout row style="margin-top: -40px; padding-bottom: 20px;">
-      <v-flex class="ml-3">
+      <v-flex xs12 class="ml-3">
         <scrollbar class="scrollbar" update-on="scrollWaveform" @scroll="scrollFromScrollbar" />
         <div
           class="overview"
