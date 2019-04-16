@@ -180,7 +180,7 @@ const settings: Settings = {
     },
     {
       name: 'interrupted',
-      regex: /([\w]{1,}\/)/u,
+      regex: /([a-zA-ZÜüÄäÖöß]+\/)/u,
       color: '#6699CC',
       id: 6
     },
