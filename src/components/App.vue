@@ -5,7 +5,7 @@
       v-model="drawer"
       right
       app>
-      <sidebar/>
+      <sidebar disable-resize-watcher :active="drawer"/>
     </v-navigation-drawer>
     <v-content class="main-content">
       <v-container fluid fill-height class="pa-0">

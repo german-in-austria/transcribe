@@ -45,8 +45,7 @@ declare module 'vue-scrollto' {
 }
 
 declare module 'vue-virtual-scroller' {
-  const x: any
-  export default x
+  export const RecycleScroller: any
 }
 declare module 'human-size'
 declare module 'vue-full-screen-file-drop'

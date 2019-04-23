@@ -1,5 +1,5 @@
 <template>
-  <v-tabs hide-slider class="sidebar layout fill-height column" height="64" grow v-model="activeTab">
+  <v-tabs v-if="active" hide-slider class="sidebar layout fill-height column" height="64" grow v-model="activeTab">
     <v-tab ripple>History</v-tab>
     <v-tab ripple>
       <v-badge :value="errors.length > 0" color="grey">
@@ -67,6 +67,8 @@ interface ErrorEvent extends LocalTranscriptEvent {
 })
 export default class Sidebar extends Vue {
 
+  @Prop() active: boolean
+
   errors: ErrorEvent[] = []
   history = history
   activeTab = 0
@@ -113,8 +115,12 @@ export default class Sidebar extends Vue {
 </script>
 <style lang="stylus">
 .sidebar-scrollable
-  overflow-y auto
   margin-bottom 70px
+  height calc(100% - 140px)
+  .v-window__container
+  .v-window-item
+  .v-list
+    height 100%
   .title
     height 19px
     
