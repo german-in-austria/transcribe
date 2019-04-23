@@ -8,16 +8,39 @@
     content-class="dialog"
     max-width="1200">
     <v-card>
-      <v-card-title class="display-block text-xs-center">
+      <v-card-title class="display-block text-xs-center grey--text">
         <v-spacer />Import Exmaralda File<v-spacer />
       </v-card-title>
       <v-divider />
-      <v-card-text>
+      <v-card-text class="pa-0">
         <v-window v-model="step">
           <v-window-item :value="1">
-            <v-layout class="pb-4 mt-5">
+            <div class="explainer">
+              <h1>Assign Tiers and Speakers</h1>
+              <p>
+                Choose which tiers you want to import from your Exmeralda File on the left,
+                and assign them the correct speaker and tier type.
+              </p>
+              <p>
+                Keep in mind that you have to select <b>exactly one</b> default tier per speaker,
+                as it forms the basis for any token related metadata.
+              </p>
+            </div>
+            <v-layout class="pl-3 pb-2 pt-2 table-header">
               <v-flex class="pl-3" xs1>
-                <v-checkbox hide-details class="mt-0" :value="isEverythingSelected" />
+                <v-tooltip z-index="999" top>
+                  <v-checkbox
+                    slot="activator"
+                    color="white"
+                    hide-details
+                    class="mt-0"
+                    @change="updateAllSelections"
+                    :indeterminate="isAnythingOrAllSelected === null"
+                    :input-value="isAnythingOrAllSelected"
+                  />
+                  <span v-if="isAnythingOrAllSelected === true">select none</span>
+                  <span v-else>select all</span>
+                </v-tooltip>
               </v-flex>
               <v-flex class="grey--text caption pt-2" xs6>
                 From Exmaralda File
@@ -26,68 +49,133 @@
                 To Speakers and Tiers
               </v-flex>
             </v-layout>
-            <v-layout class="mb-3" v-for="(speakerTier, i) in tree.speakerTiers" :key="i">
-              <v-flex class="pl-3" xs1>
-                <v-checkbox v-model="speakerTier.select_for_import" />
-              </v-flex>
-              <v-flex xs6>
-                <h4 class="ellipsis">{{ speakerTier.display_name }} <span class="caption grey--text">— {{ speakerTier.speaker_name }}</span></h4>
-                <v-chip small>
-                  <label>category</label>{{ speakerTier.category }}
-                </v-chip>
-                <v-chip small>
-                  <label>type</label> {{ speakerTier.type }}
-                </v-chip>
-                <v-chip small>
-                  <label>events</label> {{ speakerTier.events.length }}
-                </v-chip>
-              </v-flex>
-              <v-flex xs2 class="pl-2 pr-2">
-                <v-select label="Speaker" item-text="Kuerzel_anonym" dense :items="speakers">
-                  <template slot="item" slot-scope="item">
-                    <v-list-tile-content>
-                      <v-list-tile-title>
-                        {{ item.item.Kuerzel_anonym }}
-                      </v-list-tile-title>
-                    </v-list-tile-content>
-                    <v-list-tile-action-text class="pl-5">
-                      {{ item.item.Vorname }} {{ item.item.Name }}, {{ item.item.Geburtsdatum }}
-                    </v-list-tile-action-text>
-                  </template>
-                </v-select>
-              </v-flex>
-              <v-flex xs2>
-                <v-select
-                  dense
-                  label="Tier Type"
-                  :items="[{ text: 'default', value: 'default' }, { text: 'tokenized', value: 'tokenized'}, { text: 'free text', value: 'freeText' }]" />
-              </v-flex>
-            </v-layout>
+            <v-form
+              class="pb-5"
+              ref="form"
+              v-model="valid"
+              lazy-validation>
+              <v-layout class="pl-3 pt-3" v-for="(speakerTier, i) in tree.speakerTiers" :key="i">
+                <v-flex class="pl-3" xs1>
+                  <v-checkbox
+                    class="pt-0"
+                    @change="updateIsEverthingSelected"
+                    v-model="speakerTier.select_for_import"
+                  />
+                </v-flex>
+                <v-flex xs6 :class="[!speakerTier.select_for_import && 'disabled']">
+                  <h4 class="ellipsis">{{ speakerTier.display_name }} <span class="caption grey--text">— {{ speakerTier.speaker_name }}</span></h4>
+                  <v-chip small>
+                    <label>category</label>{{ speakerTier.category }}
+                  </v-chip>
+                  <v-chip small>
+                    <label>type</label> {{ speakerTier.type }}
+                  </v-chip>
+                  <v-chip small>
+                    <label>events</label> {{ speakerTier.events.length }}
+                  </v-chip>
+                </v-flex>
+                <v-flex xs2 :class="[!speakerTier.select_for_import && 'disabled']" class="pl-2 pr-2">
+                  <v-select
+                    :rules="[ speakerTier.select_for_import && speakerTier.to_speaker === null && 'Select a Speaker' ]"
+                    dense
+                    label="Speaker"
+                    v-model="speakerTier.to_speaker"
+                    item-text="Kuerzel_anonym"
+                    :items="speakers">
+                    <template slot="item" slot-scope="item">
+                      <v-list-tile-content>
+                        <v-list-tile-title>
+                          {{ item.item.Kuerzel_anonym }}
+                        </v-list-tile-title>
+                      </v-list-tile-content>
+                      <v-list-tile-action-text class="pl-5">
+                        {{ item.item.Vorname }} {{ item.item.Name }}, {{ item.item.Geburtsdatum }}
+                      </v-list-tile-action-text>
+                    </template>
+                  </v-select>
+                </v-flex>
+                <v-flex :class="[!speakerTier.select_for_import && 'disabled']" xs2>
+                  <v-select
+                    :rules="[
+                      speakerTier.select_for_import && speakerTier.to_tier_type === null && 'Select a Type',
+                      isDuplicateDefaultTierForSpeaker(speakerTier) && 'Select one Default Tier per Speaker'
+                    ]"
+                    dense
+                    v-model="speakerTier.to_tier_type"
+                    label="Tier Type"
+                    :items="[{
+                      text: 'default',
+                      value: 'default',
+                      disabled: isDefaultTierSelectedForSpeaker(speakerTier.to_speaker),
+                      comment: 'the base transcript'
+                    }, {
+                      text: 'token data',
+                      value: 'tokenized',
+                      comment: 'metadata for tokens'
+                    }, {
+                      text: 'free text',
+                      value: 'freeText',
+                      comment: 'event based, e.g. comments'
+                    }]">
+                    <template slot="item" slot-scope="item">
+                      <v-list-tile-content>
+                        <v-list-tile-title>
+                          {{ item.item.text }}
+                        </v-list-tile-title>
+                      </v-list-tile-content>
+                      <v-list-tile-action-text class="pl-5">
+                        {{ item.item.comment }}
+                      </v-list-tile-action-text>
+                    </template>
+                  </v-select>
+                </v-flex>
+              </v-layout>
+            </v-form>
           </v-window-item>
           <v-window-item :value="2">
-            add an audio file
+            <div class="explainer">
+              <h1>Add your Audio File</h1>
+              <p>
+                Must be in OGG/Vorbis format. Use Audacity to convert it.
+              </p>
+            </div>
+            <drop-file />
           </v-window-item>
         </v-window>
       </v-card-text>
       <v-divider />
-      <v-card-actions class="text-xs-right">
-        <v-spacer />
+      <v-card-actions class="text-xs-right pa-3">
         <v-btn flat @click="$emit('close')">Cancel</v-btn>
-        <v-btn color="primary" flat @click="step++">Next</v-btn>
+        <v-spacer />
+        <v-btn large :disabled="step === 1" color="primary" flat @click="step--">Back</v-btn>
+        <v-btn large
+          :color="valid ? 'primary' : 'red'"
+          class="elevation-0"
+          :disabled="!valid"
+          @click="validateAndNext">
+          Next
+        </v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
 <script lang='ts'>
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { ParsedXML } from '@service/exmeralda-parser'
+import { ParsedExmeraldaXML, SpeakerTier } from '@service/exmeralda-parser'
+import DropFile from './DropFile.vue'
 import _ from 'lodash'
 
-@Component
+@Component({
+  components: {
+    DropFile
+  }
+})
 export default class ExmeraldaImporter extends Vue {
 
-  @Prop() tree: ParsedXML|null
+  @Prop() tree: ParsedExmeraldaXML|null
   step = 1
+  valid = false
+  isAnythingOrAllSelected: boolean|null = true
   speakers = [
     {
       id : 1,
@@ -616,28 +704,93 @@ export default class ExmeraldaImporter extends Vue {
     }
   ]
 
-  get isEverythingSelected() {
-    if (this.tree !== null) {
-      return _(this.tree.speakerTiers).every(st => st.select_for_import)
-    } else {
-      return false
-    }
-  }
-
-  get sortedSpeakerTiers() {
-    if (this.tree !== null) {
-      return _(this.tree.speakerTiers).sortBy('display_name')
-    } else {
+  getSelectedDefaultTierForSpeaker(to_speaker: string): SpeakerTier[] {
+    if (this.tree === null) {
       return []
+    } else {
+      return this.tree.speakerTiers.filter(t => {
+        return (
+          t.to_speaker === to_speaker &&
+          t.to_tier_type === 'default' &&
+          t.select_for_import === true
+        )
+      })
     }
   }
 
-  mounted() {
-    console.log({tree: this.tree})
+  isDefaultTierSelectedForSpeaker(to_speaker: string): boolean {
+    return this.getSelectedDefaultTierForSpeaker(to_speaker).length === 1
   }
+
+  speakerHasDuplicateDefaultTiers(to_speaker: string): boolean {
+    return this.getSelectedDefaultTierForSpeaker(to_speaker).length > 1
+  }
+
+  isDuplicateDefaultTierForSpeaker(speakerTier: SpeakerTier): boolean {
+    if (
+      speakerTier.select_for_import === false ||
+      speakerTier.to_tier_type !== 'default' ||
+      speakerTier.to_speaker === null
+    ) {
+      return false
+    } else {
+      if (this.tree !== null && this.speakerHasDuplicateDefaultTiers(speakerTier.to_speaker)) {
+        return true
+      } else {
+        return false
+      }
+    }
+  }
+
+  updateAllSelections(v: boolean) {
+    if (this.tree !== null) {
+      this.tree.speakerTiers = this.tree.speakerTiers.map((t) => {
+        return { ...t, select_for_import: v }
+      })
+      this.updateIsEverthingSelected()
+    }
+  }
+
+  validateAndNext() {
+    if ((this.$refs.form as any).validate()) {
+      this.step = this.step + 1
+    }
+  }
+
+  updateIsEverthingSelected() {
+    if (this.tree !== null) {
+      const every = _(this.tree.speakerTiers).every(t => t.select_for_import)
+      console.log({every})
+      if (every) {
+        this.isAnythingOrAllSelected = true
+      } else {
+        const some = _(this.tree.speakerTiers).some(t => t.select_for_import)
+        console.log({some})
+        if (some) {
+          this.isAnythingOrAllSelected = null
+        } else {
+          this.isAnythingOrAllSelected = false
+        }
+      }
+    }
+  }
+
 }
 </script>
 <style lang="stylus" scoped>
+
+.table-header
+  position sticky
+  top 0
+  background #353535
+  z-index 2
+
+.v-form > .layout:nth-child(odd)
+  background rgba(255,255,255,.05)
+
+.disabled
+  opacity .5
+  pointer-events none
 
 .v-chip__content label
   background rgba(255,255,255,.1)

@@ -1,4 +1,4 @@
-import parseTree, { ParsedXML } from '../exmeralda-parser'
+import parseTree, { ParsedExmeraldaXML } from '../exmeralda-parser'
 import { makeEventId } from '../../store/transcript'
 import * as parseXML from '@rgrove/parse-xml'
 import _ from 'lodash'
@@ -29,11 +29,11 @@ interface SpeakerEvent {
 
 let transcript: Transcript|null = null
 
-export function loadExmeraldaFile(fileName: string, xml: string): ParsedXML {
+export function loadExmeraldaFile(fileName: string, xml: string): ParsedExmeraldaXML {
   return parseTree(parseXML(xml))
 }
 
-export function transcriptTreeToTranscribable(tree: ParsedXML, name: string): Transcript {
+export function transcriptTreeToTranscribable(tree: ParsedExmeraldaXML, name: string): Transcript {
   console.log({tree})
   const speakers = _(tree.speakers).map((v, k) => k).value()
   const segments = _(tree.speakers)

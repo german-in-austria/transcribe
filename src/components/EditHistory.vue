@@ -52,9 +52,9 @@
             </v-list-tile-sub-title>
           </v-list-tile-content>
           <v-list-tile-action>
-            <v-btn icon @click="" class="undo-btn">
+            <!-- <v-btn icon @click="" class="undo-btn">
               <v-icon>undo</v-icon>
-            </v-btn>
+            </v-btn> -->
           </v-list-tile-action>
         </v-list-tile>
       </template>

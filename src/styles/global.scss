@@ -99,6 +99,23 @@ img[lazy=loaded] {
   color: #666
 }
 
+.explainer{
+  text-align: center;
+  padding: 48px;
+}
+
+.explainer h1{
+  font-weight: 300;
+  font-size: 3em;
+}
+
+.explainer p{
+  font-size: 1.3em;
+  max-width: 34em;
+  margin: .7em auto;
+  opacity: .7;
+}
+
 .ellipsis{
   white-space: nowrap;
   overflow: hidden;

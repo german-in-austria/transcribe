@@ -13,11 +13,11 @@
           @close="parsedExmeraldaFile = null"
           v-if="parsedExmeraldaFile !== null"
           :tree="parsedExmeraldaFile" />
-        <vue-full-screen-file-drop
+        <!-- <vue-full-screen-file-drop
           class="file-dropper"
           @drop='onFileDrop'>
           &nbsp;
-        </vue-full-screen-file-drop>
+        </vue-full-screen-file-drop> -->
         <v-layout
           v-if="eventStore.status === 'empty'"
           class="max-width pick-transcript-container"
@@ -111,15 +111,15 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
 import playerBar from './PlayerBar.vue'
-import 'vue-full-screen-file-drop/dist/vue-full-screen-file-drop.css'
-import VueFullScreenFileDrop from 'vue-full-screen-file-drop'
+// import 'vue-full-screen-file-drop/dist/vue-full-screen-file-drop.css'
+// import VueFullScreenFileDrop from 'vue-full-screen-file-drop'
 import editor from './Editor.vue'
 import sidebar from './Sidebar.vue'
 import exmeraldaImporter from './ExmeraldaImporter.vue'
 import * as jszip from 'jszip'
 import audio from '../service/audio'
 import settings from '../store/settings'
-import { ParsedXML } from '../service/exmeralda-parser'
+import { ParsedExmeraldaXML } from '../service/exmeralda-parser'
 import { LocalTranscriptEvent, eventStore, speakerEventHasErrors, ServerTranscript } from '../store/transcript'
 import { getTranscript, mergeServerTranscript } from '../service/data-backend/server-backend'
 import { loadExmeraldaFile } from '../service/data-backend/exmaralda-backend'
@@ -133,7 +133,7 @@ interface FileReaderEventTarget extends EventTarget {
     editor,
     exmeraldaImporter,
     sidebar,
-    VueFullScreenFileDrop,
+    // VueFullScreenFileDrop,
     playerBar
   }
 })
@@ -150,7 +150,7 @@ export default class App extends Vue {
   loggedIn = true
   eventStore = eventStore
   log = console.log
-  parsedExmeraldaFile: ParsedXML|null = null
+  parsedExmeraldaFile: ParsedExmeraldaXML|null = null
   errorMessage: string|null = null
   backEndUrls = [
     'https://dissdb.dioe.at',
@@ -265,38 +265,38 @@ export default class App extends Vue {
     x.click()
   }
 
-  onFileDrop(formData: FormData, files: FileList) {
-    console.log(files[0].type)
-    _(files).forEach(file => {
-      if (this.isAudio(file)) {
-        const x = URL.createObjectURL(file)
-        this.eventStore.metadata.audioUrl = x
-        const y = document.createElement('audio')
-        y.src = x
-        const reader = new FileReader()
-        reader.readAsArrayBuffer(file)
-        reader.onload = function() {
-          audio.store.isLocalFile = true
-          audio.store.uint8Buffer = new Uint8Array(this.result as ArrayBuffer)
-        }
-        y.addEventListener('durationchange', () => {
-          eventStore.audioElement = y
-        })
-        // initialize with empty transcript,
-        // if there is none.
-      } else if (this.isXML(file)) {
-        const reader = new FileReader()
-        reader.onload = (e: FileReaderProgressEvent) => {
-          this.parsedExmeraldaFile = loadExmeraldaFile(file.name, e.target!.result)
-        }
-        reader.readAsText(file, 'UTF-8')
-        console.log('xml')
-      } else {
-        alert('unsupported file type')
-        console.log('unsupported file type', file)
-      }
-    })
-  }
+  // onFileDrop(formData: FormData, files: FileList) {
+  //   console.log(files[0].type)
+  //   _(files).forEach(file => {
+  //     if (this.isAudio(file)) {
+  //       const x = URL.createObjectURL(file)
+  //       this.eventStore.metadata.audioUrl = x
+  //       const y = document.createElement('audio')
+  //       y.src = x
+  //       const reader = new FileReader()
+  //       reader.readAsArrayBuffer(file)
+  //       reader.onload = function() {
+  //         audio.store.isLocalFile = true
+  //         audio.store.uint8Buffer = new Uint8Array(this.result as ArrayBuffer)
+  //       }
+  //       y.addEventListener('durationchange', () => {
+  //         eventStore.audioElement = y
+  //       })
+  //       // initialize with empty transcript,
+  //       // if there is none.
+  //     } else if (this.isXML(file)) {
+  //       const reader = new FileReader()
+  //       reader.onload = (e: FileReaderProgressEvent) => {
+  //         this.parsedExmeraldaFile = loadExmeraldaFile(file.name, e.target!.result)
+  //       }
+  //       reader.readAsText(file, 'UTF-8')
+  //       console.log('xml')
+  //     } else {
+  //       alert('unsupported file type')
+  //       console.log('unsupported file type', file)
+  //     }
+  //   })
+  // }
 
   initializeEmptyTranscript() {
     this.eventStore.status = 'new'
