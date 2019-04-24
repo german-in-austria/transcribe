@@ -9,10 +9,10 @@
     </v-navigation-drawer>
     <v-content class="main-content">
       <v-container fluid fill-height class="pa-0">
-        <exmeralda-importer
-          @close="parsedExmeraldaFile = null"
-          v-if="parsedExmeraldaFile !== null"
-          :tree="parsedExmeraldaFile" />
+        <exmaralda-importer
+          @close="parsedExmaraldaFile = null"
+          v-if="parsedExmaraldaFile !== null"
+          :tree="parsedExmaraldaFile" />
         <!-- <vue-full-screen-file-drop
           class="file-dropper"
           @drop='onFileDrop'>
@@ -115,14 +115,14 @@ import playerBar from './PlayerBar.vue'
 // import VueFullScreenFileDrop from 'vue-full-screen-file-drop'
 import editor from './Editor.vue'
 import sidebar from './Sidebar.vue'
-import exmeraldaImporter from './ExmeraldaImporter.vue'
+import exmaraldaImporter from './ExmaraldaImporter.vue'
 import * as jszip from 'jszip'
 import audio from '../service/audio'
 import settings from '../store/settings'
-import { ParsedExmeraldaXML } from '../service/exmeralda-parser'
+import { ParsedExmaraldaXML } from '../service/exmaralda-parser'
 import { LocalTranscriptEvent, eventStore, speakerEventHasErrors, ServerTranscript } from '../store/transcript'
 import { getTranscript, mergeServerTranscript } from '../service/data-backend/server-backend'
-import { loadExmeraldaFile } from '../service/data-backend/exmaralda-backend'
+import { loadExmaraldaFile } from '../service/data-backend/exmaralda-backend'
 
 interface FileReaderEventTarget extends EventTarget {
   result: string
@@ -131,7 +131,7 @@ interface FileReaderEventTarget extends EventTarget {
 @Component({
   components : {
     editor,
-    exmeraldaImporter,
+    exmaraldaImporter,
     sidebar,
     // VueFullScreenFileDrop,
     playerBar
@@ -150,7 +150,7 @@ export default class App extends Vue {
   loggedIn = true
   eventStore = eventStore
   log = console.log
-  parsedExmeraldaFile: ParsedExmeraldaXML|null = null
+  parsedExmaraldaFile: ParsedExmaraldaXML|null = null
   errorMessage: string|null = null
   backEndUrls = [
     'https://dissdb.dioe.at',
@@ -238,11 +238,11 @@ export default class App extends Vue {
     })
   }
 
-  openExmeraldaFile(f: File) {
+  openExmaraldaFile(f: File) {
     this.importingLocalFile = true
     const reader = new FileReader()
     reader.onload = (e: ProgressEvent) => {
-      this.parsedExmeraldaFile = loadExmeraldaFile(f.name, (e.target as FileReaderEventTarget).result)
+      this.parsedExmaraldaFile = loadExmaraldaFile(f.name, (e.target as FileReaderEventTarget).result)
       // console.log(x)
       this.importingLocalFile = false
     }
@@ -258,7 +258,7 @@ export default class App extends Vue {
         if (x.files[0].name.endsWith('.transcript')) {
           this.openProjectFile(x.files[0])
         } else if (x.files[0].name.endsWith('.exb')) {
-          this.openExmeraldaFile(x.files[0])
+          this.openExmaraldaFile(x.files[0])
         }
       }
     })
@@ -287,7 +287,7 @@ export default class App extends Vue {
   //     } else if (this.isXML(file)) {
   //       const reader = new FileReader()
   //       reader.onload = (e: FileReaderProgressEvent) => {
-  //         this.parsedExmeraldaFile = loadExmeraldaFile(file.name, e.target!.result)
+  //         this.parsedExmaraldaFile = loadExmaraldaFile(file.name, e.target!.result)
   //       }
   //       reader.readAsText(file, 'UTF-8')
   //       console.log('xml')

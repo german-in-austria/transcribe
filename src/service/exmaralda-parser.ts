@@ -75,13 +75,13 @@ interface Speakers {
   [key: string]: Tiers
 }
 
-export interface ParsedExmeraldaXML {
+export interface ParsedExmaraldaXML {
   timeline: Timeline
   speakers: Speakers
   speakerTiers: SpeakerTier[]
 }
 
-export default function parseTree(xmlTree: BasicNode): ParsedExmeraldaXML {
+export default function parseTree(xmlTree: BasicNode): ParsedExmaraldaXML {
 
   if (xmlTree.children && xmlTree.children[0] && xmlTree.children[0].children) {
     const basicBody = _(xmlTree.children[0].children).find({ name: 'basic-body' })

@@ -18,7 +18,7 @@
             <div class="explainer">
               <h1>Assign Tiers and Speakers</h1>
               <p>
-                Choose which tiers you want to import from your Exmeralda File on the left,
+                Choose which tiers you want to import from your Exmaralda File on the left,
                 and assign them the correct speaker and tier type.
               </p>
               <p>
@@ -161,7 +161,7 @@
 </template>
 <script lang='ts'>
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { ParsedExmeraldaXML, SpeakerTier } from '@service/exmeralda-parser'
+import { ParsedExmaraldaXML, SpeakerTier } from '@service/exmaralda-parser'
 import DropFile from './DropFile.vue'
 import _ from 'lodash'
 
@@ -170,9 +170,9 @@ import _ from 'lodash'
     DropFile
   }
 })
-export default class ExmeraldaImporter extends Vue {
+export default class ExmaraldaImporter extends Vue {
 
-  @Prop() tree: ParsedExmeraldaXML|null
+  @Prop() tree: ParsedExmaraldaXML|null
   step = 1
   valid = false
   isAnythingOrAllSelected: boolean|null = true
