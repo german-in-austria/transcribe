@@ -216,9 +216,9 @@
           <v-spacer />
           <v-btn large :disabled="step === 1" color="primary" flat @click="step--">Back</v-btn>
           <v-btn large
-            :color="tiersValid ? 'primary' : 'red'"
+            :color="(!basicInfoValid && step === 1) || (!tiersValid && step === 2) ? 'red' : 'primary'"
             class="elevation-0"
-            :disabled="!tiersValid || !basicInfoValid"
+            :disabled="(!basicInfoValid && step === 1) || (!tiersValid && step === 2)"
             @click="validateAndNext">
             Next
           </v-btn>
