@@ -52,6 +52,26 @@ export interface ServerTranscriptSaveRequest extends ServerTranscript {
   aEvents: ServerEventSaveRequest[]
 }
 
+export interface Informant {
+  weiblich: boolean
+  Kuerzel: string
+  Geburtsdatum: string|null
+  Wohnbezirk: number|null
+  Vorname: string|null
+  Kuerzel_anonym: string|null
+  Name: string|null
+
+}
+
+export interface ServerSurvey {
+  pk: number
+  FX_Informanten: Informant[]
+  ID_Erh: number
+  Ort: string
+  Audiofile: string
+  Dateipfad: string
+}
+
 export interface ServerTranscript {
   aTokens: {
     [token_id: string]: ServerToken
@@ -663,6 +683,18 @@ export async function convertToServerTranscript(es: LocalTranscriptEvent[]): Pro
   } else {
     return null
   }
+}
+
+export async function getSurveys(): Promise<ServerSurvey[]> {
+  const x = await (await fetch(`${ eventStore.backEndUrl }/routes/einzelerhebungen`, {
+    credentials: 'include',
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    }
+  })).json()
+  return x.einzelerhebungen
 }
 
 export async function saveChangesToServer() {

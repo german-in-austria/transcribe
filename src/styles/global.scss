@@ -58,7 +58,8 @@ img[lazy=loaded] {
 .v-btn i {
   font-size: 1.4em !important;
 }
-.v-menu__content, .context-menu {
+.v-menu__content, .context-menu,
+.v-autocomplete__content.v-menu__content, .v-autocomplete__content.v-menu__content .v-card {
   border: 1px solid #616161;
   border-radius: 4px;
   box-shadow: 0 5px 30px rgba(0,0,0,.2);
