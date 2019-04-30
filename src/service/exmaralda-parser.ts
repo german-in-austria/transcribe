@@ -56,11 +56,12 @@ interface Tier {
   type: string
 }
 
-export interface SpeakerTier extends Tier {
+export interface SpeakerTierImportable extends Tier {
   speaker_name: string
   select_for_import: boolean
   to_tier_type: string|null
   to_speaker: string|null
+  to_tier_name: string|null
 }
 
 interface Tiers {
@@ -78,7 +79,7 @@ interface Speakers {
 export interface ParsedExmaraldaXML {
   timeline: Timeline
   speakers: Speakers
-  speakerTiers: SpeakerTier[]
+  speakerTiers: SpeakerTierImportable[]
 }
 
 export default function parseTree(xmlTree: BasicNode): ParsedExmaraldaXML {
@@ -131,6 +132,7 @@ export default function parseTree(xmlTree: BasicNode): ParsedExmaraldaXML {
               select_for_import: true,
               to_speaker: null,
               to_tier_type: null,
+              to_tier_name: null,
               ...v
             })).value())
           }, [] as any[])
