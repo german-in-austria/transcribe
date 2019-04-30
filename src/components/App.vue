@@ -1,6 +1,7 @@
 <template>
   <v-app :dark="settings.darkMode">
     <v-navigation-drawer
+      stateless
       style="padding: 0"
       v-model="drawer"
       right
