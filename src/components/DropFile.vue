@@ -17,7 +17,7 @@
         </slot>
       </v-flex>
       <v-flex v-else class="text-xs-center" shrink>
-        <v-icon style="opacity: .5; font-size: 4em">audiotrack</v-icon>
+        <v-icon color="primary" style="opacity: .5; font-size: 4em">audiotrack</v-icon>
         <p>{{ file.name }}</p>
         <v-btn @click="file = null" flat small round>remove</v-btn>
       </v-flex>
