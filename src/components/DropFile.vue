@@ -10,9 +10,11 @@
       @dragleave="unhighlight"
       @drop.stop.prevent="useAudioFile"
       class="drop-area mb-5">
-      <v-flex @click="openFileDialog" v-if="file === null" class="text-xs-center cursor-pointer" shrink>
-        <v-icon color="#666" style="font-size: 4em">open_in_browser</v-icon>
-        <p class="mt-2">drop your audio file here</p>
+      <v-flex @click="openFileDialog" v-if="file === null" class="text-xs-center cursor-pointer grey--text" shrink>
+        <slot>
+          <v-icon color="#666" style="font-size: 4em">open_in_browser</v-icon>
+          <p class="mt-2">drop your audio file here</p>
+        </slot>
       </v-flex>
       <v-flex v-else class="text-xs-center" shrink>
         <v-icon style="opacity: .5; font-size: 4em">audiotrack</v-icon>
