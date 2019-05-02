@@ -220,14 +220,14 @@
         <v-card-actions class="pa-3">
           <v-layout>
             <v-flex class="text-xs-left" xs4>
-              <v-btn flat @click="$emit('close')">Cancel</v-btn>
+              <v-btn flat @click="$emit('close')" large>Cancel</v-btn>
             </v-flex>
             <v-flex class="text-xs-center" xs4>
               <v-btn
                 v-for="i in 3"
                 :key="i"
                 icon
-                :disabled="i > step"
+                :disabled="!((step + 1 === i && canContinue) || i <= step)"
                 :active="step === i"
                 @click="step = i">
                 <v-icon :color="step === i ? 'primary' : 'grey'">mdi-record</v-icon>
@@ -244,9 +244,9 @@
               </v-btn>
               <v-btn
                 large
-                :color="canContinue ? 'red' : 'primary'"
+                :color="canContinue ? 'primary' : 'red'"
                 class="elevation-0"
-                :disabled="canContinue"
+                :disabled="!canContinue"
                 @click="validateAndNext">
                 Next
               </v-btn>
@@ -297,8 +297,8 @@ export default class ExmaraldaImporter extends Vue {
 
   get canContinue() {
     return (
-      (!this.basicInfoValid && this.step === 1) ||
-      (!this.tiersValid && this.step === 2)
+      (this.basicInfoValid === true && this.step === 1) ||
+      (this.tiersValid === true && this.step === 2)
     )
   }
 
