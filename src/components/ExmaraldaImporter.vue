@@ -38,6 +38,7 @@
                 <v-flex xs6 offset-xs3>
                   <v-form
                     ref="basicInfoForm"
+                    class="pb-5"
                     v-model="basicInfoValid"
                     lazy-validation>
                     <v-autocomplete
@@ -66,6 +67,7 @@
                     <v-text-field 
                       v-model="transcriptName"
                       label="Transcript Name"
+                      validate-on-blur
                       :rules="[ transcriptName === null || transcriptName.trim() === '' && 'Please enter a name for the transcript' ]" />
                   </v-form>
                 </v-flex>
@@ -137,12 +139,12 @@
                       dense
                       label="Speaker"
                       v-model="speakerTier.to_speaker"
-                      item-text="Kuerzel_anonym"
-                      :items="speakers">
+                      item-text="Kuerzel"
+                      :items="surveySpeakers">
                       <template slot="item" slot-scope="item">
                         <v-list-tile-content>
                           <v-list-tile-title>
-                            {{ item.item.Kuerzel_anonym }}
+                            {{ item.item.Kuerzel }}
                           </v-list-tile-title>
                         </v-list-tile-content>
                         <v-list-tile-action-text class="pl-5">
@@ -200,28 +202,56 @@
               </v-form>
             </v-window-item>
             <v-window-item :value="3">
-              <div class="explainer">
-                <h1>Add your Audio File</h1>
-                <p>
-                  Must be in OGG/Vorbis format. Use Audacity to convert it.
-                </p>
-              </div>
-              <drop-file />
+              <v-layout column justify-center fill-height>
+                <v-flex class="explainer">
+                  <h1>Add your Audio File</h1>
+                  <p>
+                    Must be in OGG/Vorbis format. Use Audacity to convert it.
+                  </p>
+                </v-flex>
+                <v-flex>
+                  <drop-file />
+                </v-flex>
+              </v-layout>
             </v-window-item>
           </v-window>
         </v-card-text>
         <v-divider />
-        <v-card-actions class="text-xs-right pa-3">
-          <v-btn flat @click="$emit('close')">Cancel</v-btn>
-          <v-spacer />
-          <v-btn large :disabled="step === 1" color="primary" flat @click="step--">Back</v-btn>
-          <v-btn large
-            :color="(!basicInfoValid && step === 1) || (!tiersValid && step === 2) ? 'red' : 'primary'"
-            class="elevation-0"
-            :disabled="(!basicInfoValid && step === 1) || (!tiersValid && step === 2)"
-            @click="validateAndNext">
-            Next
-          </v-btn>
+        <v-card-actions class="pa-3">
+          <v-layout>
+            <v-flex class="text-xs-left" xs4>
+              <v-btn flat @click="$emit('close')">Cancel</v-btn>
+            </v-flex>
+            <v-flex class="text-xs-center" xs4>
+              <v-btn
+                v-for="i in 3"
+                :key="i"
+                icon
+                :disabled="i > step"
+                :active="step === i"
+                @click="step = i">
+                <v-icon :color="step === i ? 'primary' : 'grey'">mdi-record</v-icon>
+              </v-btn>
+            </v-flex>
+            <v-flex class="text-xs-right" xs4>
+              <v-btn
+                large
+                :disabled="step === 1"
+                color="primary"
+                flat
+                @click="step--">
+                Back
+              </v-btn>
+              <v-btn
+                large
+                :color="canContinue ? 'red' : 'primary'"
+                class="elevation-0"
+                :disabled="canContinue"
+                @click="validateAndNext">
+                Next
+              </v-btn>
+            </v-flex>
+          </v-layout>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -243,17 +273,33 @@ export default class ExmaraldaImporter extends Vue {
 
   @Prop() tree: ParsedExmaraldaXML|null
   surveys: ServerSurvey[]|null = null
-  selectedSurvey: ServerSurvey|null = null
-  showMissingDefaultTierError = false
+
   step = 1
-  tiersValid = false
+
   basicInfoValid = false
-  isAnythingOrAllSelected: boolean|null = true
-  speakers = []
+  tiersValid = false
+
   transcriptName = null
+  selectedSurvey: ServerSurvey|null = null
+
+  showMissingDefaultTierError = false
+  isAnythingOrAllSelected: boolean|null = true
 
   async mounted() {
     this.surveys = await getSurveys()
+  }
+
+  get surveySpeakers() {
+    if (this.selectedSurvey !== null) {
+      return this.selectedSurvey.FX_Informanten
+    }
+  }
+
+  get canContinue() {
+    return (
+      (!this.basicInfoValid && this.step === 1) ||
+      (!this.tiersValid && this.step === 2)
+    )
   }
 
   getSelectedDefaultTierForSpeaker(to_speaker: string): SpeakerTierImportable[] {

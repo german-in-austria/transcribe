@@ -122,7 +122,9 @@ img[lazy=loaded] {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
+.no-pointer-events{
+  pointer-events: none;
+}
 .cursor-pointer{
   cursor: pointer;
 }
