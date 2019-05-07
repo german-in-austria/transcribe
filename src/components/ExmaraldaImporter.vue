@@ -39,8 +39,7 @@
                   <v-form
                     ref="basicInfoForm"
                     class="pb-5"
-                    v-model="basicInfoValid"
-                    lazy-validation>
+                    v-model="basicInfoValid">
                     <v-autocomplete
                       :loading="surveys === null"
                       :rules="[ selectedSurvey === null && 'Select a Survey' ]"
@@ -68,7 +67,7 @@
                       v-model="transcriptName"
                       label="Transcript Name"
                       validate-on-blur
-                      :rules="[ transcriptName === null || transcriptName.trim() === '' && 'Please enter a name for the transcript' ]" />
+                      :rules="[ (transcriptName === null || transcriptName.trim() === '') && 'Please enter a name for the transcript' ]" />
                   </v-form>
                 </v-flex>
               </v-layout>
@@ -210,7 +209,7 @@
                   </p>
                 </v-flex>
                 <v-flex>
-                  <drop-file />
+                  <drop-file :initial-file-name="selectedSurvey !== null ? selectedSurvey.Audiofile : null" />
                 </v-flex>
               </v-layout>
             </v-window-item>
@@ -297,8 +296,9 @@ export default class ExmaraldaImporter extends Vue {
 
   get canContinue() {
     return (
-      (this.basicInfoValid === true && this.step === 1) ||
-      (this.tiersValid === true && this.step === 2)
+      (this.step === 1 && this.basicInfoValid === true && this.surveys !== null) ||
+      (this.step === 2 && this.tiersValid === true) ||
+      this.step === 3
     )
   }
 
@@ -396,6 +396,8 @@ export default class ExmaraldaImporter extends Vue {
           this.showMissingDefaultTierError = true
         }
       }
+    } else if (this.step == 3) {
+
     }
   }
 

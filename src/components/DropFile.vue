@@ -10,16 +10,20 @@
       @dragleave="unhighlight"
       @drop.stop.prevent="useAudioFile"
       class="drop-area mb-5">
-      <v-flex @click="openFileDialog" v-if="file === null" class="text-xs-center cursor-pointer grey--text" shrink>
+      <v-flex v-if="fileName !== null" class="text-xs-center" shrink>
+        <v-icon color="primary" style="opacity: .5; font-size: 4em">audiotrack</v-icon>
+        <p>{{ fileName }}</p>
+        <v-btn @click="resetForm" flat small round>remove</v-btn>
+      </v-flex>
+      <v-flex
+        v-else
+        class="text-xs-center cursor-pointer grey--text"
+        @click="openFileDialog"
+        shrink>
         <slot>
           <v-icon color="#666" style="font-size: 4em">open_in_browser</v-icon>
           <p class="mt-2">drop your audio file here</p>
         </slot>
-      </v-flex>
-      <v-flex v-else class="text-xs-center" shrink>
-        <v-icon color="primary" style="opacity: .5; font-size: 4em">audiotrack</v-icon>
-        <p>{{ file.name }}</p>
-        <v-btn @click="file = null" flat small round>remove</v-btn>
       </v-flex>
     </v-layout>
   </div>
@@ -30,7 +34,14 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 @Component
 export default class DropFile extends Vue {
 
+  @Prop({ default: null }) initialFileName: string|null
+  fileName = this.initialFileName
   file: File|null = null
+
+  @Watch('initialFileName')
+  onUpdateInitialFileName(n: string|null) {
+    this.fileName = n
+  }
 
   highlight(e: DragEvent|Event) {
     if (e instanceof DragEvent && e.dataTransfer !== null) {
@@ -48,7 +59,14 @@ export default class DropFile extends Vue {
       // console.log(e.dataTransfer.files[0], e.dataTransfer.items[0], e.dataTransfer.types[0])
       this.unhighlight(e)
       this.file = e.dataTransfer.files[0]
+      this.fileName = this.file.name
+      this.$emit('update', this.file)
     }
+  }
+
+  resetForm() {
+    this.file = null
+    this.fileName = null
   }
 
   openFileDialog() {
@@ -58,6 +76,8 @@ export default class DropFile extends Vue {
     x.addEventListener('change', async (e) => {
       if (x.files !== null) {
         this.file = x.files[0]
+        this.fileName = this.file.name
+        this.$emit('update', this.file)
       }
     })
     x.click()
