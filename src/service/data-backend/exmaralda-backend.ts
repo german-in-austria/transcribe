@@ -1,5 +1,6 @@
 import parseTree, { ParsedExmaraldaXML } from '../exmaralda-parser'
-import { makeEventId } from '../../store/transcript'
+import { makeEventId, ServerTranscript, ServerToken, makeTokenId, ServerEvent } from '../../store/transcript'
+import settings from '../../store/settings'
 import * as parseXML from '@rgrove/parse-xml'
 import _ from 'lodash'
 
@@ -27,51 +28,74 @@ interface SpeakerEvent {
   }
 }
 
-let transcript: Transcript|null = null
-
 export function loadExmaraldaFile(fileName: string, xml: string): ParsedExmaraldaXML {
   return parseTree(parseXML(xml))
 }
 
-export function transcriptTreeToTranscribable(tree: ParsedExmaraldaXML, name: string): Transcript {
-  console.log({tree})
-  const speakers = _(tree.speakers).map((v, k) => k).value()
-  const segments = _(tree.speakers)
-    .map(tiers => _.map(tiers, tier => _.map(tier.events, event => ({
-      id: makeEventId(),
-      startTime: Number(event.startTime),
-      endTime: Number(event.endTime)
-    }) )))
-    .flatten()
-    .flatten()
-    .flatten()
-    .uniqBy(s => s.id)
-    .orderBy(s => s.startTime)
-    .value()
+export function transcriptTreeToServerTranscript(tree: ParsedExmaraldaXML, name: string): ServerTranscript {
+  let tokens: _.Dictionary<ServerToken> = {}
+  const events = _(tree.speakerTiers)
+    .map((speakerTier) => {
+      let tokenOrder = 0
+      if (speakerTier.to_speaker === null) {
+        console.error('No speaker specified', { speakerTier })
+        throw new Error('No speaker specified')
+      } else {
+        return speakerTier.events.map((e): ServerEvent => {
+          const eventId = makeEventId()
+          const eventTokens = _(e.text.split(' '))
+            .filter((t) => t !== '')
+            .map((t: string, tokenIndex): ServerToken => {
+              return {
+                // TODO: choose between "text" and "ortho"
+                // based on default tier selection
+                t,
+                to: '',
 
-  const speakerEvents = _(tree.speakers)
-    .map((tiers, key) => {
-      // only the first tier for now
-      return _.toArray(tiers)[0].events.map(e => {
-        return {
-          start  : e.start,
-          end    : e.end,
-          tokens : e.text !== null ? e.text.trim().split(' ') : [],
-          speaker: key
-        }
-      })
+                tr: tokenOrder++,
+                e: eventId,
+                // TODO: to_speaker should be an object
+                // containing the abbrev + the ID, so we
+                // can use the ID here
+                i: Number(speakerTier.to_speaker), // wrong
+                s: 0,
+                sr: 0,
+                tt: (() => {
+                  const type = _(settings.tokenTypes).find((tt) => {
+                    return tt.regex.test(t)
+                  })
+                  return type ? type.id : -1
+                })()
+              }
+            })
+            .keyBy(String(makeTokenId()))
+            .value()
+
+          tokens = {
+            ...tokens,
+            ...eventTokens
+          }
+
+          return {
+            pk: eventId,
+            e: e.endTime,
+            s: e.startTime,
+            l: 0,
+            tid: {
+              // TODO: to_speaker ID!!
+              [ speakerTier.to_speaker! ]: _(eventTokens).map((v, k) => Number(k)).value()
+            }
+          }
+        })
+      }
     })
     .flatten()
-    .groupBy(e => `${e.start}-${e.end}`)
-    .mapValues(spe => _.keyBy(spe, 'speaker'))
     .value()
 
-  transcript = {
-    name,
-    audioUrl: '',
-    speakerEvents,
-    segments,
-    speakers
+  return {
+    aTokens: tokens,
+    aEvents: events,
+    aNr: 0,
+    nNr: 0
   }
-  return transcript
 }
