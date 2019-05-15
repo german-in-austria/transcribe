@@ -5,6 +5,28 @@ import Worker from '../service/buffer-concat.worker'
 const worker = new Worker('')
 const promiseWorker = new PromiseWorker(worker)
 
+interface FileReaderEventTarget extends EventTarget {
+  result: ArrayBuffer
+}
+
+export function fileToUint8ArrayAndName(f: File): Promise<{ b: Uint8Array, n: string }> {
+  return new Promise((resolve, reject) => {
+    try {
+      const reader = new FileReader()
+      reader.onload = (e: ProgressEvent) => {
+        const b = (e.target as FileReaderEventTarget).result
+        resolve({
+          b: new Uint8Array(b),
+          n: f.name
+        })
+      }
+      reader.readAsArrayBuffer(f)
+    } catch (e) {
+      reject(e)
+    }
+  })
+}
+
 export function platform(): string {
   if (navigator.platform.toLowerCase() === 'win32' || navigator.platform.toLowerCase() === 'win64') {
     return 'windows'

@@ -121,6 +121,7 @@ import audio from '../service/audio'
 import settings from '../store/settings'
 import { ParsedExmaraldaXML } from '../service/exmaralda-parser'
 import { LocalTranscriptEvent, eventStore, speakerEventHasErrors, ServerTranscript } from '../store/transcript'
+import { fileToUint8ArrayAndName } from '../util'
 import {
   getTranscript,
   mergeServerTranscript,
@@ -217,28 +218,50 @@ export default class App extends Vue {
     const sT = JSON.parse(await zip.file('transcript.json').async('text')) as ServerTranscript
     const eS = JSON.parse(await zip.file('eventStore.json').async('text'))
     const overviewSvg = await zip.file('overview.svg').async('text')
-    const blob = new Blob([audioBuffer], { type: 'audio/ogg' })
-    const u = URL.createObjectURL(blob)
-    const a = document.createElement('audio')
-    audio.store.uint8Buffer = audioBuffer
-    a.src = u
-    a.addEventListener('durationchange', () => {
-      this.importingLocalFile = false
-      this.loadingTranscriptId = null
-      eventStore.events = eS.events
-      mergeServerTranscript(sT)
-      localStorage.setItem(u + '_overview', overviewSvg)
-      audio.store.isLocalFile = true
-      eventStore.selectedEventIds = eS.selectedEventIds
-      eventStore.backEndUrl = eS.backEndUrl
-      eventStore.selectedSearchResult = eS.selectedSearchResult
-      eventStore.searchResults = eS.searchResults
-      eventStore.searchTerm = eS.searchTerm
-      eventStore.metadata = eS.metadata
-      eventStore.userState = eS.userState
-      eventStore.transcriptDownloadProgress = eS.transcriptDownloadProgress
-      eventStore.audioElement = a
-      eventStore.status = 'finished'
+    const audioUrl = await this.loadLocalTranscript(sT, audioBuffer)
+    this.loadPreviousUserState(eS, audioUrl, overviewSvg)
+  }
+
+  loadPreviousUserState(previousEventStore: any, audioUrl: string, overviewSvg: string) {
+    localStorage.setItem(audioUrl + '_overview', overviewSvg)
+    eventStore.events                     = previousEventStore.events
+    eventStore.selectedEventIds           = previousEventStore.selectedEventIds
+    eventStore.backEndUrl                 = previousEventStore.backEndUrl
+    eventStore.selectedSearchResult       = previousEventStore.selectedSearchResult
+    eventStore.searchResults              = previousEventStore.searchResults
+    eventStore.searchTerm                 = previousEventStore.searchTerm
+    eventStore.metadata                   = previousEventStore.metadata
+    eventStore.userState                  = previousEventStore.userState
+    eventStore.transcriptDownloadProgress = previousEventStore.transcriptDownloadProgress
+    eventStore.status                     = 'finished'
+  }
+
+  loadLocalTranscript(t: ServerTranscript, audioData: File|Uint8Array|null): Promise<string> {
+    return new Promise(async (resolve, reject) => {
+      let u = ''
+      const a = document.createElement('audio')
+      if (audioData instanceof File) {
+        const { b, n } = await fileToUint8ArrayAndName(audioData)
+        const blob = new Blob([b], { type: 'audio/ogg' })
+        u = URL.createObjectURL(blob)
+        audio.store.uint8Buffer = b
+      } else if (audioData instanceof Uint8Array) {
+        const blob = new Blob([audioData], { type: 'audio/ogg' })
+        u = URL.createObjectURL(blob)
+        audio.store.uint8Buffer = audioData
+      }
+      a.src = u
+      a.addEventListener('durationchange', () => {
+        this.importingLocalFile = false
+        this.loadingTranscriptId = null
+        mergeServerTranscript(t)
+        eventStore.metadata = getMetadataFromServerTranscript(t)
+        eventStore.events = serverTranscriptToLocal(t)
+        audio.store.isLocalFile = true
+        eventStore.audioElement = a
+        eventStore.status = 'finished'
+        resolve(u)
+      })
     })
   }
 
@@ -273,14 +296,6 @@ export default class App extends Vue {
 
   initializeEmptyTranscript() {
     this.eventStore.status = 'new'
-  }
-
-  loadLocalTranscript(t: ServerTranscript, audioFile: File|null) {
-    const y = document.createElement('audio')
-    mergeServerTranscript(t)
-    eventStore.metadata = getMetadataFromServerTranscript(t)
-    eventStore.events = serverTranscriptToLocal(t)
-    eventStore.status = 'finished'
   }
 
   async loadRemoteTranscript(pk: number) {
