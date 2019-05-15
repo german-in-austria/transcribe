@@ -52,7 +52,7 @@ export interface ServerTranscriptSaveRequest extends ServerTranscript {
   aEvents: ServerEventSaveRequest[]
 }
 
-export interface Informant {
+export interface ServerInformant {
   weiblich: boolean
   Kuerzel: string
   Geburtsdatum: string|null
@@ -60,16 +60,24 @@ export interface Informant {
   Vorname: string|null
   Kuerzel_anonym: string|null
   Name: string|null
-
+  pk: number
 }
 
 export interface ServerSurvey {
   pk: number
-  FX_Informanten: Informant[]
+  FX_Informanten: ServerInformant[]
   ID_Erh: number
   Ort: string
   Audiofile: string
   Dateipfad: string
+  Datum: string
+}
+
+export interface ServerTranscriptInformants {
+  [speaker_id: number]: {
+    ka: string // abbrev anonymized
+    k: string // abbrev
+  }
 }
 
 export interface ServerTranscript {
@@ -84,12 +92,7 @@ export interface ServerTranscript {
     pk: number
     trId: number
   }
-  aInformanten?: {
-    [speaker_id: number]: {
-      ka: string // name anonymized
-      k: string // name
-    }
-  }
+  aInformanten?: ServerTranscriptInformants
   aTokenSets?: {
     [setId: number]: {
       ivt: number // starting at token id (von)
@@ -230,6 +233,16 @@ export const eventStore = {
 }
 ;
 (window as any)._eventStore = eventStore
+
+export function tokenize(s: string): string[] {
+  return s
+    .split('.').join(' .')
+    .split(', ').join(' , ')
+    .split('-').join('_ _')
+    .split('? ').join(' ? ')
+    .split(' ')
+    .filter(t => t !== '')
+}
 
 export function selectSearchResult(e: LocalTranscriptEvent) {
   eventStore.selectedSearchResult  = e

@@ -12,6 +12,7 @@
       <v-container fluid fill-height class="pa-0">
         <exmaralda-importer
           @close="parsedExmaraldaFile = null"
+          @finish="loadTranscript"
           v-if="parsedExmaraldaFile !== null"
           :tree="parsedExmaraldaFile" />
         <!-- <vue-full-screen-file-drop
@@ -64,7 +65,7 @@
                   color="#333"
                   class="pt-2 pb-2 pl-3 mb-2 elevation-0 cursor-pointer"
                   :disabled="loadingTranscriptId === transcript.pk"
-                  @click="loadTranscript(transcript.pk)">
+                  @click="loadRemoteTranscript(transcript.pk)">
                   <v-layout class="pt-2 pb-1" align-content-space-around>
                     <v-flex class="pr-3" fill-height align-center xs1>
                       <v-progress-circular
@@ -112,8 +113,6 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
 import playerBar from './PlayerBar.vue'
-// import 'vue-full-screen-file-drop/dist/vue-full-screen-file-drop.css'
-// import VueFullScreenFileDrop from 'vue-full-screen-file-drop'
 import editor from './Editor.vue'
 import sidebar from './Sidebar.vue'
 import exmaraldaImporter from './ExmaraldaImporter.vue'
@@ -122,7 +121,12 @@ import audio from '../service/audio'
 import settings from '../store/settings'
 import { ParsedExmaraldaXML } from '../service/exmaralda-parser'
 import { LocalTranscriptEvent, eventStore, speakerEventHasErrors, ServerTranscript } from '../store/transcript'
-import { getTranscript, mergeServerTranscript } from '../service/data-backend/server-backend'
+import {
+  getTranscript,
+  mergeServerTranscript,
+  serverTranscriptToLocal,
+  getMetadataFromServerTranscript
+} from '../service/data-backend/server-backend'
 import { loadExmaraldaFile } from '../service/data-backend/exmaralda-backend'
 
 interface FileReaderEventTarget extends EventTarget {
@@ -134,7 +138,6 @@ interface FileReaderEventTarget extends EventTarget {
     editor,
     exmaraldaImporter,
     sidebar,
-    // VueFullScreenFileDrop,
     playerBar
   }
 })
@@ -266,44 +269,19 @@ export default class App extends Vue {
     x.click()
   }
 
-  // onFileDrop(formData: FormData, files: FileList) {
-  //   console.log(files[0].type)
-  //   _(files).forEach(file => {
-  //     if (this.isAudio(file)) {
-  //       const x = URL.createObjectURL(file)
-  //       this.eventStore.metadata.audioUrl = x
-  //       const y = document.createElement('audio')
-  //       y.src = x
-  //       const reader = new FileReader()
-  //       reader.readAsArrayBuffer(file)
-  //       reader.onload = function() {
-  //         audio.store.isLocalFile = true
-  //         audio.store.uint8Buffer = new Uint8Array(this.result as ArrayBuffer)
-  //       }
-  //       y.addEventListener('durationchange', () => {
-  //         eventStore.audioElement = y
-  //       })
-  //       // initialize with empty transcript,
-  //       // if there is none.
-  //     } else if (this.isXML(file)) {
-  //       const reader = new FileReader()
-  //       reader.onload = (e: FileReaderProgressEvent) => {
-  //         this.parsedExmaraldaFile = loadExmaraldaFile(file.name, e.target!.result)
-  //       }
-  //       reader.readAsText(file, 'UTF-8')
-  //       console.log('xml')
-  //     } else {
-  //       alert('unsupported file type')
-  //       console.log('unsupported file type', file)
-  //     }
-  //   })
-  // }
-
   initializeEmptyTranscript() {
     this.eventStore.status = 'new'
   }
 
-  async loadTranscript(pk: number) {
+  loadTranscript(t: ServerTranscript) {
+    const y = document.createElement('audio')
+    mergeServerTranscript(t)
+    eventStore.metadata = getMetadataFromServerTranscript(t)
+    eventStore.events = serverTranscriptToLocal(t)
+    eventStore.status = 'finished'
+  }
+
+  async loadRemoteTranscript(pk: number) {
     // TODO: ugly
     this.loadingTranscriptId = pk
     const y = document.createElement('audio')

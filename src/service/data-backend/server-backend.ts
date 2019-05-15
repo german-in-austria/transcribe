@@ -23,7 +23,7 @@ const textEncoder = new TextEncoder()
 
 export let serverTranscript = null as ServerTranscript|null
 
-function getMetadataFromServerTranscript(res: ServerTranscript) {
+export function getMetadataFromServerTranscript(res: ServerTranscript) {
   return {
     speakers: res.aInformanten!,
     tokenTypes: res.aTokenTypes!,
@@ -71,7 +71,7 @@ export function mergeServerTranscript(s: ServerTranscript) {
       ...s.aEvents
     ]
   }
-  console.log({tokens: _(s.aTokens).toArray().sortBy(t => t.tr).value()})
+  // console.log({tokens: _(s.aTokens).toArray().sortBy(t => t.tr).value()})
 }
 
 export async function localTranscriptToServerTranscript(

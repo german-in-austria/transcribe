@@ -1,4 +1,5 @@
 import _ from 'lodash'
+import { ServerInformant } from '@store/transcript'
 
 interface BasicNode {
   attributes: object
@@ -60,7 +61,7 @@ export interface SpeakerTierImportable extends Tier {
   speaker_name: string
   select_for_import: boolean
   to_tier_type: string|null
-  to_speaker: string|null
+  to_speaker: ServerInformant|null
   to_tier_name: string|null
 }
 
