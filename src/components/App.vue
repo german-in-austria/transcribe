@@ -12,7 +12,7 @@
       <v-container fluid fill-height class="pa-0">
         <exmaralda-importer
           @close="parsedExmaraldaFile = null"
-          @finish="loadTranscript"
+          @finish="loadLocalTranscript"
           v-if="parsedExmaraldaFile !== null"
           :tree="parsedExmaraldaFile" />
         <!-- <vue-full-screen-file-drop
@@ -255,17 +255,19 @@ export default class App extends Vue {
 
   openFile() {
     const x = document.createElement('input')
-    x.type = 'file'
-    x.accept = '.zip,.transcript,.json,.exb'
     x.addEventListener('change', async (e) => {
       if (x.files !== null) {
         if (x.files[0].name.endsWith('.transcript')) {
           this.openProjectFile(x.files[0])
         } else if (x.files[0].name.endsWith('.exb')) {
           this.openExmaraldaFile(x.files[0])
+        } else {
+          throw new Error('unrecognized file extension')
         }
       }
     })
+    x.type = 'file'
+    x.accept = '.transcript,.exb'
     x.click()
   }
 
@@ -273,7 +275,7 @@ export default class App extends Vue {
     this.eventStore.status = 'new'
   }
 
-  loadTranscript(t: ServerTranscript) {
+  loadLocalTranscript(t: ServerTranscript, audioFile: File|null) {
     const y = document.createElement('audio')
     mergeServerTranscript(t)
     eventStore.metadata = getMetadataFromServerTranscript(t)

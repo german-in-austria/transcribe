@@ -215,7 +215,9 @@
                   </p>
                 </v-flex>
                 <v-flex>
-                  <drop-file :initial-file-name="selectedSurvey !== null ? selectedSurvey.Audiofile : null" />
+                  <drop-file
+                    @update="updateFile"
+                    :initial-file-name="selectedSurvey !== null ? selectedSurvey.Audiofile : null" />
                 </v-flex>
               </v-layout>
             </v-window-item>
@@ -288,12 +290,17 @@ export default class ExmaraldaImporter extends Vue {
 
   transcriptName: string|null = null
   selectedSurvey: ServerSurvey|null = null
+  selectedFile: File|null = null
 
   showMissingDefaultTierError = false
   isAnythingOrAllSelected: boolean|null = true
 
   async mounted() {
     this.surveys = await getSurveys()
+  }
+
+  updateFile(file: File|null) {
+    this.selectedFile = file
   }
 
   get surveySpeakers() {
@@ -409,7 +416,11 @@ export default class ExmaraldaImporter extends Vue {
       }
     } else if (this.step === 3) {
       if (this.tree !== null && this.transcriptName !== null && this.selectedSurvey !== null) {
-        this.$emit('finish', transcriptTreeToServerTranscript(this.tree, this.transcriptName, this.selectedSurvey))
+        this.$emit(
+          'finish',
+          transcriptTreeToServerTranscript(this.tree, this.transcriptName, this.selectedSurvey),
+          this.selectedFile
+        )
       }
     }
   }

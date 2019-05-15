@@ -67,6 +67,7 @@ export default class DropFile extends Vue {
   resetForm() {
     this.file = null
     this.fileName = null
+    this.$emit('update', this.file)
   }
 
   openFileDialog() {
