@@ -35,7 +35,6 @@ export function transcriptTreeToServerTranscript(
   const events = _(tree.speakerTiers)
     .filter(st => st.select_for_import === true)
     .map((speakerTier) => {
-      // console.log('speakerTier', speakerTier.display_name, speakerTier.to_speaker, speakerTier.to_tier_type)
       let tokenOrder = 0
       if (speakerTier.to_speaker === null) {
         console.error('No speaker specified', { speakerTier })
@@ -65,13 +64,8 @@ export function transcriptTreeToServerTranscript(
               tokens[tokenId] = token
               return tokenId
             })
-            // .keyBy(makeTokenId)
             .value()
 
-          // tokens = {
-          //   ...tokens,
-          //   ...eventTokens
-          // }
           return {
             pk: eventId,
             e: padEnd(timeFromSeconds(Number(e.endTime)), 14, '0'),
