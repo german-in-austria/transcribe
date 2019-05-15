@@ -43,15 +43,18 @@ export function transcriptTreeToServerTranscript(
         return _(speakerTier.events).map((e): ServerEvent => {
           const eventId = makeEventId()
           const text = e.text || ''
+          // TODO: for Default Tiers and Tokenized Tiers,
+          // this should happen on a per speaker basis,
+          // not per speaker tier, as to unify all tiers
+          // into the same token.
           const eventTokenIds = _(tokenize(text))
             .filter((t) => t !== '')
             .map((t: string, tokenIndex): number => {
               const tokenId = makeTokenId()
               const token = {
-                // TODO: choose between "text" and "ortho"
-                // based on default tier selection
-                t,
-                o: '',
+                // TODO: see above
+                t: speakerTier.default_tier_type === 'text' ? t : '',
+                o: speakerTier.default_tier_type === 'ortho' ? t : '',
 
                 to: '',
                 tr: tokenOrder++,

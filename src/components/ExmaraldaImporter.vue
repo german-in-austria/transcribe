@@ -171,15 +171,15 @@
                         text: 'default',
                         value: 'default',
                         disabled: isDefaultTierSelectedForSpeaker(speakerTier.to_speaker),
-                        comment: 'the base transcript'
+                        description: 'the base transcript'
                       }, {
                         text: 'token data',
                         value: 'tokenized',
-                        comment: 'metadata for tokens'
+                        description: 'metadata for tokens'
                       }, {
                         text: 'free text',
                         value: 'freeText',
-                        comment: 'event based, e.g. comments'
+                        description: 'event based, e.g. comments'
                       }]"
                       dense>
                       <template slot="item" slot-scope="item">
@@ -189,14 +189,47 @@
                           </v-list-tile-title>
                         </v-list-tile-content>
                         <v-list-tile-action-text class="pl-5">
-                          {{ item.item.comment }}
+                          {{ item.item.description }}
                         </v-list-tile-action-text>
                       </template>
                     </v-select>
                   </v-flex>
                   <v-flex :class="[ !speakerTier.select_for_import && 'disabled' ]" xs2 class="pl-2 pr-2">
+                    <!-- if it’s the default tier, select what type of transcript the default tier is -->
+                    <v-select
+                      v-if="speakerTier.to_tier_type === 'default'"
+                      label="Transcript Type"
+                      dense
+                      v-model="speakerTier.default_tier_type"
+                      :rules="[
+                        speakerTier.select_for_import && speakerTier.default_tier_type == null && 'Select a Transcript Type'
+                      ]"
+                      :items="[
+                        {
+                          text: 'orthographic',
+                          value: 'ortho',
+                          description: 'standard orthographic transcript'
+                        },
+                        {
+                          text: 'variational',
+                          value: 'text',
+                          description: 'phonetic transcription\n using the latin alphabet'
+                        }
+                      ]">
+                      <template slot="item" slot-scope="item">
+                        <v-list-tile-content>
+                          <v-list-tile-title>
+                            {{ item.item.text }}
+                          </v-list-tile-title>
+                        </v-list-tile-content>
+                        <v-list-tile-action-text class="pl-5">
+                          {{ item.item.description }}
+                        </v-list-tile-action-text>
+                      </template>
+                    </v-select>
+                    <!-- choose tier name, if it’s not the default tier -->
                     <v-text-field
-                      :disabled="speakerTier.to_tier_type === 'default'"
+                      v-else
                       validate-on-blur
                       label="Tier Name"
                       v-model="speakerTier.to_tier_name"

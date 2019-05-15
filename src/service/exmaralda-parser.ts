@@ -62,7 +62,8 @@ export interface SpeakerTierImportable extends Tier {
   select_for_import: boolean
   to_tier_type: string|null
   to_speaker: ServerInformant|null
-  to_tier_name: string|null
+  to_tier_name: string|null,
+  default_tier_type: null|'text'|'ortho'
 }
 
 interface Tiers {
@@ -134,6 +135,7 @@ export default function parseTree(xmlTree: BasicNode): ParsedExmaraldaXML {
               to_speaker: null,
               to_tier_type: null,
               to_tier_name: null,
+              default_tier_type: null,
               ...v
             })).value())
           }, [] as any[])
