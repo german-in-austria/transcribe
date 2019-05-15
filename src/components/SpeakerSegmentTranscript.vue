@@ -12,13 +12,13 @@
         </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span class="secondary-token-tier" v-for="(tokenTier, tierIndex) in secondaryTokenTiers" :key="tokenTier.name">
           <span
             :style="{top: (tierIndex + 1) * tierHeight + 'px'}"
+            class="secondary-token-tier-text"
             v-text="token.tiers[tokenTier.name] !== undefined ? token.tiers[tokenTier.name].text : undefined"
+            contenteditable="true"
             @blur="(e) => updateAndCommitLocalTokenTier(e, tokenTier.name, i)"
             @focus="(e) => $emit('focus', e, event)"
-            contenteditable="true"
             @keydown.enter.meta="playEvent(event)"
-            @keydown.enter.exact.stop.prevent="viewAudioEvent(event)"
-            class="secondary-token-tier-text" />
+            @keydown.enter.exact.stop.prevent="viewAudioEvent(event)" />
         </span>
       </span>
     </div>
@@ -41,12 +41,12 @@
       <span
         v-if="localTokens.length && tier.type === 'freeText'"
         v-text="getTierFreeTextText(tier.name)"
+        contenteditable="true"
+        class="secondary-free-text-tier-text"
         @blur="(e) => updateAndCommitLocalTier(e, tier.name, tier.type)"
         @focus="(e) => $emit('focus', e, event)"
-        contenteditable="true"
         @keydown.enter.meta="playEvent(event)"
-        @keydown.enter.exact.stop.prevent="viewAudioEvent(event)"
-        class="secondary-free-text-tier-text" />
+        @keydown.enter.exact.stop.prevent="viewAudioEvent(event)" />
     </div>
   </div>
 </template>
