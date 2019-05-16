@@ -15,11 +15,6 @@
           @finish="loadLocalTranscript"
           v-if="parsedExmaraldaFile !== null"
           :tree="parsedExmaraldaFile" />
-        <!-- <vue-full-screen-file-drop
-          class="file-dropper"
-          @drop='onFileDrop'>
-          &nbsp;
-        </vue-full-screen-file-drop> -->
         <v-layout
           v-if="eventStore.status === 'empty'"
           class="max-width pick-transcript-container"
@@ -112,27 +107,39 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
+import * as jszip from 'jszip'
+
 import playerBar from './PlayerBar.vue'
 import editor from './Editor.vue'
 import sidebar from './Sidebar.vue'
 import exmaraldaImporter from './ExmaraldaImporter.vue'
-import * as jszip from 'jszip'
+
 import audio from '../service/audio'
 import settings from '../store/settings'
-import { ParsedExmaraldaXML } from '../service/exmaralda-parser'
-import { LocalTranscriptEvent, eventStore, speakerEventHasErrors, ServerTranscript } from '../store/transcript'
-import { fileToUint8ArrayAndName } from '../util'
+
+import {
+  LocalTranscriptEvent,
+  eventStore,
+  speakerEventHasErrors,
+  ServerTranscript
+} from '../store/transcript'
+
+import {
+  fileToUint8ArrayAndName,
+  fileToTextAndName
+} from '../util'
+
 import {
   getTranscript,
   mergeServerTranscript,
   serverTranscriptToLocal,
   getMetadataFromServerTranscript
 } from '../service/data-backend/server-backend'
-import { loadExmaraldaFile } from '../service/data-backend/exmaralda-backend'
 
-interface FileReaderEventTarget extends EventTarget {
-  result: string
-}
+import {
+  ParsedExmaraldaXML,
+  exmaraldaToImportable
+} from '../service/exmaralda-parser'
 
 @Component({
   components : {
@@ -236,6 +243,12 @@ export default class App extends Vue {
     eventStore.status                     = 'finished'
   }
 
+  async loadImportedTranscript(t: ServerTranscript, audioData: File|null): Promise<string> {
+    const url = await this.loadLocalTranscript(t, audioData)
+    this.parsedExmaraldaFile = null
+    return url
+  }
+
   loadLocalTranscript(t: ServerTranscript, audioData: File|Uint8Array|null): Promise<string> {
     return new Promise(async (resolve, reject) => {
       let u = ''
@@ -265,15 +278,11 @@ export default class App extends Vue {
     })
   }
 
-  openExmaraldaFile(f: File) {
+  async openExmaraldaFile(f: File) {
     this.importingLocalFile = true
-    const reader = new FileReader()
-    reader.onload = (e: ProgressEvent) => {
-      this.parsedExmaraldaFile = loadExmaraldaFile(f.name, (e.target as FileReaderEventTarget).result)
-      // console.log(x)
-      this.importingLocalFile = false
-    }
-    reader.readAsText(f, 'UTF-8')
+    const { t, n } = await fileToTextAndName(f)
+    this.parsedExmaraldaFile = exmaraldaToImportable(t, n)
+    this.importingLocalFile = false
   }
 
   openFile() {
@@ -327,18 +336,5 @@ export default class App extends Vue {
   background-position center 100px
   background-size 1740px 290px
   background-color rgba(0,0,0,.3)
-
-.max-width
-  max-width 100%
-
-.help
-  border-top 1px solid rgba(0,0,0,.1)
-  border-radius 0
-  background transparent
-  box-shadow none
-  font-weight 300
-
-.file-dropper
-  position: absolute
 
 </style>

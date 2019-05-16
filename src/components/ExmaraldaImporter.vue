@@ -44,7 +44,8 @@
                       :loading="surveys === null"
                       :rules="[ selectedSurvey === null && 'Select a Survey' ]"
                       label="Survey"
-                      v-model="selectedSurvey"
+                      :value="selectedSurvey"
+                      @change="selectSurvey"
                       two-line
                       item-text="Audiofile"
                       return-object
@@ -250,7 +251,7 @@
                 <v-flex>
                   <drop-file
                     @update="updateFile"
-                    :initial-file-name="selectedSurvey !== null ? selectedSurvey.Audiofile : null" />
+                    :initial-file-name="fileName" />
                 </v-flex>
               </v-layout>
             </v-window-item>
@@ -300,9 +301,19 @@
 </template>
 <script lang='ts'>
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { ParsedExmaraldaXML, SpeakerTierImportable } from '@service/exmaralda-parser'
-import { transcriptTreeToServerTranscript } from '../service/data-backend/exmaralda-backend'
-import { getSurveys, ServerInformant, ServerSurvey } from '../store/transcript'
+
+import {
+  ParsedExmaraldaXML,
+  SpeakerTierImportable,
+  transcriptTreeToServerTranscript
+} from '../service/exmaralda-parser'
+
+import {
+  getSurveys,
+  ServerInformant,
+  ServerSurvey
+} from '../store/transcript'
+
 import DropFile from './DropFile.vue'
 import _ from 'lodash'
 
@@ -323,6 +334,7 @@ export default class ExmaraldaImporter extends Vue {
 
   transcriptName: string|null = null
   selectedSurvey: ServerSurvey|null = null
+  fileName: string|null = null
   selectedFile: File|null = null
 
   showMissingDefaultTierError = false
@@ -334,6 +346,7 @@ export default class ExmaraldaImporter extends Vue {
 
   updateFile(file: File|null) {
     this.selectedFile = file
+    this.fileName = file === null ? null : file.name
   }
 
   get surveySpeakers() {
@@ -345,9 +358,14 @@ export default class ExmaraldaImporter extends Vue {
   get canContinue() {
     return (
       (this.step === 1 && this.basicInfoValid === true && this.surveys !== null) ||
-      (this.step === 2 && this.tiersValid === true) ||
-      this.step === 3
+      (this.step === 2 && this.tiersValid === true && this.isAnythingOrAllSelected !== false) ||
+      (this.step === 3 && this.fileName !== null)
     )
+  }
+
+  selectSurvey(survey: ServerSurvey) {
+    this.selectedSurvey = survey
+    this.fileName = survey.Audiofile
   }
 
   getSelectedDefaultTierForSpeaker(to_speaker: ServerInformant): SpeakerTierImportable[] {
@@ -370,12 +388,10 @@ export default class ExmaraldaImporter extends Vue {
   }
 
   speakerHasDuplicateDefaultTiers(to_speaker: ServerInformant): boolean {
-    console.log({to_speaker})
     return this.getSelectedDefaultTierForSpeaker(to_speaker).length > 1
   }
 
   isDuplicateDefaultTierForSpeaker(speakerTier: SpeakerTierImportable): boolean {
-    console.log('speakerTier.to_speaker', speakerTier.to_speaker)
     if (
       speakerTier.select_for_import === false ||
       speakerTier.to_tier_type !== 'default' ||
@@ -461,7 +477,6 @@ export default class ExmaraldaImporter extends Vue {
   updateIsEverthingSelected() {
     if (this.tree !== null) {
       const every = _(this.tree.speakerTiers).every(t => t.select_for_import)
-      console.log({every})
       if (every) {
         this.isAnythingOrAllSelected = true
       } else {

@@ -6,7 +6,24 @@ const worker = new Worker('')
 const promiseWorker = new PromiseWorker(worker)
 
 interface FileReaderEventTarget extends EventTarget {
-  result: ArrayBuffer
+  result: ArrayBuffer|string
+}
+
+export function fileToTextAndName(f: File): Promise<{ t: string, n: string }> {
+  return new Promise((resolve, reject) => {
+    try {
+      const reader = new FileReader()
+      reader.onload = (e: ProgressEvent) => {
+        resolve({
+          t: ((e.target as FileReaderEventTarget).result as string),
+          n: f.name
+        })
+      }
+      reader.readAsText(f, 'UTF-8')
+    } catch (e) {
+      reject(e)
+    }
+  })
 }
 
 export function fileToUint8ArrayAndName(f: File): Promise<{ b: Uint8Array, n: string }> {
@@ -14,9 +31,8 @@ export function fileToUint8ArrayAndName(f: File): Promise<{ b: Uint8Array, n: st
     try {
       const reader = new FileReader()
       reader.onload = (e: ProgressEvent) => {
-        const b = (e.target as FileReaderEventTarget).result
         resolve({
-          b: new Uint8Array(b),
+          b: new Uint8Array((e.target as FileReaderEventTarget).result as ArrayBuffer),
           n: f.name
         })
       }
