@@ -12,7 +12,7 @@
       <v-container fluid fill-height class="pa-0">
         <exmaralda-importer
           @close="parsedExmaraldaFile = null"
-          @finish="loadLocalTranscript"
+          @finish="loadImportedTranscript"
           v-if="parsedExmaraldaFile !== null"
           :tree="parsedExmaraldaFile" />
         <v-layout
@@ -281,7 +281,7 @@ export default class App extends Vue {
   async openExmaraldaFile(f: File) {
     this.importingLocalFile = true
     const { t, n } = await fileToTextAndName(f)
-    this.parsedExmaraldaFile = exmaraldaToImportable(t, n)
+    this.parsedExmaraldaFile = exmaraldaToImportable(n, t)
     this.importingLocalFile = false
   }
 
