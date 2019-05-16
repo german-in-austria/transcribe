@@ -11,10 +11,11 @@
     <v-content class="main-content">
       <v-container fluid fill-height class="pa-0">
         <exmaralda-importer
-          @close="parsedExmaraldaFile = null"
+          v-if="importableExmaraldaFile !== null"
+          :importable="importableExmaraldaFile"
+          @close="importableExmaraldaFile = null"
           @finish="loadImportedTranscript"
-          v-if="parsedExmaraldaFile !== null"
-          :tree="parsedExmaraldaFile" />
+        />
         <v-layout
           v-if="eventStore.status === 'empty'"
           class="max-width pick-transcript-container"
@@ -139,7 +140,7 @@ import {
 import {
   ParsedExmaraldaXML,
   exmaraldaToImportable
-} from '../service/exmaralda-parser'
+} from '../service/exmaralda-backend'
 
 @Component({
   components : {
@@ -162,7 +163,7 @@ export default class App extends Vue {
   loggedIn = true
   eventStore = eventStore
   log = console.log
-  parsedExmaraldaFile: ParsedExmaraldaXML|null = null
+  importableExmaraldaFile: ParsedExmaraldaXML|null = null
   errorMessage: string|null = null
   backEndUrls = [
     'https://dissdb.dioe.at',
@@ -245,7 +246,7 @@ export default class App extends Vue {
 
   async loadImportedTranscript(t: ServerTranscript, audioData: File|null): Promise<string> {
     const url = await this.loadLocalTranscript(t, audioData)
-    this.parsedExmaraldaFile = null
+    this.importableExmaraldaFile = null
     return url
   }
 
@@ -281,7 +282,7 @@ export default class App extends Vue {
   async openExmaraldaFile(f: File) {
     this.importingLocalFile = true
     const { t, n } = await fileToTextAndName(f)
-    this.parsedExmaraldaFile = exmaraldaToImportable(n, t)
+    this.importableExmaraldaFile = exmaraldaToImportable(n, t)
     this.importingLocalFile = false
   }
 

@@ -113,7 +113,7 @@
                 ref="tierForm"
                 v-model="tiersValid"
                 lazy-validation>
-                <v-layout class="pl-3 pt-3" v-for="(speakerTier, i) in tree.speakerTiers" :key="i">
+                <v-layout class="pl-3 pt-3" v-for="(speakerTier, i) in importable.speakerTiers" :key="i">
                   <v-flex class="pl-3" xs1>
                     <v-checkbox
                       class="pt-0"
@@ -305,8 +305,8 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import {
   ParsedExmaraldaXML,
   SpeakerTierImportable,
-  transcriptTreeToServerTranscript
-} from '../service/exmaralda-parser'
+  importableToServerTranscript
+} from '../service/exmaralda-backend'
 
 import {
   getSurveys,
@@ -324,7 +324,7 @@ import _ from 'lodash'
 })
 export default class ExmaraldaImporter extends Vue {
 
-  @Prop() tree: ParsedExmaraldaXML|null
+  @Prop({ required: true }) importable: ParsedExmaraldaXML
   surveys: ServerSurvey[]|null = null
 
   step = 1
@@ -369,18 +369,14 @@ export default class ExmaraldaImporter extends Vue {
   }
 
   getSelectedDefaultTierForSpeaker(to_speaker: ServerInformant): SpeakerTierImportable[] {
-    if (this.tree === null) {
-      return []
-    } else {
-      return this.tree.speakerTiers.filter(t => {
-        return (
-          t.to_speaker !== null &&
-          t.to_speaker.pk === to_speaker.pk &&
-          t.to_tier_type === 'default' &&
-          t.select_for_import === true
-        )
-      })
-    }
+    return this.importable.speakerTiers.filter(t => {
+      return (
+        t.to_speaker !== null &&
+        t.to_speaker.pk === to_speaker.pk &&
+        t.to_tier_type === 'default' &&
+        t.select_for_import === true
+      )
+    })
   }
 
   isDefaultTierSelectedForSpeaker(to_speaker: ServerInformant|null): boolean {
@@ -399,7 +395,7 @@ export default class ExmaraldaImporter extends Vue {
     ) {
       return false
     } else {
-      if (this.tree !== null && this.speakerHasDuplicateDefaultTiers(speakerTier.to_speaker)) {
+      if (this.speakerHasDuplicateDefaultTiers(speakerTier.to_speaker)) {
         return true
       } else {
         return false
@@ -408,8 +404,8 @@ export default class ExmaraldaImporter extends Vue {
   }
 
   updateTierName(speakerTier: SpeakerTierImportable, to_tier_name: string|null) {
-    if (this.tree !== null && to_tier_name !== null) {
-      this.tree.speakerTiers = this.tree.speakerTiers.map((t) => {
+    if (to_tier_name !== null) {
+      this.importable.speakerTiers = this.importable.speakerTiers.map((t) => {
         if (t.speaker_name === speakerTier.speaker_name && t.display_name === speakerTier.display_name) {
           return { ...t, to_tier_name }
         } else {
@@ -420,34 +416,24 @@ export default class ExmaraldaImporter extends Vue {
   }
 
   updateAllSelections(v: boolean) {
-    if (this.tree !== null) {
-      this.tree.speakerTiers = this.tree.speakerTiers.map((t) => {
-        return { ...t, select_for_import: v }
-      })
-      this.updateIsEverthingSelected()
-    }
+    this.importable.speakerTiers = this.importable.speakerTiers.map((t) => {
+      return { ...t, select_for_import: v }
+    })
+    this.updateIsEverthingSelected()
   }
 
   get speakersWithMissingDefaultTier(): SpeakerTierImportable[] {
-    if (this.tree !== null) {
-      return _(this.tree.speakerTiers)
-        .filter(t => t.select_for_import === true && t.to_speaker !== null)
-        .groupBy((st) => st.to_speaker!.pk)
-        .filter(tiersBySpeaker => tiersBySpeaker.filter(t => t.to_tier_type === 'default').length !== 1)
-        .toArray()
-        .flatten()
-        .value()
-    } else {
-      return []
-    }
+    return _(this.importable.speakerTiers)
+      .filter(t => t.select_for_import === true && t.to_speaker !== null)
+      .groupBy((st) => st.to_speaker!.pk)
+      .filter(tiersBySpeaker => tiersBySpeaker.filter(t => t.to_tier_type === 'default').length !== 1)
+      .toArray()
+      .flatten()
+      .value()
   }
 
   everySelectedSpeakerHasExactlyOneDefaultTier(): boolean {
-    if (this.tree !== null) {
-      return this.speakersWithMissingDefaultTier.length === 0
-    } else {
-      return false
-    }
+    return this.speakersWithMissingDefaultTier.length === 0
   }
 
   validateAndNext() {
@@ -464,10 +450,10 @@ export default class ExmaraldaImporter extends Vue {
         }
       }
     } else if (this.step === 3) {
-      if (this.tree !== null && this.transcriptName !== null && this.selectedSurvey !== null) {
+      if (this.transcriptName !== null && this.selectedSurvey !== null) {
         this.$emit(
           'finish',
-          transcriptTreeToServerTranscript(this.tree, this.transcriptName, this.selectedSurvey),
+          importableToServerTranscript(this.importable, this.transcriptName, this.selectedSurvey),
           this.selectedFile
         )
       }
@@ -475,17 +461,15 @@ export default class ExmaraldaImporter extends Vue {
   }
 
   updateIsEverthingSelected() {
-    if (this.tree !== null) {
-      const every = _(this.tree.speakerTiers).every(t => t.select_for_import)
-      if (every) {
-        this.isAnythingOrAllSelected = true
+    const every = _(this.importable.speakerTiers).every(t => t.select_for_import)
+    if (every) {
+      this.isAnythingOrAllSelected = true
+    } else {
+      const some = _(this.importable.speakerTiers).some(t => t.select_for_import)
+      if (some) {
+        this.isAnythingOrAllSelected = null
       } else {
-        const some = _(this.tree.speakerTiers).some(t => t.select_for_import)
-        if (some) {
-          this.isAnythingOrAllSelected = null
-        } else {
-          this.isAnythingOrAllSelected = false
-        }
+        this.isAnythingOrAllSelected = false
       }
     }
   }
