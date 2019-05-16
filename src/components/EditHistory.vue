@@ -58,16 +58,15 @@
           </v-list-tile-action>
         </v-list-tile>
       </template>
-     </RecycleScroller>
-      <!-- <v-tooltip
-        :key="i"
-        v-for="(action, i) in history" lazy left>
-        <segment-transcript :event="action.events[0]" />
-      </v-tooltip> -->
+    </RecycleScroller>
   </v-list>
 </template>
 
 <script lang="ts">
+
+import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import SegmentTranscript from './SegmentTranscript.vue'
+import { RecycleScroller } from 'vue-virtual-scroller'
 
 import {
   history,
@@ -79,10 +78,6 @@ import {
   selectEvent,
   playEvent
 } from '@store/transcript'
-
-import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import SegmentTranscript from './SegmentTranscript.vue'
-import { RecycleScroller } from 'vue-virtual-scroller'
 
 @Component({
   components: {

@@ -1,6 +1,8 @@
 <template>
   <v-tabs v-if="active" hide-slider class="sidebar layout fill-height column" height="64" grow v-model="activeTab">
-    <v-tab ripple>History</v-tab>
+    <v-tab ripple>
+      History
+    </v-tab>
     <v-tab ripple>
       <v-badge :value="errors.length > 0" color="grey">
         Errors <span slot="badge">{{ errors.length }}</span>
@@ -14,28 +16,8 @@
         </div>
       </v-tab-item>
       <v-tab-item>
-        <v-list dense>
-          <v-tooltip
-            v-for="(error) in errors"
-            :key="error.eventId"
-            lazy
-            left>
-            <v-list-tile slot="activator" @click="showEventIfExists(error)">
-              <v-list-tile-action>
-                <v-icon>error</v-icon>
-              </v-list-tile-action>
-              <v-list-tile-content>
-                <v-list-tile-title v-if="error.error_type === 'time_overlap'">Time Overlap</v-list-tile-title>
-                <v-list-tile-title v-if="error.error_type === 'unknow_token'">Unknown Token Type</v-list-tile-title>
-                <v-list-tile-sub-title>
-                  {{ toTime(error.startTime) }} - {{ toTime(error.endTime) }}
-                </v-list-tile-sub-title>
-              </v-list-tile-content>
-            </v-list-tile>
-            <segment-transcript :event="error" />
-          </v-tooltip>
-        </v-list>
-        <div v-if="errors.length === 0" class="text-xs-center grey--text mt-4">
+        <error-list :errors="errors" v-if="errors.length > 0" />
+        <div v-else class="text-xs-center grey--text mt-4">
           <small>Errors will appear here.</small>
         </div>
       </v-tab-item>
@@ -45,8 +27,8 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import editHistory from './EditHistory.vue'
+import errorList from './ErrorList.vue'
 import * as _ from 'lodash'
-import SegmentTranscript from './SegmentTranscript.vue'
 import {
   history,
   LocalTranscriptEvent,
@@ -66,7 +48,7 @@ interface ErrorEvent extends LocalTranscriptEvent {
 @Component({
   components: {
     editHistory,
-    SegmentTranscript
+    errorList
   }
 })
 export default class Sidebar extends Vue {
@@ -106,15 +88,6 @@ export default class Sidebar extends Vue {
         top: el.scrollHeight - el.clientHeight,
         behavior: 'smooth'
       })
-    }
-  }
-
-  showEventIfExists(e: LocalTranscriptEvent) {
-    const i = findSegmentById(e.eventId)
-    if (i > -1) {
-      selectEvent(e)
-      scrollToAudioEvent(e)
-      scrollToTranscriptEvent(e)
     }
   }
 
