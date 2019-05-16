@@ -27,6 +27,9 @@
               <v-list-tile-content>
                 <v-list-tile-title v-if="error.error_type === 'time_overlap'">Time Overlap</v-list-tile-title>
                 <v-list-tile-title v-if="error.error_type === 'unknow_token'">Unknown Token Type</v-list-tile-title>
+                <v-list-tile-sub-title>
+                  {{ toTime(error.startTime) }} - {{ toTime(error.endTime) }}
+                </v-list-tile-sub-title>
               </v-list-tile-content>
             </v-list-tile>
             <segment-transcript :event="error" />
@@ -52,7 +55,8 @@ import {
   scrollToTranscriptEvent,
   eventStore,
   selectEvent,
-  speakerEventHasErrors
+  speakerEventHasErrors,
+  toTime
 } from '../store/transcript'
 
 interface ErrorEvent extends LocalTranscriptEvent {
@@ -74,13 +78,16 @@ export default class Sidebar extends Vue {
   activeTab = 0
   eventStore = eventStore
   stuckAtBottom = false
+  toTime = toTime
 
   beforeUpdate() {
-    const el = this.$el.querySelector('.sidebar-scrollable')
-    if (el !== null && el.scrollHeight - el.scrollTop - el.clientHeight < 25) {
-      this.stuckAtBottom = true
-    } else {
-      this.stuckAtBottom = false
+    if (this.$el) {
+      const el = this.$el.querySelector('.sidebar-scrollable')
+      if (el !== null && el.scrollHeight - el.scrollTop - el.clientHeight < 25) {
+        this.stuckAtBottom = true
+      } else {
+        this.stuckAtBottom = false
+      }
     }
   }
 
