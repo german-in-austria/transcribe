@@ -241,6 +241,8 @@ export default function parseTree(xmlTree: BasicNode): ParsedExmaraldaXML {
           timeline: commonTimelineByTli,
           speakers: tiersBySpeakers,
           speakerTiers: _(tiersBySpeakers).reduce((m, el, i, l) => {
+            // TODO: .push(...res) is faster. provide implementation
+            // https://dev.to/uilicious/javascript-array-push-is-945x-faster-than-array-concat-1oki
             return m.concat(_(el).map(v => ({
               speaker_name: i,
               select_for_import: true,

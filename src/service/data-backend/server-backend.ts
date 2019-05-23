@@ -327,6 +327,8 @@ export async function getTranscript(
     }
 
     // convert and concat
+    // TODO: .push(...res) is faster. provide implementation
+    // https://dev.to/uilicious/javascript-array-push-is-945x-faster-than-array-concat-1oki
     eventStore.events = buffer.concat(serverTranscriptToLocal(res))
 
     // progress callback with data

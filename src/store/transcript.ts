@@ -621,6 +621,7 @@ export function joinEvents(eventIds: number[]): LocalTranscriptEvent {
         speakerEventId: makeEventId(),
         tokens: events.reduce((ts, ev) => {
           if (ev.speakerEvents[speakerId]) {
+            // TODO: .push(...res) is faster. provide implementation
             return ts = ts.concat(ev.speakerEvents[speakerId].tokens)
           } else {
             return ts
