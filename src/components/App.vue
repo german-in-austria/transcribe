@@ -288,7 +288,8 @@ export default class App extends Vue {
 
   openFile() {
     const x = document.createElement('input')
-    x.addEventListener('change', async (e) => {
+    x.addEventListener('input', (e) => {
+      console.log('change', e)
       if (x.files !== null) {
         if (x.files[0].name.endsWith('.transcript')) {
           this.openProjectFile(x.files[0])
