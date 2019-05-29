@@ -13,7 +13,8 @@ import {
   ServerToken,
   ServerTokenSaveResponse,
   ServerTranscriptSaveRequest,
-  LocalTranscriptTier
+  LocalTranscriptTier,
+  LocalTranscriptSpeakerEventTiers
 } from '@store/transcript'
 import { clone } from '@util/index'
 import serverTranscriptDiff from './server-transcript-diff.worker'
@@ -152,7 +153,8 @@ export function serverEventSaveResponseToServerEvent(e: ServerEventSaveResponse)
     l: e.l,
     pk: e.newPk || e.pk,
     s: e.s,
-    tid: e.tid
+    tid: e.tid,
+    event_tiers: e.event_tiers
   }
 }
 
@@ -255,17 +257,18 @@ export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
         eventId: eG[0].pk,
         startTime: timeToSeconds(eG[0].s),
         endTime: timeToSeconds(eG[0].e),
-        speakerEvents: _.reduce(eG, (m, se, i, ses) => {
+        speakerEvents: _.reduce(eG, (m, se) => {
           _.each(se.tid, (tokenIds, speakerKey) => {
             m[speakerKey] = {
-              // for now, the server doesn’t
-              // return speakerEventTiers
-              speakerEventTiers: {
-                comment: {
-                  type: 'freeText',
-                  text: 'comment'
-                }
-              },
+              speakerEventTiers: _(eG).reduce((ob, e) => {
+                _(e.event_tiers[speakerKey]).mapValues((t, tierId) => {
+                  ob[tierId] = {
+                    type: 'freeText',
+                    text: t.t
+                  }
+                })
+                return ob
+              }, {} as LocalTranscriptSpeakerEventTiers),
               speakerEventId: se.pk,
               tokens: _.map(tokenIds, (tokenId) => {
                 if (s.aTokens[tokenId] === undefined) {
@@ -327,8 +330,6 @@ export async function getTranscript(
     }
 
     // convert and concat
-    // TODO: .push(...res) is faster. provide implementation
-    // https://dev.to/uilicious/javascript-array-push-is-945x-faster-than-array-concat-1oki
     eventStore.events = buffer.concat(serverTranscriptToLocal(res))
 
     // progress callback with data

@@ -133,6 +133,15 @@ export interface ServerEvent {
   tid: {
     [speaker_id: string]: number[]
   }
+  event_tiers: {
+    [speaker_id: string]: {
+      [event_tier_id: string]: {
+        // event tier string
+        t: string
+        ti: string
+      }
+    }
+  }
   e: string // end
   s: string // start
   l: 0
@@ -170,7 +179,7 @@ export interface TierAnnotation {
 export type LocalTranscriptSpeakerEventTier = TierFreeText|TierAnnotation
 
 export interface LocalTranscriptSpeakerEventTiers {
-  [tierName: string]: LocalTranscriptSpeakerEventTier
+  [tierId: string]: LocalTranscriptSpeakerEventTier
 }
 
 export interface LocalTranscriptEvent {
@@ -621,7 +630,6 @@ export function joinEvents(eventIds: number[]): LocalTranscriptEvent {
         speakerEventId: makeEventId(),
         tokens: events.reduce((ts, ev) => {
           if (ev.speakerEvents[speakerId]) {
-            // TODO: .push(...res) is faster. provide implementation
             return ts = ts.concat(ev.speakerEvents[speakerId].tokens)
           } else {
             return ts

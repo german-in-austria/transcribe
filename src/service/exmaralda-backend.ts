@@ -66,6 +66,7 @@ interface TierEvent {
 }
 
 interface Tier {
+  id: string
   category: string
   display_name: string
   events: TierEvent[]
@@ -159,7 +160,9 @@ export function importableToServerTranscript(
             l: 0,
             tid: {
               [ speakerTier.to_speaker!.pk ]: eventTokenIds
-            }
+            },
+            // TODO:
+            event_tiers: {}
           }
         })
         .value()
@@ -218,6 +221,7 @@ export default function parseTree(xmlTree: BasicNode): ParsedExmaraldaXML {
               .keyBy(t => t.attributes.id)
               .mapValues(tier => {
                 return {
+                  id: tier.attributes.id,
                   type: tier.attributes.type,
                   category: tier.attributes.category,
                   display_name: tier.attributes['display-name'],
@@ -241,8 +245,6 @@ export default function parseTree(xmlTree: BasicNode): ParsedExmaraldaXML {
           timeline: commonTimelineByTli,
           speakers: tiersBySpeakers,
           speakerTiers: _(tiersBySpeakers).reduce((m, el, i, l) => {
-            // TODO: .push(...res) is faster. provide implementation
-            // https://dev.to/uilicious/javascript-array-push-is-945x-faster-than-array-concat-1oki
             return m.concat(_(el).map(v => ({
               speaker_name: i,
               select_for_import: true,

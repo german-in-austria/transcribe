@@ -106,20 +106,29 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
         l: 0,
         tid: {
           [speakerId]: speakerEvent.tokens.map((t) => t.id)
-        }
+        },
+        event_tiers: mapValues(event.speakerEvents, (e) => {
+          return reduce(e.speakerEventTiers, (memo, et, tierId) => {
+            if (et.type === 'freeText') {
+              memo[tierId] = {
+                t: et.text,
+                ti: tierId
+              }
+            }
+            return memo
+          }, {} as _.Dictionary<{t: string, ti: string}>)
+        })
       })
       return speakerEvent.tokens.map((t, i, tokens) => {
         const token = {
           e : speakerEvent.speakerEventId,
           i : Number(speakerId),
-          // this produces undefined for "" (empty strings)
+          // NOTE: this produces undefined for "" (empty strings)
           o : t.tiers.ortho.text.trim() || undefined,
-          // sentence id? do i have to produce new sentences?
           s : oldTranscript.aTokens[t.id] ? oldTranscript.aTokens[t.id].s : -1,
-          // sequence in sentence (how do i find that out?)
           sr: oldTranscript.aTokens[t.id] ? oldTranscript.aTokens[t.id].sr : -1,
           t : t.tiers.default.text,
-          // Text in ortho is basically useless.
+          // Text in ortho is basically useless, so we populate it with "text".
           to: t.tiers.ortho.text,
           tr: t.order,
           // TODO: this could be null
