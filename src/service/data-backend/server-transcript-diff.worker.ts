@@ -114,6 +114,8 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
                 t: et.text,
                 ti: tierId
               }
+            } else {
+              // it’s an annotation thing.
             }
             return memo
           }, {} as _.Dictionary<{t: string, ti: string}>)
