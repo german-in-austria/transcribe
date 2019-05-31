@@ -76,10 +76,10 @@ interface Tier {
 export interface SpeakerTierImportable extends Tier {
   speaker_name: string
   select_for_import: boolean
-  to_tier_type: string|null
+  to_tier_type: 'tokenized'|'freeText'|'default'|null
   to_speaker: ServerInformant|null
-  to_tier_name: string|null,
-  default_tier_type: null|'text'|'ortho'
+  to_tier_name: string|null
+  token_tier_type: 'text'|'ortho'|null
 }
 
 interface Tiers {
@@ -172,6 +172,8 @@ export function importableToServerTranscript(
     .value()
 
   return {
+    // TODO:
+    aTiers: {},
     aEinzelErhebung: {
       af: selectedSurvey.Audiofile,
       d: selectedSurvey.Datum,
@@ -251,7 +253,7 @@ export default function parseTree(xmlTree: BasicNode): ParsedExmaraldaXML {
               to_speaker: null,
               to_tier_type: null,
               to_tier_name: null,
-              default_tier_type: null,
+              token_tier_type: null,
               ...v
             })).value())
           }, [] as any[])

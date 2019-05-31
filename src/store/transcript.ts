@@ -81,6 +81,9 @@ export interface ServerTranscriptInformants {
 }
 
 export interface ServerTranscript {
+  aTiers: {
+    [tier_id: string]: string
+  }
   aTokens: {
     [token_id: string]: ServerToken
   }

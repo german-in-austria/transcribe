@@ -45,11 +45,6 @@ export function getMetadataFromServerTranscript(res: ServerTranscript) {
         show: false
       },
       {
-        type: 'token',
-        name: 'test',
-        show: false
-      },
-      {
         type: 'freeText',
         name: 'comment',
         show: false

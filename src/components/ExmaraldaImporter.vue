@@ -113,7 +113,10 @@
                 ref="tierForm"
                 v-model="tiersValid"
                 lazy-validation>
-                <v-layout class="pl-3 pt-3" v-for="(speakerTier, i) in importable.speakerTiers" :key="i">
+                <v-layout
+                  v-for="(speakerTier, i) in importable.speakerTiers"
+                  :key="i"
+                  class="pl-3 pt-3">
                   <v-flex class="pl-3" xs1>
                     <v-checkbox
                       class="pt-0"
@@ -158,8 +161,8 @@
                   <v-flex :class="[ !speakerTier.select_for_import && 'disabled' ]" xs2 class="pl-2">
                     <v-select
                       label="Tier Type"
-                      v-model="speakerTier.to_tier_type"
-                      @change="updateTierName(speakerTier, speakerTier.to_tier_type)"
+                      :value="speakerTier.to_tier_type"
+                      @change="(e) => updateTierType(speakerTier, e, i)"
                       :rules="[
                         speakerTier.select_for_import === true &&
                         speakerTier.to_tier_type === null &&
@@ -178,7 +181,7 @@
                         value: 'tokenized',
                         description: 'metadata for tokens'
                       }, {
-                        text: 'free text',
+                        text: 'event based',
                         value: 'freeText',
                         description: 'event based, e.g. comments'
                       }]"
@@ -196,27 +199,16 @@
                     </v-select>
                   </v-flex>
                   <v-flex :class="[ !speakerTier.select_for_import && 'disabled' ]" xs2 class="pl-2 pr-2">
-                    <!-- if it’s the default tier, select what type of transcript the default tier is -->
+                    <!-- select which type of transcript the token tier is -->
                     <v-select
-                      v-if="speakerTier.to_tier_type === 'default'"
+                      v-if="speakerTier.to_tier_type === 'tokenized' || speakerTier.to_tier_type === 'default'"
                       label="Transcript Type"
                       dense
-                      v-model="speakerTier.default_tier_type"
+                      v-model="speakerTier.token_tier_type"
                       :rules="[
-                        speakerTier.select_for_import && speakerTier.default_tier_type == null && 'Select a Transcript Type'
+                        speakerTier.select_for_import && speakerTier.token_tier_type == null && 'Select a Transcript Type'
                       ]"
-                      :items="[
-                        {
-                          text: 'orthographic',
-                          value: 'ortho',
-                          description: 'standard orthographic transcript'
-                        },
-                        {
-                          text: 'variational',
-                          value: 'text',
-                          description: 'phonetic transcription\n using the latin alphabet'
-                        }
-                      ]">
+                      :items="tokenTiersAvailable(speakerTier.to_speaker)">
                       <template slot="item" slot-scope="item">
                         <v-list-tile-content>
                           <v-list-tile-title>
@@ -327,6 +319,8 @@ export default class ExmaraldaImporter extends Vue {
   @Prop({ required: true }) importable: ParsedExmaraldaXML
   surveys: ServerSurvey[]|null = null
 
+  log = console.log
+
   step = 1
 
   basicInfoValid = false
@@ -387,10 +381,22 @@ export default class ExmaraldaImporter extends Vue {
     return this.getSelectedDefaultTierForSpeaker(to_speaker).length > 1
   }
 
+  updateTierType(
+    speakerTier: SpeakerTierImportable,
+    to_tier_type: SpeakerTierImportable['to_tier_type'],
+    i: number
+  ) {
+    this.importable.speakerTiers[i] = {
+      ...speakerTier,
+      to_tier_type
+    }
+    this.updateTierName(speakerTier, speakerTier.to_tier_type)
+  }
+
   isDuplicateDefaultTierForSpeaker(speakerTier: SpeakerTierImportable): boolean {
     if (
       speakerTier.select_for_import === false ||
-      speakerTier.to_tier_type !== 'default' ||
+      speakerTier.to_tier_type === 'default' ||
       speakerTier.to_speaker === null
     ) {
       return false
@@ -420,6 +426,34 @@ export default class ExmaraldaImporter extends Vue {
       return { ...t, select_for_import: v }
     })
     this.updateIsEverthingSelected()
+  }
+
+  tokenTiersAvailable(to_speaker: ServerInformant) {
+    const selectedTiersForSpeaker = this.importable.speakerTiers
+      .filter(t =>
+        t.select_for_import === true &&
+        t.to_speaker !== null &&
+        t.to_speaker.pk === to_speaker.pk)
+
+    console.log({selectedTiersForSpeaker})
+    return [
+        {
+          text: 'orthographic',
+          value: 'ortho',
+          description: 'standard orthographic transcript',
+          disabled: selectedTiersForSpeaker.findIndex((t) => {
+            return t.token_tier_type === 'ortho'
+          }) > -1
+        },
+        {
+          text: 'variational',
+          value: 'text',
+          description: 'phonetic transcription\n using the latin alphabet',
+          disabled: selectedTiersForSpeaker.findIndex((t) => {
+            return t.token_tier_type === 'text'
+          }) > -1
+        }
+      ]
   }
 
   get speakersWithMissingDefaultTier(): SpeakerTierImportable[] {
