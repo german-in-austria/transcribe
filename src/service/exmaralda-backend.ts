@@ -2,6 +2,7 @@ import _ from 'lodash'
 import {
   ServerInformant,
   makeEventId,
+  makeTierId,
   makeTokenId,
   ServerEvent,
   ServerSurvey,
@@ -73,13 +74,15 @@ interface Tier {
   type: string
 }
 
+type TokenTierType = 'text'|'ortho'|'phon'|null
+
 export interface SpeakerTierImportable extends Tier {
   speaker_name: string
   select_for_import: boolean
   to_tier_type: 'tokenized'|'freeText'|'default'|null
   to_speaker: ServerInformant|null
   to_tier_name: string|null
-  token_tier_type: 'text'|'ortho'|null
+  token_tier_type: TokenTierType
 }
 
 interface Tiers {
@@ -104,6 +107,8 @@ export function exmaraldaToImportable(fileName: string, xml: string): ParsedExma
   return parseTree(parseXML(xml))
 }
 
+const tokenTierTypes: TokenTierType[] = [ 'text', 'ortho', 'phon' ]
+
 function getTokenTypeId(t: string): number {
   const type = _(settings.tokenTypes).find((tt) => {
     return tt.regex.test(t)
@@ -111,69 +116,135 @@ function getTokenTypeId(t: string): number {
   return type ? type.id : -1
 }
 
+function getTierToken(
+    this: any,
+    speakerTiers: SpeakerTierImportable[],
+    tierType: TokenTierType,
+    startTime: string,
+    tokenIndex: number,
+  ): string|null {
+    const tier = _(speakerTiers).find(t => t.select_for_import === true && t.token_tier_type === tierType)
+    if (tier === undefined) {
+      return null
+    } else {
+      const event = _(tier.events).find(e => e.startTime === startTime)
+      if (event === undefined) {
+        return null
+      } else {
+        return tokenize(event.text)[tokenIndex] || null
+      }
+    }
+}
+
 export function importableToServerTranscript(
   tree: ParsedExmaraldaXML,
   name: string,
   selectedSurvey: ServerSurvey
 ): ServerTranscript {
-  const tokens: _.Dictionary<ServerToken> = {}
-  const events = _(tree.speakerTiers)
-    .filter(st => st.select_for_import === true)
-    .map((speakerTier) => {
-      let tokenOrder = 0
-      if (speakerTier.to_speaker === null) {
-        console.error('No speaker specified', { speakerTier })
-        throw new Error('No speaker specified')
-      } else {
-        return _(speakerTier.events).map((e): ServerEvent => {
-          const eventId = makeEventId()
-          const text = e.text || ''
-          // TODO: for Default Tiers and Tokenized Tiers,
-          // this should happen on a per speaker basis,
-          // not per speaker tier, as to unify all tiers
-          // into the same token.
-          const eventTokenIds = _(tokenize(text))
-            .filter((t) => t !== '')
-            .map((t: string, tokenIndex): number => {
-              const tokenId = makeTokenId()
-              const token = {
-                // TODO: see above
-                t,
-                o: '',
-                to: '',
-                tr: tokenOrder++,
-                e: eventId,
-                i: speakerTier.to_speaker!.pk,
-                s: 0,
-                sr: 0,
-                tt: getTokenTypeId(t)
-              }
-              tokens[tokenId] = token
-              return tokenId
-            })
-            .value()
 
-          return {
-            pk: eventId,
-            e: padEnd(timeFromSeconds(Number(e.endTime)), 14, '0'),
-            s: padEnd(timeFromSeconds(Number(e.startTime)), 14, '0'),
-            l: 0,
-            tid: {
-              [ speakerTier.to_speaker!.pk ]: eventTokenIds
-            },
-            // TODO:
-            event_tiers: {}
+  const tiersBySpeakers = _(tree.speakerTiers)
+    .filter(st => st.select_for_import === true)
+    .groupBy(st => st.to_speaker!.pk)
+    .value()
+
+  // const defaultTierEvents = _(tree.speakerTiers)
+  //   .filter(st => st.to_tier_type === 'default')
+  //   .flatMap(st => st.events)
+  //   .map(te => ({ ...te, id: makeEventId() }))
+  //   .value()
+
+  // const defaultTimeline = _(defaultTierEvents).groupBy(te => te.startTime).value()
+  // const defaultTimelineRounded = _(defaultTierEvents).groupBy(te => Math.round(Number(te.startTime))).value()
+
+  // console.log('defaultTierEventsByTime', defaultTimeline)
+  // console.log('defaultTierEventsByRoundedTime', defaultTimelineRounded)
+
+  const tokens: _.Dictionary<ServerToken> = {}
+  const tiers: ServerTranscript['aTiers'] = {}
+
+  const events = _(tiersBySpeakers)
+    .map(speakerTiers => {
+      return _(speakerTiers)
+        // only the default tier and free text (event_tier) tiers
+        .filter(st => st.to_tier_type === 'default' || st.to_tier_type === 'freeText')
+        .map(speakerTier => {
+          let tokenOrder = 0
+          if (speakerTier.to_speaker === null) {
+            console.error('No speaker specified', { speakerTier })
+            throw new Error('No speaker specified')
+          } else {
+            return _(speakerTier.events).map((e): ServerEvent => {
+
+              const eventId = makeEventId()
+              const text = e.text || ''
+
+              // secondary tiers (event tiers)
+              if (speakerTier.to_tier_type === 'freeText') {
+                const tierId = makeTierId()
+                tiers[tierId] = speakerTier.to_tier_name || 'untitled'
+                return {
+                  pk: eventId,
+                  e: padEnd(timeFromSeconds(Number(e.endTime)), 14, '0'),
+                  s: padEnd(timeFromSeconds(Number(e.startTime)), 14, '0'),
+                  l: 0 as 0,
+                  tid: {},
+                  event_tiers: {
+                    [speakerTier.to_speaker!.pk] : {
+                      [tierId]: {
+                        t: e.text,
+                        ti: String(tierId)
+                      }
+                    }
+                  }
+                }
+              } else {
+                const defaultType = speakerTier.token_tier_type
+                const otherTypes = tokenTierTypes.filter(ttt => ttt !== defaultType)
+                const eventTokenIds = _(tokenize(text))
+                  .filter((t) => t !== '')
+                  .map((t: string, tokenIndex): number => {
+                    const tokenId = makeTokenId()
+                    const token = {
+                      t,
+                      // TODO:
+                      // the default might be ortho, phon or text;
+                      // so we need a generic way to always try to look up the others (not self)
+                      o: getTierToken(speakerTiers, 'ortho', e.startTime, tokenIndex) || '',
+                      // TODO: phon type (nullable/optional).
+                      to: '',
+                      tr: tokenOrder++,
+                      e: eventId,
+                      i: speakerTier.to_speaker!.pk,
+                      s: 0,
+                      sr: 0,
+                      tt: getTokenTypeId(t)
+                    }
+                    tokens[tokenId] = token
+                    return tokenId
+                  }).value()
+                return {
+                  pk: eventId,
+                  e: padEnd(timeFromSeconds(Number(e.endTime)), 14, '0'),
+                  s: padEnd(timeFromSeconds(Number(e.startTime)), 14, '0'),
+                  l: 0,
+                  tid: {
+                    [ speakerTier.to_speaker!.pk ]: eventTokenIds
+                  },
+                  event_tiers: {}
+                }
+              }
+            }).value()
           }
-        })
-        .value()
-      }
+      }).value()
     })
+    .flatten()
     .flatten()
     .value()
 
+  // console.log({events})
+
   return {
-    // TODO:
-    aTiers: {},
+    aTiers: tiers,
     aEinzelErhebung: {
       af: selectedSurvey.Audiofile,
       d: selectedSurvey.Datum,

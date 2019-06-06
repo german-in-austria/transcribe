@@ -25,7 +25,7 @@ const textEncoder = new TextEncoder()
 export let serverTranscript = null as ServerTranscript|null
 
 export function getMetadataFromServerTranscript(res: ServerTranscript) {
-  return {
+  const v = {
     speakers: res.aInformanten!,
     tokenTypes: res.aTokenTypes!,
     transcriptName: res.aTranskript!.n,
@@ -33,24 +33,31 @@ export function getMetadataFromServerTranscript(res: ServerTranscript) {
       + res.aEinzelErhebung!.dp.split('\\').join('/')
       + res.aEinzelErhebung!.af
       + '.ogg',
-    tiers: [
+    tiers: _(res.aTiers).map((t, tid) => {
+      return {
+        type: 'freeText',
+        name: t,
+        show: false,
+        id: tid
+      }
+    })
+    .concat([
       {
         type: 'basic',
         name: 'default',
-        show: true
+        show: true,
+        id: 'default'
       },
       {
         type: 'token',
         name: 'ortho',
-        show: false
-      },
-      {
-        type: 'freeText',
-        name: 'comment',
-        show: false
+        show: false,
+        id: 'ortho'
       }
-    ] as LocalTranscriptTier[]
+    ]).value() as LocalTranscriptTier[]
   }
+  console.log({metadata: v})
+  return v
 }
 
 export function mergeServerTranscript(s: ServerTranscript) {
@@ -255,14 +262,15 @@ export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
         speakerEvents: _.reduce(eG, (m, se) => {
           _.each(se.tid, (tokenIds, speakerKey) => {
             m[speakerKey] = {
-              speakerEventTiers: _(eG).reduce((ob, e) => {
-                _(e.event_tiers[speakerKey]).mapValues((t, tierId) => {
-                  ob[tierId] = {
+              speakerEventTiers: _(eG).reduce((ts, e) => {
+                const x = _(e.event_tiers[speakerKey]).mapValues((t, tierId) => {
+                  ts[tierId] = {
                     type: 'freeText',
                     text: t.t
                   }
-                })
-                return ob
+                  return ts[tierId]
+                }).value()
+                return ts
               }, {} as LocalTranscriptSpeakerEventTiers),
               speakerEventId: se.pk,
               tokens: _.map(tokenIds, (tokenId) => {

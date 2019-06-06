@@ -279,6 +279,10 @@ export function makeTokenId() {
   return Number(_.uniqueId()) * -1
 }
 
+export function makeTierId() {
+  return Number(_.uniqueId()) * -1
+}
+
 export function findSegmentById(id: number) {
   return _(eventStore.events).findIndex(e => e.eventId === id)
 }
