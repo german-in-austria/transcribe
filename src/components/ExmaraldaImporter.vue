@@ -401,11 +401,7 @@ export default class ExmaraldaImporter extends Vue {
     ) {
       return false
     } else {
-      if (this.speakerHasDuplicateDefaultTiers(speakerTier.to_speaker)) {
-        return true
-      } else {
-        return false
-      }
+      return this.speakerHasDuplicateDefaultTiers(speakerTier.to_speaker)
     }
   }
 
@@ -429,13 +425,13 @@ export default class ExmaraldaImporter extends Vue {
   }
 
   tokenTiersAvailable(to_speaker: ServerInformant) {
+
     const selectedTiersForSpeaker = this.importable.speakerTiers
       .filter(t =>
         t.select_for_import === true &&
         t.to_speaker !== null &&
         t.to_speaker.pk === to_speaker.pk)
 
-    console.log({selectedTiersForSpeaker})
     return [
         {
           text: 'orthographic',
