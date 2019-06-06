@@ -40,10 +40,10 @@
       class="secondary-free-text-tier">
       <span
         v-if="localTokens.length && tier.type === 'freeText'"
-        v-text="getTierFreeTextText(tier.name)"
+        v-text="getTierFreeTextText(tier.id)"
         contenteditable="true"
         class="secondary-free-text-tier-text"
-        @blur="(e) => updateAndCommitLocalTier(e, tier.name, tier.type)"
+        @blur="(e) => updateAndCommitLocalTier(e, tier.id, tier.type)"
         @focus="(e) => $emit('focus', e, event)"
         @keydown.enter.meta="playEvent(event)"
         @keydown.enter.exact.stop.prevent="viewAudioEvent(event)" />
@@ -115,12 +115,12 @@ export default class SpeakerSegmentTranscript extends Vue {
     this.segmentText = this.localTokens ? this.localTokens.map(t => t.tiers.default.text).join(' ') : ''
   }
 
-  getTierFreeTextText(tierName: string) {
+  getTierFreeTextText(tierId: string) {
     return (
       this.localEvent.speakerEvents[this.speaker] !== undefined &&
       this.localEvent.speakerEvents[this.speaker].speakerEventTiers !== undefined &&
-      this.localEvent.speakerEvents[this.speaker].speakerEventTiers[tierName] !== undefined
-        ? (this.localEvent.speakerEvents[this.speaker].speakerEventTiers[tierName] as TierFreeText).text
+      this.localEvent.speakerEvents[this.speaker].speakerEventTiers[tierId] !== undefined
+        ? (this.localEvent.speakerEvents[this.speaker].speakerEventTiers[tierId] as TierFreeText).text
         : ''
     )
   }
@@ -223,12 +223,12 @@ export default class SpeakerSegmentTranscript extends Vue {
     }
   }
 
-  updateAndCommitLocalTier(e: Event, tierName: string, tierType: string) {
+  updateAndCommitLocalTier(e: Event, id: string, tierType: string) {
     if (this.localEvent.speakerEvents[this.speaker] !== undefined) {
       if (tierType === 'freeText') {
         (this.localEvent
           .speakerEvents[this.speaker]
-          .speakerEventTiers[tierName] as TierFreeText
+          .speakerEventTiers[id] as TierFreeText
         ).text = (e.target as HTMLElement).textContent as string
       }
       this.commit()
