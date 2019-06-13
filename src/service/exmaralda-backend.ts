@@ -204,7 +204,9 @@ export function importableToServerTranscript(
                       o: thisType === 'ortho'
                         ? t
                         : (getTierToken(speakerTiers, 'ortho', e.startTime, tokenIndex) || ''),
-                      // TODO: phon type (nullable/optional).
+                      p: thisType === 'phon'
+                        ? t
+                        : (getTierToken(speakerTiers, 'phon', e.startTime, tokenIndex) || ''),
                       to: '',
                       tr: tokenOrder++,
                       e: eventId,

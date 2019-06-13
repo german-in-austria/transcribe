@@ -47,13 +47,19 @@ export function getMetadataFromServerTranscript(res: ServerTranscript) {
         type: 'basic',
         name: 'default',
         show: true,
-        id: 'default'
+        id: 'text'
       },
       {
         type: 'token',
         name: 'ortho',
         show: false,
         id: 'ortho'
+      },
+      {
+        type: 'token',
+        name: 'phon',
+        show: false,
+        id: 'phon'
       }
     ]).value() as LocalTranscriptTier[]
   }

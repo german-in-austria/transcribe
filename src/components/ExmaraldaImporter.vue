@@ -448,6 +448,14 @@ export default class ExmaraldaImporter extends Vue {
           disabled: selectedTiersForSpeaker.findIndex((t) => {
             return t.token_tier_type === 'text'
           }) > -1
+        },
+        {
+          text: 'phonetic',
+          value: 'phon',
+          description: 'actual phonetic transcription',
+          disabled: selectedTiersForSpeaker.findIndex((t) => {
+            return t.token_tier_type === 'phon'
+          }) > -1
         }
       ]
   }

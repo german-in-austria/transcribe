@@ -129,6 +129,7 @@ export interface ServerToken {
   i: number // inf id
   e: number // event id
   o?: string // ortho
+  p?: string // TODO: add phon on server
   fo?: number // fragment of
 }
 
