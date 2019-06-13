@@ -6,7 +6,8 @@ import {
   LocalTranscriptToken,
   ServerTranscriptSaveRequest,
   ServerEventSaveRequest,
-  ServerTokenSaveRequest
+  ServerTokenSaveRequest,
+  TokenTierType
 } from '@store/transcript'
 
 const registerPromiseWorker = require('promise-worker-transferable/register')
@@ -60,14 +61,14 @@ function getTokenTextWithFragments(t: LocalTranscriptToken, speakerId: string, e
   })
   if (event !== undefined) {
     const nextToken = event.speakerEvents[speakerId].tokens[0]
-    const newText = replaceLastOccurrence(t.tiers.default.text, '=', nextToken.tiers.default.text)
+    const newText = replaceLastOccurrence(t.tiers.text.text, '=', nextToken.tiers.text.text)
     if (tokenHasFragment(newText)) {
-      return t.tiers.default.text.replace('=', '') + getTokenTextWithFragments(nextToken, speakerId, es)
+      return t.tiers.text.text.replace('=', '') + getTokenTextWithFragments(nextToken, speakerId, es)
     } else {
       return newText
     }
   } else {
-    return t.tiers.default.text
+    return t.tiers.text.text
   }
 }
 
@@ -95,6 +96,7 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
   const { oldT, newT } = message
   const oldTranscript = JSON.parse(textDecoder.decode(oldT)) as ServerTranscript
   const localTranscript = JSON.parse(textDecoder.decode(newT)) as LocalTranscript
+  const defaultTier = oldTranscript.aDefaultTier || 'text'
 
   const newServerEvents: ServerEvent[] = []
   const newServerTokens = reduce(localTranscript, (m, event) => {
@@ -129,12 +131,12 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
           o : t.tiers.ortho.text.trim() || undefined,
           s : oldTranscript.aTokens[t.id] ? oldTranscript.aTokens[t.id].s : -1,
           sr: oldTranscript.aTokens[t.id] ? oldTranscript.aTokens[t.id].sr : -1,
-          t : t.tiers.default.text,
+          t : t.tiers.text.text,
           // Text in ortho is basically useless, so we populate it with "text".
           to: t.tiers.ortho.text,
           tr: t.order,
           // TODO: this could be null
-          tt: t.tiers.default.type as number,
+          tt: t.tiers.text.type as number,
           fo: t.fragmentOf || undefined
         }
         // it is the last token and has a fragment marker

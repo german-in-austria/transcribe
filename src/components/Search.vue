@@ -87,6 +87,7 @@ import {
 @Component
 export default class Search extends Vue {
 
+  defaultTier = eventStore.metadata.defaultTier
   focussed = false
   eventStore = eventStore
   toTime = toTime
@@ -138,7 +139,7 @@ export default class Search extends Vue {
 
   defaultOrAllTokenText(t: LocalTranscriptToken) {
     if (this.defaultTierOnly) {
-      return t.tiers.default.text
+      return t.tiers[this.defaultTier].text
     } else {
       return _(t.tiers).map(tier => tier.text).value().join(' ')
     }

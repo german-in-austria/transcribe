@@ -29,6 +29,7 @@ export function getMetadataFromServerTranscript(res: ServerTranscript) {
     speakers: res.aInformanten!,
     tokenTypes: res.aTokenTypes!,
     transcriptName: res.aTranskript!.n,
+    defaultTier: res.aDefaultTier || 'text',
     audioUrl: `${ eventStore.backEndUrl }/private-media`
       + res.aEinzelErhebung!.dp.split('\\').join('/')
       + res.aEinzelErhebung!.af
@@ -56,7 +57,6 @@ export function getMetadataFromServerTranscript(res: ServerTranscript) {
       }
     ]).value() as LocalTranscriptTier[]
   }
-  console.log({metadata: v})
   return v
 }
 
@@ -282,8 +282,8 @@ export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
                   fragmentOf: s.aTokens[tokenId].fo || null,
                   sentenceId: s.aTokens[tokenId].s || null,
                   order: s.aTokens[tokenId].tr,
-                  tiers : {
-                    default: {
+                  tiers: {
+                    text: {
                       // replace fragment in current token,
                       // if next token has a "fragment_of" marker
                       text: (() => {
@@ -298,6 +298,11 @@ export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
                     },
                     ortho: {
                       text: s.aTokens[tokenId].o || '',
+                      type: null
+                    },
+                    // TODO: add "phon" on server
+                    phon: {
+                      text: (s.aTokens[tokenId] as any).p || '',
                       type: null
                     }
                   }

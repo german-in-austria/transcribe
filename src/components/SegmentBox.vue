@@ -10,7 +10,7 @@
     :style="{ left: offset + 'px', width: width + 'px' }">
     <div :style="{ left: width / 2 + 'px' }" class="transcript-tooltip" v-if="isEventSelected(event.eventId)">
       <div class="inner" :key="i" v-for="(se, i) in event.speakerEvents">
-        {{ eventStore.metadata.speakers[i].k }}: {{ se.tokens.map(t => t.tiers.default.text).join(' ') }}
+        {{ eventStore.metadata.speakers[i].k }}: {{ se.tokens.map(t => t.tiers[eventStore.metadata.defaultTier].text).join(' ') }}
       </div>
     </div>
     <resize-parent

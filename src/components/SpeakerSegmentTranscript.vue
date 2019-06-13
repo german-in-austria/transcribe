@@ -6,9 +6,9 @@
         v-for="(token, i) in localTokens"
         :key="token.id">
         <span
-          v-text="token.tiers.default.text"
+          v-text="token.tiers[defaultTier].text"
           :class="['token-type-indicator', focused && 'focused']"
-          :style="{ backgroundColor: colorFromTokenType(token.tiers.default.type) }">
+          :style="{ backgroundColor: colorFromTokenType(token.tiers[defaultTier].type) }">
         </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span class="secondary-token-tier" v-for="(tokenTier, tierIndex) in secondaryTokenTiers" :key="tokenTier.name">
           <span
             :style="{top: (tierIndex + 1) * tierHeight + 'px'}"
@@ -58,14 +58,15 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
 import { clone, isEqualDeep, requestFrameAsync } from '../util'
 import {
-  updateSpeakerEvent,
   LocalTranscriptEvent,
-  eventStore,
   LocalTranscriptToken,
-  makeTokenId,
+  TierFreeText,
+  TokenTierType,
+  updateSpeakerEvent,
+  eventStore,
   findPreviousSpeakerEvent,
-  playEvent,
-  TierFreeText
+  makeTokenId,
+  playEvent
 } from '../store/transcript'
 import * as _ from 'lodash'
 import * as jsdiff from 'diff'
@@ -98,7 +99,8 @@ export default class SpeakerSegmentTranscript extends Vue {
   localTokens = this.localEvent.speakerEvents[this.speaker]
     ? this.localEvent.speakerEvents[this.speaker].tokens
     : []
-  segmentText = this.localTokens ? this.localTokens.map(t => t.tiers.default.text).join(' ') : ''
+  defaultTier = eventStore.metadata.defaultTier
+  segmentText = this.localTokens ? this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ') : ''
   focused = false
 
   settings = settings
@@ -112,7 +114,7 @@ export default class SpeakerSegmentTranscript extends Vue {
     this.localTokens = this.localEvent.speakerEvents[this.speaker]
       ? this.localEvent.speakerEvents[this.speaker].tokens
       : []
-    this.segmentText = this.localTokens ? this.localTokens.map(t => t.tiers.default.text).join(' ') : ''
+    this.segmentText = this.localTokens ? this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ') : ''
   }
 
   getTierFreeTextText(tierId: string) {
@@ -127,14 +129,7 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   get isMarkedWithFragment(): boolean {
     const last = _(this.localTokens).last()
-    return last !== undefined && last.tiers.default.text.endsWith('=')
-  }
-
-  get printableSpeakerTokens() {
-    return this.event.speakerEvents[this.speaker]
-      ? JSON.stringify(this.event.speakerEvents[this.speaker].tokens
-        .map(t => t.order + ': ' + t.tiers.default.text), undefined, 4)
-      : ''
+    return last !== undefined && last.tiers[this.defaultTier].text.endsWith('=')
   }
 
   get firstTokenFragmentOf(): number|null {
@@ -237,7 +232,7 @@ export default class SpeakerSegmentTranscript extends Vue {
     }
   }
 
-  updateAndCommitLocalTokenTier(e: Event, tierName: string, i: number) {
+  updateAndCommitLocalTokenTier(e: Event, tierName: TokenTierType, i: number) {
     const text = (e.target as HTMLElement).textContent as string
     this.localTokens[i].tiers[tierName] = { text, type: null }
     this.commit()
@@ -253,7 +248,7 @@ export default class SpeakerSegmentTranscript extends Vue {
     const newTokens = this.tokenizeText((e.target as HTMLDivElement).textContent as string).map((t, i) => {
       return { text: t, index: i }
     })
-    const oldTokens = this.localTokens.map((t, i) => ({ text: t.tiers.default.text, index: i }))
+    const oldTokens = this.localTokens.map((t, i) => ({ text: t.tiers[this.defaultTier].text, index: i }))
     console.log({ newTokens, oldTokens })
     const hunks = jsdiff.diffArrays(oldTokens, newTokens, { comparator: (l, r) => l.text === r.text })
     console.log({hunks})
@@ -297,11 +292,15 @@ export default class SpeakerSegmentTranscript extends Vue {
           order: -1,
           sentenceId: -1, // how?
           tiers: {
-            default: {
+            text: {
               text: u.text,
               type: tokenTypeFromToken(u.text).id
             },
             ortho: {
+              text: '',
+              type: null
+            },
+            phon: {
               text: '',
               type: null
             }
@@ -309,7 +308,7 @@ export default class SpeakerSegmentTranscript extends Vue {
         })
       // UPDATE
       } else if (u.type === 'update') {
-        this.localTokens[u.index].tiers.default = {
+        this.localTokens[u.index].tiers[this.defaultTier] = {
           text: u.text,
           type: tokenTypeFromToken(u.text).id
         }

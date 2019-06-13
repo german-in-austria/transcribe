@@ -1,5 +1,5 @@
 
-import * as _ from 'lodash'
+import _ from 'lodash'
 import audio from '../service/audio'
 import { clone } from '../util'
 import {
@@ -87,6 +87,7 @@ export interface ServerTranscript {
   aTokens: {
     [token_id: string]: ServerToken
   }
+  aDefaultTier: TokenTierType|null,
   aEinzelErhebung?: {
     af: string
     d: string
@@ -154,9 +155,10 @@ interface LocalTranscriptTokenTier {
   text: string
   type: number|null
 }
-
 type LocalTranscriptSpeakers = ServerTranscript['aInformanten']
 type LocalTranscriptTokenTypes = ServerTranscript['aTokenTypes']
+
+export type TokenTierType = 'text'|'ortho'|'phon'
 
 export interface LocalTranscriptToken {
   id: number
@@ -164,8 +166,7 @@ export interface LocalTranscriptToken {
   sentenceId: number|null
   order: number
   tiers: {
-    default: LocalTranscriptTokenTier
-    [tier: string]: LocalTranscriptTokenTier
+    [key in TokenTierType]: LocalTranscriptTokenTier
   }
 }
 
@@ -227,6 +228,7 @@ export const eventStore = {
   searchTerm: '',
   playingEvent: null as LocalTranscriptEvent|null,
   metadata: {
+    defaultTier: 'text' as TokenTierType,
     speakers: {} as LocalTranscriptSpeakers,
     tokenTypes: {} as LocalTranscriptTokenTypes,
     transcriptName: null as string|null,
@@ -287,9 +289,9 @@ export function findSegmentById(id: number) {
   return _(eventStore.events).findIndex(e => e.eventId === id)
 }
 
-export function sentencesFromEvent(event: LocalTranscriptEvent): string[] {
+export function sentencesFromEvent(event: LocalTranscriptEvent, tier: TokenTierType): string[] {
   return _(event.speakerEvents).map(e => {
-    return e.tokens.map(t => t.tiers.default.text).join(' ')
+    return e.tokens.map(t => t.tiers[tier].text).join(' ')
   }).value()
 }
 
@@ -298,7 +300,7 @@ const sentenceRules: [(text: string) => boolean] = [
 ]
 
 export function speakerEventHasErrors(event: LocalTranscriptEvent): boolean {
-  const sentences = sentencesFromEvent(event)
+  const sentences = sentencesFromEvent(event, eventStore.metadata.defaultTier)
   // not every sentence satisfies every rule.
   return !sentences.every(s => sentenceRules.every(r => r(s)))
 }
@@ -342,10 +344,10 @@ function getLastEventToken(event: LocalTranscriptEvent, speakerId: number): Loca
   }
 }
 
-function hasNextFragmentMarker(event: LocalTranscriptEvent, speakerId: number): boolean {
+function hasNextFragmentMarker(event: LocalTranscriptEvent, speakerId: number, tier: TokenTierType): boolean {
   const lastToken = getLastEventToken(event, speakerId)
   if (lastToken !== undefined) {
-    return lastToken.tiers.default.text.endsWith('=')
+    return lastToken.tiers[tier].text.endsWith('=')
   } else {
     return false
   }
@@ -411,7 +413,7 @@ export function updateSpeakerEvent(
   // IF IT HAS A FRAGMENT MARKER ("="),
   // MARK THE FIRST TOKEN IN THE NEXT
   // SPEAKER EVENT AS A FRAGMENT_OF
-  if (hasNextFragmentMarker(newEvent, speakerId)) {
+  if (hasNextFragmentMarker(newEvent, speakerId, eventStore.metadata.defaultTier)) {
     setFirstTokenFragmentOf(index + 1, speakerId, getLastEventToken(newEvent, speakerId))
   }
   // UPDATE TOKEN ORDER IF THE LENGTH CHANGED
