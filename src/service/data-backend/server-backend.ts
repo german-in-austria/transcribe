@@ -300,16 +300,16 @@ export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
                           return s.aTokens[tokenId].t
                         }
                       })(),
-                      type: s.aTokens[tokenId].tt
+                      type: s.aDefaultTier === 'text' ? s.aTokens[tokenId].tt : null
                     },
                     ortho: {
                       text: s.aTokens[tokenId].o || '',
-                      type: null
+                      type: s.aDefaultTier === 'ortho' ? s.aTokens[tokenId].tt : null
                     },
                     // TODO: add "phon" on server
                     phon: {
                       text: (s.aTokens[tokenId] as any).p || '',
-                      type: null
+                      type: s.aDefaultTier === 'phon' ? s.aTokens[tokenId].tt : null
                     }
                   }
                 }
