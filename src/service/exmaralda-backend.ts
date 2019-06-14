@@ -135,18 +135,21 @@ function getTierToken(
 }
 
 export function importableToServerTranscript(
-  tree: ParsedExmaraldaXML,
+  importable: ParsedExmaraldaXML,
   name: string,
   selectedSurvey: ServerSurvey
 ): ServerTranscript {
 
-  const tiersBySpeakers = _(tree.speakerTiers)
+  const tiersBySpeakers = _(importable.speakerTiers)
     .filter(st => st.select_for_import === true)
     .groupBy(st => st.to_speaker!.pk)
     .value()
 
+  // TODO: since now there can only be one
+  // default tier type for all speakers
+  // this should be handled more explicitly
   const defaultTokenTierType = (
-    _(tree.speakerTiers).filter(t => t.to_tier_type === 'default').value()[0] || { token_tier_type: 'text' }
+    _(importable.speakerTiers).filter(t => t.to_tier_type === 'default').value()[0] || { token_tier_type: 'text' }
   ).token_tier_type
 
   const tokens: _.Dictionary<ServerToken> = {}
@@ -194,7 +197,7 @@ export function importableToServerTranscript(
               } else {
                 const thisType = speakerTier.token_tier_type
                 const eventTokenIds = _(tokenize(text))
-                  .filter((t) => t !== '')
+                  .filter(t => t !== '')
                   .map((t, tokenIndex): number => {
                     const tokenId = makeTokenId()
                     const token = {
@@ -273,7 +276,7 @@ export default function parseTree(xmlTree: BasicNode): ParsedExmaraldaXML {
     const basicBody = _(xmlTree.children[0].children).find({ name: 'basic-body' })
     if (basicBody !== undefined) {
       const commonTimeline = _(basicBody.children).find({ name: 'common-timeline' })
-      const tiers = _(basicBody.children).filter((t) => t.name === 'tier').value() as TierNode[]
+      const tiers = _(basicBody.children).filter(t => t.name === 'tier').value() as TierNode[]
       if (commonTimeline !== undefined) {
 
         const commonTimelineByTli = _(commonTimeline.children)
