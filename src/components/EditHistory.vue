@@ -19,7 +19,7 @@
             <v-list-tile-title class="sidebar-title">resize segment</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
               <div class="inner" :key="i" v-for="(se, i) in item.events[0].speakerEvents">
-                {{ i }}: {{ se.tokens.map(t => t.tiers[this.defaultTier].text).join(' ') }}
+                {{ i }}: {{ se.tokens.map(t => t.tiers[defaultTier].text).join(' ') }}
               </div>
             </v-list-tile-sub-title>
           </v-list-tile-content>
@@ -33,7 +33,7 @@
             <v-list-tile-title class="sidebar-title">delete segment</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
               <div class="inner" :key="i" v-for="(se, i) in item.events[0].speakerEvents">
-                {{ i }}: {{ se.tokens.map(t => t.tiers[this.defaultTier].text).join(' ') }}
+                {{ i }}: {{ se.tokens.map(t => t.tiers[defaultTier].text).join(' ') }}
               </div>
             </v-list-tile-sub-title>
           </v-list-tile-content>
@@ -47,7 +47,7 @@
             <v-list-tile-title class="sidebar-title">update transcript</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
               <div class="inner" :key="i" v-for="(se, i) in item.events[0].speakerEvents">
-                {{ i }}: {{ se.tokens.map(t => t.tiers[this.defaultTier].text).join(' ') }}
+                {{ i }}: {{ se.tokens.map(t => t.tiers[defaultTier].text).join(' ') }}
               </div>
             </v-list-tile-sub-title>
           </v-list-tile-content>
