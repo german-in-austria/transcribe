@@ -9,16 +9,18 @@
           v-text="token.tiers[defaultTier].text"
           :class="['token-type-indicator', focused && 'focused']"
           :style="{ backgroundColor: colorFromTokenType(token.tiers[defaultTier].type) }">
-        </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span class="secondary-token-tier" v-for="(tokenTier, tierIndex) in secondaryTokenTiers" :key="tokenTier.name">
+        </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span class="secondary-token-tier" v-for="(tier, tierIndex) in secondaryTiers" :key="tier.name">
           <span
+            v-if="tier.type === 'token'"
             :style="{top: (tierIndex + 1) * tierHeight + 'px'}"
             class="secondary-token-tier-text"
-            v-text="token.tiers[tokenTier.name] !== undefined ? token.tiers[tokenTier.name].text : undefined"
+            v-text="token.tiers[tier.name] !== undefined ? token.tiers[tier.name].text : undefined"
             contenteditable="true"
-            @blur="(e) => updateAndCommitLocalTokenTier(e, tokenTier.name, i)"
+            @blur="(e) => updateAndCommitLocalTokenTier(e, tier.name, i)"
             @focus="(e) => $emit('focus', e, event)"
             @keydown.enter.meta="playEvent(event)"
             @keydown.enter.exact.stop.prevent="viewAudioEvent(event)" />
+          <span v-else class="secondary-token-tier-text" />
         </span>
       </span>
     </div>
