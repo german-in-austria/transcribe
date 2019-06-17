@@ -45,7 +45,7 @@
         v-text="getTierFreeTextText(tier.id)"
         contenteditable="true"
         class="secondary-free-text-tier-text"
-        @blur="(e) => updateAndCommitLocalTier(e, tier.id, tier.type)"
+        @blur="(e) => updateAndCommitLocalEventTier(e, tier.id, tier.type)"
         @focus="(e) => $emit('focus', e, event)"
         @keydown.enter.meta="playEvent(event)"
         @keydown.enter.exact.stop.prevent="viewAudioEvent(event)" />
@@ -220,8 +220,11 @@ export default class SpeakerSegmentTranscript extends Vue {
     }
   }
 
-  updateAndCommitLocalTier(e: Event, id: string, tierType: string) {
-    if (this.localEvent.speakerEvents[this.speaker] !== undefined) {
+  updateAndCommitLocalEventTier(e: Event, id: string, tierType: string) {
+    if (
+      this.localEvent.speakerEvents[this.speaker] !== undefined &&
+      this.localEvent.speakerEvents[this.speaker].speakerEventTiers !== undefined &&
+      this.localEvent.speakerEvents[this.speaker].speakerEventTiers[id] !== undefined) {
       if (tierType === 'freeText') {
         (this.localEvent
           .speakerEvents[this.speaker]
@@ -230,7 +233,8 @@ export default class SpeakerSegmentTranscript extends Vue {
       }
       this.commit()
     } else {
-      // does not yet exists
+      console.log('CREATE!')
+      // does not yet exist
     }
   }
 
