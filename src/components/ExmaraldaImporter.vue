@@ -111,8 +111,8 @@
               <v-form
                 class="pb-5"
                 ref="tierForm"
-                v-model="tiersValid"
-                lazy-validation>
+                lazy-validation
+                v-model="tiersValid">
                 <v-layout
                   v-for="(speakerTier, i) in importable.speakerTiers"
                   :key="i"
@@ -162,7 +162,8 @@
                     <v-select
                       label="Tier Type"
                       :value="speakerTier.to_tier_type"
-                      @change="(e) => updateTierType(speakerTier, e, i)"
+                      @input="(e) => updateTierType(speakerTier, e, i)"
+                      :disabled="speakerTier.to_speaker === null"
                       :rules="[
                         speakerTier.select_for_import === true &&
                         speakerTier.to_tier_type === null &&
@@ -225,6 +226,7 @@
                       v-else
                       validate-on-blur
                       label="Tier Name"
+                      :disabled="speakerTier.to_tier_type === null"
                       v-model="speakerTier.to_tier_name"
                       :rules="[ speakerTier.select_for_import && !speakerTier.to_tier_name && 'Specify a name' ]"
                     />
@@ -332,7 +334,7 @@ export default class ExmaraldaImporter extends Vue {
   selectedFile: File|null = null
 
   showMissingDefaultTierError = false
-  isAnythingOrAllSelected: boolean|null = true
+  isAnythingOrAllSelected: boolean|null = false
 
   async mounted() {
     this.surveys = await getSurveys()
@@ -386,11 +388,13 @@ export default class ExmaraldaImporter extends Vue {
     to_tier_type: SpeakerTierImportable['to_tier_type'],
     i: number
   ) {
-    this.importable.speakerTiers[i] = {
-      ...speakerTier,
-      to_tier_type
-    }
-    this.updateTierName(speakerTier, speakerTier.to_tier_type)
+    this.importable.speakerTiers[i].to_tier_type = to_tier_type
+    // this.$nextTick(() => {
+    //   this.importable.speakerTiers[i] = {
+    //     ...speakerTier,
+    //     to_tier_type
+    //   }
+    // })
   }
 
   isDuplicateDefaultTierForSpeaker(speakerTier: SpeakerTierImportable): boolean {
@@ -405,17 +409,15 @@ export default class ExmaraldaImporter extends Vue {
     }
   }
 
-  updateTierName(speakerTier: SpeakerTierImportable, to_tier_name: string|null) {
-    if (to_tier_name !== null) {
-      this.importable.speakerTiers = this.importable.speakerTiers.map((t) => {
-        if (t.speaker_name === speakerTier.speaker_name && t.display_name === speakerTier.display_name) {
-          return { ...t, to_tier_name }
-        } else {
-          return t
-        }
-      })
-    }
-  }
+  // updateTierName(speakerTier: SpeakerTierImportable, to_tier_name: string|null) {
+  //   this.importable.speakerTiers = this.importable.speakerTiers.map((t) => {
+  //     if (t.speaker_name === speakerTier.speaker_name && t.display_name === speakerTier.display_name) {
+  //       return { ...t, to_tier_name }
+  //     } else {
+  //       return t
+  //     }
+  //   })
+  // }
 
   updateAllSelections(v: boolean) {
     this.importable.speakerTiers = this.importable.speakerTiers.map((t) => {
