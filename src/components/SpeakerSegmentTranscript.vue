@@ -30,6 +30,7 @@
       @blur="updateAndCommitLocalTokens"
       @keydown.enter.meta="playEvent(event)"
       @keydown.enter.exact.stop.prevent="viewAudioEvent(event)"
+      @copy.prevent="copyTokens"
       contenteditable="true"
       v-text="segmentText"
       :style="textStyle"
@@ -117,6 +118,83 @@ export default class SpeakerSegmentTranscript extends Vue {
       ? this.localEvent.speakerEvents[this.speaker].tokens
       : []
     this.segmentText = this.localTokens ? this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ') : ''
+  }
+
+  collectTokensViaOffsets(start: number, end: number): LocalTranscriptToken[] {
+    const left = Math.min(start, end)
+    const right = Math.max(start, end)
+    console.log({left, right})
+    let cursor = 0
+    return this.localTokens.filter((t, ti) => {
+      const tokenStart = cursor
+      const tokenEnd = cursor + t.tiers[this.defaultTier].text.length
+      // move cursor and account for whitespace
+      cursor = tokenEnd + 1
+      if (left <= tokenStart && right >= tokenEnd) {
+        console.log('full copy of token', tokenStart, tokenEnd, t)
+        return true
+      } else if (left > tokenEnd || right < tokenStart) {
+        console.log('no copy of token', tokenStart, tokenEnd, t)
+        return false
+      } else {
+        console.log('partial copy of token', tokenStart, tokenEnd, t)
+        return true
+      }
+    })
+  }
+
+  tokensToCsv(tokens: LocalTranscriptToken[]): string {
+    return _(tokens).reduce((m, e, i, l) => {
+      // insert the header
+      if (i === 0) {
+        m = 'ORDER,TEXT,ORTHO,PHON\n'
+      }
+      return `${ m }"${e.order}","${ e.tiers.text.text }","${ e.tiers.ortho.text }","${ e.tiers.phon.text }"\n`
+    }, '')
+  }
+
+  csvToTokens(tokens: string): LocalTranscriptToken[] {
+    // TODO:
+    // IMPLEMENT
+    return [{
+      id: makeTokenId(),
+      fragmentOf: null,
+      sentenceId: -1,
+      order: 0,
+      tiers: {
+        text: {
+          text: '',
+          type: -1
+        },
+        phon: {
+          text: '',
+          type: -1
+        },
+        ortho: {
+          text: '',
+          type: -1
+        }
+      }
+    }]
+  }
+
+  copyTokens(e: ClipboardEvent) {
+    const s = document.getSelection()
+    if (s !== null) {
+      const tokens = this.collectTokensViaOffsets(s.baseOffset, s.extentOffset)
+      const csv = this.tokensToCsv(tokens)
+      e.clipboardData.setData('text/plain', csv)
+    } else {
+      // nothing selected
+    }
+  }
+
+  pasteTokens(e: ClipboardEvent) {
+    const csv = e.clipboardData.getData('text/plain')
+    const s = document.getSelection()
+    // TODO: IMPLEMENT
+    const tokens = this.csvToTokens(csv)
+    // TODO: update tokens accordingly.
   }
 
   getTierFreeTextText(tierId: string) {
