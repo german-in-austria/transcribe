@@ -170,7 +170,7 @@ export function importableToServerTranscript(
             const tierId = makeTierId()
             // create and name aTier
             if (speakerTier.to_tier_type === 'freeText') {
-              tiers[tierId] = speakerTier.to_tier_name || 'untitled'
+              tiers[tierId] = speakerTier.to_tier_name || speakerTier.to_tier_type || 'untitled'
             }
             return _(speakerTier.events).map((e): ServerEvent => {
 
@@ -318,7 +318,7 @@ export default function parseTree(xmlTree: BasicNode): ParsedExmaraldaXML {
           speakerTiers: _(tiersBySpeakers).reduce((m, el, i, l) => {
             return m.concat(_(el).map(v => ({
               speaker_name: i,
-              select_for_import: true,
+              select_for_import: false,
               to_speaker: null,
               to_tier_type: null,
               to_tier_name: null,
