@@ -174,7 +174,7 @@ const settings: Settings = {
     },
     {
       name: 'delimiter',
-      regex: /(\?|\.|\,|!)/,
+      regex: /^(\?|\.|\,|!)/,
       color: '#000088',
       id: 2
     },
@@ -198,7 +198,7 @@ const settings: Settings = {
     },
     {
       name: 'word',
-      regex: /[a-zA-ZÜüÄäÖöß]+/u,
+      regex: /^[a-zA-ZÜüÄäÖöß]+/u,
       color: 'transparent',
       id: 1
     },
