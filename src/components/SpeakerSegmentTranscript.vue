@@ -31,6 +31,8 @@
       @keydown.enter.meta="playEvent(event)"
       @keydown.enter.exact.stop.prevent="viewAudioEvent(event)"
       @copy.prevent="copyTokens"
+      @cut="copyTokens"
+      @paste="pasteTokens"
       contenteditable="true"
       v-text="segmentText"
       :style="textStyle"
@@ -59,7 +61,8 @@
 import contenteditableDirective from 'vue-contenteditable-directive'
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
-import { clone, isEqualDeep, requestFrameAsync } from '../util'
+import parseCsv from 'tiny-csv'
+import { clone, isEqualDeep, requestFrameAsync, Pastable } from '../util'
 import {
   LocalTranscriptEvent,
   LocalTranscriptToken,
@@ -120,62 +123,69 @@ export default class SpeakerSegmentTranscript extends Vue {
     this.segmentText = this.localTokens ? this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ') : ''
   }
 
-  collectTokensViaOffsets(start: number, end: number): LocalTranscriptToken[] {
+  collectTokensViaOffsets(start: number, end: number): Array<Pastable<LocalTranscriptToken>> {
+    // start and end are not necessarily from left to right
     const left = Math.min(start, end)
     const right = Math.max(start, end)
-    console.log({left, right})
+    // init cursor
     let cursor = 0
-    return this.localTokens.filter((t, ti) => {
+    // reduce to relevant tokens and mark partiality
+    return this.localTokens.reduce((m, e) => {
+      // get range for token
       const tokenStart = cursor
-      const tokenEnd = cursor + t.tiers[this.defaultTier].text.length
-      // move cursor and account for whitespace
+      const tokenEnd = cursor + e.tiers[this.defaultTier].text.length
+      // move cursor to the end of the token and account for whitespace
       cursor = tokenEnd + 1
+      // decide wether it’s in the range
       if (left <= tokenStart && right >= tokenEnd) {
-        console.log('full copy of token', tokenStart, tokenEnd, t)
-        return true
+        // token is fully in collection range, not partial
+        return m.concat({ ...e, partial: false })
       } else if (left > tokenEnd || right < tokenStart) {
-        console.log('no copy of token', tokenStart, tokenEnd, t)
-        return false
+        // token is outside of collection range -> do nothing
+        return m
       } else {
-        console.log('partial copy of token', tokenStart, tokenEnd, t)
-        return true
+        // token is partly in collection range, not fully
+        return m.concat({ ...e, partial: true })
+      }
+    }, [] as Array<Pastable<LocalTranscriptToken>>)
+  }
+
+  tokensToCsv(tokens: Array<Pastable<LocalTranscriptToken>>): string {
+    return _(tokens).reduce((m, e, i, l) => {
+      if (i === 0) {
+        // insert the header
+        m = 'ORDER;TEXT;ORTHO;PHON;PARTIAL\n'
+      }
+      // insert data
+      return `${ m }${ e.order };${ e.tiers.text.text };${ e.tiers.ortho.text };${ e.tiers.phon.text };${ e.partial }\n`
+    }, '')
+  }
+
+  csvToTokenTiers(tokens: string): Array<Pastable<LocalTranscriptToken['tiers']>> {
+    const parsedTokens = parseCsv(tokens, ';')
+    return parsedTokens.map((v, k) => {
+      return {
+        // TODO: find out actual values for PARTIAL
+        partial: v.PARTIAL ? true : false,
+        text: {
+          text: v.TEXT || '',
+          type: -1
+        },
+        phon: {
+          text: v.PHON || '',
+          type: -1
+        },
+        ortho: {
+          text: v.ORTHO || '',
+          type: -1
+        }
       }
     })
   }
 
-  tokensToCsv(tokens: LocalTranscriptToken[]): string {
-    return _(tokens).reduce((m, e, i, l) => {
-      // insert the header
-      if (i === 0) {
-        m = 'ORDER,TEXT,ORTHO,PHON\n'
-      }
-      return `${ m }"${e.order}","${ e.tiers.text.text }","${ e.tiers.ortho.text }","${ e.tiers.phon.text }"\n`
-    }, '')
-  }
-
-  csvToTokens(tokens: string): LocalTranscriptToken[] {
-    // TODO:
-    // IMPLEMENT
-    return [{
-      id: makeTokenId(),
-      fragmentOf: null,
-      sentenceId: -1,
-      order: 0,
-      tiers: {
-        text: {
-          text: '',
-          type: -1
-        },
-        phon: {
-          text: '',
-          type: -1
-        },
-        ortho: {
-          text: '',
-          type: -1
-        }
-      }
-    }]
+  mergePastableTokensAt(tokenTiers: Array<Pastable<LocalTranscriptToken['tiers']>>, start: number, end: number) {
+    console.log(this.segmentText.length, this.segmentText.length)
+    console.log({start, end})
   }
 
   copyTokens(e: ClipboardEvent) {
@@ -185,16 +195,24 @@ export default class SpeakerSegmentTranscript extends Vue {
       const csv = this.tokensToCsv(tokens)
       e.clipboardData.setData('text/plain', csv)
     } else {
-      // nothing selected
+      // nothing is selected, copy nothing.
     }
   }
 
   pasteTokens(e: ClipboardEvent) {
-    const csv = e.clipboardData.getData('text/plain')
+    const clipboardString = e.clipboardData.getData('text/plain')
     const s = document.getSelection()
-    // TODO: IMPLEMENT
-    const tokens = this.csvToTokens(csv)
-    // TODO: update tokens accordingly.
+    try {
+      // TODO: check what is returned here if it’s not a csv
+      const tokensTiers = this.csvToTokenTiers(clipboardString)
+      if (tokensTiers.length > 0 && s !== null) {
+        console.log({tokensTiers})
+        e.preventDefault()
+        this.mergePastableTokensAt(tokensTiers, s.baseOffset, s.extentOffset)
+      }
+    } catch (e) {
+      // do nothing (i.e. default OS functionality)
+    }
   }
 
   getTierFreeTextText(tierId: string) {

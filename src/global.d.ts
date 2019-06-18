@@ -47,6 +47,12 @@ declare module 'vue-scrollto' {
 declare module 'vue-virtual-scroller' {
   export const RecycleScroller: any
 }
+
+declare module 'tiny-csv' {
+  const csv: (data: string, delimiter?: string) => {[key: string]: string}[]
+  export default csv
+}
+
 declare module 'human-size'
 declare module 'vue-full-screen-file-drop'
 declare module 'promise-worker-transferable'

@@ -5,6 +5,10 @@ import Worker from '../service/buffer-concat.worker'
 const worker = new Worker('')
 const promiseWorker = new PromiseWorker(worker)
 
+export type Pastable<T> = T & {
+  partial: boolean
+}
+
 interface FileReaderEventTarget extends EventTarget {
   result: ArrayBuffer|string
 }
