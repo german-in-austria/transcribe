@@ -5,9 +5,7 @@ import {
   LocalTranscript,
   LocalTranscriptToken,
   ServerTranscriptSaveRequest,
-  ServerEventSaveRequest,
-  ServerTokenSaveRequest,
-  TokenTierType
+  SaveRequest
 } from '@store/transcript'
 
 const registerPromiseWorker = require('promise-worker-transferable/register')
@@ -170,7 +168,7 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
       }
     }
     return m
-  }, {} as _.Dictionary<ServerTokenSaveRequest>)
+  }, {} as _.Dictionary<SaveRequest<ServerToken>>)
 
   const tokenDeletions = reduce(oldTranscript.aTokens, (m, t, id) => {
     if (newServerTokens[id] === undefined) {
@@ -180,7 +178,7 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
       }
     }
     return m
-  }, {} as _.Dictionary<ServerTokenSaveRequest>)
+  }, {} as _.Dictionary<SaveRequest<ServerToken>>)
 
   const eventUpdatesAndInserts = reduce(newIndexedEvents, (m, e) => {
     if (e.pk < 0) {
@@ -198,7 +196,7 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
       })
     }
     return m
-  }, [] as ServerEventSaveRequest[])
+  }, [] as Array<SaveRequest<ServerEvent>>)
 
   const eventDeletions = reduce(oldIndexedEvents, (m, e) => {
     if (newIndexedEvents[e.pk] === undefined) {
@@ -208,7 +206,7 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
       })
     }
     return m
-  }, [] as ServerEventSaveRequest[])
+  }, [] as Array<SaveRequest<ServerEvent>>)
 
   return [
     // DIFF

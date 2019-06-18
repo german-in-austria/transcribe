@@ -22,34 +22,28 @@ declare global {
   }
 }
 
-interface SaveRequestEntity {
+export type SaveRequest<T> = T & {
   status: 'update'|'delete'|'insert'
 }
 
-interface SaveResponseEntity extends SaveRequestEntity {
+export type SaveResponse<T> = SaveRequest<T> & {
   newStatus: 'updated'|'deleted'|'inserted'|'error'
   error?: string
   newPk?: number
 }
 
-export interface ServerTokenSaveRequest extends ServerToken, SaveRequestEntity {}
-export interface ServerTokenSaveResponse extends ServerToken, SaveResponseEntity {}
-
-export interface ServerEventSaveRequest extends ServerEvent, SaveRequestEntity {}
-export interface ServerEventSaveResponse extends ServerEvent, SaveResponseEntity {}
-
 export interface ServerTranscriptSaveResponse extends ServerTranscript {
   aTokens: {
-    [token_id: string]: ServerTokenSaveResponse
+    [token_id: string]: SaveResponse<ServerToken>
   }
-  aEvents: ServerEventSaveResponse[]
+  aEvents: Array<SaveResponse<ServerEvent>>
 }
 
 export interface ServerTranscriptSaveRequest extends ServerTranscript {
   aTokens: {
-    [token_id: string]: ServerTokenSaveRequest
+    [token_id: string]: SaveRequest<ServerToken>
   }
-  aEvents: ServerEventSaveRequest[]
+  aEvents: Array<SaveRequest<ServerEvent>>
 }
 
 export interface ServerInformant {

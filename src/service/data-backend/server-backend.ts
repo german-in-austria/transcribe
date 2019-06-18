@@ -5,13 +5,12 @@ import {
   LocalTranscriptEvent,
   eventStore,
   ServerTranscript,
+  SaveResponse,
   ServerTranscriptSaveResponse,
-  ServerEventSaveResponse,
   LocalTranscript,
   timeToSeconds,
   ServerEvent,
   ServerToken,
-  ServerTokenSaveResponse,
   ServerTranscriptSaveRequest,
   LocalTranscriptTier,
   LocalTranscriptSpeakerEventTiers
@@ -155,7 +154,7 @@ function findNextFragmentOfId(
   }
 }
 
-export function serverEventSaveResponseToServerEvent(e: ServerEventSaveResponse): ServerEvent {
+export function serverEventSaveResponseToServerEvent(e: SaveResponse<ServerEvent>): ServerEvent {
   return {
     e: e.e,
     l: e.l,
@@ -167,8 +166,8 @@ export function serverEventSaveResponseToServerEvent(e: ServerEventSaveResponse)
 }
 
 export function serverTokenSaveResponseToServerToken(
-  t: ServerTokenSaveResponse,
-  es: _.Dictionary<ServerEventSaveResponse>
+  t: SaveResponse<ServerToken>,
+  es: _.Dictionary<SaveResponse<ServerEvent>>
 ): ServerToken {
   return {
     e: t.e > 0
@@ -188,8 +187,8 @@ export function serverTokenSaveResponseToServerToken(
 
 function mergeTokenChanges(
   ts: _.Dictionary<ServerToken>,
-  tcs: _.Dictionary<ServerTokenSaveResponse>,
-  es: ServerEventSaveResponse[]
+  tcs: _.Dictionary<SaveResponse<ServerToken>>,
+  es: Array<SaveResponse<ServerEvent>>
 ): _.Dictionary<ServerToken> {
     const tokens = clone(ts)
     const keyedEvents = _(es).keyBy('pk').value()
@@ -207,7 +206,7 @@ function mergeTokenChanges(
 
 function mergeEventChanges(
   es: ServerEvent[],
-  ecs: ServerEventSaveResponse[],
+  ecs: Array<SaveResponse<ServerEvent>>,
   ts: _.Dictionary<ServerToken>
 ): ServerEvent[] {
   const keyedEvents = _(clone(es)).keyBy('pk').value()
