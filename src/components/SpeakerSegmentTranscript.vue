@@ -31,7 +31,7 @@
       @keydown.enter.meta="playEvent(event)"
       @keydown.enter.exact.stop.prevent="viewAudioEvent(event)"
       @copy.prevent="copyTokens"
-      @cut="copyTokens"
+      @cut.prevent="cutTokens"
       @paste="pasteTokens"
       contenteditable="true"
       v-text="segmentText"
@@ -130,22 +130,44 @@ export default class SpeakerSegmentTranscript extends Vue {
     // init cursor
     let cursor = 0
     // reduce to relevant tokens and mark partiality
-    return this.localTokens.reduce((m, e) => {
+    return this.localTokens.reduce((m, e, i) => {
       // get range for token
       const tokenStart = cursor
       const tokenEnd = cursor + e.tiers[this.defaultTier].text.length
       // move cursor to the end of the token and account for whitespace
       cursor = tokenEnd + 1
-      // decide wether it’s in the range
+      // decide whether it’s in the range
       if (left <= tokenStart && right >= tokenEnd) {
         // token is fully in collection range, not partial
-        return m.concat({ ...e, partial: false })
+        return m.concat({ ...e, partial: false, index: i })
       } else if (left > tokenEnd || right < tokenStart) {
         // token is outside of collection range -> do nothing
         return m
       } else {
         // token is partly in collection range, not fully
-        return m.concat({ ...e, partial: true })
+        return m.concat([{
+          ...e,
+          index: i,
+          tiers: {
+            // leave the other tiers untouched
+            ...e.tiers,
+            // edit the defaultTier text, so it only contains the selected text
+            [ this.defaultTier ]: {
+              ...e.tiers[ this.defaultTier ],
+              // must decide between left and right substring.
+              text: (() => {
+                if (right < tokenEnd) {
+                  // only take the left part (it’s the start)
+                  return e.tiers[ this.defaultTier ].text.substring(0, right - tokenStart)
+                } else {
+                  // only take the right part (it’s the end)
+                  return e.tiers[ this.defaultTier ].text.substring(left - tokenStart)
+                }
+              })()
+            },
+          },
+          partial: true
+        }])
       }
     }, [] as Array<Pastable<LocalTranscriptToken>>)
   }
@@ -154,19 +176,41 @@ export default class SpeakerSegmentTranscript extends Vue {
     return _(tokens).reduce((m, e, i, l) => {
       if (i === 0) {
         // insert the header
-        m = 'ORDER;TEXT;ORTHO;PHON;PARTIAL\n'
+        m = 'ORDER;TEXT;ORTHO;PHON;PARTIAL;INDEX\n'
       }
       // insert data
-      return `${ m }${ e.order };${ e.tiers.text.text };${ e.tiers.ortho.text };${ e.tiers.phon.text };${ e.partial }\n`
+      return m
+        + e.order + ';'
+        + e.tiers.text.text + ';'
+        + e.tiers.ortho.text + ';'
+        + e.tiers.phon.text + ';'
+        + e.partial + ';'
+        + e.index + '\n'
     }, '')
   }
 
+  parseCsv(csv: string): Array<{ [key: string]: string }> {
+    const headers = csv.split('\n')[0].split(';')
+    return _(csv.split('\n'))
+      .tail()
+      .filter(line => line.trim() !== '')
+      .map(line => {
+        const es = line.split(';')
+        return headers.reduce((m, e, i, l) => {
+          m[e] = es[i]
+          return m
+        }, {} as { [key: string]: string })
+      })
+      .value()
+  }
+
   csvToTokenTiers(tokens: string): Array<Pastable<LocalTranscriptToken['tiers']>> {
-    const parsedTokens = parseCsv(tokens, ';')
+    const parsedTokens = this.parseCsv(tokens)
+    console.log({parsedTokens})
     return parsedTokens.map((v, k) => {
       return {
-        // TODO: find out actual values for PARTIAL
-        partial: v.PARTIAL ? true : false,
+        index: Number(v.INDEX),
+        partial: v.PARTIAL === 'true',
         text: {
           text: v.TEXT || '',
           type: -1
@@ -183,9 +227,99 @@ export default class SpeakerSegmentTranscript extends Vue {
     })
   }
 
+  getOtherHalfOfToken(token: LocalTranscriptToken, tokenPart: LocalTranscriptToken): LocalTranscriptToken {
+    const s = tokenPart.tiers[this.defaultTier].text
+    return {
+      ...token,
+      tiers: {
+        ...token.tiers,
+        [this.defaultTier]: {
+          text: token.tiers[this.defaultTier].text.replace(s, '')
+        }
+      }
+    }
+  }
+
+  removeTokens(tokensToRemove: Array<Pastable<LocalTranscriptToken>>) {
+    const tokensToRemoveById = _(tokensToRemove).keyBy('id').value()
+    const newTokens =  this.localTokens.reduce((m, t, i, l) => {
+      if (t.id in tokensToRemoveById) {
+        // the token was partially selected
+        if (tokensToRemoveById[t.id].partial === true) {
+          console.log('partial token to remove', t, tokensToRemoveById[t.id])
+          // push the non-selected half
+          m.push(this.getOtherHalfOfToken(t, tokensToRemoveById[t.id]))
+        // the token was fully selected
+        } else {
+          // it must be deleted entirely, so push it. do nothing.
+        }
+      } else {
+        // it is not to be removed, so push it.
+        m.push(t)
+      }
+      return m
+    }, [] as LocalTranscriptToken[])
+    this.localTokens = newTokens
+  }
+
+  insertTokensAfter(index: number, tokenTiers: Array<Pastable<LocalTranscriptToken['tiers']>>) {
+    const tokens = tokenTiers.map((ttp): LocalTranscriptToken => {
+      return {
+        id: makeTokenId(),
+        fragmentOf: -1,
+        sentenceId: -1,
+        order: 0,
+        tiers: {
+          text: ttp.text,
+          ortho: ttp.ortho,
+          phon: ttp.phon
+        }
+      }
+    })
+    this.localTokens.splice(index + 1, 0, ...tokens)
+  }
+
   mergePastableTokensAt(tokenTiers: Array<Pastable<LocalTranscriptToken['tiers']>>, start: number, end: number) {
-    console.log(this.segmentText.length, this.segmentText.length)
-    console.log({start, end})
+    // the target is either empty, or all of it is selected
+    if (start === 0 && end === this.segmentText.length) {
+      // replace all tokens
+      console.log('all tokens selected, replace all', this.segmentText.length, start, end)
+      this.localTokens = tokenTiers.map(({text, ortho, phon}, ti) => {
+        return {
+          id: makeTokenId(),
+          fragmentOf: null,
+          sentenceId: -1,
+          order: (this.firstTokenOrder || 0) + ti,
+          tiers: { text, ortho, phon }
+        }
+      })
+    // the selection is collapsed (i.e. there’s a cursor, but no selection)
+    } else if (start === end) {
+      // find index at position and insert
+      // TODO: wrong
+      this.insertTokensAfter(start, tokenTiers)
+      console.log('collapsed cursor: insert', start, end)
+    } else {
+      // replace the fully selected ones.
+      const selectedTokens = this.collectTokensViaOffsets(start, end)
+      this.removeTokens(selectedTokens)
+      const insertTokensAfterIndex = selectedTokens[0].index
+      this.insertTokensAfter(insertTokensAfterIndex, tokenTiers)
+    }
+    this.segmentText = this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ')
+  }
+
+  cutTokens(e: ClipboardEvent) {
+    const s = document.getSelection()
+    if (s !== null) {
+      const tokens = this.collectTokensViaOffsets(s.baseOffset, s.extentOffset)
+      this.removeTokens(tokens)
+      const csv = this.tokensToCsv(tokens)
+      e.clipboardData.setData('text/plain', csv)
+      this.segmentText = this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ')
+    } else {
+      // nothing is selected, copy nothing.
+    }
   }
 
   copyTokens(e: ClipboardEvent) {
@@ -346,7 +480,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   async updateLocalTokens(e: Event) {
-    await requestFrameAsync()
+    // await requestFrameAsync()
     const newTokens = this.tokenizeText((e.target as HTMLDivElement).textContent as string).map((t, i) => {
       return { text: t, index: i }
     })
@@ -381,41 +515,78 @@ export default class SpeakerSegmentTranscript extends Vue {
       .flatten()
       .value()
     console.log({updates})
-    updates.forEach((u) => {
-      // DELETE
-      if (u.type === 'remove') {
-        console.log('removed', u.text)
-        this.localTokens.splice(u.index, 1)
-      // INSERT
-      } else if (u.type === 'add') {
-        this.localTokens.splice(u.index, 0, {
-          id: makeTokenId(),
-          fragmentOf: u.index === 0 ? this.firstTokenFragmentOf : null,
-          order: -1,
-          sentenceId: -1, // how?
-          tiers: {
-            text: {
-              text: u.text,
-              type: tokenTypeFromToken(u.text).id
-            },
-            ortho: {
-              text: '',
-              type: null
-            },
-            phon: {
-              text: '',
-              type: null
+
+    const updatesByIndex = _.keyBy(updates, u => u.index)
+    // FIXME: breaks when localTokens is shorter than the target.
+    // solution: add the other ones back in before sorting.
+    // both need an index.
+    this.localTokens = this.localTokens.reduce((m, t, i, l) => {
+      const update = updatesByIndex[i]
+      if (update !== undefined) {
+        // token deleted
+        if (update.type === 'remove') {
+          // do nothing
+        // token inserted
+        } else if (update.type === 'add') {
+          // insert
+          m.push({
+            id: makeTokenId(),
+            fragmentOf: i === 0 ? this.firstTokenFragmentOf : null,
+            order: -1,
+            sentenceId: -1, // how?
+            tiers: {
+              text: {
+                text: '',
+                type: null
+              },
+              ortho: {
+                text: '',
+                type: null
+              },
+              phon: {
+                text: '',
+                type: null
+              },
+              [ this.defaultTier ]: {
+                text: update.text,
+                type: tokenTypeFromToken(update.text).id
+              }
             }
-          }
-        })
-      // UPDATE
-      } else if (u.type === 'update') {
-        this.localTokens[u.index].tiers[this.defaultTier] = {
-          text: u.text,
-          type: tokenTypeFromToken(u.text).id
+          })
+        } else if (update.type === 'update') {
+          m.push({
+            ...t,
+            tiers: {
+              ...t.tiers,
+              [ this.defaultTier ]: {
+                text: update.text,
+                type: tokenTypeFromToken(update.text).id
+              }
+            }
+          })
         }
+      // no update -> keep.
+      } else {
+        m.push(t)
       }
-    })
+      return m
+    }, [] as LocalTranscriptToken[])
+    // updates.forEach((u) => {
+    //   // DELETE
+    //   if (u.type === 'remove') {
+    //     console.log('removed', u.text)
+    //     this.localTokens.splice(u.index, 1)
+    //   // INSERT
+    //   } else if (u.type === 'add') {
+    //   // UPDATE
+    //   } else if (u.type === 'update') {
+    //     this.localTokens[u.index].tiers[ this.defaultTier ] = {
+    //       text: u.text,
+    //       type: tokenTypeFromToken(u.text).id
+    //     }
+    //   }
+    // })
+    // console.log('after update, before map', this.localTokens)
     this.localTokens = this.localTokens.map((t, i) => {
       return { ...t, order: (this.firstTokenOrder || 0) + i }
     })

@@ -6,6 +6,7 @@ const worker = new Worker('')
 const promiseWorker = new PromiseWorker(worker)
 
 export type Pastable<T> = T & {
+  index: number
   partial: boolean
 }
 
