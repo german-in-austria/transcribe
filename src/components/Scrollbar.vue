@@ -21,7 +21,7 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import { eventStore, toTime } from '../store/transcript'
 import EventBus from '../service/event-bus'
-
+import _ from 'lodash'
 @Component
 export default class Scrollbar extends Vue {
 
@@ -97,10 +97,12 @@ export default class Scrollbar extends Vue {
     const timer = this.$refs.overviewTime
     if (timer instanceof HTMLElement) {
       const { time, limitedOffset } = this.getOffsets(e.x)
-      requestAnimationFrame(() => {
-        timer.innerHTML = toTime(time)
-        timer.style.transform = `translate3d(${ limitedOffset }px, 0, 0)`
-      })
+      if (!_.isNaN(time)) {
+        requestAnimationFrame(() => {
+          timer.innerHTML = toTime(time)
+          timer.style.transform = `translate3d(${ limitedOffset }px, 0, 0)`
+        })
+      }
     }
   }
 
