@@ -81,7 +81,7 @@ export interface ServerTranscript {
   aTokens: {
     [token_id: string]: ServerToken
   }
-  aDefaultTier: TokenTierType|null,
+  aDefaultTier?: TokenTierType|null, // TODO: in reality, this is not optional
   aEinzelErhebung?: {
     af: string
     d: string
@@ -386,7 +386,7 @@ export function updateSpeakerEvent(
   const deletedSpeakerId = tokens.length === 0 ? speakerId : undefined
   const tokenCountDifference = isNew ? tokens.length : tokens.length - oldEvent.speakerEvents[speakerId].tokens.length
   const speakerEvents = _({
-    // MERGE-IN THE NEW SPEAKER
+      // MERGE-IN THE NEW SPEAKER
       ...oldEvent.speakerEvents,
       [speakerId] : {
         speakerEventId: event.eventId,

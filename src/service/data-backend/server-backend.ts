@@ -13,7 +13,8 @@ import {
   ServerToken,
   ServerTranscriptSaveRequest,
   LocalTranscriptTier,
-  LocalTranscriptSpeakerEventTiers
+  LocalTranscriptSpeakerEventTiers,
+  TokenTierType
 } from '@store/transcript'
 import { clone } from '@util/index'
 import serverTranscriptDiff from './server-transcript-diff.worker'
@@ -253,6 +254,10 @@ export function updateServerTranscriptWithChanges(s: ServerTranscriptSaveRespons
 }
 
 export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
+  // TODO: this should be reactive and configurable somehow
+  if (s.aDefaultTier === null || s.aDefaultTier === undefined) {
+    s.aDefaultTier = 'text'
+  }
   return _(s.aEvents)
     // group into events by startTime and endTime
     .groupBy((e) => e.s + '-' + e.e)
