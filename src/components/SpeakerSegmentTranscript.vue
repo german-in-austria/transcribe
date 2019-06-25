@@ -206,7 +206,6 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   csvToTokenTiers(tokens: string): Array<Pastable<LocalTranscriptToken['tiers']>> {
     const parsedTokens = this.parseCsv(tokens)
-    console.log({parsedTokens})
     return parsedTokens.map((v, k) => {
       return {
         index: Number(v.INDEX),
@@ -222,6 +221,10 @@ export default class SpeakerSegmentTranscript extends Vue {
         ortho: {
           text: v.ORTHO || '',
           type: -1
+        },
+        [ this.defaultTier ]: {
+          text: v[ this.defaultTier.toUpperCase() ],
+          type: tokenTypeFromToken(v[ this.defaultTier.toUpperCase() ]).id
         }
       }
     })
@@ -264,6 +267,7 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   insertTokensAfter(index: number, tokenTiers: Array<Pastable<LocalTranscriptToken['tiers']>>) {
     const tokens = tokenTiers.map((ttp): LocalTranscriptToken => {
+      console.log({ttp})
       return {
         id: makeTokenId(),
         fragmentOf: -1,
@@ -276,7 +280,7 @@ export default class SpeakerSegmentTranscript extends Vue {
         }
       }
     })
-    this.localTokens.splice(index + 1, 0, ...tokens)
+    this.localTokens.splice(index, 0, ...tokens)
   }
 
   mergePastableTokensAt(tokenTiers: Array<Pastable<LocalTranscriptToken['tiers']>>, start: number, end: number) {
@@ -340,7 +344,7 @@ export default class SpeakerSegmentTranscript extends Vue {
       // TODO: check what is returned here if it’s not a csv
       const tokensTiers = this.csvToTokenTiers(clipboardString)
       if (tokensTiers.length > 0 && s !== null) {
-        console.log({tokensTiers})
+        // console.log({tokensTiers})
         e.preventDefault()
         this.mergePastableTokensAt(tokensTiers, s.baseOffset, s.extentOffset)
       }
@@ -488,7 +492,7 @@ export default class SpeakerSegmentTranscript extends Vue {
     console.log({ newTokens, oldTokens })
     const hunks = jsdiff.diffArrays(oldTokens, newTokens, { comparator: (l, r) => l.text === r.text })
     console.log({hunks})
-    const updates = _(hunks)
+    const changes = _(hunks)
       .filter((h) => h.added === true || h.removed === true)
       .map((h) => h.value.map(v => ({
         ...v,
@@ -514,63 +518,52 @@ export default class SpeakerSegmentTranscript extends Vue {
       })
       .flatten()
       .value()
-    console.log({updates})
 
-    const updatesByIndex = _.keyBy(updates, u => u.index)
-    // FIXME: breaks when localTokens is shorter than the target.
-    // solution: add the other ones back in before sorting.
-    // both need an index.
-    this.localTokens = this.localTokens.reduce((m, t, i, l) => {
-      const update = updatesByIndex[i]
-      if (update !== undefined) {
-        // token deleted
-        if (update.type === 'remove') {
-          // do nothing
-        // token inserted
-        } else if (update.type === 'add') {
-          // insert
-          m.push({
-            id: makeTokenId(),
-            fragmentOf: i === 0 ? this.firstTokenFragmentOf : null,
-            order: -1,
-            sentenceId: -1, // how?
-            tiers: {
-              text: {
-                text: '',
-                type: null
-              },
-              ortho: {
-                text: '',
-                type: null
-              },
-              phon: {
-                text: '',
-                type: null
-              },
-              [ this.defaultTier ]: {
-                text: update.text,
-                type: tokenTypeFromToken(update.text).id
-              }
+    let addedCounter = 0
+    _.each(changes, (change, i) => {
+      if (change.type === 'update') {
+        console.log('update', this.localTokens[change.index + addedCounter])
+        this.localTokens[change.index + addedCounter] = {
+        ...this.localTokens[change.index + addedCounter],
+          tiers: {
+            ...this.localTokens[change.index + addedCounter].tiers,
+            [ this.defaultTier ]: {
+              text: change.text,
+              type: tokenTypeFromToken(change.text).id
             }
-          })
-        } else if (update.type === 'update') {
-          m.push({
-            ...t,
-            tiers: {
-              ...t.tiers,
-              [ this.defaultTier ]: {
-                text: update.text,
-                type: tokenTypeFromToken(update.text).id
-              }
-            }
-          })
+          }
         }
-      // no update -> keep.
-      } else {
-        m.push(t)
+      } else if (change.type === 'add') {
+        this.localTokens.splice(change.index + addedCounter, 0, {
+          id: makeTokenId(),
+          fragmentOf: i === 0 ? this.firstTokenFragmentOf : null,
+          order: -1,
+          sentenceId: -1, // how?
+          tiers: {
+            text: {
+              text: '',
+              type: null
+            },
+            ortho: {
+              text: '',
+              type: null
+            },
+            phon: {
+              text: '',
+              type: null
+            },
+            [ this.defaultTier ]: {
+              text: change.text,
+              type: tokenTypeFromToken(change.text).id
+            }
+          }
+        })
+        addedCounter = addedCounter + 1
+      } else if (change.type === 'remove') {
+        this.localTokens.splice(change.index + addedCounter, 1)
+        addedCounter = addedCounter - 1
       }
-      return m
-    }, [] as LocalTranscriptToken[])
+    })
     // updates.forEach((u) => {
     //   // DELETE
     //   if (u.type === 'remove') {
