@@ -300,7 +300,8 @@ export default class SpeakerSegmentTranscript extends Vue {
     // the selection is collapsed (i.e. there’s a cursor, but no selection)
     } else if (start === end) {
       // find index at position and insert
-      // TODO: wrong
+      // TODO: FIXME: wrong. start is the cursor position in char offsets.
+      // must provide a function to insert the tokens at that positon.
       this.insertTokensAfter(start, tokenTiers)
       console.log('collapsed cursor: insert', start, end)
     } else {
@@ -349,6 +350,7 @@ export default class SpeakerSegmentTranscript extends Vue {
         this.mergePastableTokensAt(tokensTiers, s.baseOffset, s.extentOffset)
       }
     } catch (e) {
+      console.error(e)
       // do nothing (i.e. default OS functionality)
     }
   }
