@@ -94,7 +94,7 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
   const { oldT, newT } = message
   const oldTranscript = JSON.parse(textDecoder.decode(oldT)) as ServerTranscript
   const localTranscript = JSON.parse(textDecoder.decode(newT)) as LocalTranscript
-  const defaultTier = oldTranscript.aDefaultTier || 'text'
+  const defaultTier = oldTranscript.aTranskript!.default_tier || 'text'
 
   const newServerEvents: ServerEvent[] = []
   const newServerTokens = reduce(localTranscript, (m, event) => {

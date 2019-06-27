@@ -242,7 +242,6 @@ export function importableToServerTranscript(
 
   return {
     aTiers: tiers,
-    aDefaultTier: defaultTokenTierType,
     aEinzelErhebung: {
       af: selectedSurvey.Audiofile,
       d: selectedSurvey.Datum,
@@ -261,6 +260,7 @@ export function importableToServerTranscript(
     aTokens: tokens,
     aEvents: events,
     aTranskript: {
+      default_tier: defaultTokenTierType,
       n: name,
       pk: -1,
       ut: 'now' // TODO:

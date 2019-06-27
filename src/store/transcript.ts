@@ -81,7 +81,6 @@ export interface ServerTranscript {
   aTokens: {
     [token_id: string]: ServerToken
   }
-  aDefaultTier?: TokenTierType|null, // TODO: in reality, this is not optional
   aEinzelErhebung?: {
     af: string
     d: string
@@ -98,6 +97,7 @@ export interface ServerTranscript {
     }
   }
   aTranskript?: {
+    default_tier?: TokenTierType|null
     n: string // name
     pk: number
     ut: string

@@ -29,7 +29,7 @@ export function getMetadataFromServerTranscript(res: ServerTranscript) {
     speakers: res.aInformanten!,
     tokenTypes: res.aTokenTypes!,
     transcriptName: res.aTranskript!.n,
-    defaultTier: res.aDefaultTier || 'text',
+    defaultTier: res.aTranskript!.default_tier || 'text',
     audioUrl: `${ eventStore.backEndUrl }/private-media`
       + res.aEinzelErhebung!.dp.split('\\').join('/')
       + res.aEinzelErhebung!.af
@@ -254,10 +254,17 @@ export function updateServerTranscriptWithChanges(s: ServerTranscriptSaveRespons
 }
 
 export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
-  // TODO: this should be reactive and configurable somehow
-  if (s.aDefaultTier === null || s.aDefaultTier === undefined) {
-    s.aDefaultTier = 'text'
-  }
+  const defaultTier = (() => {
+    if (
+      s.aTranskript === undefined ||
+      s.aTranskript.default_tier === null ||
+      s.aTranskript.default_tier === undefined
+    ) {
+      return 'text'
+    } else {
+      return s.aTranskript.default_tier
+    }
+  })()
   return _(s.aEvents)
     // group into events by startTime and endTime
     .groupBy((e) => e.s + '-' + e.e)
@@ -304,16 +311,15 @@ export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
                           return s.aTokens[tokenId].t
                         }
                       })(),
-                      type: s.aDefaultTier === 'text' ? s.aTokens[tokenId].tt : null
+                      type: defaultTier === 'text' ? s.aTokens[tokenId].tt : null
                     },
                     ortho: {
                       text: s.aTokens[tokenId].o || '',
-                      type: s.aDefaultTier === 'ortho' ? s.aTokens[tokenId].tt : null
+                      type: defaultTier === 'ortho' ? s.aTokens[tokenId].tt : null
                     },
-                    // TODO: add "phon" on server
                     phon: {
                       text: (s.aTokens[tokenId] as any).p || '',
-                      type: s.aDefaultTier === 'phon' ? s.aTokens[tokenId].tt : null
+                      type: defaultTier === 'phon' ? s.aTokens[tokenId].tt : null
                     }
                   }
                 }
