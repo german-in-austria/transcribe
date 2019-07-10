@@ -2,6 +2,8 @@
 import _ from 'lodash'
 import audio from '../service/audio'
 import { clone } from '../util'
+import settings from '../store/settings'
+
 import {
   localTranscriptToServerTranscript,
   localTranscriptToServerSaveRequest,
@@ -242,6 +244,21 @@ export const eventStore = {
 }
 ;
 (window as any)._eventStore = eventStore
+
+export function tokenTypeFromToken(token: string) {
+  const type = _(settings.tokenTypes).find((tt) => {
+    return tt.regex.test(token)
+  })
+  if (type !== undefined) {
+    return type
+  } else {
+    return {
+      name: 'error',
+      color: 'red',
+      id: -1
+    }
+  }
+}
 
 export function tokenize(s: string): string[] {
   return s

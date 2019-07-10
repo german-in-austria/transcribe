@@ -72,25 +72,12 @@ import {
   eventStore,
   findPreviousSpeakerEvent,
   makeTokenId,
-  playEvent
+  playEvent,
+  tokenTypeFromToken
 } from '../store/transcript'
+import copyPaste from '../service/copy-paste'
 import * as _ from 'lodash'
 import * as jsdiff from 'diff'
-
-function tokenTypeFromToken(token: string) {
-  const type = _(settings.tokenTypes).find((tt) => {
-    return tt.regex.test(token)
-  })
-  if (type !== undefined) {
-    return type
-  } else {
-    return {
-      name: 'error',
-      color: 'red',
-      id: -1
-    }
-  }
-}
 
 @Component
 export default class SpeakerSegmentTranscript extends Vue {
@@ -113,7 +100,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   playEvent = playEvent
   updateSpeakerEvent = updateSpeakerEvent
 
-  // TODO: redundant.
+  // TODO: redundant?
   @Watch('event')
   onUpdateEvent(newEvent: LocalTranscriptEvent) {
     this.localEvent = clone(newEvent)
@@ -123,205 +110,18 @@ export default class SpeakerSegmentTranscript extends Vue {
     this.segmentText = this.localTokens ? this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ') : ''
   }
 
-  collectTokensViaOffsets(start: number, end: number): Array<Pastable<LocalTranscriptToken>> {
-    // start and end are not necessarily from left to right
-    const left = Math.min(start, end)
-    const right = Math.max(start, end)
-    // init cursor
-    let cursor = 0
-    // reduce to relevant tokens and mark partiality
-    return this.localTokens.reduce((m, e, i) => {
-      // get range for token
-      const tokenStart = cursor
-      const tokenEnd = cursor + e.tiers[this.defaultTier].text.length
-      // move cursor to the end of the token and account for whitespace
-      cursor = tokenEnd + 1
-      // decide whether it’s in the range
-      if (left <= tokenStart && right >= tokenEnd) {
-        // token is fully in collection range, not partial
-        return m.concat({ ...e, partial: false, index: i })
-      } else if (left > tokenEnd || right < tokenStart) {
-        // token is outside of collection range -> do nothing
-        return m
-      } else {
-        // token is partly in collection range, not fully
-        return m.concat([{
-          ...e,
-          index: i,
-          tiers: {
-            // leave the other tiers untouched
-            ...e.tiers,
-            // edit the defaultTier text, so it only contains the selected text
-            [ this.defaultTier ]: {
-              ...e.tiers[ this.defaultTier ],
-              // must decide between left and right substring.
-              text: (() => {
-                if (right < tokenEnd) {
-                  // only take the left part (it’s the start)
-                  return e.tiers[ this.defaultTier ].text.substring(0, right - tokenStart)
-                } else {
-                  // only take the right part (it’s the end)
-                  return e.tiers[ this.defaultTier ].text.substring(left - tokenStart)
-                }
-              })()
-            },
-          },
-          partial: true
-        }])
-      }
-    }, [] as Array<Pastable<LocalTranscriptToken>>)
-  }
-
-  tokensToCsv(tokens: Array<Pastable<LocalTranscriptToken>>): string {
-    return _(tokens).reduce((m, e, i, l) => {
-      if (i === 0) {
-        // insert the header
-        m = 'ORDER;TEXT;ORTHO;PHON;PARTIAL;INDEX\n'
-      }
-      // insert data
-      return m
-        + e.order + ';'
-        + e.tiers.text.text + ';'
-        + e.tiers.ortho.text + ';'
-        + e.tiers.phon.text + ';'
-        + e.partial + ';'
-        + e.index + '\n'
-    }, '')
-  }
-
-  parseCsv(csv: string): Array<{ [key: string]: string }> {
-    const headers = csv.split('\n')[0].split(';')
-    return _(csv.split('\n'))
-      .tail()
-      .filter(line => line.trim() !== '')
-      .map(line => {
-        const es = line.split(';')
-        return headers.reduce((m, e, i, l) => {
-          m[e] = es[i]
-          return m
-        }, {} as { [key: string]: string })
-      })
-      .value()
-  }
-
-  csvToTokenTiers(tokens: string): Array<Pastable<LocalTranscriptToken['tiers']>> {
-    const parsedTokens = this.parseCsv(tokens)
-    return parsedTokens.map((v, k) => {
-      return {
-        index: Number(v.INDEX),
-        partial: v.PARTIAL === 'true',
-        text: {
-          text: v.TEXT || '',
-          type: -1
-        },
-        phon: {
-          text: v.PHON || '',
-          type: -1
-        },
-        ortho: {
-          text: v.ORTHO || '',
-          type: -1
-        },
-        [ this.defaultTier ]: {
-          text: v[ this.defaultTier.toUpperCase() ],
-          type: tokenTypeFromToken(v[ this.defaultTier.toUpperCase() ]).id
-        }
-      }
-    })
-  }
-
-  getOtherHalfOfToken(token: LocalTranscriptToken, tokenPart: LocalTranscriptToken): LocalTranscriptToken {
-    const s = tokenPart.tiers[this.defaultTier].text
-    return {
-      ...token,
-      tiers: {
-        ...token.tiers,
-        [this.defaultTier]: {
-          text: token.tiers[this.defaultTier].text.replace(s, '')
-        }
-      }
-    }
-  }
-
-  removeTokens(tokensToRemove: Array<Pastable<LocalTranscriptToken>>) {
-    const tokensToRemoveById = _(tokensToRemove).keyBy('id').value()
-    const newTokens =  this.localTokens.reduce((m, t, i, l) => {
-      if (t.id in tokensToRemoveById) {
-        // the token was partially selected
-        if (tokensToRemoveById[t.id].partial === true) {
-          console.log('partial token to remove', t, tokensToRemoveById[t.id])
-          // push the non-selected half
-          m.push(this.getOtherHalfOfToken(t, tokensToRemoveById[t.id]))
-        // the token was fully selected
-        } else {
-          // it must be deleted entirely, so push it. do nothing.
-        }
-      } else {
-        // it is not to be removed, so push it.
-        m.push(t)
-      }
-      return m
-    }, [] as LocalTranscriptToken[])
-    this.localTokens = newTokens
-  }
-
-  insertTokensAfter(index: number, tokenTiers: Array<Pastable<LocalTranscriptToken['tiers']>>) {
-    const tokens = tokenTiers.map((ttp): LocalTranscriptToken => {
-      console.log({ttp})
-      return {
-        id: makeTokenId(),
-        fragmentOf: -1,
-        sentenceId: -1,
-        order: 0,
-        tiers: {
-          text: ttp.text,
-          ortho: ttp.ortho,
-          phon: ttp.phon
-        }
-      }
-    })
-    this.localTokens.splice(index, 0, ...tokens)
-  }
-
-  mergePastableTokensAt(tokenTiers: Array<Pastable<LocalTranscriptToken['tiers']>>, start: number, end: number) {
-    // the target is either empty, or all of it is selected
-    if (start === 0 && end === this.segmentText.length) {
-      // replace all tokens
-      console.log('all tokens selected, replace all', this.segmentText.length, start, end)
-      this.localTokens = tokenTiers.map(({text, ortho, phon}, ti) => {
-        return {
-          id: makeTokenId(),
-          fragmentOf: null,
-          sentenceId: -1,
-          order: (this.firstTokenOrder || 0) + ti,
-          tiers: { text, ortho, phon }
-        }
-      })
-    // the selection is collapsed (i.e. there’s a cursor, but no selection)
-    } else if (start === end) {
-      // find index at position and insert
-      // TODO: FIXME: wrong. start is the cursor position in char offsets.
-      // must provide a function to insert the tokens at that positon.
-      this.insertTokensAfter(start, tokenTiers)
-      console.log('collapsed cursor: insert', start, end)
-    } else {
-      // replace the fully selected ones.
-      const selectedTokens = this.collectTokensViaOffsets(start, end)
-      this.removeTokens(selectedTokens)
-      const insertTokensAfterIndex = selectedTokens[0].index
-      this.insertTokensAfter(insertTokensAfterIndex, tokenTiers)
-    }
-    this.segmentText = this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ')
-  }
-
-  cutTokens(e: ClipboardEvent) {
+  async cutTokens(e: ClipboardEvent) {
     const s = document.getSelection()
     if (s !== null) {
-      const tokens = this.collectTokensViaOffsets(s.baseOffset, s.extentOffset)
-      this.removeTokens(tokens)
-      const csv = this.tokensToCsv(tokens)
+      const base = s.baseOffset
+      const extent = s.extentOffset
+      const selectedTokens = copyPaste.collectTokensViaOffsets(this.localTokens, base, extent)
+      this.localTokens = copyPaste.removeTokensAndTokenParts(this.localTokens, selectedTokens)
+      const csv = copyPaste.serializeTokens(selectedTokens)
       e.clipboardData.setData('text/plain', csv)
       this.segmentText = this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ')
+      await this.$nextTick()
+      this.setCursorPosition(e.currentTarget as HTMLElement, Math.min(base, extent))
     } else {
       // nothing is selected, copy nothing.
     }
@@ -330,24 +130,54 @@ export default class SpeakerSegmentTranscript extends Vue {
   copyTokens(e: ClipboardEvent) {
     const s = document.getSelection()
     if (s !== null) {
-      const tokens = this.collectTokensViaOffsets(s.baseOffset, s.extentOffset)
-      const csv = this.tokensToCsv(tokens)
+      const tokens = copyPaste.collectTokensViaOffsets(this.localTokens, s.baseOffset, s.extentOffset)
+      const csv = copyPaste.serializeTokens(tokens)
       e.clipboardData.setData('text/plain', csv)
     } else {
       // nothing is selected, copy nothing.
     }
   }
 
-  pasteTokens(e: ClipboardEvent) {
+  setCursorPosition(el: HTMLElement, at: number) {
+    const pos = Math.min(this.segmentText.length, at)
+    const range = document.createRange()
+    const sel = window.getSelection()
+    range.setStart(el.firstChild || el.parentNode!.firstChild!, pos)
+    range.collapse(true)
+    sel.removeAllRanges()
+    sel.addRange(range)
+  }
+
+  async pasteTokens(e: ClipboardEvent) {
+    // get clipboard data as string
     const clipboardString = e.clipboardData.getData('text/plain')
     const s = document.getSelection()
     try {
       // TODO: check what is returned here if it’s not a csv
-      const tokensTiers = this.csvToTokenTiers(clipboardString)
+      const tokensTiers = copyPaste.unserializeTokenTiers(clipboardString)
       if (tokensTiers.length > 0 && s !== null) {
-        // console.log({tokensTiers})
+        // copy to local variables, because the selection might change.
+        const base = s.baseOffset
+        const extent = s.extentOffset
         e.preventDefault()
-        this.mergePastableTokensAt(tokensTiers, s.baseOffset, s.extentOffset)
+        // update tokens
+        this.localTokens = copyPaste.mergePastableTokensAt(
+          this.localTokens,
+          tokensTiers,
+          base,
+          extent,
+          this.firstTokenOrder || 0
+        )
+        // update text presentation
+        this.segmentText = this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ')
+        if (e.currentTarget !== null) {
+          await this.$nextTick()
+          console.log('s.baseOffset, s.extentOffset', base, extent)
+          this.setCursorPosition(e.currentTarget as HTMLElement, Math.max(base, extent))
+        }
+      } else {
+        // paste as string.
+        document.execCommand('insertHTML', false, clipboardString)
       }
     } catch (e) {
       console.error(e)
@@ -566,22 +396,6 @@ export default class SpeakerSegmentTranscript extends Vue {
         addedCounter = addedCounter - 1
       }
     })
-    // updates.forEach((u) => {
-    //   // DELETE
-    //   if (u.type === 'remove') {
-    //     console.log('removed', u.text)
-    //     this.localTokens.splice(u.index, 1)
-    //   // INSERT
-    //   } else if (u.type === 'add') {
-    //   // UPDATE
-    //   } else if (u.type === 'update') {
-    //     this.localTokens[u.index].tiers[ this.defaultTier ] = {
-    //       text: u.text,
-    //       type: tokenTypeFromToken(u.text).id
-    //     }
-    //   }
-    // })
-    // console.log('after update, before map', this.localTokens)
     this.localTokens = this.localTokens.map((t, i) => {
       return { ...t, order: (this.firstTokenOrder || 0) + i }
     })
