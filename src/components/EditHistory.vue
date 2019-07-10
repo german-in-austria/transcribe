@@ -6,8 +6,8 @@
       :item-size="40">
       <template v-slot="{ item }">
         <v-list-tile
-          @dblclick="playEvent(item.events[0])"
-          @click="showEventIfExists(item.events[0])">
+          @dblclick="playEvent(item.before[0])"
+          @click="showEventIfExists(item.before[0])">
           <v-list-tile-avatar>
             <v-icon v-if="item.type === 'RESIZE'">swap_horiz</v-icon>
             <v-icon v-if="item.type === 'DELETE'">delete_forever</v-icon>
@@ -18,7 +18,7 @@
           <v-list-tile-content v-if="item.type === 'RESIZE'">
             <v-list-tile-title class="sidebar-title">resize segment</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
-              <div class="inner" :key="i" v-for="(se, i) in item.events[0].speakerEvents">
+              <div class="inner" :key="i" v-for="(se, i) in item.before[0].speakerEvents">
                 {{ i }}: {{ se.tokens.map(t => t.tiers[defaultTier].text).join(' ') }}
               </div>
             </v-list-tile-sub-title>
@@ -26,13 +26,13 @@
           <v-list-tile-content v-if="item.type === 'JOIN'">
             <v-list-tile-title class="sidebar-title">join segments</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
-              {{ item.events.length }} segments
+              {{ item.before.length }} segments
             </v-list-tile-sub-title>
           </v-list-tile-content>
           <v-list-tile-content v-else-if="item.type === 'DELETE'">
             <v-list-tile-title class="sidebar-title">delete segment</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
-              <div class="inner" :key="i" v-for="(se, i) in item.events[0].speakerEvents">
+              <div class="inner" :key="i" v-for="(se, i) in item.before[0].speakerEvents">
                 {{ i }}: {{ se.tokens.map(t => t.tiers[defaultTier].text).join(' ') }}
               </div>
             </v-list-tile-sub-title>
@@ -40,13 +40,13 @@
           <v-list-tile-content v-else-if="item.type === 'ADD'">
             <v-list-tile-title class="sidebar-title">add segment</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
-              {{ toTime(item.events[0].startTime) }}
+              {{ toTime(item.after[0].startTime) }}
             </v-list-tile-sub-title>
           </v-list-tile-content>
           <v-list-tile-content v-else-if="item.type === 'CHANGE_TOKENS'">
             <v-list-tile-title class="sidebar-title">update transcript</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
-              <div class="inner" :key="i" v-for="(se, i) in item.events[0].speakerEvents">
+              <div class="inner" :key="i" v-for="(se, i) in item.before[0].speakerEvents">
                 {{ i }}: {{ se.tokens.map(t => t.tiers[defaultTier].text).join(' ') }}
               </div>
             </v-list-tile-sub-title>
