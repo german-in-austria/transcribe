@@ -110,9 +110,9 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
 import * as Queue from 'simple-promise-queue'
 
-import scrollLockButton from '@components/ScrollLockButton.vue'
-import scrollbar from '@components/Scrollbar.vue'
-import segmentBox from '@components/SegmentBox.vue'
+import scrollLockButton from './ScrollLockButton.vue'
+import scrollbar from './Scrollbar.vue'
+import segmentBox from './SegmentBox.vue'
 
 import settings from '../store/settings'
 import audio from '../service/audio'

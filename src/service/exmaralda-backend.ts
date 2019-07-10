@@ -12,11 +12,11 @@ import {
   timeFromSeconds,
   tokenize,
   TokenTierType
-} from '@store/transcript'
+} from '../store/transcript'
 
 import settings from '../store/settings'
 import * as parseXML from '@rgrove/parse-xml'
-import { padEnd } from '@util/index'
+import { padEnd } from '../util/index'
 
 interface BasicNode {
   attributes: object

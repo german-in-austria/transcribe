@@ -19,21 +19,6 @@
         "paths": {
             "lodash/*": [
               "node_modules/@types/lodash-es/*"
-            ],
-            "@components/*": [
-                "components/*"
-            ],
-            "@util/*": [
-                "util/*"
-            ],
-            "@store/*": [
-                "store/*"
-            ],
-            "@models/*": [
-                "models/*"
-            ],
-            "@service/*": [
-              "service/*"
             ]
         }
     },

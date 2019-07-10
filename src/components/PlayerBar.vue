@@ -46,10 +46,10 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import settings from '@store/settings'
+import settings from '../store/settings'
 import audio from '../service/audio'
-import { toTime, eventStore } from '@store/transcript'
-import { requestFrameAsync } from '@util/index'
+import { toTime, eventStore } from '../store/transcript'
+import { requestFrameAsync } from '../util/index'
 
 @Component
 export default class PlayerBar extends Vue {

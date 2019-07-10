@@ -29,10 +29,10 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import SegmentTranscript from '@components/SegmentTranscript.vue'
+import SegmentTranscript from './SegmentTranscript.vue'
 import SpeakerPanel from './SpeakerPanel.vue'
 import Scrollbar from './Scrollbar.vue'
-import settings from '@store/settings'
+import settings from '../store/settings'
 import * as _ from 'lodash'
 import EventBus from '../service/event-bus'
 // tslint:disable-next-line:max-line-length
@@ -43,7 +43,7 @@ import {
   findSegmentById,
   findSegmentAt,
   findSegmentIndexAt
-} from '@store/transcript'
+} from '../store/transcript'
 import { requestFrameAsync } from '../util'
 
 const defaultLimit = 20

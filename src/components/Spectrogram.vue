@@ -56,7 +56,7 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import audio from '../service/audio'
 import segmentTranscript from './SegmentTranscript.vue'
-import { LocalTranscriptEvent } from '@store/transcript'
+import { LocalTranscriptEvent } from '../store/transcript'
 
 @Component({
   components: {

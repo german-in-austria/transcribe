@@ -188,7 +188,7 @@ import * as jszip from 'jszip'
 import { saveAs } from 'file-saver'
 import * as humanSize from 'human-size'
 import audio from '../service/audio'
-import { requestFrameAsync } from '@util/index'
+import { requestFrameAsync } from '../util/index'
 
 import {
   getSelectedEvent,
@@ -209,7 +209,7 @@ import {
   history,
   saveChangesToServer,
   convertToServerTranscript
-} from '@store/transcript'
+} from '../store/transcript'
 import { serverTranscript } from '../service/data-backend/server-backend'
 
 @Component({

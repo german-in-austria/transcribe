@@ -6,7 +6,7 @@ import {
   LocalTranscriptToken,
   ServerTranscriptSaveRequest,
   SaveRequest
-} from '@store/transcript'
+} from '../../store/transcript'
 
 const registerPromiseWorker = require('promise-worker-transferable/register')
 const textDecoder = new TextDecoder('utf-8')

@@ -34,8 +34,8 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch, Provide } from 'vue-property-decorator'
-import Resizer from '@components/helper/Resizer.vue'
-import ResizeParent from '@components/helper/ResizeParent.vue'
+import Resizer from './helper/Resizer.vue'
+import ResizeParent from './helper/ResizeParent.vue'
 // tslint:disable-next-line:max-line-length
 import {
   playEvent,

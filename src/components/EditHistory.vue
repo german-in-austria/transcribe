@@ -78,7 +78,7 @@ import {
   selectEvent,
   playEvent,
   eventStore
-} from '@store/transcript'
+} from '../store/transcript'
 
 @Component({
   components: {

@@ -35,7 +35,7 @@
 </template>
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import SpeakerSegmentTranscript from '@components/SpeakerSegmentTranscript.vue'
+import SpeakerSegmentTranscript from './SpeakerSegmentTranscript.vue'
 import * as _ from 'lodash'
 
 import {

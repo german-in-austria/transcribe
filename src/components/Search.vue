@@ -82,7 +82,7 @@ import {
   toTime,
   LocalTranscriptToken,
   selectSearchResult
-} from '@store/transcript'
+} from '../store/transcript'
 
 @Component
 export default class Search extends Vue {
