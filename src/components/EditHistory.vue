@@ -1,6 +1,6 @@
 <template>
   <v-list v-if="history.actions.length > 0" dense>
-    <v-list-tile @click="undo">
+    <v-list-tile :disabled="!canUndo" @click="undo">
       undo
     </v-list-tile>
     <RecycleScroller
@@ -9,8 +9,9 @@
       :item-size="40">
       <template v-slot="{ item }">
         <v-list-tile
+          :class="item.apply === false && 'undone'"
           @dblclick="playEvent(item.before[0])"
-          @click="showEventIfExists(item.before[0])">
+          @click="undoOrRedoUntil(item)">
           <v-list-tile-avatar>
             <v-icon v-if="item.type === 'RESIZE'">swap_horiz</v-icon>
             <v-icon v-if="item.type === 'DELETE'">delete_forever</v-icon>
@@ -82,7 +83,12 @@ import {
   eventStore
 } from '../store/transcript'
 
-import { history, undo } from '../store/history'
+import {
+  history,
+  undo,
+  jumpToState,
+  HistoryEventAction
+} from '../store/history'
 
 @Component({
   components: {
@@ -104,10 +110,26 @@ export default class EditHistory extends Vue {
       scrollToTranscriptEvent(e)
     }
   }
+
+  get canUndo(): boolean {
+    // there is an applied undoable action.
+    return history.actions.find(a => a.apply === true) !== undefined
+  }
+
+  undoOrRedoUntil(action: HistoryEventAction) {
+    if (action.after[0]) {
+      scrollToTranscriptEvent(action.after[0])
+    }
+    jumpToState(action)
+  }
+
 }
 </script>
 <style lang="stylus" scoped>
 @import '../../node_modules/vue-virtual-scroller/dist/vue-virtual-scroller.css';
+
+.undone
+  opacity .5
 
 .scroller
   height 100%
