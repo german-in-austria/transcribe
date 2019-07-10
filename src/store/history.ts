@@ -80,6 +80,7 @@ export function redo() {
   const a = history.actions.find(ac => ac.apply === false)
   if (a !== undefined) {
     redoAction(a)
+    a.apply = true
   } else {
     // nothing has been undone, so we can’t redo anything
   }
