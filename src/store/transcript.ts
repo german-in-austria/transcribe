@@ -3,7 +3,7 @@ import _ from 'lodash'
 import audio from '../service/audio'
 import { clone } from '../util'
 import settings from '../store/settings'
-
+import { HistoryEventAction } from './history'
 import {
   localTranscriptToServerTranscript,
   localTranscriptToServerSaveRequest,
@@ -208,16 +208,6 @@ export interface LocalTranscriptTier {
 
 export type LocalTranscript = LocalTranscriptEvent[]
 
-export interface HistoryEventAction {
-  id: string
-  type: 'RESIZE'|'DELETE'|'CHANGE_TOKENS'|'ADD'|'JOIN'
-  apply: boolean
-  before: LocalTranscriptEvent[]
-  after: LocalTranscriptEvent[]
-}
-
-export const history: HistoryEventAction[] = [];
-
 export const eventStore = {
   events: [] as LocalTranscriptEvent[],
   selectedEventIds: [] as number[],
@@ -398,13 +388,13 @@ export function updateSpeakerEvent(
   event: LocalTranscriptEvent,
   speakerId: number,
   tokens: LocalTranscriptToken[],
-) {
+): HistoryEventAction {
   const oldEvent = eventStore.events[findSegmentById(event.eventId)]
   const isNew = oldEvent.speakerEvents[speakerId] === undefined
   const deletedSpeakerId = tokens.length === 0 ? speakerId : undefined
   const tokenCountDifference = isNew ? tokens.length : tokens.length - oldEvent.speakerEvents[speakerId].tokens.length
   const speakerEvents = _({
-      // MERGE-IN THE NEW SPEAKER
+      // merge the new speaker
       ...oldEvent.speakerEvents,
       [speakerId] : {
         speakerEventId: event.eventId,
@@ -412,7 +402,7 @@ export function updateSpeakerEvent(
         tokens
       }
     })
-    // REMOVE DELETED SPEAKER EVENTS
+    // remove deleted speaker events
     .reduce((m, e, k, l) => {
       if (Number(k) !== Number(deletedSpeakerId)) {
         m[k] = e
@@ -423,42 +413,41 @@ export function updateSpeakerEvent(
   const index = findSegmentById(event.eventId)
   // UPDATE EVENT
   eventStore.events.splice(index, 1, newEvent)
-  // IF IT HAS A FRAGMENT MARKER ("="),
-  // MARK THE FIRST TOKEN IN THE NEXT
-  // SPEAKER EVENT AS A FRAGMENT_OF
+  // if it has a fragment marker ("="),
+  // mark the first token in the next
+  // speaker event as a fragment_of
   if (hasNextFragmentMarker(newEvent, speakerId, eventStore.metadata.defaultTier)) {
     setFirstTokenFragmentOf(index + 1, speakerId, getLastEventToken(newEvent, speakerId))
   }
-  // UPDATE TOKEN ORDER IF THE LENGTH CHANGED
+  // update token order if the length has changed
   if (tokenCountDifference !== 0) {
     eventStore.events = updateSpeakerTokenOrderStartingAt(speakerId, index, tokenCountDifference)
   }
-  // ADD HISTORY EVENT
-  history.push({
+  return {
     id: _.uniqueId(),
     apply: true,
     type: 'CHANGE_TOKENS',
     before: [ clone(oldEvent) ],
     after: [ clone(newEvent) ]
-  })
+  }
 }
 
-export function resizeSegment(id: number, startTime: number, endTime: number) {
+export function resizeSegment(id: number, startTime: number, endTime: number): HistoryEventAction {
   const i = findSegmentById(id)
   const before = clone(eventStore.events[i])
   eventStore.events[i].startTime = startTime
   eventStore.events[i].endTime = endTime
   const after = clone(eventStore.events[i])
-  history.push({
+  return {
     id: _.uniqueId(),
     apply: true,
     type: 'RESIZE',
     before: [ before ],
     after: [ after ]
-  })
+  }
 }
 
-export function addSegment(atTime: number) {
+export function addSegment(atTime: number): HistoryEventAction {
   const nextEvent = findNextSegmentAt(atTime)
   const newEvent: LocalTranscriptEvent = {
     startTime: atTime,
@@ -466,21 +455,20 @@ export function addSegment(atTime: number) {
     eventId: makeEventId(),
     speakerEvents: {}
   }
-  history.push({
+  if (nextEvent !== undefined) {
+    const i = findSegmentById(nextEvent.eventId)
+    // console.log({i})
+    eventStore.events.splice(i, 0, newEvent)
+  } else {
+    eventStore.events.push(newEvent)
+  }
+  return {
     id: _.uniqueId(),
     apply: true,
     type: 'ADD',
     before: [],
     after: [ clone(newEvent) ]
-  })
-  if (nextEvent !== undefined) {
-    const i = findSegmentById(nextEvent.eventId)
-    console.log({i})
-    eventStore.events.splice(i, 0, newEvent)
-  } else {
-    eventStore.events.push(newEvent)
   }
-  return newEvent
 }
 
 export function deleteSelectedEvents(): number[] {
@@ -488,48 +476,49 @@ export function deleteSelectedEvents(): number[] {
   return eventStore.selectedEventIds
 }
 
-export function deleteEvent(event: LocalTranscriptEvent) {
+export function deleteEvent(event: LocalTranscriptEvent): HistoryEventAction {
   const i = findSegmentById(event.eventId)
-  history.push({
+  const e = clone(eventStore.events[i])
+  eventStore.events.splice(i, 1)
+  return {
     id: _.uniqueId(),
     apply: true,
     type: 'DELETE',
-    before: [clone(eventStore.events[i])],
+    before: [ e ],
     after: []
-  })
-  eventStore.events.splice(i, 1)
+  }
 }
 
-export function splitSegment(event: LocalTranscriptEvent, splitAt: number): LocalTranscriptEvent[] {
+export function splitSegment(event: LocalTranscriptEvent, splitAt: number): HistoryEventAction[] {
   const i = findSegmentById(event.eventId)
-  const oldEvent: LocalTranscriptEvent = {
+  const before = clone(eventStore.events[i])
+  const leftEvent: LocalTranscriptEvent = {
     ...event,
     endTime: event.startTime + splitAt
   }
-  const newEvent: LocalTranscriptEvent = {
+  const rightEvent: LocalTranscriptEvent = {
     startTime: event.startTime + splitAt,
     endTime: event.endTime,
     eventId: makeEventId(),
     speakerEvents: {}
   }
-  history.push(
+  eventStore.events.splice(i, 1, leftEvent, rightEvent)
+  return [
     {
       id: _.uniqueId(),
       apply: true,
       type: 'RESIZE',
-      before: [ clone(eventStore.events[i]) ],
-      after: [ clone(oldEvent) ]
+      before: [ before ],
+      after: [ clone(leftEvent) ]
     },
     {
       id: _.uniqueId(),
       apply: true,
       type: 'ADD',
       before: [],
-      after: [ clone(newEvent) ]
+      after: [ clone(rightEvent) ]
     }
-  )
-  eventStore.events.splice(i, 1, oldEvent, newEvent)
-  return [ event, newEvent ]
+  ]
 }
 
 export function findNextSegmentAt(seconds: number, events = eventStore.events): LocalTranscriptEvent|undefined {
@@ -617,13 +606,13 @@ function getEventsByIds(ids: number[]): LocalTranscriptEvent[] {
     .value()
 }
 
-function replaceEvents(oldEvents: LocalTranscriptEvent[], newEvents: LocalTranscriptEvent[]) {
+export function replaceEvents(oldEvents: LocalTranscriptEvent[], newEvents: LocalTranscriptEvent[]) {
   const startIndex = findSegmentById(oldEvents[0].eventId)
   const numDeletions = oldEvents.length
   eventStore.events.splice(startIndex, numDeletions, ...newEvents)
 }
 
-export function joinEvents(eventIds: number[]): LocalTranscriptEvent {
+export function joinEvents(eventIds: number[]): HistoryEventAction {
   const events = getEventsByIds(eventIds)
   const speakerIds = getSpeakersFromEvents(events)
   const joinedEvent = {
@@ -650,16 +639,15 @@ export function joinEvents(eventIds: number[]): LocalTranscriptEvent {
       return speakerEvents
     }, {} as LocalTranscriptEvent['speakerEvents'])
   }
-  history.push({
+  replaceEvents(events, [ joinedEvent ])
+  eventStore.selectedEventIds = [ joinedEvent.eventId ]
+  return {
     id: _.uniqueId(),
     type: 'JOIN',
     apply: true,
     before: clone(events),
     after: [ clone(joinedEvent) ]
-  })
-  replaceEvents(events, [ joinedEvent ])
-  eventStore.selectedEventIds = [ joinedEvent.eventId ]
-  return joinedEvent
+  }
 }
 
 export function isEventSelected(id: number) {

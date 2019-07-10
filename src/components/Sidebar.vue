@@ -10,7 +10,7 @@
     </v-tab>
     <v-tabs-items class="sidebar-scrollable">
       <v-tab-item>
-        <edit-history v-if="history.length > 0" />
+        <edit-history v-if="history.actions.length > 0" />
         <div v-else class="text-xs-center grey--text mt-4">
           <small>Edits will appear here.</small>
         </div>
@@ -30,7 +30,6 @@ import editHistory from './EditHistory.vue'
 import errorList from './ErrorList.vue'
 import * as _ from 'lodash'
 import {
-  history,
   LocalTranscriptEvent,
   scrollToAudioEvent,
   findSegmentById,
@@ -40,6 +39,8 @@ import {
   speakerEventHasErrors,
   toTime
 } from '../store/transcript'
+
+import { history } from '../store/history'
 
 interface ErrorEvent extends LocalTranscriptEvent {
   error_type: 'time_overlap'|'unknown_token'
@@ -63,7 +64,7 @@ export default class Sidebar extends Vue {
   toTime = toTime
 
   beforeUpdate() {
-    if (this.$el) {
+    if (this.$el && this.$el.querySelector) {
       const el = this.$el.querySelector('.sidebar-scrollable')
       if (el !== null && el.scrollHeight - el.scrollTop - el.clientHeight < 25) {
         this.stuckAtBottom = true

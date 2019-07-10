@@ -36,6 +36,8 @@
 import { Vue, Component, Prop, Watch, Provide } from 'vue-property-decorator'
 import Resizer from './helper/Resizer.vue'
 import ResizeParent from './helper/ResizeParent.vue'
+import { undoable } from '../store/history'
+
 // tslint:disable-next-line:max-line-length
 import {
   playEvent,
@@ -94,14 +96,14 @@ export default class SegmentBox extends Vue {
   onResizeEnd(e: any) {
     this.event.startTime = e.current.left / this.pixelsPerSecond
     this.event.endTime = e.current.right / this.pixelsPerSecond
-    resizeSegment(this.event.eventId!, this.event.startTime, this.event.endTime)
+    undoable(resizeSegment(this.event.eventId!, this.event.startTime, this.event.endTime))
     if (e.next !== null && this.nextEvent !== undefined) {
       this.nextEvent.startTime = e.next.left / this.pixelsPerSecond
-      resizeSegment(this.nextEvent.eventId!, this.nextEvent.startTime, this.nextEvent.endTime)
+      undoable(resizeSegment(this.nextEvent.eventId!, this.nextEvent.startTime, this.nextEvent.endTime))
     }
     if (e.previous !== null && this.previousEvent !== undefined) {
       this.previousEvent.endTime = e.previous.right / this.pixelsPerSecond
-      resizeSegment(this.previousEvent.eventId!, this.previousEvent.startTime, this.previousEvent.endTime)
+      undoable(resizeSegment(this.previousEvent.eventId!, this.previousEvent.startTime, this.previousEvent.endTime))
     }
   }
 }

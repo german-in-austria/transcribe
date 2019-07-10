@@ -206,10 +206,11 @@ import {
   scrollToTranscriptEvent,
   joinEvents,
   isEventSelected,
-  history,
   saveChangesToServer,
   convertToServerTranscript
 } from '../store/transcript'
+
+import { history, undoable } from '../store/history'
 import { serverTranscript } from '../service/data-backend/server-backend'
 
 @Component({
@@ -234,7 +235,6 @@ export default class Editor extends Vue {
   findSegmentAt = findSegmentAt
   playEvent = playEvent
   getSelectedEvent = getSelectedEvent
-  joinEvents = joinEvents
   isEventSelected = isEventSelected
   history = history
 
@@ -267,6 +267,10 @@ export default class Editor extends Vue {
     }
   }
 
+  joinEvents(es: number[]) {
+    undoable(joinEvents(es))
+  }
+
   async exportProject() {
     this.isSaving = true
     const zip = new jszip()
@@ -284,7 +288,7 @@ export default class Editor extends Vue {
   }
 
   async saveToServer() {
-    if (this.history.length > 0) {
+    if (this.history.actions.length > 0) {
       this.isSaving = true
       try {
         await saveChangesToServer()
@@ -324,7 +328,7 @@ export default class Editor extends Vue {
     if (e.key === 's') {
       const event = this.findSegmentAt(this.playHeadPos)
       if (event === undefined) {
-        const s = this.addSegment(this.playHeadPos)
+        const s = this.addSegment(this.playHeadPos).after[0]
         await this.$nextTick()
         selectEvent(s)
       } else {

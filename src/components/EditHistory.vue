@@ -1,8 +1,11 @@
 <template>
-  <v-list v-if="history.length > 0" dense>
+  <v-list v-if="history.actions.length > 0" dense>
+    <v-list-tile @click="undo">
+      undo
+    </v-list-tile>
     <RecycleScroller
       class="scroller"
-      :items="history"
+      :items="history.actions"
       :item-size="40">
       <template v-slot="{ item }">
         <v-list-tile
@@ -69,7 +72,6 @@ import SegmentTranscript from './SegmentTranscript.vue'
 import { RecycleScroller } from 'vue-virtual-scroller'
 
 import {
-  history,
   toTime,
   scrollToAudioEvent,
   scrollToTranscriptEvent,
@@ -79,6 +81,8 @@ import {
   playEvent,
   eventStore
 } from '../store/transcript'
+
+import { history, undo } from '../store/history'
 
 @Component({
   components: {
@@ -91,6 +95,7 @@ export default class EditHistory extends Vue {
   history = history
   toTime = toTime
   playEvent = playEvent
+  undo = undo
   showEventIfExists(e: LocalTranscriptEvent) {
     const i = findSegmentById(e.eventId)
     if (i > -1) {

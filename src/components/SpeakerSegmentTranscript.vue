@@ -76,6 +76,7 @@ import {
   tokenTypeFromToken
 } from '../store/transcript'
 import copyPaste from '../service/copy-paste'
+import { undoable } from '../store/history'
 import * as _ from 'lodash'
 import * as jsdiff from 'diff'
 
@@ -280,7 +281,7 @@ export default class SpeakerSegmentTranscript extends Vue {
       !isEqualDeep(this.localTokens, this.event.speakerEvents[this.speaker].tokens)
     ) {
       // perform update
-      updateSpeakerEvent(this.localEvent, this.speaker, this.localTokens)
+      undoable(updateSpeakerEvent(this.localEvent, this.speaker, this.localTokens))
     } else {
       // nothing to update
     }
