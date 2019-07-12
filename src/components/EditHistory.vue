@@ -1,8 +1,5 @@
 <template>
   <v-list v-if="history.actions.length > 0" dense>
-    <v-list-tile :disabled="!canUndo" @click="undo">
-      undo
-    </v-list-tile>
     <RecycleScroller
       class="scroller"
       :items="history.actions"
