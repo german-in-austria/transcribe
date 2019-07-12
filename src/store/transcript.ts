@@ -488,8 +488,14 @@ export function addSegment(atTime: number): HistoryEventAction {
   }
 }
 
-export function deleteSelectedEvents(): HistoryEventAction[] {
-  return eventStore.selectedEventIds.map(deleteEventById)
+export function deleteSelectedEvents(): HistoryEventAction {
+  return {
+    id: _.uniqueId(),
+    apply: true,
+    type: 'DELETE',
+    before: _(eventStore.selectedEventIds).map(deleteEventById).flatMap(a => a.before).value(),
+    after: []
+  }
 }
 
 export function deleteEvent(event: LocalTranscriptEvent): HistoryEventAction {
