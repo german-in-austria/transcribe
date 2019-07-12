@@ -439,16 +439,16 @@ export function updateSpeakerEvent(
 }
 
 export function resizeEvents(...es: LocalTranscriptEvent[]): HistoryEventAction {
-  const before = clone(es
+  const oldEs = clone(es
     .map(e => findEventById(e.eventId))
     .map(i => eventStore.events[i])
   )
-  replaceEvents(before, es)
+  replaceEvents(oldEs, es)
   return {
     id: _.uniqueId(),
     apply: true,
     type: 'RESIZE',
-    before,
+    before: oldEs,
     after: clone(es)
   }
 }
