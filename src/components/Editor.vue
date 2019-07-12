@@ -205,7 +205,8 @@ import {
   scrollToTranscriptEvent,
   joinEvents,
   isEventSelected,
-  saveChangesToServer
+  saveChangesToServer,
+  scrollToAudioEvent
 } from '../store/transcript'
 
 import { history, undoable, undo, redo } from '../store/history'
@@ -362,9 +363,19 @@ export default class Editor extends Vue {
 
     document.body.addEventListener('keydown', (e) => {
       if (e.metaKey && !e.shiftKey && e.key === 'z') {
-        undo()
+        const action = undo()
+        if (action !== undefined) {
+          e.preventDefault()
+          selectEvent(action.before[0] || action.after[0])
+          scrollToAudioEvent(action.before[0] || action.after[0])
+        }
       } else if (e.metaKey && e.shiftKey && e.key === 'z') {
-        redo()
+        const action = redo()
+        if (action !== undefined) {
+          e.preventDefault()
+          selectEvent(action.after[0] || action.before[0])
+          scrollToAudioEvent(action.after[0] || action.before[0])
+        }
       }
     })
 
