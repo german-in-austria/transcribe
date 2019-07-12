@@ -41,7 +41,7 @@ import { undoable } from '../store/history'
 // tslint:disable-next-line:max-line-length
 import {
   playEvent,
-  resizeEvent,
+  resizeEvents,
   LocalTranscriptEvent,
   eventStore,
   selectEvent,
@@ -91,16 +91,16 @@ export default class SegmentBox extends Vue {
   }
 
   onResizeEnd(e: any) {
-    this.event.startTime = e.current.left / this.pixelsPerSecond
-    this.event.endTime = e.current.right / this.pixelsPerSecond
-    undoable(resizeEvent(this.event.eventId!, this.event.startTime, this.event.endTime))
+    const startTime = e.current.left / this.pixelsPerSecond
+    const endTime = e.current.right / this.pixelsPerSecond
     if (e.next !== null && this.nextEvent !== undefined) {
-      this.nextEvent.startTime = e.next.left / this.pixelsPerSecond
-      undoable(resizeEvent(this.nextEvent.eventId!, this.nextEvent.startTime, this.nextEvent.endTime))
-    }
-    if (e.previous !== null && this.previousEvent !== undefined) {
-      this.previousEvent.endTime = e.previous.right / this.pixelsPerSecond
-      undoable(resizeEvent(this.previousEvent.eventId!, this.previousEvent.startTime, this.previousEvent.endTime))
+      const nextStartTime = e.next.left / this.pixelsPerSecond
+      undoable(resizeEvents({ ...this.event, startTime, endTime }, { ...this.nextEvent, startTime: nextStartTime }))
+    } else if (e.previous !== null && this.previousEvent !== undefined) {
+      const previousEndTime = e.previous.right / this.pixelsPerSecond
+      undoable(resizeEvents({ ...this.previousEvent, endTime: previousEndTime }, { ...this.event, startTime, endTime }))
+    } else {
+      undoable(resizeEvents({ ...this.event, startTime, endTime }))
     }
   }
 }

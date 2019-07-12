@@ -438,19 +438,39 @@ export function updateSpeakerEvent(
   }
 }
 
-export function resizeEvent(id: number, startTime: number, endTime: number): HistoryEventAction {
-  const i = findEventById(id)
-  const before = clone(eventStore.events[i])
-  eventStore.events[i].startTime = startTime
-  eventStore.events[i].endTime = endTime
-  const after = clone(eventStore.events[i])
+export function resizeEvents(...es: LocalTranscriptEvent[]): HistoryEventAction {
+  const before = clone(es
+    .map(e => findEventById(e.eventId))
+    .map(i => eventStore.events[i])
+  )
+  replaceEvents(before, es)
   return {
     id: _.uniqueId(),
     apply: true,
     type: 'RESIZE',
-    before: [ before ],
-    after: [ after ]
+    before,
+    after: clone(es)
   }
+}
+
+export function resizeEvent(id: number, startTime: number, endTime: number): HistoryEventAction {
+  const i = findEventById(id)
+  return resizeEvents({...eventStore.events[i], startTime, endTime})
+  // const i = findEventById(id)
+  // const before = clone(eventStore.events[i])
+  // console.log('params', startTime, endTime)
+  // console.log('before', before.startTime, before.endTime, before)
+  // eventStore.events[i].startTime = startTime
+  // eventStore.events[i].endTime = endTime
+  // const after = clone(eventStore.events[i])
+  // console.log('after', after.startTime, after.endTime, after)
+  // return {
+  //   id: _.uniqueId(),
+  //   apply: true,
+  //   type: 'RESIZE',
+  //   before: [ before ],
+  //   after: [ after ]
+  // }
 }
 
 export function insertEvent(e: LocalTranscriptEvent): HistoryEventAction {
@@ -690,16 +710,16 @@ export function isMostRecentSelection(id: number) {
   return _.last(eventStore.selectedEventIds) === id
 }
 
-export function selectNextEvent(reverse = false) {
+export function selectNextEvent(increase: 1|-1 = 1) {
   if (eventStore.selectedEventIds.length > 0) {
     const i = findEventById(eventStore.selectedEventIds[0])
-    const n = eventStore.events[i + (reverse ? -1 : 1)]
+    const n = eventStore.events[i + increase]
     selectEvent(n)
   }
 }
 
 export function selectPreviousEvent() {
-  selectNextEvent(true)
+  selectNextEvent(-1)
 }
 
 export function deselectEvents() {
