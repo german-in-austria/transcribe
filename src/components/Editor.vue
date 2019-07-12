@@ -80,7 +80,7 @@
     <wave-form
       tabindex="-1"
       class="no-outline"
-      @keydown.native="handleKey"
+      @keydown.native="handleWaveformKey"
       @change-metadata="changeMetadata"
       @scroll="handleScroll"
       @show-menu="doShowMenu"
@@ -142,7 +142,7 @@
             </v-list-tile>
             <v-divider />
             <v-list-tile
-              @click="deleteEvent(getSelectedEvent())">
+              @click="deleteSelectedEvents">
               <v-list-tile-content>
                 <v-list-tile-title>Delete</v-list-tile-title>
               </v-list-tile-content>
@@ -184,7 +184,6 @@ import playHead from './PlayHead.vue'
 import scrollbar from './Scrollbar.vue'
 import * as _ from 'lodash'
 import * as fns from 'date-fns'
-import * as jszip from 'jszip'
 import { saveAs } from 'file-saver'
 import * as humanSize from 'human-size'
 import audio from '../service/audio'
@@ -197,8 +196,7 @@ import {
   eventStore,
   playEvent,
   addSegment,
-  deleteEvent,
-  deleteEventById,
+  deleteSelectedEvents,
   splitSegment,
   findSegmentAt,
   selectNextEvent,
@@ -206,12 +204,12 @@ import {
   scrollToTranscriptEvent,
   joinEvents,
   isEventSelected,
-  saveChangesToServer,
-  convertToServerTranscript
+  saveChangesToServer
 } from '../store/transcript'
 
-import { history, undoable } from '../store/history'
-import { serverTranscript } from '../service/data-backend/server-backend'
+import { history, undoable, undo, redo } from '../store/history'
+import { serverTranscript } from '../service/backend-server'
+import { generateProjectFile } from '../service/backend-files'
 
 @Component({
   components: {
@@ -229,9 +227,6 @@ export default class Editor extends Vue {
 
   errors: LocalTranscriptEvent[] = []
   eventStore = eventStore
-  addSegment = addSegment
-  deleteEvent = deleteEvent
-  splitSegment = splitSegment
   findSegmentAt = findSegmentAt
   playEvent = playEvent
   getSelectedEvent = getSelectedEvent
@@ -268,23 +263,19 @@ export default class Editor extends Vue {
   }
 
   joinEvents(es: number[]) {
-    undoable(joinEvents(es))
+    return undoable(joinEvents(es))
+  }
+
+  deleteSelectedEvents() {
+    return undoable(deleteSelectedEvents())
   }
 
   async exportProject() {
     this.isSaving = true
-    const zip = new jszip()
     const overviewWave = (document.querySelector('.overview-waveform svg') as HTMLElement).innerHTML
-    const newServerTranscript = await convertToServerTranscript(eventStore.events)
-    zip.file('overview.svg', overviewWave)
-    zip.file('settings.json', JSON.stringify(settings))
-    zip.file('audio.ogg', audio.store.uint8Buffer.buffer, {compression: 'STORE'})
-    zip.file('transcript.json', JSON.stringify(newServerTranscript))
-    zip.file('eventStore.json', JSON.stringify(eventStore))
-    zip.file('VERSION', '1')
-    const f = await zip.generateAsync({ type: 'blob'})
-    this.isSaving = false
+    const f = await generateProjectFile(eventStore, overviewWave, settings, audio.store.uint8Buffer, history.actions)
     saveAs(f, eventStore.metadata.transcriptName! + '.transcript')
+    this.isSaving = false
   }
 
   async saveToServer() {
@@ -318,25 +309,27 @@ export default class Editor extends Vue {
     this.spectrogramEvent = e
   }
 
-  async handleKey(e: KeyboardEvent) {
-    console.log(this.playHeadPos)
-    console.log(e)
-    // _(settings.keyboardShortcuts).forEach((v, i) => {
-    //   if (v.key === e.key && (v.modifier === null || (e as any)[v.modifier] === true)) {
-    //   }
-    // })
+  addSegment(pos: number) {
+    return undoable(addSegment(pos))
+  }
+
+  splitSegment(e: LocalTranscriptEvent, at: number) {
+    return undoable(splitSegment(e, at))
+  }
+
+  async handleWaveformKey(e: KeyboardEvent) {
     if (e.key === 's') {
-      const event = this.findSegmentAt(this.playHeadPos)
-      if (event === undefined) {
-        const s = this.addSegment(this.playHeadPos).after[0]
+      const eventUnderPlayHead = this.findSegmentAt(this.playHeadPos)
+      if (eventUnderPlayHead === undefined) {
+        const newEvent = this.addSegment(this.playHeadPos)[0]
         await this.$nextTick()
-        selectEvent(s)
+        selectEvent(newEvent)
       } else {
-        const splitAt = this.playHeadPos - event.startTime
-        this.splitSegment(event, splitAt)
+        const splitAt = this.playHeadPos - eventUnderPlayHead.startTime
+        this.splitSegment(eventUnderPlayHead, splitAt)
       }
     } else if (e.key === 'Backspace') {
-      this.eventStore.selectedEventIds.forEach(deleteEventById)
+      this.deleteSelectedEvents()
       this.eventStore.selectedEventIds = []
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault()
@@ -359,7 +352,6 @@ export default class Editor extends Vue {
   }
 
   mounted() {
-    console.log('mounted')
     if (eventStore.audioElement instanceof HTMLAudioElement) {
       console.log('inner')
       eventStore.audioElement.addEventListener('pause', () => {
@@ -369,6 +361,15 @@ export default class Editor extends Vue {
         }
       })
     }
+
+    document.body.addEventListener('keydown', (e) => {
+      if (e.metaKey && !e.shiftKey && e.key === 'z') {
+        undo()
+      } else if (e.metaKey && e.shiftKey && e.key === 'z') {
+        redo()
+      }
+    })
+
   }
 
   scrub(time: number) {
@@ -397,7 +398,6 @@ export default class Editor extends Vue {
     selectNextEvent()
   }
   changeMetadata(metadata: any) {
-    console.log({metadata})
     this.metadata = metadata
   }
 

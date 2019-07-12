@@ -118,6 +118,8 @@ export default class EditHistory extends Vue {
 
   undoOrRedoUntil(action: HistoryEventAction) {
     if (action.after[0]) {
+      selectEvent(action.after[0])
+      scrollToAudioEvent(action.after[0])
       scrollToTranscriptEvent(action.after[0])
     }
     jumpToState(action)

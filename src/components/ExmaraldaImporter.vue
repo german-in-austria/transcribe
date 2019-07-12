@@ -300,7 +300,7 @@ import {
   ParsedExmaraldaXML,
   SpeakerTierImportable,
   importableToServerTranscript
-} from '../service/exmaralda-backend'
+} from '../service/backend-exmaralda'
 
 import {
   getSurveys,

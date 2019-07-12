@@ -10,7 +10,7 @@ import {
   serverTranscript,
   serverTranscriptToLocal,
   updateServerTranscriptWithChanges
-} from '../service/data-backend/server-backend'
+} from '../service/backend-server'
 
 declare global {
   interface Window {
@@ -447,6 +447,23 @@ export function resizeSegment(id: number, startTime: number, endTime: number): H
   }
 }
 
+export function insertSegment(e: LocalTranscriptEvent): HistoryEventAction {
+  const nextEvent = findNextSegmentAt(e.startTime)
+  if (nextEvent !== undefined) {
+    const i = findSegmentById(nextEvent.eventId)
+    eventStore.events.splice(i, 0, e)
+  } else {
+    eventStore.events.push(e)
+  }
+  return {
+    id: _.uniqueId(),
+    apply: true,
+    type: 'INSERT',
+    before: [],
+    after: [ clone(e) ]
+  }
+}
+
 export function addSegment(atTime: number): HistoryEventAction {
   const nextEvent = findNextSegmentAt(atTime)
   const newEvent: LocalTranscriptEvent = {
@@ -471,9 +488,8 @@ export function addSegment(atTime: number): HistoryEventAction {
   }
 }
 
-export function deleteSelectedEvents(): number[] {
-  eventStore.selectedEventIds.forEach(deleteEventById)
-  return eventStore.selectedEventIds
+export function deleteSelectedEvents(): HistoryEventAction[] {
+  return eventStore.selectedEventIds.map(deleteEventById)
 }
 
 export function deleteEvent(event: LocalTranscriptEvent): HistoryEventAction {
@@ -545,7 +561,7 @@ export function findPreviousSpeakerEvent(speaker: number, eventId: number): numb
 
 export function deleteEventById(id: number) {
   const i = findSegmentById(id)
-  deleteEvent(eventStore.events[i])
+  return deleteEvent(eventStore.events[i])
 }
 
 export function timeToSeconds(time: string) {
@@ -607,9 +623,13 @@ function getEventsByIds(ids: number[]): LocalTranscriptEvent[] {
 }
 
 export function replaceEvents(oldEvents: LocalTranscriptEvent[], newEvents: LocalTranscriptEvent[]) {
-  const startIndex = findSegmentById(oldEvents[0].eventId)
-  const numDeletions = oldEvents.length
-  eventStore.events.splice(startIndex, numDeletions, ...newEvents)
+  if (oldEvents.length === 0) {
+    newEvents.forEach(insertSegment)
+  } else {
+    const startIndex = findSegmentById(oldEvents[0].eventId)
+    const numDeletions = oldEvents.length
+    eventStore.events.splice(startIndex, numDeletions, ...newEvents)
+  }
 }
 
 export function joinEvents(eventIds: number[]): HistoryEventAction {

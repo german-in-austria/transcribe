@@ -48,7 +48,7 @@ export function fileToUint8ArrayAndName(f: File): Promise<{ b: Uint8Array, n: st
   })
 }
 
-export function platform(): string {
+export function platform(): 'windows'|'mac'|'linux' {
   if (navigator.platform.toLowerCase() === 'win32' || navigator.platform.toLowerCase() === 'win64') {
     return 'windows'
   } else if (navigator.platform.toLowerCase() === 'macintel') {

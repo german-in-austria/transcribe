@@ -3,7 +3,7 @@ import _ from 'lodash'
 
 export interface HistoryEventAction {
   id: string
-  type: 'RESIZE'|'DELETE'|'CHANGE_TOKENS'|'ADD'|'JOIN'
+  type: 'RESIZE'|'DELETE'|'CHANGE_TOKENS'|'ADD'|'JOIN'|'INSERT'
   apply: boolean
   before: LocalTranscriptEvent[]
   after: LocalTranscriptEvent[]
@@ -15,6 +15,7 @@ export let history = {
 
 export function jumpToState(action: HistoryEventAction) {
   const ai = history.actions.findIndex((a) => a.id === action.id)
+  // if the index was found.
   if (ai > - 1) {
     history.actions = history.actions.map((a, hi) => {
       // everything before this action must
@@ -43,27 +44,11 @@ export function jumpToState(action: HistoryEventAction) {
 }
 
 function undoAction(a: HistoryEventAction) {
-  if (a.type === 'CHANGE_TOKENS') {
-    replaceEvents(a.after, a.before)
-  } else if (a.type === 'JOIN') {
-    replaceEvents(a.after, a.before)
-  } else if (true) {
-    // etc.
-  } else {
-    // can’t undo an unknown action
-  }
+  replaceEvents(a.after, a.before)
 }
 
 function redoAction(a: HistoryEventAction) {
-  if (a.type === 'CHANGE_TOKENS') {
-    replaceEvents(a.before, a.after)
-  } else if (a.type === 'JOIN') {
-    replaceEvents(a.before, a.after)
-  } else if (true) {
-    // etc.
-  } else {
-    // can’t undo an unknown action
-  }
+  replaceEvents(a.before, a.after)
 }
 
 export function undo() {
@@ -72,6 +57,8 @@ export function undo() {
   if (a !== undefined) {
     undoAction(a)
     a.apply = false
+  } else {
+    // nothing has been done, so we can’t undo anything
   }
 }
 

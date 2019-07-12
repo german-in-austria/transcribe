@@ -5,7 +5,7 @@
       tabindex="-1"
       :class="{time: true, error: hasErrors}"
       @keydown.enter.meta="playEvent(event)"
-      @keydown.delete.exact="deleteSelectedEvents"
+      @keydown.delete.exact="deleteEvents"
       @keydown.backspace.exact="deleteSelectedEvents"
       @dblclick="playEvent(event)"
       @mousedown.meta.stop="selectOrDeselectEvent(event)"
@@ -50,6 +50,8 @@ import {
   toTime
 } from '../store/transcript'
 
+import { undoable } from '../store/history'
+
 @Component({
   components: {
     SpeakerSegmentTranscript
@@ -63,7 +65,6 @@ export default class SegmentTranscript extends Vue {
   @Prop({ default: false }) isSelected: boolean
   eventStore = eventStore
   offsetWidth = 0
-  deleteSelectedEvents = deleteSelectedEvents
   selectOrDeselectEvent = selectOrDeselectEvent
   playEvent = playEvent
   toTime = toTime
@@ -76,6 +77,10 @@ export default class SegmentTranscript extends Vue {
     return _(this.event.speakerEvents).some((speakerEvent) => {
       return speakerEvent.tokens[0] !== undefined && speakerEvent.tokens[0].fragmentOf !== null
     })
+  }
+
+  deleteSelectedEvents() {
+    undoable(deleteSelectedEvents())
   }
 
   mounted() {

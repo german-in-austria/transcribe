@@ -108,7 +108,6 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
-import * as jszip from 'jszip'
 
 import playerBar from './PlayerBar.vue'
 import editor from './Editor.vue'
@@ -135,12 +134,21 @@ import {
   mergeServerTranscript,
   serverTranscriptToLocal,
   getMetadataFromServerTranscript
-} from '../service/data-backend/server-backend'
+} from '../service/backend-server'
+
+import {
+  parseProjectFile
+} from '../service/backend-files'
 
 import {
   ParsedExmaraldaXML,
   exmaraldaToImportable
-} from '../service/exmaralda-backend'
+} from '../service/backend-exmaralda'
+
+import {
+  history,
+  HistoryEventAction
+} from '../store/history'
 
 @Component({
   components : {
@@ -220,17 +228,17 @@ export default class App extends Vue {
 
   async openProjectFile(f: File) {
     this.importingLocalFile = true
-    const zip = new jszip()
-    await zip.loadAsync(f)
-    const audioBuffer = await zip.file('audio.ogg').async('uint8array')
-    const sT = JSON.parse(await zip.file('transcript.json').async('text')) as ServerTranscript
-    const eS = JSON.parse(await zip.file('eventStore.json').async('text'))
-    const overviewSvg = await zip.file('overview.svg').async('text')
-    const audioUrl = await this.loadLocalTranscript(sT, audioBuffer)
-    this.loadPreviousUserState(eS, audioUrl, overviewSvg)
+    const p = await parseProjectFile(f)
+    const audioUrl = await this.loadLocalTranscript(p.serverTranscript, p.audioBuffer)
+    this.loadPreviousUserState(p.eventStore, audioUrl, p.overviewSvg, p.historyActions)
   }
 
-  loadPreviousUserState(previousEventStore: any, audioUrl: string, overviewSvg: string) {
+  loadPreviousUserState(
+    previousEventStore: any,
+    audioUrl: string,
+    overviewSvg: string,
+    historyFile: HistoryEventAction[]
+  ) {
     localStorage.setItem(audioUrl + '_overview', overviewSvg)
     eventStore.events                     = previousEventStore.events
     eventStore.selectedEventIds           = previousEventStore.selectedEventIds
@@ -242,6 +250,7 @@ export default class App extends Vue {
     eventStore.userState                  = previousEventStore.userState
     eventStore.transcriptDownloadProgress = previousEventStore.transcriptDownloadProgress
     eventStore.status                     = 'finished'
+    history.actions                       = historyFile
   }
 
   async loadImportedTranscript(t: ServerTranscript, audioData: File|null): Promise<string> {
@@ -333,10 +342,11 @@ export default class App extends Vue {
 </script>
 <style lang="stylus" scoped>
 .pick-transcript-container
-  background url('/static/img/bg-waveform.png')
-  background-repeat no-repeat
-  background-position center 100px
-  background-size 1740px 290px
-  background-color rgba(0,0,0,.3)
+  background #222
+  // background url('/static/img/bg-waveform.png')
+  // background-repeat no-repeat
+  // background-position center 100px
+  // background-size 1740px 290px
+  // background-color rgba(0,0,0,.3)
 
 </style>

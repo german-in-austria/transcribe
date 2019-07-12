@@ -15,9 +15,9 @@ import {
   LocalTranscriptTier,
   LocalTranscriptSpeakerEventTiers,
   TokenTierType
-} from '../../store/transcript'
-import { clone } from '../../util/index'
-import serverTranscriptDiff from './server-transcript-diff.worker'
+} from '../store/transcript'
+import { clone } from '../util/index'
+import serverTranscriptDiff from './backend-server-transcript-diff.worker'
 
 const diffWorker = new PromiseWorker(new serverTranscriptDiff())
 const textEncoder = new TextEncoder()

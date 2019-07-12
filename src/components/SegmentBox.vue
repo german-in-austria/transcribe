@@ -90,9 +90,6 @@ export default class SegmentBox extends Vue {
     return (Number(this.event.endTime) - Number(this.event.startTime)) * this.pixelsPerSecond
   }
 
-  deleteEvent(segment: Event) {
-    this.$emit('delete-event', event)
-  }
   onResizeEnd(e: any) {
     this.event.startTime = e.current.left / this.pixelsPerSecond
     this.event.endTime = e.current.right / this.pixelsPerSecond
