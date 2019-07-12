@@ -1,5 +1,10 @@
 <template>
-  <div class="waveform-outer" :style="containerStyle" :class="{ disabled, loading }">
+  <div
+    @keydown.left="emitScroll"
+    @keydown.right="emitScroll"
+    class="waveform-outer"
+    :style="containerStyle"
+    :class="{ disabled, loading }">
     <v-layout class="pa-3" style="position: relative;">
       <v-flex xs2 text-xs-left>
         <label for="scaleFactorY" class="caption grey--text lighten-2">
@@ -222,8 +227,12 @@ export default class Waveform extends Vue {
     settings.lockPlayHead = false
   }
 
-  onMousewheel(e: MouseWheelEvent) {
+  emitScroll() {
     EventBus.$emit('scrollWaveform', (this.$refs.svgContainer as HTMLElement).scrollLeft / this.pixelsPerSecond)
+  }
+
+  onMousewheel(e: MouseWheelEvent) {
+    this.emitScroll()
     if (settings.emulateHorizontalScrolling === true) {
       const c = this.$refs.svgContainer
       if (c instanceof HTMLElement) {
@@ -268,6 +277,12 @@ export default class Waveform extends Vue {
     boundRight = eventStore.audioElement.duration * (scrollFactorRight + segmentBufferPercent)
     const ves = await this.getVisibleEvents(boundLeft, boundRight)
     this.visibleEvents = ves
+    // if we didn’t do that, the elements that are re-rendered
+    // because of the above call would loose focus, causing the
+    // window to receive focus, and thus breaking the ability
+    // to handle keyboard events from here.
+    await this.$nextTick();
+    (this.$el as any).focus()
   }
 
   async getVisibleEvents(l: number, r: number, es = eventStore.events): Promise<LocalTranscriptEvent[]> {

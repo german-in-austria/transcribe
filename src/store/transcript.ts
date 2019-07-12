@@ -686,6 +686,10 @@ export function isEventSelected(id: number) {
   return eventStore.selectedEventIds.indexOf(id) > -1
 }
 
+export function isMostRecentSelection(id: number) {
+  return _.last(eventStore.selectedEventIds) === id
+}
+
 export function selectNextEvent(reverse = false) {
   if (eventStore.selectedEventIds.length > 0) {
     const i = findEventById(eventStore.selectedEventIds[0])

@@ -336,16 +336,13 @@ export default class Editor extends Vue {
       e.preventDefault()
       e.stopPropagation()
       if (e.key === 'ArrowRight') {
-        // const oldFocusEl = document.activeElement as HTMLElement
         selectNextEvent()
-        // this.$nextTick(() => oldFocusEl.focus())
       } else {
         selectPreviousEvent()
       }
       this.$nextTick(() => {
         setTimeout(() => {
           const el = (document.querySelector('.segment.selected') as HTMLElement)
-          // el.scrollIntoView({ behavior: 'smooth' })
           el.focus()
         }, 0)
       })
