@@ -50,7 +50,7 @@
             height: height + 'px'
           }"
           :key="i"
-          @dblclick.stop="addSegmentAt"
+          @dblclick.stop="addEventAt"
           :class="['wave-form-segment', 'draw-segment-'+i]">
           <div class="wave-form-placeholder" />
         </div>
@@ -120,7 +120,7 @@ import * as util from '../util'
 import EventBus from '../service/event-bus'
 import {
   eventStore,
-  findSegmentAt,
+  findEventAt,
   LocalTranscriptEvent,
   scrollToTranscriptEvent,
   toTime
@@ -213,7 +213,7 @@ export default class Waveform extends Vue {
     }
   }
 
-  addSegmentAt(e: MouseEvent) {
+  addEventAt(e: MouseEvent) {
     const c = this.$refs.svgContainer as HTMLDivElement
     this.$emit('add-segment', (c.scrollLeft + e.pageX) / this.pixelsPerSecond)
   }
@@ -412,7 +412,7 @@ export default class Waveform extends Vue {
     console.log('scrollTranscriptFromOverview')
     const c = this.$refs.svgContainer as HTMLElement
     const currentSeconds = c.scrollLeft / this.pixelsPerSecond
-    const e = findSegmentAt(currentSeconds)
+    const e = findEventAt(currentSeconds)
     if (e !== undefined) {
       scrollToTranscriptEvent(e)
     }

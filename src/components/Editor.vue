@@ -84,7 +84,7 @@
       @change-metadata="changeMetadata"
       @scroll="handleScroll"
       @show-menu="doShowMenu"
-      @add-segment="addSegment"
+      @add-segment="addEvent"
       :height="300"
       :scroll-to-event="scrollToEvent" >
       <play-head
@@ -113,7 +113,7 @@
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
-              @click="splitSegmentFromMenu(getSelectedEvent())">
+              @click="splitEventFromMenu(getSelectedEvent())">
               <v-list-tile-content>
                 <v-list-tile-title>Split</v-list-tile-title>
               </v-list-tile-content>
@@ -195,10 +195,11 @@ import {
   LocalTranscriptEvent,
   eventStore,
   playEvent,
-  addSegment,
+  addEvent,
   deleteSelectedEvents,
-  splitSegment,
-  findSegmentAt,
+  splitEvent,
+  findEventAt,
+  deselectEvents,
   selectNextEvent,
   selectPreviousEvent,
   scrollToTranscriptEvent,
@@ -227,7 +228,7 @@ export default class Editor extends Vue {
 
   errors: LocalTranscriptEvent[] = []
   eventStore = eventStore
-  findSegmentAt = findSegmentAt
+  findEventAt = findEventAt
   playEvent = playEvent
   getSelectedEvent = getSelectedEvent
   isEventSelected = isEventSelected
@@ -299,9 +300,9 @@ export default class Editor extends Vue {
     this.showMenu = true
   }
 
-  splitSegmentFromMenu(event: LocalTranscriptEvent) {
+  splitEventFromMenu(event: LocalTranscriptEvent) {
     const splitAt = this.layerX / this.pixelsPerSecond
-    this.splitSegment(event, splitAt)
+    this.splitEvent(event, splitAt)
   }
 
   showSpectrogram(e: LocalTranscriptEvent) {
@@ -309,28 +310,28 @@ export default class Editor extends Vue {
     this.spectrogramEvent = e
   }
 
-  addSegment(pos: number) {
-    return undoable(addSegment(pos))
+  addEvent(pos: number) {
+    return undoable(addEvent(pos))
   }
 
-  splitSegment(e: LocalTranscriptEvent, at: number) {
-    return undoable(splitSegment(e, at))
+  splitEvent(e: LocalTranscriptEvent, at: number) {
+    return undoable(splitEvent(e, at))
   }
 
   async handleWaveformKey(e: KeyboardEvent) {
     if (e.key === 's') {
-      const eventUnderPlayHead = this.findSegmentAt(this.playHeadPos)
+      const eventUnderPlayHead = this.findEventAt(this.playHeadPos)
       if (eventUnderPlayHead === undefined) {
-        const newEvent = this.addSegment(this.playHeadPos)[0]
+        const newEvent = this.addEvent(this.playHeadPos)[0]
         await this.$nextTick()
         selectEvent(newEvent)
       } else {
         const splitAt = this.playHeadPos - eventUnderPlayHead.startTime
-        this.splitSegment(eventUnderPlayHead, splitAt)
+        this.splitEvent(eventUnderPlayHead, splitAt)
       }
     } else if (e.key === 'Backspace') {
       this.deleteSelectedEvents()
-      this.eventStore.selectedEventIds = []
+      deselectEvents()
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault()
       e.stopPropagation()

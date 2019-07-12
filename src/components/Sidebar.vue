@@ -32,7 +32,7 @@ import * as _ from 'lodash'
 import {
   LocalTranscriptEvent,
   scrollToAudioEvent,
-  findSegmentById,
+  findEventById,
   scrollToTranscriptEvent,
   eventStore,
   selectEvent,

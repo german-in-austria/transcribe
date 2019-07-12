@@ -70,9 +70,9 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
 // tslint:disable-next-line:max-line-length
 import {
-  findNextSegmentAt,
-  findPreviousSegmentAt,
-  findSegmentById,
+  findNextEventAt,
+  findPreviousEventAt,
+  findEventById,
   eventStore,
   LocalTranscriptEvent,
   scrollToAudioEvent,
@@ -97,7 +97,7 @@ export default class Search extends Vue {
   defaultTierOnly = false
 
   playEvent() {
-    const i = findSegmentById(eventStore.selectedEventIds[0])
+    const i = findEventById(eventStore.selectedEventIds[0])
     playEvent(eventStore.events[i])
   }
 
@@ -196,8 +196,8 @@ export default class Search extends Vue {
     }
   }
   findNext() {
-    const selectedEvent = eventStore.events[findSegmentById(eventStore.selectedEventIds[0])]
-    const e = findNextSegmentAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults)
+    const selectedEvent = eventStore.events[findEventById(eventStore.selectedEventIds[0])]
+    const e = findNextEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults)
     if (e) {
       this.goToResult(e)
     } else {
@@ -205,8 +205,8 @@ export default class Search extends Vue {
     }
   }
   findPrevious() {
-    const selectedEvent = eventStore.events[findSegmentById(eventStore.selectedEventIds[0])]
-    const e = findPreviousSegmentAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults)
+    const selectedEvent = eventStore.events[findEventById(eventStore.selectedEventIds[0])]
+    const e = findPreviousEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults)
     if (e) {
       this.goToResult(e)
     } else {

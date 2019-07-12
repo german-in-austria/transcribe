@@ -6,7 +6,7 @@
     @keydown.enter.meta.stop.prevent="playEvent(event)"
     @keydown.enter.exact="scrollToTranscriptEvent(event)"
     tabindex="-1"
-    :class="[ 'segment', isEventSelected(event.eventId) ? 'selected' : '', hasOverlap && 'has-overlap' ]"
+    :class="[ 'segment', isEventSelected(event.eventId) && 'selected', hasOverlap && 'has-overlap' ]"
     :style="{ left: offset + 'px', width: width + 'px' }">
     <div :style="{ left: width / 2 + 'px' }" class="transcript-tooltip" v-if="isEventSelected(event.eventId)">
       <div class="inner" :key="i" v-for="(se, i) in event.speakerEvents">
@@ -41,7 +41,7 @@ import { undoable } from '../store/history'
 // tslint:disable-next-line:max-line-length
 import {
   playEvent,
-  resizeSegment,
+  resizeEvent,
   LocalTranscriptEvent,
   eventStore,
   selectEvent,
@@ -93,14 +93,14 @@ export default class SegmentBox extends Vue {
   onResizeEnd(e: any) {
     this.event.startTime = e.current.left / this.pixelsPerSecond
     this.event.endTime = e.current.right / this.pixelsPerSecond
-    undoable(resizeSegment(this.event.eventId!, this.event.startTime, this.event.endTime))
+    undoable(resizeEvent(this.event.eventId!, this.event.startTime, this.event.endTime))
     if (e.next !== null && this.nextEvent !== undefined) {
       this.nextEvent.startTime = e.next.left / this.pixelsPerSecond
-      undoable(resizeSegment(this.nextEvent.eventId!, this.nextEvent.startTime, this.nextEvent.endTime))
+      undoable(resizeEvent(this.nextEvent.eventId!, this.nextEvent.startTime, this.nextEvent.endTime))
     }
     if (e.previous !== null && this.previousEvent !== undefined) {
       this.previousEvent.endTime = e.previous.right / this.pixelsPerSecond
-      undoable(resizeSegment(this.previousEvent.eventId!, this.previousEvent.startTime, this.previousEvent.endTime))
+      undoable(resizeEvent(this.previousEvent.eventId!, this.previousEvent.startTime, this.previousEvent.endTime))
     }
   }
 }

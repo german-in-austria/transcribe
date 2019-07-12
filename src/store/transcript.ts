@@ -211,6 +211,7 @@ export type LocalTranscript = LocalTranscriptEvent[]
 export const eventStore = {
   events: [] as LocalTranscriptEvent[],
   selectedEventIds: [] as number[],
+  selectionAnchor: null as number|null,
   selectedSearchResult: null as LocalTranscriptEvent|null,
   searchResults: [] as LocalTranscriptEvent[],
   searchTerm: '',
@@ -233,8 +234,9 @@ export const eventStore = {
   backEndUrl: localStorage.getItem('backEndUrl') || 'https://dissdb.dioe.at',
   audioElement: document.createElement('audio')
 }
-;
-(window as any)._eventStore = eventStore
+
+// ;
+// (window as any)._eventStore = eventStore
 
 export function tokenTypeFromToken(token: string) {
   const type = _(settings.tokenTypes).find((tt) => {
@@ -288,7 +290,11 @@ export function makeTierId() {
   return Number(_.uniqueId()) * -1
 }
 
-export function findSegmentById(id: number) {
+export function sortEvents(es: LocalTranscriptEvent[]): LocalTranscriptEvent[] {
+  return _.sortBy(es, (e) => e.startTime)
+}
+
+export function findEventById(id: number) {
   return _(eventStore.events).findIndex(e => e.eventId === id)
 }
 
@@ -389,7 +395,7 @@ export function updateSpeakerEvent(
   speakerId: number,
   tokens: LocalTranscriptToken[],
 ): HistoryEventAction {
-  const oldEvent = eventStore.events[findSegmentById(event.eventId)]
+  const oldEvent = eventStore.events[findEventById(event.eventId)]
   const isNew = oldEvent.speakerEvents[speakerId] === undefined
   const deletedSpeakerId = tokens.length === 0 ? speakerId : undefined
   const tokenCountDifference = isNew ? tokens.length : tokens.length - oldEvent.speakerEvents[speakerId].tokens.length
@@ -410,7 +416,7 @@ export function updateSpeakerEvent(
       return m
     }, {} as LocalTranscriptEvent['speakerEvents'])
   const newEvent = clone({...oldEvent, speakerEvents})
-  const index = findSegmentById(event.eventId)
+  const index = findEventById(event.eventId)
   // UPDATE EVENT
   eventStore.events.splice(index, 1, newEvent)
   // if it has a fragment marker ("="),
@@ -432,8 +438,8 @@ export function updateSpeakerEvent(
   }
 }
 
-export function resizeSegment(id: number, startTime: number, endTime: number): HistoryEventAction {
-  const i = findSegmentById(id)
+export function resizeEvent(id: number, startTime: number, endTime: number): HistoryEventAction {
+  const i = findEventById(id)
   const before = clone(eventStore.events[i])
   eventStore.events[i].startTime = startTime
   eventStore.events[i].endTime = endTime
@@ -447,10 +453,10 @@ export function resizeSegment(id: number, startTime: number, endTime: number): H
   }
 }
 
-export function insertSegment(e: LocalTranscriptEvent): HistoryEventAction {
-  const nextEvent = findNextSegmentAt(e.startTime)
+export function insertEvent(e: LocalTranscriptEvent): HistoryEventAction {
+  const nextEvent = findNextEventAt(e.startTime)
   if (nextEvent !== undefined) {
-    const i = findSegmentById(nextEvent.eventId)
+    const i = findEventById(nextEvent.eventId)
     eventStore.events.splice(i, 0, e)
   } else {
     eventStore.events.push(e)
@@ -464,8 +470,8 @@ export function insertSegment(e: LocalTranscriptEvent): HistoryEventAction {
   }
 }
 
-export function addSegment(atTime: number): HistoryEventAction {
-  const nextEvent = findNextSegmentAt(atTime)
+export function addEvent(atTime: number): HistoryEventAction {
+  const nextEvent = findNextEventAt(atTime)
   const newEvent: LocalTranscriptEvent = {
     startTime: atTime,
     endTime: atTime + 1,
@@ -473,7 +479,7 @@ export function addSegment(atTime: number): HistoryEventAction {
     speakerEvents: {}
   }
   if (nextEvent !== undefined) {
-    const i = findSegmentById(nextEvent.eventId)
+    const i = findEventById(nextEvent.eventId)
     // console.log({i})
     eventStore.events.splice(i, 0, newEvent)
   } else {
@@ -499,7 +505,7 @@ export function deleteSelectedEvents(): HistoryEventAction {
 }
 
 export function deleteEvent(event: LocalTranscriptEvent): HistoryEventAction {
-  const i = findSegmentById(event.eventId)
+  const i = findEventById(event.eventId)
   const e = clone(eventStore.events[i])
   eventStore.events.splice(i, 1)
   return {
@@ -511,8 +517,8 @@ export function deleteEvent(event: LocalTranscriptEvent): HistoryEventAction {
   }
 }
 
-export function splitSegment(event: LocalTranscriptEvent, splitAt: number): HistoryEventAction[] {
-  const i = findSegmentById(event.eventId)
+export function splitEvent(event: LocalTranscriptEvent, splitAt: number): HistoryEventAction[] {
+  const i = findEventById(event.eventId)
   const before = clone(eventStore.events[i])
   const leftEvent: LocalTranscriptEvent = {
     ...event,
@@ -543,30 +549,30 @@ export function splitSegment(event: LocalTranscriptEvent, splitAt: number): Hist
   ]
 }
 
-export function findNextSegmentAt(seconds: number, events = eventStore.events): LocalTranscriptEvent|undefined {
+export function findNextEventAt(seconds: number, events = eventStore.events): LocalTranscriptEvent|undefined {
   return _(events).find((e) => e.startTime >= seconds)
 }
 
-export function findPreviousSegmentAt(seconds: number, events = eventStore.events): LocalTranscriptEvent|undefined {
+export function findPreviousEventAt(seconds: number, events = eventStore.events): LocalTranscriptEvent|undefined {
   const i = _(events).findLastIndex((e) => e.startTime < seconds)
   return events[Math.max(0, i - 1)]
 }
 
-export function findSegmentAt(seconds: number): LocalTranscriptEvent|undefined {
+export function findEventAt(seconds: number): LocalTranscriptEvent|undefined {
   return _(eventStore.events).find((e) => e.startTime <= seconds && e.endTime >= seconds)
 }
 
-export function findSegmentIndexAt(seconds: number): number {
+export function findEventIndexAt(seconds: number): number {
   return _(eventStore.events).findIndex((e) => e.startTime <= seconds && e.endTime >= seconds)
 }
 
 export function findPreviousSpeakerEvent(speaker: number, eventId: number): number|undefined {
-  const i = findSegmentById(eventId)
+  const i = findEventById(eventId)
   return _(eventStore.events).findLastIndex((e, eventIndex) => eventIndex < i && e.speakerEvents[speaker] !== undefined)
 }
 
 export function deleteEventById(id: number) {
-  const i = findSegmentById(id)
+  const i = findEventById(id)
   return deleteEvent(eventStore.events[i])
 }
 
@@ -585,7 +591,7 @@ export function timeFromSeconds(seconds: number) {
 
 export async function playEvents(events: LocalTranscriptEvent[]) {
   eventStore.playingEvent = null
-  const sortedEvents = _(events).sortBy((e) => e.startTime).value()
+  const sortedEvents = sortEvents(events)
 
   const synEvent = {
     ..._(sortedEvents).first() as LocalTranscriptEvent,
@@ -622,7 +628,7 @@ function getSpeakersFromEvents(es: LocalTranscriptEvent[]): string[] {
 
 function getEventsByIds(ids: number[]): LocalTranscriptEvent[] {
   return _(eventStore.selectedEventIds)
-    .map((id) => eventStore.events[findSegmentById(id)])
+    .map((id) => eventStore.events[findEventById(id)])
     .compact()
     .sortBy(e => e.startTime)
     .value()
@@ -630,9 +636,9 @@ function getEventsByIds(ids: number[]): LocalTranscriptEvent[] {
 
 export function replaceEvents(oldEvents: LocalTranscriptEvent[], newEvents: LocalTranscriptEvent[]) {
   if (oldEvents.length === 0) {
-    newEvents.forEach(insertSegment)
+    newEvents.forEach(insertEvent)
   } else {
-    const startIndex = findSegmentById(oldEvents[0].eventId)
+    const startIndex = findEventById(oldEvents[0].eventId)
     const numDeletions = oldEvents.length
     eventStore.events.splice(startIndex, numDeletions, ...newEvents)
   }
@@ -682,7 +688,7 @@ export function isEventSelected(id: number) {
 
 export function selectNextEvent(reverse = false) {
   if (eventStore.selectedEventIds.length > 0) {
-    const i = findSegmentById(eventStore.selectedEventIds[0])
+    const i = findEventById(eventStore.selectedEventIds[0])
     const n = eventStore.events[i + (reverse ? -1 : 1)]
     selectEvent(n)
   }
@@ -692,8 +698,23 @@ export function selectPreviousEvent() {
   selectNextEvent(true)
 }
 
+export function deselectEvents() {
+  eventStore.selectionAnchor = null
+  eventStore.selectedEventIds = []
+}
+
+export function selectEvents(es: LocalTranscriptEvent[]): LocalTranscriptEvent[] {
+  if (es.length === 0) {
+    eventStore.selectionAnchor = null
+  } else if (es.length === 1) {
+    eventStore.selectionAnchor = es[0].eventId
+  }
+  eventStore.selectedEventIds = es.map(e => e.eventId)
+  return es
+}
+
 export function selectEvent(e: LocalTranscriptEvent) {
-  eventStore.selectedEventIds = [ e.eventId ]
+  return selectEvents([ e ])
 }
 
 export function selectOrDeselectEvent(e: LocalTranscriptEvent): LocalTranscriptEvent {
@@ -704,8 +725,13 @@ export function selectOrDeselectEvent(e: LocalTranscriptEvent): LocalTranscriptE
   }
   return e
 }
+
 export function addEventsToSelection(es: LocalTranscriptEvent[]) {
-  eventStore.selectedEventIds = eventStore.selectedEventIds.concat(es.map(e => e.eventId))
+  if (es.length === 1) {
+    selectEvent(es[0])
+  } else {
+    eventStore.selectedEventIds = eventStore.selectedEventIds.concat(es.map(e => e.eventId))
+  }
 }
 
 export function removeEventsFromSelection(es: LocalTranscriptEvent[]) {

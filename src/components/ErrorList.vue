@@ -29,7 +29,7 @@ import { RecycleScroller } from 'vue-virtual-scroller'
 import {
   LocalTranscriptEvent,
   scrollToAudioEvent,
-  findSegmentById,
+  findEventById,
   scrollToTranscriptEvent,
   toTime,
   selectEvent
@@ -49,7 +49,7 @@ export default class ErrorList extends Vue {
   toTime = toTime
 
   showEventIfExists(e: LocalTranscriptEvent) {
-    const i = findSegmentById(e.eventId)
+    const i = findEventById(e.eventId)
     if (i > -1) {
       selectEvent(e)
       scrollToAudioEvent(e)

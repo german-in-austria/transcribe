@@ -40,9 +40,9 @@ import {
   eventStore,
   LocalTranscriptEvent,
   isEventSelected,
-  findSegmentById,
-  findSegmentAt,
-  findSegmentIndexAt
+  findEventById,
+  findEventAt,
+  findEventIndexAt
 } from '../store/transcript'
 import { requestFrameAsync } from '../util'
 
@@ -71,7 +71,7 @@ export default class TranscriptEditor extends Vue {
   @Watch('userState.viewingTranscriptEvent')
   doScrollToEvent(e: LocalTranscriptEvent) {
     // right in the middle
-    const i = findSegmentById(e.eventId) - Math.floor(defaultLimit / 2)
+    const i = findEventById(e.eventId) - Math.floor(defaultLimit / 2)
     this.currentIndex = Math.max(0, i)
     this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
     this.$nextTick(() => {
@@ -113,7 +113,7 @@ export default class TranscriptEditor extends Vue {
   }
 
   async scrollToSecond(seconds: number) {
-    const i = findSegmentIndexAt(seconds)
+    const i = findEventIndexAt(seconds)
     if (i !== -1) {
       await requestFrameAsync()
       if (i !== this.currentIndex) {
