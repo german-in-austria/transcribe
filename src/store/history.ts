@@ -13,6 +13,15 @@ export let history = {
   actions: [] as HistoryEventAction[]
 }
 
+export function goToInitialState() {
+  history.actions = history.actions.map(a => {
+    if (a.apply === true) {
+      undoAction(a)
+    }
+    return { ...a, apply: false }
+  })
+}
+
 export function jumpToState(action: HistoryEventAction) {
   const ai = history.actions.findIndex((a) => a.id === action.id)
   // if the index was found.
@@ -51,23 +60,25 @@ function redoAction(a: HistoryEventAction) {
   replaceEvents(a.before, a.after)
 }
 
-export function undo() {
+export function undo(): HistoryEventAction|undefined {
   // the last action that is not yet undone.
   const a = _.last(history.actions.filter(x => x.apply === true))
   if (a !== undefined) {
     undoAction(a)
     a.apply = false
+    return a
   } else {
     // nothing has been done, so we can’t undo anything
   }
 }
 
-export function redo() {
+export function redo(): HistoryEventAction|undefined {
   // find the most recent undone action.
   const a = history.actions.find(ac => ac.apply === false)
   if (a !== undefined) {
     redoAction(a)
     a.apply = true
+    return a
   } else {
     // nothing has been undone, so we can’t redo anything
   }

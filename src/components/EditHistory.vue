@@ -1,5 +1,11 @@
 <template>
   <v-list v-if="history.actions.length > 0" dense>
+    <v-list-tile @click="goToInitialState">
+      <v-list-tile-avatar><small>(1)</small></v-list-tile-avatar>
+      <v-list-tile-content>
+        <v-list-tile-title class="sidebar-title">Open Document</v-list-tile-title>
+      </v-list-tile-content>
+    </v-list-tile>
     <RecycleScroller
       class="scroller"
       :items="history.actions"
@@ -47,7 +53,7 @@
           <v-list-tile-content v-else-if="item.type === 'CHANGE_TOKENS'">
             <v-list-tile-title class="sidebar-title">update transcript</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
-              <div class="inner" :key="i" v-for="(se, i) in item.before[0].speakerEvents">
+              <div class="inner" :key="i" v-for="(se, i) in item.after[0].speakerEvents">
                 {{ i }}: {{ se.tokens.map(t => t.tiers[defaultTier].text).join(' ') }}
               </div>
             </v-list-tile-sub-title>
@@ -84,6 +90,7 @@ import {
   history,
   undo,
   jumpToState,
+  goToInitialState,
   HistoryEventAction
 } from '../store/history'
 
@@ -94,11 +101,14 @@ import {
   }
 })
 export default class EditHistory extends Vue {
+
   defaultTier = eventStore.metadata.defaultTier
   history = history
   toTime = toTime
   playEvent = playEvent
   undo = undo
+  goToInitialState = goToInitialState
+
   showEventIfExists(e: LocalTranscriptEvent) {
     const i = findEventById(e.eventId)
     if (i > -1) {
@@ -131,5 +141,5 @@ export default class EditHistory extends Vue {
   opacity .5
 
 .scroller
-  height 100%
+  height calc(100% - 40px)
 </style>
