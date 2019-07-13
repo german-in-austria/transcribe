@@ -68,7 +68,7 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
-// tslint:disable-next-line:max-line-length
+import { isCmdOrCtrl, isUndoOrRedo } from '../util'
 import {
   findNextEventAt,
   findPreviousEventAt,
@@ -95,6 +95,16 @@ export default class Search extends Vue {
   caseSensitive = true
   useRegEx = false
   defaultTierOnly = false
+
+  mounted() {
+    document.body.addEventListener('keydown', isCmdOrCtrl((e) => {
+      if (e.key === 'f') {
+        e.preventDefault()
+        e.stopPropagation();
+        (this.$refs.input as any).focus()
+      }
+    }))
+  }
 
   playEvent() {
     const i = findEventById(eventStore.selectedEventIds[0])
