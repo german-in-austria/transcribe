@@ -740,15 +740,17 @@ export function selectEventRange(e: LocalTranscriptEvent) {
   if (anchorEvent === undefined) {
     selectEvent(e)
   } else {
-    eventStore.selectedEventIds = [ anchorEvent.eventId ].concat(
+    eventStore.selectedEventIds =
+      // collect them, from left to right.
       _(collectEventsByTimeRange(
         Math.min(e.startTime, anchorEvent.startTime),
         Math.max(e.endTime, anchorEvent.endTime)
       ))
-      .tail()
+      // move the anchor back to the beginning
+      // of the stack.
+      .sortBy(ev => ev.eventId === anchorEvent.eventId ? 0 : 1)
       .map(ev => ev.eventId)
       .value()
-    )
   }
 }
 
