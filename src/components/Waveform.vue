@@ -202,7 +202,6 @@ export default class Waveform extends Vue {
 
   @Watch('eventStore.events')
   async onEventsChange(newEs: LocalTranscriptEvent[]) {
-    console.log('EVENTS CHANGE')
     this.visibleEvents = await this.getVisibleEvents(boundLeft, boundRight, newEs)
   }
 

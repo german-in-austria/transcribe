@@ -5,11 +5,6 @@ import Worker from '../service/buffer-concat.worker'
 const worker = new Worker('')
 const promiseWorker = new PromiseWorker(worker)
 
-export type Pastable<T> = T & {
-  index: number
-  partial: boolean
-}
-
 export interface UndoRedo {
   undo: boolean
   redo: boolean
