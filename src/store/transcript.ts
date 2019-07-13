@@ -211,7 +211,6 @@ export type LocalTranscript = LocalTranscriptEvent[]
 export const eventStore = {
   events: [] as LocalTranscriptEvent[],
   selectedEventIds: [] as number[],
-  selectionAnchor: null as number|null,
   selectedSearchResult: null as LocalTranscriptEvent|null,
   searchResults: [] as LocalTranscriptEvent[],
   searchTerm: '',
@@ -655,13 +654,8 @@ function getEventsByIds(ids: number[]): LocalTranscriptEvent[] {
 }
 
 export function replaceEvents(oldEvents: LocalTranscriptEvent[], newEvents: LocalTranscriptEvent[]) {
-  if (oldEvents.length === 0) {
-    newEvents.forEach(insertEvent)
-  } else {
-    const startIndex = findEventById(oldEvents[0].eventId)
-    const numDeletions = oldEvents.length
-    eventStore.events.splice(startIndex, numDeletions, ...newEvents)
-  }
+  oldEvents.forEach(deleteEvent)
+  newEvents.forEach(insertEvent)
 }
 
 export function joinEvents(eventIds: number[]): HistoryEventAction {
@@ -723,22 +717,39 @@ export function selectPreviousEvent() {
 }
 
 export function deselectEvents() {
-  eventStore.selectionAnchor = null
   eventStore.selectedEventIds = []
 }
 
 export function selectEvents(es: LocalTranscriptEvent[]): LocalTranscriptEvent[] {
-  if (es.length === 0) {
-    eventStore.selectionAnchor = null
-  } else if (es.length === 1) {
-    eventStore.selectionAnchor = es[0].eventId
-  }
   eventStore.selectedEventIds = es.map(e => e.eventId)
   return es
 }
 
 export function selectEvent(e: LocalTranscriptEvent) {
   return selectEvents([ e ])
+}
+
+export function collectEventsByTimeRange(start: number, end: number): LocalTranscriptEvent[] {
+  return eventStore.events.filter((e) => {
+    return e.startTime >= start && e.endTime <= end
+  })
+}
+
+export function selectEventRange(e: LocalTranscriptEvent) {
+  const anchorEvent = getSelectedEvent()
+  if (anchorEvent === undefined) {
+    selectEvent(e)
+  } else {
+    eventStore.selectedEventIds = [ anchorEvent.eventId ].concat(
+      _(collectEventsByTimeRange(
+        Math.min(e.startTime, anchorEvent.startTime),
+        Math.max(e.endTime, anchorEvent.endTime)
+      ))
+      .tail()
+      .map(ev => ev.eventId)
+      .value()
+    )
+  }
 }
 
 export function selectOrDeselectEvent(e: LocalTranscriptEvent): LocalTranscriptEvent {
@@ -751,11 +762,7 @@ export function selectOrDeselectEvent(e: LocalTranscriptEvent): LocalTranscriptE
 }
 
 export function addEventsToSelection(es: LocalTranscriptEvent[]) {
-  if (es.length === 1) {
-    selectEvent(es[0])
-  } else {
-    eventStore.selectedEventIds = eventStore.selectedEventIds.concat(es.map(e => e.eventId))
-  }
+  eventStore.selectedEventIds = eventStore.selectedEventIds.concat(es.map(e => e.eventId))
 }
 
 export function removeEventsFromSelection(es: LocalTranscriptEvent[]) {

@@ -2,6 +2,7 @@
   <div
     @click.exact.stop="selectEvent(event)"
     @mousedown.meta="selectOrDeselectEvent(event)"
+    @mousedown.shift="selectEventRange(event)"
     @dblclick="playEvent(event)"
     @keydown.enter.meta.stop.prevent="playEvent(event)"
     @keydown.enter.exact="scrollToTranscriptEvent(event)"
@@ -46,6 +47,7 @@ import {
   eventStore,
   selectEvent,
   selectOrDeselectEvent,
+  selectEventRange,
   selectNextEvent,
   isEventSelected,
   selectPreviousEvent,
@@ -66,6 +68,7 @@ export default class SegmentBox extends Vue {
 
   scrollToTranscriptEvent = scrollToTranscriptEvent
   selectEvent = selectEvent
+  selectEventRange = selectEventRange
   selectOrDeselectEvent = selectOrDeselectEvent
   eventStore = eventStore
   isEventSelected = isEventSelected
