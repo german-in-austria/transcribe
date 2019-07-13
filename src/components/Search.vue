@@ -74,6 +74,7 @@ import {
   findPreviousEventAt,
   findEventById,
   eventStore,
+  getSelectedEvent,
   LocalTranscriptEvent,
   scrollToAudioEvent,
   scrollToTranscriptEvent,
@@ -95,6 +96,7 @@ export default class Search extends Vue {
   caseSensitive = true
   useRegEx = false
   defaultTierOnly = false
+  isCmdOrCtrl = isCmdOrCtrl
 
   mounted() {
     document.body.addEventListener('keydown', isCmdOrCtrl((e) => {
@@ -107,8 +109,10 @@ export default class Search extends Vue {
   }
 
   playEvent() {
-    const i = findEventById(eventStore.selectedEventIds[0])
-    playEvent(eventStore.events[i])
+    const e = getSelectedEvent()
+    if (e !== undefined) {
+      playEvent(e)
+    }
   }
 
   get searchSettings() {
