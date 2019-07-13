@@ -62,7 +62,7 @@ import contenteditableDirective from 'vue-contenteditable-directive'
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
 import parseCsv from 'tiny-csv'
-import { clone, isEqualDeep, requestFrameAsync, Pastable } from '../util'
+import { clone, isEqualDeep, requestFrameAsync } from '../util'
 import {
   LocalTranscriptEvent,
   LocalTranscriptToken,
@@ -75,7 +75,7 @@ import {
   playEvent,
   tokenTypeFromToken
 } from '../store/transcript'
-import copyPaste from '../service/copy-paste'
+import * as copyPaste from '../service/copy-paste'
 import { undoable } from '../store/history'
 import * as _ from 'lodash'
 import * as jsdiff from 'diff'
