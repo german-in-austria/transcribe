@@ -78,19 +78,15 @@ export default class TranscriptEditor extends Vue {
       requestAnimationFrame(() => {
         const el = this.$el.querySelector('.segment-selected')
         const c = this.$refs.tracks
-        if (c instanceof HTMLElement && el instanceof HTMLElement) {
+        const inner = this.$refs.inner
+        if (c instanceof HTMLElement && el instanceof HTMLElement && inner instanceof HTMLElement) {
+          inner.style.transition = '.3s'
           this.innerLeft = el.offsetLeft * -1 + c.clientWidth / 2 - el.clientWidth / 2
+          setTimeout(() => { inner.style.transition = 'none' }, 300)
           this.debouncedEmitScroll()
         }
       })
     })
-  }
-
-  scrollIntoView(e: Event, event: LocalTranscriptEvent) {
-    const r = (e.target as HTMLElement).getBoundingClientRect()
-    if (r.left < 57 || r.left + r.width > (this.$refs.outer as HTMLElement).clientWidth) {
-      this.doScrollToEvent(event)
-    }
   }
 
   @Watch('eventStore.events')
