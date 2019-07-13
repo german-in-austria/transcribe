@@ -10,7 +10,8 @@ export interface HistoryEventAction {
 }
 
 export let history = {
-  actions: [] as HistoryEventAction[]
+  actions: [] as HistoryEventAction[],
+  undoListener: (() => null) as (e: KeyboardEvent) => any
 }
 
 export function goToInitialState() {

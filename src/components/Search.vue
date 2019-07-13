@@ -12,8 +12,8 @@
         @keydown.enter.meta.exact="playEvent"
         @keydown.enter.ctrl.exact="playEvent"
         @input="(e) => handleSearch(e.target.value)"
-        @focus="focussed = true"
-        @blur="focussed = false"
+        @focus="onFocus"
+        @blur="onBlur"
         placeholder="Search…"
       />
       <v-card tabindex="-1" class="context-menu">
@@ -84,12 +84,13 @@ import {
   LocalTranscriptToken,
   selectSearchResult
 } from '../store/transcript'
+import { history } from '../store/history';
 
 @Component
 export default class Search extends Vue {
 
   defaultTier = eventStore.metadata.defaultTier
-  focussed = false
+  focused = false
   eventStore = eventStore
   toTime = toTime
   isMenuShown = false
@@ -106,6 +107,23 @@ export default class Search extends Vue {
         (this.$refs.input as any).focus()
       }
     }))
+  }
+
+  stopUndoPropagation(e: KeyboardEvent) {
+    isUndoOrRedo((ev, d) => {
+      console.log('undo or redo', d)
+      e.preventDefault()
+    })
+  }
+
+  onFocus() {
+    this.focused = true
+    document.removeEventListener('keydown', history.undoListener)
+  }
+
+  onBlur() {
+    this.focused = false
+    document.addEventListener('keydown', history.undoListener)
   }
 
   playEvent() {
@@ -128,7 +146,7 @@ export default class Search extends Vue {
     this.handleSearch(eventStore.searchTerm)
   }
 
-  get selectedResultIndex() {
+  get selectedResultIndex(): number|null {
     if (eventStore.selectedEventIds.length !== 1) {
       return null
     } else {
@@ -143,7 +161,7 @@ export default class Search extends Vue {
   }
 
   showMenu() {
-    if (this.focussed) {
+    if (this.focused) {
       this.isMenuShown = true
     }
   }
@@ -151,7 +169,7 @@ export default class Search extends Vue {
     this.isMenuShown = false
   }
 
-  defaultOrAllTokenText(t: LocalTranscriptToken) {
+  getDefaultOrAllTokenText(t: LocalTranscriptToken) {
     if (this.defaultTierOnly) {
       return t.tiers[this.defaultTier].text
     } else {
@@ -171,7 +189,7 @@ export default class Search extends Vue {
         const r = _(eventStore.events)
           .filter((v) => {
             return _(v.speakerEvents).filter((se) => {
-              let s = _(se.tokens).map(this.defaultOrAllTokenText).value().join(' ')
+              let s = _(se.tokens).map(this.getDefaultOrAllTokenText).value().join(' ')
               if (!this.caseSensitive) {
                 s = s.toLowerCase()
               }
@@ -180,7 +198,7 @@ export default class Search extends Vue {
               } else {
                 return s.indexOf(search) > -1
               }
-            }).value().length
+            }).value().length > 0
           }).value()
         this.eventStore.searchResults = r
       })

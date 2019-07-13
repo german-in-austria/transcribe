@@ -351,6 +351,7 @@ export default class Editor extends Vue {
   }
 
   mounted() {
+
     if (eventStore.audioElement instanceof HTMLAudioElement) {
       console.log('inner')
       eventStore.audioElement.addEventListener('pause', () => {
@@ -361,7 +362,11 @@ export default class Editor extends Vue {
       })
     }
 
-    document.body.addEventListener('keydown', isUndoOrRedo((e, d) => {
+    this.createUndoListener()
+  }
+
+  createUndoListener() {
+    history.undoListener = isUndoOrRedo((e, d) => {
       if (d.undo === true) {
         const action = undo()
         if (action !== undefined) {
@@ -377,26 +382,8 @@ export default class Editor extends Vue {
           scrollToAudioEvent(action.after[0] || action.before[0])
         }
       }
-    }))
-
-    // document.body.addEventListener('keydown', (e) => {
-    //   if (e.metaKey && !e.shiftKey && e.key === 'z') {
-    //     const action = undo()
-    //     if (action !== undefined) {
-    //       e.preventDefault()
-    //       selectEvent(action.before[0] || action.after[0])
-    //       scrollToAudioEvent(action.before[0] || action.after[0])
-    //     }
-    //   } else if (e.metaKey && e.shiftKey && e.key === 'z') {
-    //     const action = redo()
-    //     if (action !== undefined) {
-    //       e.preventDefault()
-    //       selectEvent(action.after[0] || action.before[0])
-    //       scrollToAudioEvent(action.after[0] || action.before[0])
-    //     }
-    //   }
-    // })
-
+    })
+    document.addEventListener('keydown', history.undoListener)
   }
 
   scrub(time: number) {
