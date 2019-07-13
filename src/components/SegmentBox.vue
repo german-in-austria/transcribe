@@ -48,7 +48,6 @@ import {
   selectEvent,
   selectOrDeselectEvent,
   selectEventRange,
-  selectNextEvent,
   isEventSelected,
   selectPreviousEvent,
   scrollToTranscriptEvent
