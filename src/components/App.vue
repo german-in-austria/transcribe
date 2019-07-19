@@ -69,7 +69,7 @@
                         size="20"
                         width="2"
                         v-if="loadingTranscriptId === transcript.pk"
-                        indeterminate />
+                        indeterminate> </v-progress-circular>
                       <v-icon color="grey" v-else>cloud_queue</v-icon>
                     </v-flex>
                     <v-flex class="pl-2">

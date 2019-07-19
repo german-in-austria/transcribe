@@ -11,13 +11,13 @@
     <v-tabs-items class="sidebar-scrollable">
       <v-tab-item>
         <edit-history v-if="history.actions.length > 0" />
-        <div v-else class="text-xs-center grey--text mt-4">
+        <div v-if="errors.length === 0" class="text-xs-center grey--text mt-4">
           <small>Edits will appear here.</small>
         </div>
       </v-tab-item>
       <v-tab-item>
-        <error-list :errors="errors" v-if="errors.length > 0" />
-        <div v-else class="text-xs-center grey--text mt-4">
+        <error-list v-if="errors.length > 0" :errors="errors" />
+        <div v-if="errors.length === 0" class="text-xs-center grey--text mt-4">
           <small>Errors will appear here.</small>
         </div>
       </v-tab-item>

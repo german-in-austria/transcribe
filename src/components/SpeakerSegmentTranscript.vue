@@ -19,7 +19,7 @@
             @blur="(e) => updateAndCommitLocalTokenTier(e, tier.name, i)"
             @focus="(e) => $emit('focus', e, event)"
             @keydown.enter.meta="playEvent(event)"
-            @keydown.enter.exact.stop.prevent="viewAudioEvent(event)" />
+            @keydown.enter.exact.stop.prevent="viewAudioEvent(event)"></span>
           <span v-else class="secondary-token-tier-text" />
         </span>
       </span>
