@@ -233,7 +233,6 @@ export default class Editor extends Vue {
   history = history
 
   scrollToEvent: LocalTranscriptEvent|null = null
-  segmentPlayingTimeout: any = null
   scrollTranscriptIndex: number = 0
   scrollTranscriptTime: number = 0
 
@@ -314,6 +313,8 @@ export default class Editor extends Vue {
     return undoable(splitEvent(e, at))
   }
 
+  // TODO: these are actually global shortcuts
+  // where do i put them?
   async handleWaveformKey(e: KeyboardEvent) {
     if (e.key === 's') {
       const eventUnderPlayHead = this.findEventAt(eventStore.currentTime)
@@ -338,25 +339,20 @@ export default class Editor extends Vue {
       }
       this.$nextTick(() => {
         setTimeout(() => {
-          const el = (document.querySelector('.segment.selected') as HTMLElement)
-          el.focus()
+          const el = (
+            // either the previously selected one, or the first.
+            document.querySelector('.segment.selected') ||
+            document.querySelector('.segment')
+          )
+          if (el instanceof HTMLElement) {
+            el.focus()
+          }
         }, 0)
       })
     }
   }
 
   mounted() {
-
-    if (eventStore.audioElement instanceof HTMLAudioElement) {
-      console.log('inner')
-      eventStore.audioElement.addEventListener('pause', () => {
-        if (this.segmentPlayingTimeout !== null) {
-          clearTimeout(this.segmentPlayingTimeout)
-          this.segmentPlayingTimeout = null
-        }
-      })
-    }
-
     this.createUndoListener()
   }
 
