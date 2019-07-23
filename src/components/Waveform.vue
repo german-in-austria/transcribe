@@ -625,7 +625,7 @@ export default class Waveform extends Vue {
         return (await Promise.all([
           audio.drawWave(buffer, width, this.height, settings.waveFormColors[0], 0),
           audio.drawWave(buffer, width, this.height, settings.waveFormColors[1], 1)
-        ])).join()
+        ])).join('')
       }
     })()
     if (this.$refs.svgContainer instanceof HTMLElement) {
