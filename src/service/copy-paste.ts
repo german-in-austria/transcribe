@@ -12,39 +12,42 @@ export type Pastable<T> = T & {
   partial: boolean
 }
 
-export function getTokenPart(
+export function getTokenPartWithMetadata(
   e: LocalTranscriptToken,
-  copyMetaData: boolean,
   range1: number,
   range2?: number
 ): LocalTranscriptToken {
-  if (copyMetaData === false) {
-    // new token id and only the default tier
-    return {
-      ...e,
-      id: makeTokenId(),
-      tiers: {
-        ortho: { text: '', type: -1 },
-        phon:  { text: '', type: -1 },
-        text:  { text: '', type: -1 },
-        [ eventStore.metadata.defaultTier ]: {
-          ...e.tiers[ eventStore.metadata.defaultTier ],
-          text: e.tiers[ eventStore.metadata.defaultTier ].text.substring(range1, range2)
-        }
-      }
+  return {
+    // old token id and all tiers
+    ...e,
+    tiers: {
+      // leave the other tiers untouched
+      ...e.tiers,
+      // edit the defaultTier text, so it only contains the selected text
+      [ eventStore.metadata.defaultTier ]: {
+        ...e.tiers[ eventStore.metadata.defaultTier ],
+        text: e.tiers[ eventStore.metadata.defaultTier ].text.substring(range1, range2)
+      },
     }
-  } else {
-    return {
-      // old token id and all tiers
-      ...e,
-      tiers: {
-        // leave the other tiers untouched
-        ...e.tiers,
-        // edit the defaultTier text, so it only contains the selected text
-        [ eventStore.metadata.defaultTier ]: {
-          ...e.tiers[ eventStore.metadata.defaultTier ],
-          text: e.tiers[ eventStore.metadata.defaultTier ].text.substring(range1, range2)
-        },
+  }
+}
+
+export function getTokenPart(
+  e: LocalTranscriptToken,
+  range1: number,
+  range2?: number
+): LocalTranscriptToken {
+  // new token id and only the default tier
+  return {
+    ...e,
+    id: makeTokenId(),
+    tiers: {
+      ortho: { text: '', type: -1 },
+      phon:  { text: '', type: -1 },
+      text:  { text: '', type: -1 },
+      [ eventStore.metadata.defaultTier ]: {
+        ...e.tiers[ eventStore.metadata.defaultTier ],
+        text: e.tiers[ eventStore.metadata.defaultTier ].text.substring(range1, range2)
       }
     }
   }
@@ -149,14 +152,14 @@ export function collectTokensViaOffsets(
       if (right < tokenEnd) {
         // only take the left part (it’s the start)
         return m.concat([{
-          ...getTokenPart(e, true, 0, right - tokenStart),
+          ...getTokenPartWithMetadata(e, 0, right - tokenStart),
           index: i,
           partial: true
         }])
       } else {
         // only take the right part (it’s the end)
         return m.concat([{
-          ...getTokenPart(e, false, left - tokenStart),
+          ...getTokenPart(e, left - tokenStart),
           index: i,
           partial: true
         }])
@@ -181,9 +184,9 @@ export function insertTokensAfterTextOffset(
       // the offset is in the middle
       // => split the token right in the middle. metadata goes to the first
       return m.concat([
-        getTokenPart(e, true, offset - tokenStart, 0),
+        getTokenPartWithMetadata(e, offset - tokenStart, 0),
         ...pastableTiersToTokens(insertableTiers),
-        getTokenPart(e, false, offset - tokenStart)
+        getTokenPart(e, offset - tokenStart)
       ])
     } else if (tokenStart === offset) {
       // right before the token
@@ -233,7 +236,8 @@ export function removeTokensAndTokenParts(
         m.push(getOtherHalfOfToken(t, tokensToRemoveById[t.id]))
       // the token was fully selected
       } else {
-        // it must be deleted entirely, so don’t push it. do nothing.
+        // it must be deleted entirely, so don’t push it.
+        // do nothing.
       }
     } else {
       // it is not to be removed, so push it.

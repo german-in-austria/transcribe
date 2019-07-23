@@ -357,7 +357,7 @@ export default class SpeakerSegmentTranscript extends Vue {
       if (change.type === 'update') {
         console.log('update', this.localTokens[change.index + addedCounter])
         this.localTokens[change.index + addedCounter] = {
-        ...this.localTokens[change.index + addedCounter],
+          ...this.localTokens[change.index + addedCounter],
           tiers: {
             ...this.localTokens[change.index + addedCounter].tiers,
             [ this.defaultTier ]: {
