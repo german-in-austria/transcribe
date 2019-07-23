@@ -12,8 +12,8 @@
               :max="100"
               thumb-label
               dark
-              :value="100"
-              @input="eventStore.audioElement.playbackRate = $event / 100" />
+              :value="settings.playbackSpeed * 100"
+              @input="setPlaybackSpeed($event / 100)" />
             Playback Speed
           </div>
         </v-flex>
@@ -22,7 +22,7 @@
             <v-icon v-if="eventStore.isPaused" x-large>play_arrow</v-icon>
             <v-icon v-else x-large>pause</v-icon>
           </v-btn>
-          <div class="current-time"></div>
+          <div ref="currentTime" class="current-time"></div>
         </v-flex>
         <v-flex text-xs-left offset-xs2 xs2>
           <div class="caption grey--text lighten-2">
@@ -34,7 +34,8 @@
               :max="100"
               dark
               thumb-label
-              v-model="volume" />
+              :value="settings.playbackVolume * 100"
+              @input="setPlaybackVolume($event / 100)" />
             Volume
           </div>
         </v-flex>
@@ -46,11 +47,23 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import settings from '../store/settings'
+import settings, {
+  increasePlaybackSpeed,
+  decreasePlaybackSpeed,
+  setPlaybackSpeed,
+  setPlaybackVolume,
+  increaseVolume,
+  decreaseVolume
+} from '../store/settings'
 import audio from '../service/audio'
 import eventBus from '../service/event-bus'
-import { toTime, eventStore, playAllFrom, pause } from '../store/transcript'
-import { requestFrameAsync } from '../util/index'
+import {
+  eventStore,
+  toTime,
+  playAllFrom,
+  pause
+} from '../store/transcript'
+import { requestFrameAsync, isCmdOrCtrl } from '../util/index'
 
 @Component
 export default class PlayerBar extends Vue {
@@ -58,7 +71,8 @@ export default class PlayerBar extends Vue {
   eventStore = eventStore
   audioStore = audio.store
   currentTime = eventStore.audioElement.currentTime
-  volume = 100
+  setPlaybackSpeed = setPlaybackSpeed
+  setPlaybackVolume = setPlaybackVolume
   settings = settings
   toTime = toTime
 
@@ -68,11 +82,6 @@ export default class PlayerBar extends Vue {
     } else {
       pause()
     }
-  }
-
-  @Watch('volume')
-  onVolumeChange(volume: number) {
-    eventStore.audioElement.volume = volume / 100
   }
 
   get theme() {
@@ -91,21 +100,38 @@ export default class PlayerBar extends Vue {
     }, '' as string)
   }
 
-  async onChangeTime(t: number) {
-    await requestFrameAsync()
-    this.updateTimeDisplay(t, this.$el.querySelector('.current-time') as HTMLElement)
+  onChangeTime(t: number) {
+    requestAnimationFrame(() => {
+      this.updateTimeDisplay(t, this.$refs.currentTime as HTMLElement)
+    })
   }
 
   mounted() {
     eventBus.$on('updateTime', this.onChangeTime)
     eventBus.$on('scrubAudio', this.onChangeTime)
     this.onChangeTime(eventStore.currentTime)
+    document.addEventListener('keydown', isCmdOrCtrl((e) => {
+      if (e.shiftKey) {
+        if (e.key === 'ArrowUp') {
+          increaseVolume(.1)
+        } else if (e.key === 'ArrowDown') {
+          decreaseVolume(.1)
+        }
+      } else {
+        if (e.key === 'ArrowUp') {
+          increasePlaybackSpeed(.1)
+        } else if (e.key === 'ArrowDown') {
+          decreasePlaybackSpeed(.1)
+        }
+      }
+    }))
   }
 }
 </script>
 <style lang="stylus">
 .playerbar
   .current-time
+    will-change contents
     font-size 110%
     display inline-block
     width 155px

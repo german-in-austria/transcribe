@@ -1,6 +1,7 @@
 
 import { makeGradient, Color } from '../lib/gradient'
-import { platform } from '../util'
+import { platform, setNumberInBounds } from '../util'
+import { eventStore } from './transcript'
 
 export interface Settings {
   spectrogramGradient: number[][]
@@ -8,6 +9,8 @@ export interface Settings {
   waveFormColors: string[]
   lockScroll: boolean
   lockPlayHead: boolean
+  playbackSpeed: number,
+  playbackVolume: number,
   pixelsPerSecond: number
   emulateHorizontalScrolling: boolean
   darkMode: boolean
@@ -143,12 +146,40 @@ const spectrogramPresets = [
   }
 ]
 
+export function setPlaybackSpeed(s: number) {
+  settings.playbackSpeed = setNumberInBounds(s)
+  eventStore.audioElement.playbackRate = settings.playbackSpeed
+}
+
+export function increasePlaybackSpeed(by: number) {
+  setPlaybackSpeed(settings.playbackSpeed + by)
+}
+
+export function decreasePlaybackSpeed(by: number) {
+  setPlaybackSpeed(settings.playbackSpeed - by)
+}
+
+export function setPlaybackVolume(v: number) {
+  settings.playbackVolume = setNumberInBounds(v)
+  eventStore.audioElement.volume = settings.playbackVolume
+}
+
+export function increaseVolume(by: number) {
+  setPlaybackVolume(settings.playbackVolume + by)
+}
+
+export function decreaseVolume(by: number) {
+  setPlaybackVolume(settings.playbackVolume - by)
+}
+
 const settings: Settings = {
   spectrogramGradient: makeGradient(spectrogramPresets[1].colors),
   spectrogramColors: spectrogramPresets[1].colors,
   waveFormColors: [ '#fb7676', '#6699CC' ],
   lockScroll: false,
   lockPlayHead: true,
+  playbackSpeed: 1,
+  playbackVolume: 1,
   darkMode: true,
   pixelsPerSecond: 150,
   emulateHorizontalScrolling: platform() === 'windows' || platform() === 'linux',

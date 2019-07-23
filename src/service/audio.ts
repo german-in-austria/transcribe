@@ -18,7 +18,6 @@ import OggIndexWorker from './oggindex.worker'
 const oggIndexWorker = new PromiseWorker(new OggIndexWorker(''))
 
 const textEncoder = new TextEncoder()
-const localAudioElement = document.createElement('audio')
 // import drawWaveWasm from './wasm/module.untouched.wasm'
 // import getSpectrogramWasm from './wasm/module2.untouched.wasm'
 // const loader = require('../lib/as-loader')
@@ -50,10 +49,10 @@ export interface OggIndex {
 
 const ctxClass: any = (window as any).AudioContext || (window as any).webkitAudioContext
 
-// store
 const audioContext: AudioContext = new ctxClass()
+const localAudioElement = document.createElement('audio')
+let localBufferSrc = audioContext.createBufferSource()
 const uint8Buffer = new Uint8Array(0)
-// const oggBuffer = uint8Buffer.buffer
 
 const isLocalFile                       = false
 let   oggPages                          = [] as OggIndex['pages']
@@ -63,7 +62,6 @@ let   sampleRate: number|null           = null
 let   metadata: AudioMetaData|null      = null
 const isBufferComplete                  = false
 let   oggHeaderBuffer: ArrayBuffer|null = null
-const playbackRate                      = 100
 
 function readU4le(dataView: DataView, i: number) {
   return dataView.byteLength > i + 32 ? dataView.getUint32(i, true) : null
@@ -259,8 +257,19 @@ function findOggPages(from: number, to: number, pages: OggIndex['pages']): {
 //   }
 // }
 
+export function pauseCurrentBuffer() {
+  localAudioElement.pause()
+  URL.revokeObjectURL(localAudioElement.src)
+  localBufferSrc.buffer = null
+  try {
+    localBufferSrc.stop()
+    localBufferSrc.disconnect()
+  } catch (e) {
+    console.log(e)
+  }
+}
+
 export function playBuffer(buffer: AudioBuffer, speed = 1, start = 0, offset?: number, duration?: number) {
-  const src = audio.store.audioContext.createBufferSource()
   if (speed !== 1) {
     const wav = audio.audioBufferToWav(buffer)
     const blob = new Blob([new Uint8Array(wav)])
@@ -268,12 +277,13 @@ export function playBuffer(buffer: AudioBuffer, speed = 1, start = 0, offset?: n
     localAudioElement.playbackRate = speed
     localAudioElement.crossOrigin = 'anonymous'
     localAudioElement.play()
-    return src
+    return localAudioElement
   } else {
-    src.buffer = buffer
-    src.connect(audio.store.audioContext.destination)
-    src.start(0, offset, duration)
-    return src
+    localBufferSrc = audioContext.createBufferSource()
+    localBufferSrc.buffer = buffer
+    localBufferSrc.connect(audio.store.audioContext.destination)
+    localBufferSrc.start(0, offset, duration)
+    return localBufferSrc
   }
 }
 
@@ -639,8 +649,7 @@ const audio = {
     oggHeaderBuffer,
     oggHeaders,
     oggPages,
-    uint8Buffer,
-    playbackRate
+    uint8Buffer
   },
   audioBufferToWav,
   cacheOggIndex,
@@ -658,6 +667,7 @@ const audio = {
   getOggSampleRate,
   getOrFetchAudioBuffer,
   playBuffer,
+  pauseCurrentBuffer,
   sliceAudioBuffer
 }
 

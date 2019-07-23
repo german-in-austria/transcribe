@@ -10,7 +10,11 @@
         <label for="scaleFactorY" class="caption grey--text lighten-2">
           Gain
         </label>
-        <select name="scaleFactorY" class="ml-2 no-outline" style="padding: .1em .1em 0 1em; font-size: 90%" v-model="scaleFactorY">
+        <select
+          name="scaleFactorY"
+          class="ml-2 no-outline"
+          style="padding: .1em .1em 0 1em; font-size: 90%"
+          v-model="scaleFactorY">
           <option
             v-for="(v, i) in zoomLevels"
             :value="v"
@@ -296,9 +300,7 @@ export default class Waveform extends Vue {
   async getVisibleEvents(l: number, r: number, es = eventStore.events): Promise<LocalTranscriptEvent[]> {
     // await util.requestFrameAsync()
     const ves = _(es)
-      .filter((s) => {
-        return s.startTime >= l && s.endTime <= r
-      })
+      .filter(s => s.startTime >= l && s.endTime <= r)
       .sortBy('startTime')
       .value()
     await util.requestFrameAsync()
@@ -463,10 +465,10 @@ export default class Waveform extends Vue {
       // SCROLL DIRECTLY TO IT (SHORT DISTANCE)
       if (realDistance < this.$el.clientWidth) {
         const step = () => {
-          const timeEllapsed = (performance.now() - startTime) / 1000
-          if (timeEllapsed <= animationDuration) {
+          const timeElapsed = (performance.now() - startTime) / 1000
+          if (timeElapsed <= animationDuration) {
             el.scrollLeft = util.easeInOutQuad(
-              timeEllapsed,
+              timeElapsed,
               currentOffset,
               targetOffset - currentOffset,
               animationDuration
@@ -481,10 +483,10 @@ export default class Waveform extends Vue {
         el.scrollLeft = targetOffset - distance
         requestAnimationFrame(() => {
           const step = () => {
-            const timeEllapsed = (performance.now() - startTime) / 1000
-            if (timeEllapsed <= animationDuration) {
+            const timeElapsed = (performance.now() - startTime) / 1000
+            if (timeElapsed <= animationDuration) {
               el.scrollLeft = util.easeOutQuad(
-                timeEllapsed,
+                timeElapsed,
                 targetOffset - distance,
                 distance,
                 animationDuration
@@ -567,9 +569,11 @@ export default class Waveform extends Vue {
     const el = this.$refs.svgContainer
     if (el instanceof HTMLElement) {
       await util.requestFrameAsync()
+      const scrollLeft = el.scrollLeft
+      const clientWidth = el.clientWidth
       return [
-        Math.max(Math.floor((el.scrollLeft + el.clientWidth / 2 - distance / 2)), 0),
-        Math.max(Math.floor((el.scrollLeft + el.clientWidth / 2 + distance / 2)), distance)
+        Math.max(Math.floor((scrollLeft + clientWidth / 2 - distance / 2)), 0),
+        Math.max(Math.floor((scrollLeft + clientWidth / 2 + distance / 2)), distance)
       ]
     } else {
       return [0, 0]
@@ -631,14 +635,6 @@ export default class Waveform extends Vue {
         el.innerHTML = svg
         el.style.width = `${(to - from) * settings.pixelsPerSecond}px`
         // console.timeEnd('render')
-        this.$emit('change-metadata', {
-          totalWidth: this.totalWidth,
-          amountDrawSegments: this.amountDrawSegments,
-          // currentZoomLevel: this.zoomLevels[this.currentZoomLevelIndex],
-          pixelsPerSecond: settings.pixelsPerSecond,
-          audioLength: this.audioLength,
-          drawWidth: this.drawWidth
-        })
       })
     }
   }

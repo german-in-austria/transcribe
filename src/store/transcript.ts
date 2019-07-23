@@ -621,19 +621,30 @@ export function pause() {
   eventStore.playingEvent = null
   eventBus.$emit('pauseAudio', eventStore.currentTime)
   eventStore.audioElement.pause()
+  audio.pauseCurrentBuffer()
   eventStore.isPaused = true
 }
 
-function emitUpdateTimeUntilPaused(t: number) {
+function emitUpdateTimeUntilPaused(t: number, maxT?: number) {
+  console.log('emit update time until paused')
   const startTime = performance.now()
+  eventStore.currentTime = t
+  eventBus.$emit('updateTime', t)
   const step = (now: number) => {
-    const elapsed = (now - startTime) / 1000 * eventStore.audioElement.playbackRate
+    const elapsed = (now - startTime) / 1000 * settings.playbackSpeed
+    // more than 16 ms have passed
     if (t + elapsed - eventStore.currentTime >= .016) {
+      // update and emit.
       eventStore.currentTime = t + elapsed
-      eventBus.$emit('updateTime', t + elapsed)
+      eventBus.$emit('updateTime', eventStore.currentTime)
     }
-    if (eventStore.isPaused === false) {
-      requestAnimationFrame(step)
+    // paused or over max t.
+    if (eventStore.isPaused === true || (maxT !== undefined && eventStore.currentTime >= maxT)) {
+      // stop emitting.
+      return false
+    } else {
+      // continue emitting
+      return requestAnimationFrame(step)
     }
   }
   step(performance.now())
@@ -669,10 +680,11 @@ export async function playEvents(events: LocalTranscriptEvent[]) {
       requestAnimationFrame(() => {
         eventStore.playingEvent = synEvent
         eventStore.isPaused = false
+        eventBus.$emit('playEvents', events)
         audio
-          .playBuffer(buffer, eventStore.audioElement.playbackRate)
-          .addEventListener('ended', pause)
-        emitUpdateTimeUntilPaused(synEvent.startTime)
+          .playBuffer(buffer, settings.playbackSpeed)
+          .addEventListener('ended', () => pause)
+        emitUpdateTimeUntilPaused(synEvent.startTime, synEvent.endTime)
       })
     }
   }

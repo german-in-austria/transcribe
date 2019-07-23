@@ -14,6 +14,16 @@ interface FileReaderEventTarget extends EventTarget {
   result: ArrayBuffer|string
 }
 
+export function setNumberInBounds(n: number, min = 0, max = 1) {
+  if (n <= min) {
+    return min
+  } else if (n >= max) {
+    return max
+  } else {
+    return n
+  }
+}
+
 export function fileToTextAndName(f: File): Promise<{ t: string, n: string }> {
   return new Promise((resolve, reject) => {
     try {
