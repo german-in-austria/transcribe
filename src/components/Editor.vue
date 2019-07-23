@@ -84,8 +84,7 @@
       @scroll="handleScroll"
       @show-menu="doShowMenu"
       @add-segment="addEvent"
-      :height="300"
-      :scroll-to-event="scrollToEvent" >
+      :height="300">
       <play-head />
       <div
         v-if="settings.showSegmentBoxes"
@@ -188,7 +187,7 @@ import { requestFrameAsync, isUndoOrRedo, isCmdOrCtrl } from '../util'
 
 import {
   getSelectedEvent,
-  selectEvent,
+  selectEvents,
   LocalTranscriptEvent,
   eventStore,
   playEvent,
@@ -232,7 +231,6 @@ export default class Editor extends Vue {
   isEventSelected = isEventSelected
   history = history
 
-  scrollToEvent: LocalTranscriptEvent|null = null
   scrollTranscriptIndex: number = 0
   scrollTranscriptTime: number = 0
 
@@ -321,7 +319,7 @@ export default class Editor extends Vue {
       if (eventUnderPlayHead === undefined) {
         const newEvent = this.addEvent(eventStore.currentTime)[0]
         await this.$nextTick()
-        selectEvent(newEvent)
+        selectEvents([ newEvent ])
       } else {
         const splitAt = eventStore.currentTime - eventUnderPlayHead.startTime
         this.splitEvent(eventUnderPlayHead, splitAt)
@@ -329,6 +327,11 @@ export default class Editor extends Vue {
     } else if (e.key === 'Backspace') {
       this.deleteSelectedEvents()
       deselectEvents()
+    // join
+    } else if (e.key === 'j' && e.metaKey === true || e.ctrlKey === true) {
+      if (eventStore.selectedEventIds.length) {
+        this.joinEvents(eventStore.selectedEventIds)
+      }
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault()
       e.stopPropagation()
@@ -362,14 +365,14 @@ export default class Editor extends Vue {
         const action = undo()
         if (action !== undefined) {
           e.preventDefault()
-          selectEvent(action.before[0] || action.after[0])
+          selectEvents(action.before || action.after)
           scrollToAudioEvent(action.before[0] || action.after[0])
         }
       } else if (d.redo === true) {
         const action = redo()
         if (action !== undefined) {
           e.preventDefault()
-          selectEvent(action.after[0] || action.before[0])
+          selectEvents(action.after || action.before)
           scrollToAudioEvent(action.after[0] || action.before[0])
         }
       }
@@ -377,27 +380,12 @@ export default class Editor extends Vue {
     document.addEventListener('keydown', history.undoListener)
   }
 
-  selectAndScrollToEvent(e: LocalTranscriptEvent) {
-    selectEvent(e)
-    this.$nextTick(() => {
-      this.scrollToEvent = e
-    })
-  }
-
-  async handleScroll() {
+  handleScroll() {
     if (this.showMenu === true) {
       this.showMenu = false
     }
   }
 
-  selectPrevious(i: number) {
-    selectPreviousEvent()
-  }
-
-  selectNext(i: number) {
-    selectNextEvent()
-  }
-  
 }
 </script>
 <style lang="stylus" scoped>
