@@ -54,37 +54,38 @@
                 <v-btn :loading="importingLocalFile" @click="openFile" class="mb-2 elevation-0" style="height: 40px;" block>
                   Open/Import File
                 </v-btn>
-                <v-sheet
-                  :key="transcript.pk"
-                  v-for="transcript in filteredTranscriptList"
-                  v-ripple
-                  color="#333"
-                  class="pt-2 pb-2 pl-3 mb-2 elevation-0 cursor-pointer"
-                  :disabled="loadingTranscriptId === transcript.pk"
-                  @click="loadRemoteTranscript(transcript.pk)">
-                  <v-layout class="pt-2 pb-1" align-content-space-around>
-                    <v-flex class="pr-3" fill-height align-center xs1>
-                      <v-progress-circular
-                        class="mb-2"
-                        size="20"
-                        width="2"
-                        v-if="loadingTranscriptId === transcript.pk"
-                        indeterminate />
-                      <v-icon color="grey" v-else>cloud_queue</v-icon>
-                    </v-flex>
-                    <v-flex class="pl-2">
-                      {{ transcript.n }}
-                    </v-flex>
-                    <v-flex class="pl-2 pr-3 text-xs-right caption grey--text">
-                      {{ transcript.ut }}
-                    </v-flex>
-                  </v-layout>
-                </v-sheet>
-                <v-list-tile class="text-xs-center" v-if="filteredTranscriptList.length === 0">
-                  <span class="caption">
-                    no matching transcripts found
-                  </span>
-                </v-list-tile>
+                <v-list two-line style="background: transparent">
+                  <template v-for="transcript in filteredTranscriptList">
+                    <v-list-tile
+                      :key="transcript.pk" 
+                      :disabled="loadingTranscriptId !== null"
+                      @click="loadRemoteTranscript(transcript.pk)">
+                      <v-list-tile-avatar>
+                        <v-progress-circular
+                          class="mb-2"
+                          size="20"
+                          width="2"
+                          v-if="loadingTranscriptId === transcript.pk"
+                          indeterminate />
+                        <v-icon color="grey" v-else>cloud_queue</v-icon>
+                      </v-list-tile-avatar>
+                      <v-list-tile-content>
+                        <v-list-tile-title>
+                          {{ transcript.n }}
+                        </v-list-tile-title>
+                        <v-list-tile-sub-title>
+                          {{ transcript.ut }}
+                        </v-list-tile-sub-title>
+                      </v-list-tile-content>
+                    </v-list-tile>
+                    <v-divider :key="'d' + transcript.pk" />
+                  </template>
+                  <v-list-tile class="text-xs-center" v-if="filteredTranscriptList.length === 0">
+                    <span class="caption">
+                      no matching transcripts found
+                    </span>
+                  </v-list-tile>
+                </v-list>
               </v-flex>
             </v-layout>
           </v-flex>
@@ -341,8 +342,8 @@ export default class App extends Vue {
 }
 </script>
 <style lang="stylus" scoped>
-.pick-transcript-container
-  background #222
+// .pick-transcript-container
+//   background #222
   // background url('/static/img/bg-waveform.png')
   // background-repeat no-repeat
   // background-position center 100px
