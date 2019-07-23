@@ -763,8 +763,8 @@ export function isMostRecentSelection(id: number) {
 export function selectNextEvent(increase: 1|-1 = 1) {
   if (eventStore.selectedEventIds.length > 0) {
     const i = findEventById(eventStore.selectedEventIds[0])
-    const n = eventStore.events[i + increase]
-    selectEvent(n)
+    const e = eventStore.events[i + increase]
+    selectEvent(e)
   }
 }
 
