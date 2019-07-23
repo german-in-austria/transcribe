@@ -14,6 +14,11 @@ export let history = {
   undoListener: (() => null) as (e: KeyboardEvent) => any
 }
 
+export function canUndo(): boolean {
+  // there is an applied undoable action.
+  return history.actions.find(a => a.apply === true) !== undefined
+}
+
 export function goToInitialState() {
   history.actions = history.actions.map(a => {
     if (a.apply === true) {

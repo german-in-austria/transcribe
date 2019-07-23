@@ -118,11 +118,6 @@ export default class EditHistory extends Vue {
     }
   }
 
-  get canUndo(): boolean {
-    // there is an applied undoable action.
-    return history.actions.find(a => a.apply === true) !== undefined
-  }
-
   undoOrRedoUntil(action: HistoryEventAction) {
     if (action.after[0]) {
       selectEvent(action.after[0])
