@@ -227,6 +227,10 @@ export const eventStore = {
     audioUrl: null as string|null,
     tiers: [] as LocalTranscriptTier[]
   },
+  audioMetadata: {
+    fileSize: 0 as number,
+    length: 0 as number
+  },
   userState: {
     viewingTranscriptEvent: null as LocalTranscriptEvent|null,
     viewingAudioEvent: null as LocalTranscriptEvent|null

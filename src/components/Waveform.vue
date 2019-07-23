@@ -173,9 +173,8 @@ export default class Waveform extends Vue {
   visibleSeconds: number[] = []
   visibleEvents: LocalTranscriptEvent[] = []
   audioLength = 0
-  metadata: any = {} // TODO: get rid of this / put into the store
   renderedWaveFormPieces: number[] = []
-  totalWidth = this.audioLength * this.settings.pixelsPerSecond
+  totalWidth = this.audioLength * settings.pixelsPerSecond
   log = console.log
   scrollTimeout = null
   onScroll = _.throttle(this.handleScroll, 350)
@@ -206,7 +205,7 @@ export default class Waveform extends Vue {
   async cacheOverviewWaveform() {
     await util.requestFrameAsync()
     const el = (this.$el.querySelector('.overview-waveform svg') as HTMLElement)
-    localStorage.setItem(this.metadata.url + '_overview', el.innerHTML)
+    localStorage.setItem(eventStore.metadata.audioUrl + '_overview', el.innerHTML)
   }
 
   get containerStyle() {
@@ -217,7 +216,7 @@ export default class Waveform extends Vue {
 
   addEventAt(e: MouseEvent) {
     const c = this.$refs.svgContainer as HTMLDivElement
-    this.$emit('add-segment', (c.scrollLeft + e.pageX) / this.settings.pixelsPerSecond)
+    this.$emit('add-segment', (c.scrollLeft + e.pageX) / settings.pixelsPerSecond)
   }
 
   disableAutoScrollDuringPlayback() {
@@ -226,7 +225,7 @@ export default class Waveform extends Vue {
 
   emitScroll() {
     EventBus.$emit('scrollWaveform', (
-      this.$refs.svgContainer as HTMLElement).scrollLeft / this.settings.pixelsPerSecond
+      this.$refs.svgContainer as HTMLElement).scrollLeft / settings.pixelsPerSecond
     )
   }
 
@@ -310,16 +309,16 @@ export default class Waveform extends Vue {
     // (it’s dependent on browser geometry, so a computed getter doesn’t work here.)
     const [left, right] = await this.getRenderBoundaries(10000)
     const [startSecond, endSecond] = [
-      Math.floor(left / this.settings.pixelsPerSecond),
-      Math.floor(right / this.settings.pixelsPerSecond)]
+      Math.floor(left / settings.pixelsPerSecond),
+      Math.floor(right / settings.pixelsPerSecond)]
     const visibleSeconds = util
       .range(Math.max(startSecond, 0), Math.min(endSecond, this.audioLength))
-      .filter((s, i) => this.settings.pixelsPerSecond > 60 || i % 2 === 0)
+      .filter((s, i) => settings.pixelsPerSecond > 60 || i % 2 === 0)
     await util.requestFrameAsync()
     const el = this.$el.querySelector('.second-marker-row') as HTMLElement
     el.innerHTML = visibleSeconds.map(s => {
       return (
-        `<div style="transform: translate3d(${ s * this.settings.pixelsPerSecond }px, 0, 0)" class="second-marker">`
+        `<div style="transform: translate3d(${ s * settings.pixelsPerSecond }px, 0, 0)" class="second-marker">`
         + toTime(s)
         + '</div>'
       )
@@ -329,14 +328,14 @@ export default class Waveform extends Vue {
   async drawSpectrogramPiece(i: number) {
     console.log('DRAWING Spectrogram')
     const isLast = i + 1 === this.amountDrawSegments
-    const secondsPerDrawWidth = this.drawWidth / this.settings.pixelsPerSecond
+    const secondsPerDrawWidth = this.drawWidth / settings.pixelsPerSecond
     const from = i * secondsPerDrawWidth
     const to = isLast ? this.audioLength : from + secondsPerDrawWidth
     const buffer = await audio.getOrFetchAudioBuffer(
       from,
       to,
-      this.metadata.fileSize,
-      this.audioLength,
+      eventStore.audioMetadata.fileSize,
+      eventStore.audioMetadata.length,
       eventStore.audioElement.src
     )
     console.log({ from, to, duration: to - from })
@@ -359,7 +358,7 @@ export default class Waveform extends Vue {
         queue.unshiftTask(async (resolve: any, reject: any) => {
           this.renderedWaveFormPieces.push(p)
           try {
-            if (this.settings.showSpectrograms) {
+            if (settings.showSpectrograms) {
               const x = await this.drawSpectrogramPiece(p)
               resolve(x)
             } else {
@@ -407,23 +406,16 @@ export default class Waveform extends Vue {
   }
   endScaleX() {
     const el = (this.$refs.svgContainer as HTMLElement)
-    const oldProgress = el.scrollLeft / this.settings.pixelsPerSecond
+    const oldProgress = el.scrollLeft / settings.pixelsPerSecond
     requestAnimationFrame(() => {
-      this.settings.pixelsPerSecond = this.initialPixelsPerSecond * this.scaleFactorX
+      settings.pixelsPerSecond = this.initialPixelsPerSecond * this.scaleFactorX
       this.$nextTick(() => {
         this.scrollToSecond(oldProgress)
       })
       // clear cache
       this.clearRenderCache()
       this.doMaybeRerender()
-      this.totalWidth = this.audioLength * this.settings.pixelsPerSecond
-      this.$emit('change-metadata', {
-        totalWidth: this.totalWidth,
-        amountDrawSegments: this.amountDrawSegments,
-        pixelsPerSecond: this.settings.pixelsPerSecond,
-        audioLength: this.audioLength,
-        drawWidth: this.drawWidth
-      })
+      this.totalWidth = this.audioLength * settings.pixelsPerSecond
     })
   }
 
@@ -439,7 +431,7 @@ export default class Waveform extends Vue {
   scrollTranscriptFromOverview() {
     console.log('scrollTranscriptFromOverview')
     const c = this.$refs.svgContainer as HTMLElement
-    const currentSeconds = c.scrollLeft / this.settings.pixelsPerSecond
+    const currentSeconds = c.scrollLeft / settings.pixelsPerSecond
     const e = findEventAt(currentSeconds)
     if (e !== undefined) {
       scrollToTranscriptEvent(e)
@@ -452,7 +444,7 @@ export default class Waveform extends Vue {
   scrollToSecond(t: number) {
     const el = this.$refs.svgContainer
     if (t !== null && el instanceof HTMLElement) {
-      const left = this.settings.pixelsPerSecond * t
+      const left = settings.pixelsPerSecond * t
       console.log('scrollToSecond.')
       requestAnimationFrame(() => {
         el.scrollLeft = left
@@ -513,17 +505,16 @@ export default class Waveform extends Vue {
     }
     if (e !== null) {
       const duration = e.endTime - e.startTime
-      const offset = (e.startTime + duration / 2) * this.settings.pixelsPerSecond
+      const offset = (e.startTime + duration / 2) * settings.pixelsPerSecond
       const targetOffset = offset - this.$el.clientWidth / 2
-      EventBus.$emit('scrollWaveform', targetOffset / this.settings.pixelsPerSecond)
+      EventBus.$emit('scrollWaveform', targetOffset / settings.pixelsPerSecond)
       this.scrollToSecondSmooth(targetOffset)
     }
   }
 
-  initWithMetadata(m: any) {
-    const waveformCache = localStorage.getItem(m.url + '_overview')
+  initWithCache() {
+    const waveformCache = localStorage.getItem(eventStore.metadata.audioUrl + '_overview')
     const scrollLeft = localStorage.getItem('scrollPos')
-    this.metadata = m
     if (waveformCache !== null) {
       const overviewEl = (this.$el.querySelector('.overview-waveform svg') as HTMLElement);
       overviewEl.innerHTML = waveformCache
@@ -540,19 +531,24 @@ export default class Waveform extends Vue {
     if (eventStore.audioElement !== null && !isNaN(eventStore.audioElement.duration)) {
       this.loading = true
       this.audioLength = eventStore.audioElement.duration
-      this.totalWidth = this.audioLength * this.settings.pixelsPerSecond
+      this.totalWidth = this.audioLength * settings.pixelsPerSecond
       const that = this
       if (audio.store.isLocalFile === true) {
         this.loading = false
       } else {
         await audio.downloadAudioStream({
           url: eventStore.audioElement.src,
-          onStart: (metadata: any) => {
-            this.initWithMetadata(metadata)
+          onStart: (metadata) => {
+            if (metadata !== null) {
+              eventStore.metadata.audioUrl = metadata.url
+              eventStore.audioMetadata.fileSize = metadata.fileSize
+              eventStore.audioMetadata.length = eventStore.audioElement.duration
+            }
+            this.initWithCache()
             this.doMaybeRerender()
           },
           onProgress: (chunk: AudioBuffer, from: number, to: number) => {
-            if (localStorage.getItem(this.metadata.url + '_overview') === null) {
+            if (localStorage.getItem(eventStore.metadata.audioUrl + '_overview') === null) {
               this.drawOverviewWaveformPiece(from, to, chunk)
             }
           }
@@ -564,7 +560,7 @@ export default class Waveform extends Vue {
   }
 
   get amountDrawSegments() {
-    return Math.ceil(this.audioLength * this.settings.pixelsPerSecond / this.drawWidth)
+    return Math.ceil(this.audioLength * settings.pixelsPerSecond / this.drawWidth)
   }
 
   async getRenderBoundaries(distance = this.drawDistance): Promise<number[]> {
@@ -606,41 +602,40 @@ export default class Waveform extends Vue {
   async drawWaveFormPiece(i: number) {
     console.log('drawing', i)
     const isLast = i + 1 === this.amountDrawSegments
-    const secondsPerDrawWidth = this.drawWidth / this.settings.pixelsPerSecond
+    const secondsPerDrawWidth = this.drawWidth / settings.pixelsPerSecond
     const from = i * secondsPerDrawWidth
-    const to = isLast ? this.audioLength : from + secondsPerDrawWidth
-    const width = isLast ? (to - from) * this.settings.pixelsPerSecond : this.drawWidth
+    const to = isLast ? eventStore.audioMetadata.length : from + secondsPerDrawWidth
+    const width = isLast ? (to - from) * settings.pixelsPerSecond : this.drawWidth
     const buffer = await audio.getOrFetchAudioBuffer(
       from,
       to,
-      this.metadata.fileSize,
-      this.audioLength,
+      eventStore.audioMetadata.fileSize,
+      eventStore.audioMetadata.length,
       eventStore.audioElement.src
     )
 
-    let svg: string
-    if (this.settings.useMonoWaveForm === true) {
-      svg = await audio.drawWave(buffer, width, this.height, settings.waveFormColors[1], undefined, true)
-    } else {
-      const [svg1, svg2] = await Promise.all([
-        audio.drawWave(buffer, width, this.height, settings.waveFormColors[0], 0),
-        audio.drawWave(buffer, width, this.height, settings.waveFormColors[1], 1)
-      ])
-      // console.log({from, to, svg1, svg2, width, buffer})
-      svg = svg1 + svg2
-    }
+    const svg = await (async () => {
+      if (settings.useMonoWaveForm === true) {
+        return await audio.drawWave(buffer, width, this.height, settings.waveFormColors[1], undefined, true)
+      } else {
+        return (await Promise.all([
+          audio.drawWave(buffer, width, this.height, settings.waveFormColors[0], 0),
+          audio.drawWave(buffer, width, this.height, settings.waveFormColors[1], 1)
+        ])).join()
+      }
+    })()
     if (this.$refs.svgContainer instanceof HTMLElement) {
       requestAnimationFrame(() => {
         const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
-        console.time('render')
+        // console.time('render')
         el.innerHTML = svg
-        el.style.width = `${(to - from) * this.settings.pixelsPerSecond}px`
-        console.timeEnd('render')
+        el.style.width = `${(to - from) * settings.pixelsPerSecond}px`
+        // console.timeEnd('render')
         this.$emit('change-metadata', {
           totalWidth: this.totalWidth,
           amountDrawSegments: this.amountDrawSegments,
           // currentZoomLevel: this.zoomLevels[this.currentZoomLevelIndex],
-          pixelsPerSecond: this.settings.pixelsPerSecond,
+          pixelsPerSecond: settings.pixelsPerSecond,
           audioLength: this.audioLength,
           drawWidth: this.drawWidth
         })

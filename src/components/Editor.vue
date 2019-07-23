@@ -4,7 +4,7 @@
       <div>{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
       <v-spacer></v-spacer>
       <div>
-        <search :show="showSearch" />
+        <search />
       </div>
       <div class="pr-4">
         <v-tooltip transition="none" bottom>
@@ -81,15 +81,12 @@
       tabindex="-1"
       class="no-outline"
       @keydown.native="handleWaveformKey"
-      @change-metadata="changeMetadata"
       @scroll="handleScroll"
       @show-menu="doShowMenu"
       @add-segment="addEvent"
       :height="300"
       :scroll-to-event="scrollToEvent" >
-      <play-head
-        @change-position="scrub"
-        :metadata="metadata" />
+      <play-head />
       <div
         v-if="settings.showSegmentBoxes"
         class="absolute">
@@ -235,7 +232,6 @@ export default class Editor extends Vue {
   isEventSelected = isEventSelected
   history = history
 
-  metadata: any = null
   scrollToEvent: LocalTranscriptEvent|null = null
   segmentPlayingTimeout: any = null
   scrollTranscriptIndex: number = 0
@@ -246,7 +242,6 @@ export default class Editor extends Vue {
 
   scrollToTranscriptEvent = scrollToTranscriptEvent
   settings = settings
-  playHeadPos = 0
   showSettings = false
   showSearch = false
   showMenu = false
@@ -260,7 +255,7 @@ export default class Editor extends Vue {
       const b = new Blob([ JSON.stringify(this.eventStore.events, undefined, 4) ], {
         type: 'application/json;charset=UTF-8'
       })
-      saveAs(b, this.eventStore.metadata.transcriptName! + '.json')
+      saveAs(b, eventStore.metadata.transcriptName! + '.json')
     }
   }
 
@@ -302,7 +297,7 @@ export default class Editor extends Vue {
   }
 
   splitEventFromMenu(event: LocalTranscriptEvent) {
-    const splitAt = this.layerX / this.pixelsPerSecond
+    const splitAt = this.layerX / settings.pixelsPerSecond
     this.splitEvent(event, splitAt)
   }
 
@@ -321,13 +316,13 @@ export default class Editor extends Vue {
 
   async handleWaveformKey(e: KeyboardEvent) {
     if (e.key === 's') {
-      const eventUnderPlayHead = this.findEventAt(this.playHeadPos)
+      const eventUnderPlayHead = this.findEventAt(eventStore.currentTime)
       if (eventUnderPlayHead === undefined) {
-        const newEvent = this.addEvent(this.playHeadPos)[0]
+        const newEvent = this.addEvent(eventStore.currentTime)[0]
         await this.$nextTick()
         selectEvent(newEvent)
       } else {
-        const splitAt = this.playHeadPos - eventUnderPlayHead.startTime
+        const splitAt = eventStore.currentTime - eventUnderPlayHead.startTime
         this.splitEvent(eventUnderPlayHead, splitAt)
       }
     } else if (e.key === 'Backspace') {
@@ -386,11 +381,6 @@ export default class Editor extends Vue {
     document.addEventListener('keydown', history.undoListener)
   }
 
-  scrub(time: number) {
-    this.playHeadPos = time
-    eventStore.audioElement.currentTime = time
-  }
-
   selectAndScrollToEvent(e: LocalTranscriptEvent) {
     selectEvent(e)
     this.$nextTick(() => {
@@ -411,18 +401,7 @@ export default class Editor extends Vue {
   selectNext(i: number) {
     selectNextEvent()
   }
-  changeMetadata(metadata: any) {
-    this.metadata = metadata
-  }
-
-  get pixelsPerSecond() {
-    if ( this.metadata !== null) {
-      return this.metadata.pixelsPerSecond
-    } else {
-      return 0
-    }
-  }
-
+  
 }
 </script>
 <style lang="stylus" scoped>

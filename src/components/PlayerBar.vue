@@ -64,7 +64,7 @@ export default class PlayerBar extends Vue {
 
   playPause(e: Event) {
     if (eventStore.isPaused) {
-      playAllFrom(eventStore.audioElement.currentTime)
+      playAllFrom(eventStore.currentTime)
     } else {
       pause()
     }

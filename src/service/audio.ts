@@ -530,14 +530,14 @@ async function getAudioMetadata(url: string): Promise<AudioMetaData> {
   if (metadata !== null) {
     return metadata
   } else {
-    const kb = 100
+    const limitKb = 100
     if ((await serverAcceptsRanges(url)) === false) {
       throw new Error('server doesn’t accept ranges')
     } else {
       const chunk = await fetch(url, {
         method: 'GET',
         credentials: 'include',
-        headers: { Range: `bytes=0-${ kb * 1024 }`}
+        headers: { Range: `bytes=0-${ limitKb * 1024 }`}
       })
       const fileSize = (await fetch(url, {
         credentials: 'include',
@@ -597,7 +597,7 @@ async function downloadAudioStream({
   }: {
     url: string,
     chunkSize?: number,
-    onStart: (metadata: any) => any,
+    onStart: (metadata: AudioMetaData|null) => any,
     onProgress: (chunk: AudioBuffer, from: number, to: number) => any
   }
 ) {

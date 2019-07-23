@@ -4,7 +4,6 @@
       class="play-head"
       ref="playHead"
       :style="{
-        transition: transition,
         transform: `translate3d(${ left }px, 0, 0)`
       }"
     />
@@ -36,7 +35,6 @@ export default class PlayHead extends Vue {
   audioStore = audio.store
   eventStore = eventStore
   left = 10
-  transition = 'unset'
   settings = settings
 
   // TODO: use events
