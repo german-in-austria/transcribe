@@ -37,23 +37,6 @@ export default class PlayHead extends Vue {
   left = 10
   settings = settings
 
-  // TODO: use events
-  @Watch('eventStore.playAllFrom')
-  async onPlayAllFromChange(from: number|null) {
-    if (from !== null) {
-      settings.lockPlayHead = true
-    }
-  }
-
-  // TODO: use events
-  @Watch('eventStore.playingEvent')
-  onPlayingEventChange() {
-    const e = this.eventStore.playingEvent
-    if (e !== null) {
-      this.movePlayHead(e.startTime)
-    }
-  }
-
   // TODO: what’s that good for
   @Watch('posX')
   moveToPos(posX: number) {
@@ -77,9 +60,18 @@ export default class PlayHead extends Vue {
     }
   }
 
+  // this should actually be in the 
   animateScrollCatchUp(t: number) {
+    // initially, the playhead is always locked.
+    // it gets unlocked, when the user scrolls.
+    settings.lockPlayHead = true
+    // we’re using a named function below,
+    // so we must keep track of "this"
     const that = this
+    // the time it should take the scroller to
+    // catch up to the playhead.
     const scrollCatchUpTime = 1
+    // geometry and time formulae
     const startedTime = performance.now()
     const waveform = document.querySelector('.wave-form')!
     const stageWidth = waveform.clientWidth
@@ -87,16 +79,17 @@ export default class PlayHead extends Vue {
     const wTargetPosition = (t + scrollCatchUpTime) * settings.pixelsPerSecond - stageWidth / 2
     const wDistanceToCover = wTargetPosition - waveform.scrollLeft
     eventBus.$on('updateTime', function catchUpListener(this: any) {
-      const timeEllapsed = (performance.now() - startedTime) / 1000 * eventStore.audioElement.playbackRate
-      // if playhead is locked
+      const timeElapsed = (performance.now() - startedTime) / 1000 * settings.playbackSpeed
+      // if playhead is still locked
       if (settings.lockPlayHead === true) {
         // catch up using quadratic ease in out
-        if (timeEllapsed <= scrollCatchUpTime) {
-          waveform.scrollLeft = easeInOutQuad(timeEllapsed, wStart, wDistanceToCover, scrollCatchUpTime)
+        if (timeElapsed <= scrollCatchUpTime) {
+          waveform.scrollLeft = easeInOutQuad(timeElapsed, wStart, wDistanceToCover, scrollCatchUpTime)
         } else {
-          // hand it over to the regular scroller
-          eventBus.$on('updateTime', that.scrollToTime)
+          // when we’re done, hand it over to the
+          // regular, linear scroller
           eventBus.$off('updateTime', catchUpListener)
+          eventBus.$on('updateTime', that.scrollToTime)
         }
       }
     })
