@@ -114,6 +114,7 @@ export default class PlayHead extends Vue {
 
   startDrag(e: MouseEvent) {
     this.inFront = true
+    scrubAudio(e.offsetX / settings.pixelsPerSecond)
     document.addEventListener('mousemove', this.drag)
     document.addEventListener('mouseup', this.endDrag)
   }
@@ -125,7 +126,6 @@ export default class PlayHead extends Vue {
   endDrag(e: MouseEvent) {
     this.inFront = false
     this.left = e.layerX
-    this.$emit('change-position', e.layerX / settings.pixelsPerSecond)
     document.removeEventListener('mousemove', this.drag)
     document.removeEventListener('mouseup', this.endDrag)
   }
