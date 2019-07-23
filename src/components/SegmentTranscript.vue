@@ -51,6 +51,7 @@ import {
 } from '../store/transcript'
 
 import { undoable } from '../store/history'
+import settings from '../store/settings';
 
 @Component({
   components: {
@@ -97,7 +98,9 @@ export default class SegmentTranscript extends Vue {
   }
 
   selectAndScrollToEvent(e: LocalTranscriptEvent) {
-    scrollToAudioEvent(e)
+    if (!settings.lockScroll) {
+      scrollToAudioEvent(e)
+    }
     selectEvent(e)
   }
 }

@@ -4,6 +4,8 @@ import audio from '../service/audio'
 import { clone } from '../util'
 import settings from '../store/settings'
 import { HistoryEventAction } from './history'
+import eventBus from '../service/event-bus'
+
 import {
   localTranscriptToServerTranscript,
   localTranscriptToServerSaveRequest,
@@ -215,6 +217,8 @@ export const eventStore = {
   searchResults: [] as LocalTranscriptEvent[],
   searchTerm: '',
   playingEvent: null as LocalTranscriptEvent|null,
+  isPaused: true as boolean,
+  currentTime: 0,
   metadata: {
     defaultTier: 'text' as TokenTierType,
     speakers: {} as LocalTranscriptSpeakers,
@@ -608,10 +612,45 @@ export function timeFromSeconds(seconds: number) {
   return new Date(1000 * seconds).toISOString().substr(12, 11)
 }
 
-export async function playEvents(events: LocalTranscriptEvent[]) {
+export function pause() {
+  eventStore.playAllFrom = null
   eventStore.playingEvent = null
-  const sortedEvents = sortEvents(events)
+  eventBus.$emit('pauseAudio', eventStore.currentTime)
+  eventStore.audioElement.pause()
+  eventStore.isPaused = true
+}
 
+function emitUpdateTimeUntilPaused(t: number) {
+  const startTime = performance.now()
+  const step = (now: number) => {
+    const elapsed = (now - startTime) / 1000 * eventStore.audioElement.playbackRate
+    if (t + elapsed - eventStore.currentTime >= .016) {
+      eventStore.currentTime = t + elapsed
+      eventBus.$emit('updateTime', t + elapsed)
+    }
+    if (eventStore.isPaused === false) {
+      requestAnimationFrame(step)
+    }
+  }
+  step(performance.now())
+}
+
+export function playAllFrom(t: number) {
+  eventStore.playAllFrom = t
+  eventStore.audioElement.play()
+  eventStore.isPaused = false
+  eventBus.$emit('playAudio', t)
+  emitUpdateTimeUntilPaused(t)
+}
+
+export function scrubAudio(t: number) {
+  eventStore.currentTime = t
+  eventBus.$emit('scrubAudio', t)
+}
+
+export async function playEvents(events: LocalTranscriptEvent[]) {
+  pause()
+  const sortedEvents = sortEvents(events)
   const synEvent = {
     ..._(sortedEvents).first() as LocalTranscriptEvent,
     endTime: (_(sortedEvents).last() as LocalTranscriptEvent).endTime
@@ -625,10 +664,11 @@ export async function playEvents(events: LocalTranscriptEvent[]) {
     if (buffer !== undefined) {
       requestAnimationFrame(() => {
         eventStore.playingEvent = synEvent
-        audio.playBuffer(buffer, eventStore.audioElement.playbackRate)
-          .addEventListener('ended', (e: Event) => {
-            eventStore.playingEvent = null
-          })
+        eventStore.isPaused = false
+        audio
+          .playBuffer(buffer, eventStore.audioElement.playbackRate)
+          .addEventListener('ended', pause)
+        emitUpdateTimeUntilPaused(synEvent.startTime)
       })
     }
   }

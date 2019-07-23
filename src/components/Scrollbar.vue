@@ -20,13 +20,14 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import { eventStore, toTime } from '../store/transcript'
-import EventBus from '../service/event-bus'
+import EventBus, { BusEvent } from '../service/event-bus'
 import _ from 'lodash'
+
 @Component
 export default class Scrollbar extends Vue {
 
   // global events to listen to
-  @Prop() updateOn: string|string[]
+  @Prop() updateOn: BusEvent
 
   overviewTimeWidth = 70 // width of the time preview tooltip above the overview waveform
   isDragging = false

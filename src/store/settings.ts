@@ -6,13 +6,14 @@ export interface Settings {
   spectrogramGradient: number[][]
   spectrogramColors: Color[]
   waveFormColors: string[]
-  lockScroll: boolean,
-  lockPlayHead: boolean,
-  emulateHorizontalScrolling: boolean,
-  darkMode: boolean,
-  showSegmentBoxes: boolean,
-  showSpectrograms: boolean,
-  useMonoWaveForm: boolean,
+  lockScroll: boolean
+  lockPlayHead: boolean
+  pixelsPerSecond: number
+  emulateHorizontalScrolling: boolean
+  darkMode: boolean
+  showSegmentBoxes: boolean
+  showSpectrograms: boolean
+  useMonoWaveForm: boolean
   tokenTypes: Array<{
     name: string
     regex: RegExp
@@ -149,6 +150,7 @@ const settings: Settings = {
   lockScroll: false,
   lockPlayHead: true,
   darkMode: true,
+  pixelsPerSecond: 150,
   emulateHorizontalScrolling: platform() === 'windows' || platform() === 'linux',
   showSegmentBoxes: true,
   showSpectrograms: false,

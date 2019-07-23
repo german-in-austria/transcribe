@@ -38,7 +38,7 @@ import { Vue, Component, Prop, Watch, Provide } from 'vue-property-decorator'
 import Resizer from './helper/Resizer.vue'
 import ResizeParent from './helper/ResizeParent.vue'
 import { undoable } from '../store/history'
-
+import settings from '../store/settings'
 // tslint:disable-next-line:max-line-length
 import {
   playEvent,
@@ -63,7 +63,6 @@ export default class SegmentBox extends Vue {
   @Prop() event: LocalTranscriptEvent
   @Prop() previousEvent?: LocalTranscriptEvent
   @Prop() nextEvent?: LocalTranscriptEvent
-  @Prop() pixelsPerSecond: number
 
   scrollToTranscriptEvent = scrollToTranscriptEvent
   selectEvent = selectEvent
@@ -85,21 +84,21 @@ export default class SegmentBox extends Vue {
   }
 
   get offset() {
-    return Number(this.event.startTime) * this.pixelsPerSecond
+    return Number(this.event.startTime) * settings.pixelsPerSecond
   }
 
   get width(): number {
-    return (Number(this.event.endTime) - Number(this.event.startTime)) * this.pixelsPerSecond
+    return (Number(this.event.endTime) - Number(this.event.startTime)) * settings.pixelsPerSecond
   }
 
   onResizeEnd(e: any) {
-    const startTime = e.current.left / this.pixelsPerSecond
-    const endTime = e.current.right / this.pixelsPerSecond
+    const startTime = e.current.left / settings.pixelsPerSecond
+    const endTime = e.current.right / settings.pixelsPerSecond
     if (e.next !== null && this.nextEvent !== undefined) {
-      const nextStartTime = e.next.left / this.pixelsPerSecond
+      const nextStartTime = e.next.left / settings.pixelsPerSecond
       undoable(resizeEvents({ ...this.event, startTime, endTime }, { ...this.nextEvent, startTime: nextStartTime }))
     } else if (e.previous !== null && this.previousEvent !== undefined) {
-      const previousEndTime = e.previous.right / this.pixelsPerSecond
+      const previousEndTime = e.previous.right / settings.pixelsPerSecond
       undoable(resizeEvents({ ...this.previousEvent, endTime: previousEndTime }, { ...this.event, startTime, endTime }))
     } else {
       undoable(resizeEvents({ ...this.event, startTime, endTime }))

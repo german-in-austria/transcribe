@@ -6,27 +6,30 @@
       :style="{
         transition: transition,
         transform: `translate3d(${ left }px, 0, 0)`
-      }">
-    </div>
+      }"
+    />
     <div
-      :style="{zIndex: inFront ? 1 : 'auto'}"
       @mousedown="startDrag"
       ref="stage"
-      class="play-head-stage" />
+      class="play-head-stage"
+      :style="{
+        zIndex: inFront ? 1 : 'auto'
+      }"
+    />
   </div>
 </template>
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { eventStore } from '../store/transcript'
+import { eventStore, scrubAudio } from '../store/transcript'
 import audio from '../service/audio'
-import { easeInOutQuad } from '../util'
+import { easeInOutQuad, requestFrameAsync } from '../util'
 import settings from '../store/settings'
+import eventBus from '../service/event-bus'
 
 @Component
 export default class PlayHead extends Vue {
 
-  @Prop() metadata: any
   @Prop() posX: number
 
   inFront = false
@@ -34,85 +37,26 @@ export default class PlayHead extends Vue {
   eventStore = eventStore
   left = 10
   transition = 'unset'
+  settings = settings
 
+  // TODO: use events
   @Watch('eventStore.playAllFrom')
   async onPlayAllFromChange(from: number|null) {
     if (from !== null) {
-      this.transition = 'unset'
       settings.lockPlayHead = true
-      this.scrollAtSpeed(from)
-      // const endTime = eventStore.audioElement.duration
-      // const playbackTimeInSeconds = (endTime - from) * (1 / (this.audioStore.playbackRate / 100))
-      // this.transition = 'unset'
-      // await this.$nextTick()
-      // this.left = from * this.pixelsPerSecond
-      // await this.$nextTick()
-      // this.transition = `transform ${playbackTimeInSeconds}s linear`
-      // this.left = endTime * this.pixelsPerSecond
-    } else {
-      // this.left = eventStore.audioElement.currentTime
-      // this.transition = 'unset'
     }
   }
 
-  scrollAtSpeed(startAtTime = 0, catchUpTime = 1) {
-    const startTime = performance.now()
-    const w = document.querySelector('.wave-form')!
-    const p = this.$refs.playHead as HTMLElement
-    const wStart = w.scrollLeft
-    const wTargetPosition = (startAtTime + catchUpTime) * this.pixelsPerSecond - w.clientWidth / 2
-    const wDistanceToCover = wTargetPosition - w.scrollLeft
-    const step = () => {
-      const timeEllapsed = (performance.now() - startTime) / 1000 * eventStore.audioElement.playbackRate
-      const playHeadLeft = Math.round((startAtTime + timeEllapsed) * this.pixelsPerSecond)
-      const viewPortLeft = playHeadLeft - w.clientWidth / 2
-      requestAnimationFrame(() => {
-        // IF PLAYHEAD IS LOCKED
-        if (settings.lockPlayHead === true) {
-          // CATCH UP USING QUADRATIC EASE IN OUT
-          if (timeEllapsed <= catchUpTime) {
-            w.scrollLeft = easeInOutQuad(timeEllapsed, wStart, wDistanceToCover, catchUpTime)
-          } else {
-            w.scrollLeft = viewPortLeft
-          }
-        }
-        // CORRECT PLAYHEAD POSITION IF IT FALLS BEHIND
-        const difference = Math.abs(startAtTime + timeEllapsed - eventStore.audioElement.currentTime)
-        if (difference > .1) {
-          console.log('corrected playhead position')
-          p.style.transform = `translate3d(${ this.pixelsPerSecond * eventStore.audioElement.currentTime }px, 0, 0)`
-        } else {
-          p.style.transform = `translate3d(${ playHeadLeft }px, 0, 0)`
-        }
-        // KEEP GOING IF IT’S SUPPOSED TO PLAY
-        if (eventStore.playAllFrom !== null) {
-          requestAnimationFrame(step)
-        } else {
-          this.left = playHeadLeft
-        }
-      })
-    }
-    step()
-  }
-
+  // TODO: use events
   @Watch('eventStore.playingEvent')
   onPlayingEventChange() {
-    const s = this.eventStore.playingEvent
-    if (s !== null) {
-      this.transition = 'unset'
-      const playbackTimeInSeconds = (s.endTime - s.startTime) * (1 / (this.audioStore.playbackRate / 100))
-      requestAnimationFrame(() => {
-        this.left = s.startTime * this.pixelsPerSecond
-        requestAnimationFrame(() => {
-          this.transition = `transform ${playbackTimeInSeconds}s linear`
-          this.left = s.endTime * this.pixelsPerSecond
-        })
-      })
-    } else {
-      this.transition = 'unset'
+    const e = this.eventStore.playingEvent
+    if (e !== null) {
+      this.movePlayHead(e.startTime)
     }
   }
 
+  // TODO: what’s that good for
   @Watch('posX')
   moveToPos(posX: number) {
     this.left = this.posX
@@ -121,12 +65,60 @@ export default class PlayHead extends Vue {
   log(e: any) {
     console.log(e)
   }
-  get pixelsPerSecond() {
-    if ( this.metadata !== null) {
-      return this.metadata.pixelsPerSecond
+
+  scrollToTime(t: number) {
+    if (settings.lockPlayHead === true && eventStore.isPaused === false) {
+      requestAnimationFrame(() => {
+        const waveform = document.querySelector('.wave-form')!
+        const playHeadLeft = Math.round(t * settings.pixelsPerSecond)
+        const viewPortLeft = playHeadLeft - waveform.clientWidth / 2
+        waveform.scrollLeft = viewPortLeft
+      })
     } else {
-      return 0
+      eventBus.$off('updateTime', this.scrollToTime)
     }
+  }
+
+  animateScrollCatchUp(t: number) {
+    const that = this
+    const scrollCatchUpTime = 1
+    const startedTime = performance.now()
+    const waveform = document.querySelector('.wave-form')!
+    const stageWidth = waveform.clientWidth
+    const wStart = waveform.scrollLeft
+    const wTargetPosition = (t + scrollCatchUpTime) * settings.pixelsPerSecond - stageWidth / 2
+    const wDistanceToCover = wTargetPosition - waveform.scrollLeft
+    eventBus.$on('updateTime', function catchUpListener(this: any) {
+      const timeEllapsed = (performance.now() - startedTime) / 1000 * eventStore.audioElement.playbackRate
+      // if playhead is locked
+      if (settings.lockPlayHead === true) {
+        // catch up using quadratic ease in out
+        if (timeEllapsed <= scrollCatchUpTime) {
+          waveform.scrollLeft = easeInOutQuad(timeEllapsed, wStart, wDistanceToCover, scrollCatchUpTime)
+        } else {
+          // hand it over to the regular scroller
+          eventBus.$on('updateTime', that.scrollToTime)
+          eventBus.$off('updateTime', catchUpListener)
+        }
+      }
+    })
+  }
+
+  async movePlayHead(t: number) {
+    await requestFrameAsync();
+    (this.$refs.playHead as HTMLElement).style.transform = `translate3d(${ t * settings.pixelsPerSecond }px, 0, 0)`
+  }
+
+  mounted() {
+    eventBus.$on('scrubAudio', this.movePlayHead)
+    eventBus.$on('playAudio', this.animateScrollCatchUp)
+    eventBus.$on('updateTime', this.movePlayHead)
+  }
+
+  beforeDestroy() {
+    eventBus.$off('scrubAudio', this.movePlayHead)
+    eventBus.$off('playAudio', this.animateScrollCatchUp)
+    eventBus.$off('updateTime', this.movePlayHead)
   }
 
   startDrag(e: MouseEvent) {
@@ -136,16 +128,13 @@ export default class PlayHead extends Vue {
   }
 
   drag(e: MouseEvent) {
-    requestAnimationFrame(() => {
-      this.left = e.offsetX
-      eventStore.audioElement.currentTime = this.left / this.metadata.pixelsPerSecond
-    })
+    scrubAudio(e.offsetX / settings.pixelsPerSecond)
   }
 
   endDrag(e: MouseEvent) {
     this.inFront = false
     this.left = e.layerX
-    this.$emit('change-position', e.layerX / this.metadata.pixelsPerSecond)
+    this.$emit('change-position', e.layerX / settings.pixelsPerSecond)
     document.removeEventListener('mousemove', this.drag)
     document.removeEventListener('mouseup', this.endDrag)
   }

@@ -67,8 +67,7 @@
             :key="event.eventId"
             :event="event"
             :previous-event="visibleEvents[i - 1]"
-            :next-event="visibleEvents[i + 1]"
-            :pixels-per-second="pixelsPerSecond">
+            :next-event="visibleEvents[i + 1]">
           </segment-box>
         </div>
       </div>
@@ -157,7 +156,7 @@ export default class Waveform extends Vue {
   // config
   zoomLevels = [.25, .5, .75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4]
   drawDistance = 5000 // pixels in both directions from the center of the viewport (left and right)
-  initialPixelsPerSecond = 150 // this the initial real zoom value
+  initialPixelsPerSecond = settings.pixelsPerSecond // this the initial real zoom value
   overviewSvgWidth = 1500 // width of the overview waveform in pixels
 
   // bind stores
@@ -166,7 +165,6 @@ export default class Waveform extends Vue {
   eventStore = eventStore
 
   // state
-  pixelsPerSecond = this.initialPixelsPerSecond // copied on init, not bound.
   disabled = false
   loading = false
   scaleFactorY = 1
@@ -177,7 +175,7 @@ export default class Waveform extends Vue {
   audioLength = 0
   metadata: any = {} // TODO: get rid of this / put into the store
   renderedWaveFormPieces: number[] = []
-  totalWidth = this.audioLength * this.pixelsPerSecond
+  totalWidth = this.audioLength * this.settings.pixelsPerSecond
   log = console.log
   scrollTimeout = null
   onScroll = _.throttle(this.handleScroll, 350)
@@ -219,7 +217,7 @@ export default class Waveform extends Vue {
 
   addEventAt(e: MouseEvent) {
     const c = this.$refs.svgContainer as HTMLDivElement
-    this.$emit('add-segment', (c.scrollLeft + e.pageX) / this.pixelsPerSecond)
+    this.$emit('add-segment', (c.scrollLeft + e.pageX) / this.settings.pixelsPerSecond)
   }
 
   disableAutoScrollDuringPlayback() {
@@ -227,7 +225,9 @@ export default class Waveform extends Vue {
   }
 
   emitScroll() {
-    EventBus.$emit('scrollWaveform', (this.$refs.svgContainer as HTMLElement).scrollLeft / this.pixelsPerSecond)
+    EventBus.$emit('scrollWaveform', (
+      this.$refs.svgContainer as HTMLElement).scrollLeft / this.settings.pixelsPerSecond
+    )
   }
 
   onMousewheel(e: MouseWheelEvent) {
@@ -309,23 +309,27 @@ export default class Waveform extends Vue {
   async updateSecondsMarkers() {
     // (it’s dependent on browser geometry, so a computed getter doesn’t work here.)
     const [left, right] = await this.getRenderBoundaries(10000)
-    const [startSecond, endSecond] = [Math.floor(left / this.pixelsPerSecond), Math.floor(right / this.pixelsPerSecond)]
+    const [startSecond, endSecond] = [
+      Math.floor(left / this.settings.pixelsPerSecond),
+      Math.floor(right / this.settings.pixelsPerSecond)]
     const visibleSeconds = util
       .range(Math.max(startSecond, 0), Math.min(endSecond, this.audioLength))
-      .filter((s, i) => this.pixelsPerSecond > 60 || i % 2 === 0)
+      .filter((s, i) => this.settings.pixelsPerSecond > 60 || i % 2 === 0)
     await util.requestFrameAsync()
     const el = this.$el.querySelector('.second-marker-row') as HTMLElement
     el.innerHTML = visibleSeconds.map(s => {
-      return `<div style="transform: translate3d(${ s * this.pixelsPerSecond }px, 0, 0)" class="second-marker">`
+      return (
+        `<div style="transform: translate3d(${ s * this.settings.pixelsPerSecond }px, 0, 0)" class="second-marker">`
         + toTime(s)
         + '</div>'
+      )
     }).join('')
   }
 
   async drawSpectrogramPiece(i: number) {
     console.log('DRAWING Spectrogram')
     const isLast = i + 1 === this.amountDrawSegments
-    const secondsPerDrawWidth = this.drawWidth / this.pixelsPerSecond
+    const secondsPerDrawWidth = this.drawWidth / this.settings.pixelsPerSecond
     const from = i * secondsPerDrawWidth
     const to = isLast ? this.audioLength : from + secondsPerDrawWidth
     const buffer = await audio.getOrFetchAudioBuffer(
@@ -403,20 +407,20 @@ export default class Waveform extends Vue {
   }
   endScaleX() {
     const el = (this.$refs.svgContainer as HTMLElement)
-    const oldProgress = el.scrollLeft / this.pixelsPerSecond
+    const oldProgress = el.scrollLeft / this.settings.pixelsPerSecond
     requestAnimationFrame(() => {
-      this.pixelsPerSecond = this.initialPixelsPerSecond * this.scaleFactorX
+      this.settings.pixelsPerSecond = this.initialPixelsPerSecond * this.scaleFactorX
       this.$nextTick(() => {
         this.scrollToSecond(oldProgress)
       })
       // clear cache
       this.clearRenderCache()
       this.doMaybeRerender()
-      this.totalWidth = this.audioLength * this.pixelsPerSecond
+      this.totalWidth = this.audioLength * this.settings.pixelsPerSecond
       this.$emit('change-metadata', {
         totalWidth: this.totalWidth,
         amountDrawSegments: this.amountDrawSegments,
-        pixelsPerSecond: this.pixelsPerSecond,
+        pixelsPerSecond: this.settings.pixelsPerSecond,
         audioLength: this.audioLength,
         drawWidth: this.drawWidth
       })
@@ -435,7 +439,7 @@ export default class Waveform extends Vue {
   scrollTranscriptFromOverview() {
     console.log('scrollTranscriptFromOverview')
     const c = this.$refs.svgContainer as HTMLElement
-    const currentSeconds = c.scrollLeft / this.pixelsPerSecond
+    const currentSeconds = c.scrollLeft / this.settings.pixelsPerSecond
     const e = findEventAt(currentSeconds)
     if (e !== undefined) {
       scrollToTranscriptEvent(e)
@@ -448,7 +452,8 @@ export default class Waveform extends Vue {
   scrollToSecond(t: number) {
     const el = this.$refs.svgContainer
     if (t !== null && el instanceof HTMLElement) {
-      const left = this.pixelsPerSecond * t
+      const left = this.settings.pixelsPerSecond * t
+      console.log('scrollToSecond.')
       requestAnimationFrame(() => {
         el.scrollLeft = left
       })
@@ -508,9 +513,9 @@ export default class Waveform extends Vue {
     }
     if (e !== null) {
       const duration = e.endTime - e.startTime
-      const offset = (e.startTime + duration / 2) * this.pixelsPerSecond
+      const offset = (e.startTime + duration / 2) * this.settings.pixelsPerSecond
       const targetOffset = offset - this.$el.clientWidth / 2
-      EventBus.$emit('scrollWaveform', targetOffset / this.pixelsPerSecond)
+      EventBus.$emit('scrollWaveform', targetOffset / this.settings.pixelsPerSecond)
       this.scrollToSecondSmooth(targetOffset)
     }
   }
@@ -535,7 +540,7 @@ export default class Waveform extends Vue {
     if (eventStore.audioElement !== null && !isNaN(eventStore.audioElement.duration)) {
       this.loading = true
       this.audioLength = eventStore.audioElement.duration
-      this.totalWidth = this.audioLength * this.pixelsPerSecond
+      this.totalWidth = this.audioLength * this.settings.pixelsPerSecond
       const that = this
       if (audio.store.isLocalFile === true) {
         this.loading = false
@@ -559,13 +564,13 @@ export default class Waveform extends Vue {
   }
 
   get amountDrawSegments() {
-    return Math.ceil(this.audioLength * this.pixelsPerSecond / this.drawWidth)
+    return Math.ceil(this.audioLength * this.settings.pixelsPerSecond / this.drawWidth)
   }
 
   async getRenderBoundaries(distance = this.drawDistance): Promise<number[]> {
-    await util.requestFrameAsync()
     const el = this.$refs.svgContainer
     if (el instanceof HTMLElement) {
+      await util.requestFrameAsync()
       return [
         Math.max(Math.floor((el.scrollLeft + el.clientWidth / 2 - distance / 2)), 0),
         Math.max(Math.floor((el.scrollLeft + el.clientWidth / 2 + distance / 2)), distance)
@@ -601,10 +606,10 @@ export default class Waveform extends Vue {
   async drawWaveFormPiece(i: number) {
     console.log('drawing', i)
     const isLast = i + 1 === this.amountDrawSegments
-    const secondsPerDrawWidth = this.drawWidth / this.pixelsPerSecond
+    const secondsPerDrawWidth = this.drawWidth / this.settings.pixelsPerSecond
     const from = i * secondsPerDrawWidth
     const to = isLast ? this.audioLength : from + secondsPerDrawWidth
-    const width = isLast ? (to - from) * this.pixelsPerSecond : this.drawWidth
+    const width = isLast ? (to - from) * this.settings.pixelsPerSecond : this.drawWidth
     const buffer = await audio.getOrFetchAudioBuffer(
       from,
       to,
@@ -629,13 +634,13 @@ export default class Waveform extends Vue {
         const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
         console.time('render')
         el.innerHTML = svg
-        el.style.width = `${(to - from) * this.pixelsPerSecond}px`
+        el.style.width = `${(to - from) * this.settings.pixelsPerSecond}px`
         console.timeEnd('render')
         this.$emit('change-metadata', {
           totalWidth: this.totalWidth,
           amountDrawSegments: this.amountDrawSegments,
           // currentZoomLevel: this.zoomLevels[this.currentZoomLevelIndex],
-          pixelsPerSecond: this.pixelsPerSecond,
+          pixelsPerSecond: this.settings.pixelsPerSecond,
           audioLength: this.audioLength,
           drawWidth: this.drawWidth
         })
@@ -688,6 +693,7 @@ export default class Waveform extends Vue {
   margin-top 0px
   position relative
   max-width 100vw
+  will-change scroll-position
   overflow-x scroll
   overflow-y hidden
   &::-webkit-scrollbar

@@ -19,7 +19,7 @@
         </v-flex>
         <v-flex class="pt-3 display-area" offset-xs2 xs4 align-content-center>
           <v-btn class="play-button" @click="playPause" large icon flat>
-            <v-icon v-if="isPaused" x-large>play_arrow</v-icon>
+            <v-icon v-if="eventStore.isPaused" x-large>play_arrow</v-icon>
             <v-icon v-else x-large>pause</v-icon>
           </v-btn>
           <div class="current-time"></div>
@@ -48,13 +48,13 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
 import audio from '../service/audio'
-import { toTime, eventStore } from '../store/transcript'
+import eventBus from '../service/event-bus'
+import { toTime, eventStore, playAllFrom, pause } from '../store/transcript'
 import { requestFrameAsync } from '../util/index'
 
 @Component
 export default class PlayerBar extends Vue {
 
-  isPaused = true
   eventStore = eventStore
   audioStore = audio.store
   currentTime = eventStore.audioElement.currentTime
@@ -63,12 +63,10 @@ export default class PlayerBar extends Vue {
   toTime = toTime
 
   playPause(e: Event) {
-    if (this.isPaused) {
-      this.eventStore.playAllFrom = eventStore.audioElement.currentTime
-      eventStore.audioElement.play()
+    if (eventStore.isPaused) {
+      playAllFrom(eventStore.audioElement.currentTime)
     } else {
-      this.eventStore.playAllFrom = null
-      eventStore.audioElement.pause()
+      pause()
     }
   }
 
@@ -93,33 +91,15 @@ export default class PlayerBar extends Vue {
     }, '' as string)
   }
 
+  async onChangeTime(t: number) {
+    await requestFrameAsync()
+    this.updateTimeDisplay(t, this.$el.querySelector('.current-time') as HTMLElement)
+  }
+
   mounted() {
-    eventStore.audioElement.addEventListener('play', () => {
-      this.isPaused = false
-      const t = eventStore.audioElement.currentTime
-      const e = this.$el.querySelector('.current-time') as HTMLElement
-      const startTime = performance.now()
-      const step = () => {
-        const ellapsed = (performance.now() - startTime) / 1000 * eventStore.audioElement.playbackRate
-        if (ellapsed >= .005) {
-          this.updateTimeDisplay(t + ellapsed, e)
-        }
-        if (this.isPaused === false) {
-          requestAnimationFrame(step)
-        }
-      }
-      step()
-    })
-    eventStore.audioElement.addEventListener('pause', () => {
-      this.isPaused = true
-    })
-    eventStore.audioElement.addEventListener('seeking', async (e) => {
-      await requestFrameAsync()
-      this.updateTimeDisplay(
-        eventStore.audioElement.currentTime,
-        this.$el.querySelector('.current-time') as HTMLElement
-      )
-    })
+    eventBus.$on('updateTime', this.onChangeTime)
+    eventBus.$on('scrubAudio', this.onChangeTime)
+    this.onChangeTime(eventStore.currentTime)
   }
 }
 </script>
