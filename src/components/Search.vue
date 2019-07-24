@@ -104,7 +104,8 @@ export default class Search extends Vue {
       if (e.key === 'f') {
         e.preventDefault()
         e.stopPropagation();
-        (this.$refs.input as any).focus()
+        (this.$refs.input as HTMLInputElement).focus();
+        (this.$refs.input as HTMLInputElement).select();
       }
     }))
   }
@@ -265,5 +266,6 @@ input
   display none
   width 100%
   outline 0
+  z-index 1
 </style>
 
