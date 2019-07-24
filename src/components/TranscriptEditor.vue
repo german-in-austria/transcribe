@@ -69,24 +69,26 @@ export default class TranscriptEditor extends Vue {
   isEventSelected = isEventSelected
 
   @Watch('userState.viewingTranscriptEvent')
-  doScrollToEvent(e: LocalTranscriptEvent) {
+  doScrollToEvent(e?: LocalTranscriptEvent|null) {
     // right in the middle
-    const i = findEventById(e.eventId) - Math.floor(defaultLimit / 2)
-    this.currentIndex = Math.max(0, i)
-    this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
-    this.$nextTick(() => {
-      requestAnimationFrame(() => {
-        const el = this.$el.querySelector('.segment-selected')
-        const c = this.$refs.tracks
-        const inner = this.$refs.inner
-        if (c instanceof HTMLElement && el instanceof HTMLElement && inner instanceof HTMLElement) {
-          inner.style.transition = '.3s'
-          this.innerLeft = el.offsetLeft * -1 + c.clientWidth / 2 - el.clientWidth / 2
-          setTimeout(() => { inner.style.transition = 'none' }, 300)
-          this.debouncedEmitScroll()
-        }
+    if (e !== null && e !== undefined) {
+      const i = findEventById(e.eventId) - Math.floor(defaultLimit / 2)
+      this.currentIndex = Math.max(0, i)
+      this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
+      this.$nextTick(() => {
+        requestAnimationFrame(() => {
+          const el = this.$el.querySelector('.segment-selected')
+          const c = this.$refs.tracks
+          const inner = this.$refs.inner
+          if (c instanceof HTMLElement && el instanceof HTMLElement && inner instanceof HTMLElement) {
+            inner.style.transition = '.3s'
+            this.innerLeft = el.offsetLeft * -1 + c.clientWidth / 2 - el.clientWidth / 2
+            setTimeout(() => { inner.style.transition = 'none' }, 300)
+            this.debouncedEmitScroll()
+          }
+        })
       })
-    })
+    }
   }
 
   @Watch('eventStore.events')
