@@ -55,8 +55,11 @@ img[lazy=loaded] {
   align-self: baseline;
   max-height: 400px;
 }
+.theme--dark.v-toolbar{
+  background-color: #191918 !important;
+}
 .v-btn i {
-  font-size: 1.4em !important;
+  font-size: 1.2em !important;
 }
 .v-menu__content, .context-menu,
 .v-autocomplete__content.v-menu__content, .v-autocomplete__content.v-menu__content .v-card {
