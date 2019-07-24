@@ -5,7 +5,7 @@
     class="waveform-outer"
     :style="containerStyle"
     :class="{ disabled, loading }">
-    <v-layout class="pa-3" style="position: relative;">
+    <!-- <v-layout class="pa-3" style="position: relative;">
       <v-flex xs2 text-xs-left>
         <label for="scaleFactorY" class="caption grey--text lighten-2">
           Gain
@@ -39,7 +39,7 @@
           </option>
         </select>
       </v-flex>
-    </v-layout>
+    </v-layout> -->
     <div
       class="wave-form"
       :style="{height: `${height}px`, width: `${totalWidth}px`}"
@@ -675,13 +675,12 @@ export default class Waveform extends Vue {
 .disabled
 .loading
   cursor progress
-  opacity .5
+  pointer-events none
 .wave-form-segment
   transform-origin center
   position absolute
   overflow hidden
 .wave-form
-  border-top 1px solid rgba(255,255,255,.1)
   margin-top 0px
   position relative
   max-width 100vw

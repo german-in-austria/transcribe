@@ -27,20 +27,18 @@ function undoRedoListener(e: KeyboardEvent) {
     e.preventDefault()
     const action = undo()
     if (action !== undefined) {
-      const as = action.before.length > 1 ? action.before : action.after
-      selectEvents(as)
-      scrollToAudioEvent(as[0])
-      scrollToTranscriptEvent(as[0])
+      selectEvents(action.before)
+      scrollToAudioEvent(action.before[0])
+      scrollToTranscriptEvent(action.before[0])
     }
   } else if (d.redo === true) {
     e.stopPropagation()
     e.preventDefault()
     const action = redo()
     if (action !== undefined) {
-      const as = action.before.length > 1 ? action.before : action.after
-      selectEvents(as)
-      scrollToAudioEvent(as[0])
-      scrollToTranscriptEvent(as[0])
+      selectEvents(action.after)
+      scrollToAudioEvent(action.after[0])
+      scrollToTranscriptEvent(action.after[0])
     }
   }
 }

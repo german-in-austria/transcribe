@@ -1,6 +1,6 @@
 <template>
   <div class="fill-height">
-    <v-toolbar class="topbar elevation-0" fixed app>
+    <v-toolbar class="divide-after elevation-0" fixed app>
       <div>{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
       <v-spacer></v-spacer>
       <div>

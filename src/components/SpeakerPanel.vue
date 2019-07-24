@@ -62,7 +62,7 @@ export default class SpeakerPanel extends Vue {
 
   get theme() {
     if (this.settings.darkMode) {
-      return { background: 'rgb(50, 50, 50)' }
+      return {}
     } else {
       return { background: '#efefef' }
     }

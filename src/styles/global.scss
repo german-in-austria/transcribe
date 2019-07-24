@@ -76,8 +76,16 @@ img[lazy=loaded] {
   min-width: 40px;
   margin-left: -10px;
 }
+.v-navigation-drawer{
+  background: #272727 !important;
+  opacity: .95;
+  border-left: 1px solid rgba(255,255,255,.075);
+}
 .v-navigation-drawer__border{
   display: none;
+}
+.v-navigation-drawer .v-tabs__bar.theme--dark{
+  background-color: transparent
 }
 .v-menu__content .v-list--dense:not(.list--two-line) a,
 .context-menu .v-list--dense:not(.v-list--two-line) a,
@@ -86,10 +94,30 @@ img[lazy=loaded] {
   height: 33px !important;
 }
 .v-tabs__item{
-  background: rgba(0,0,0,.2);
+  background: rgba(0,0,0,.4);
 }
 .v-tabs__item--active {
   background: transparent
+}
+.theme--dark.application {
+  background: #191919 !important;
+}
+.divide-after:after {
+  content: " ";
+  display: block;
+  border-top: 1px solid rgba(255,255,255,.15);
+  width: calc(100% - 20px);
+  position: absolute;
+  left: 10px;
+}
+.divide-before:before{
+  content: " ";
+  display: block;
+  border-top: 1px solid rgba(255,255,255,.15);
+  width: calc(100% - 20px);
+  position: absolute;
+  left: 10px;
+  margin-top: -10px
 }
 .application.theme--dark .text--disabled,
 .theme--dark.v-list .v-list--disabled {

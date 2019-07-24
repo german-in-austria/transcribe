@@ -1,11 +1,6 @@
 <template>
   <div class="search-results-container">
     <div
-      v-if="eventStore.selectedSearchResult !== null && eventStore.searchResults.length > 0"
-      :style="{left: eventStore.selectedSearchResult.startTime / eventStore.audioElement.duration * 100 + '%'}"
-      class="result-overview result-selected"
-    />
-    <div
       @mouseover="handleResultMouseOver"
       @mouseout="handleResultMouseOut"
       @click="handleResultClick"
@@ -94,17 +89,39 @@ export default class SearchResults extends Vue {
     }
   }
 
+  getPercentageOffset(t: number) {
+    return t / eventStore.audioElement.duration * 100
+  }
+
+  @Watch('eventStore.selectedSearchResult')
+  onSelectedSearchResultChange() {
+    if (eventStore.selectedSearchResult !== null && eventStore.searchResults.length > 0) {
+      const c = this.$refs.resultContainer
+      if (c instanceof HTMLElement) {
+        const oldRes = c.querySelector('.result-selected')
+        if (oldRes) {
+          oldRes.classList.remove('result-selected')
+        }
+        const res = c.querySelector(`[data-event-id="${ eventStore.selectedSearchResult.eventId }"]`)
+        if (res) {
+          res.classList.add('result-selected')
+        }
+      }
+    }
+  }
+
   @Watch('eventStore.searchResults')
   onResultsChange() {
     const t = eventStore.searchTerm
     const c = this.$refs.resultContainer
-    const resHtml = eventStore.searchResults.map((r) => `
-      <div
+    const resHtml = eventStore.searchResults.map((r, i, l) => {
+      const left = this.getPercentageOffset(r.startTime)
+      return `<div
         data-event-id="${r.eventId}"
         class="result-overview"
-        style="left: ${ r.startTime / eventStore.audioElement.duration * 100}%">
+        style="left: ${ left }%">
       </div>`
-    )
+    })
     if (c instanceof Element) {
       c.classList.add('loading')
       c.innerHTML = ''
@@ -126,21 +143,25 @@ export default class SearchResults extends Vue {
 </script>
 <style lang="stylus">
 .search-results-container
-  position: relative
+  position relative
   .search-results-outer
     transition .3s opacity
     &.loading
       opacity .2
   .result-overview
-    background #447720
     width 7px
-    height 7px
+    height 25px
     position absolute
-    border-radius 1px
-    top -59px
+    border-radius 0
+    top -5px
+    border-left 1px solid white
+    opacity .3
+    transition .1s transform
     &.result-selected, &:hover
       z-index 1
-      background #6BBB32
+      opacity 1
     &.result-selected
-      box-shadow 0 0 30px #6bbb32
+      width 1px
+      border-width 2px
+      box-shadow 0 0 30px white
 </style>

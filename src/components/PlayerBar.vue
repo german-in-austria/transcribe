@@ -86,7 +86,7 @@ export default class PlayerBar extends Vue {
 
   get theme() {
     if (this.settings.darkMode) {
-      return { background: '#383838' }
+      return {}
     } else {
       return { background: '#efefef' }
     }
