@@ -501,11 +501,11 @@ export default class Waveform extends Vue {
   }
 
   @Watch('userState.viewingAudioEvent')
-  doScrollToSegment(e: LocalTranscriptEvent) {
+  doScrollToSegment(e?: LocalTranscriptEvent|null) {
     if (eventStore.playAllFrom !== null) {
       this.disableAutoScrollDuringPlayback()
     }
-    if (e !== null) {
+    if (e !== null && e !== undefined) {
       const duration = e.endTime - e.startTime
       const offset = (e.startTime + duration / 2) * settings.pixelsPerSecond
       const targetOffset = offset - this.$el.clientWidth / 2
@@ -681,6 +681,7 @@ export default class Waveform extends Vue {
   position absolute
   overflow hidden
 .wave-form
+  border-top 1px solid rgba(255,255,255,.1)
   margin-top 0px
   position relative
   max-width 100vw
