@@ -225,7 +225,6 @@ export default class Editor extends Vue {
 
   errors: LocalTranscriptEvent[] = []
   eventStore = eventStore
-  findEventAt = findEventAt
   playEvent = playEvent
   getSelectedEvent = getSelectedEvent
   isEventSelected = isEventSelected
@@ -315,7 +314,7 @@ export default class Editor extends Vue {
   // where do i put them?
   async handleWaveformKey(e: KeyboardEvent) {
     if (e.key === 's') {
-      const eventUnderPlayHead = this.findEventAt(eventStore.currentTime)
+      const eventUnderPlayHead = findEventAt(eventStore.currentTime)
       if (eventUnderPlayHead === undefined) {
         const newEvent = this.addEvent(eventStore.currentTime)[0]
         await this.$nextTick()
