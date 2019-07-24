@@ -1,6 +1,6 @@
 # Transcribe
 
-A browser based transcription tool.
+A browser based audio transcription tool.
 
 ## Goals
 
@@ -8,7 +8,8 @@ A browser based transcription tool.
 - smooth, native-class user experience
 - independence from back end, can be used stand-alone.
 - no native modules, everything must work in-browser.
-- basic phonetic analysis tools
+- basic phonetic analysis tools.
+- compatibility with [exmaralda](https://exmaralda.org/) file formats.
 
 ## Setup
 
@@ -27,7 +28,7 @@ or
 
 ### JavaScript Ogg Bitstream Parser
 
-Parses Ogg Headers and Ogg Pages in JS. Useful for working with large OGG files that are impractical to decode all at once.
+Parses Ogg Headers and Ogg Pages in JS. Useful for working with large OGG files that are impractical to decode all at once. More Info here: <https://www.xiph.org/ogg/doc/framing.html>
 
 ### AudioBuffer to SVG Waveform conversion library
 
