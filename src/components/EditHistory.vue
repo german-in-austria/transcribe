@@ -32,17 +32,22 @@
             </v-list-tile-sub-title>
           </v-list-tile-content>
           <v-list-tile-content v-if="item.type === 'JOIN'">
-            <v-list-tile-title class="sidebar-title">join segments</v-list-tile-title>
+            <v-list-tile-title class="sidebar-title">
+              join {{ item.before.length }} segments
+            </v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
-              {{ item.before.length }} segments
+              at {{ toTime(item.after[0].startTime) }} to {{ toTime(item.after[0].endTime) }}
             </v-list-tile-sub-title>
           </v-list-tile-content>
           <v-list-tile-content v-else-if="item.type === 'DELETE'">
-            <v-list-tile-title class="sidebar-title">delete segment</v-list-tile-title>
+            <v-list-tile-title v-if="item.before.length === 1" class="sidebar-title">
+              delete segment
+            </v-list-tile-title>
+            <v-list-tile-title v-else>
+              delete {{ item.before.length }} segments
+            </v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
-              <div class="inner" :key="i" v-for="(se, i) in item.before[0].speakerEvents">
-                {{ i }}: {{ se.tokens.map(t => t.tiers[defaultTier].text).join(' ') }}
-              </div>
+              at {{ toTime(item.before[0].startTime) }}
             </v-list-tile-sub-title>
           </v-list-tile-content>
           <v-list-tile-content v-else-if="item.type === 'ADD'">
