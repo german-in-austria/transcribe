@@ -544,7 +544,7 @@ export function deleteEvent(event: LocalTranscriptEvent): HistoryEventAction {
   }
 }
 
-export function splitEvent(event: LocalTranscriptEvent, splitAt: number): HistoryEventAction[] {
+export function splitEvent(event: LocalTranscriptEvent, splitAt: number): HistoryEventAction {
   const i = findEventById(event.eventId)
   const before = clone(eventStore.events[i])
   const leftEvent: LocalTranscriptEvent = {
@@ -558,22 +558,13 @@ export function splitEvent(event: LocalTranscriptEvent, splitAt: number): Histor
     speakerEvents: {}
   }
   eventStore.events.splice(i, 1, leftEvent, rightEvent)
-  return [
-    {
-      id: _.uniqueId(),
-      apply: true,
-      type: 'RESIZE',
-      before: [ before ],
-      after: [ clone(leftEvent) ]
-    },
-    {
-      id: _.uniqueId(),
-      apply: true,
-      type: 'ADD',
-      before: [],
-      after: [ clone(rightEvent) ]
-    }
-  ]
+  return {
+    id: _.uniqueId(),
+    apply: true,
+    type: 'SPLIT',
+    before: [ before ],
+    after: [ clone(leftEvent), clone(rightEvent) ]
+  }
 }
 
 export function findNextEventAt(seconds: number, events = eventStore.events): LocalTranscriptEvent|undefined {
@@ -878,9 +869,11 @@ export async function saveChangesToServer() {
       serverDeletionsAndErrorsAndInserts: _(serverChanges.aTokens).toArray().filter((t) => {
         return t.newStatus === 'deleted' || t.newStatus === 'inserted' || t.newStatus === 'error'
       }).value(),
-      groupedErrors: _(serverChanges.aTokens).toArray().groupBy(t => {
-        return t.error
-      }).value()
+      groupedErrors: _(serverChanges.aTokens)
+        .toArray()
+        .filter(t => t.error !== undefined)
+        .groupBy(t => t.error)
+        .value()
     })
     eventStore.events = serverTranscriptToLocal(updateServerTranscriptWithChanges(serverChanges))
   }

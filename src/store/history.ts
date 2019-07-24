@@ -1,17 +1,56 @@
-import { LocalTranscriptEvent, replaceEvents } from './transcript'
+import {
+  LocalTranscriptEvent,
+  replaceEvents,
+  selectEvents,
+  scrollToAudioEvent,
+  scrollToTranscriptEvent
+} from './transcript'
+import { isUndoOrRedo } from '../util'
 import _ from 'lodash'
 
 export interface HistoryEventAction {
   id: string
-  type: 'RESIZE'|'DELETE'|'CHANGE_TOKENS'|'ADD'|'JOIN'|'INSERT'
+  type: 'RESIZE'|'DELETE'|'CHANGE_TOKENS'|'ADD'|'JOIN'|'INSERT'|'SPLIT'
   apply: boolean
   before: LocalTranscriptEvent[]
   after: LocalTranscriptEvent[]
 }
 
 export let history = {
-  actions: [] as HistoryEventAction[],
-  undoListener: (() => null) as (e: KeyboardEvent) => any
+  actions: [] as HistoryEventAction[]
+}
+
+function undoRedoListener(e: KeyboardEvent) {
+  const d = isUndoOrRedo(e)
+  if (d.undo === true) {
+    e.stopPropagation()
+    e.preventDefault()
+    const action = undo()
+    if (action !== undefined) {
+      const as = action.before.length > 1 ? action.before : action.after
+      selectEvents(as)
+      scrollToAudioEvent(as[0])
+      scrollToTranscriptEvent(as[0])
+    }
+  } else if (d.redo === true) {
+    e.stopPropagation()
+    e.preventDefault()
+    const action = redo()
+    if (action !== undefined) {
+      const as = action.before.length > 1 ? action.before : action.after
+      selectEvents(as)
+      scrollToAudioEvent(as[0])
+      scrollToTranscriptEvent(as[0])
+    }
+  }
+}
+
+export function startListening() {
+  document.addEventListener('keydown', undoRedoListener)
+}
+
+export function stopListening() {
+  document.removeEventListener('keydown', undoRedoListener)
 }
 
 export function canUndo(): boolean {

@@ -41,20 +41,22 @@ export function fileToTextAndName(f: File): Promise<{ t: string, n: string }> {
   })
 }
 
-export function isUndoOrRedo(fn: (e: KeyboardEvent, d: UndoRedo) => any) {
-  return (e: KeyboardEvent) => {
-    if (platform() === 'mac') {
-      if (e.metaKey && !e.shiftKey && e.key === 'z') {
-        return fn(e, {undo: true, redo: false })
-      } else if (e.metaKey && e.shiftKey && e.key === 'z') {
-        return fn(e, {undo: false, redo: true })
-      }
+export function isUndoOrRedo(e: KeyboardEvent): UndoRedo {
+  if (platform() === 'mac') {
+    if (e.metaKey && !e.shiftKey && e.key === 'z') {
+      return { undo: true, redo: false }
+    } else if (e.metaKey && e.shiftKey && e.key === 'z') {
+      return { undo: false, redo: true }
     } else {
-      if (e.ctrlKey && e.key === 'z') {
-        return fn(e, {undo: true, redo: false })
-      } else if (e.ctrlKey && e.key === 'y') {
-        return fn(e, {undo: false, redo: true })
-      }
+      return { undo: false, redo: false }
+    }
+  } else {
+    if (e.ctrlKey && e.key === 'z') {
+      return { undo: true, redo: false }
+    } else if (e.ctrlKey && e.key === 'y') {
+      return { undo: false, redo: true }
+    } else {
+      return { undo: false, redo: false }
     }
   }
 }

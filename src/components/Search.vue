@@ -68,7 +68,7 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
-import { isCmdOrCtrl, isUndoOrRedo } from '../util'
+import { isCmdOrCtrl } from '../util'
 import {
   findNextEventAt,
   findPreviousEventAt,
@@ -84,7 +84,7 @@ import {
   LocalTranscriptToken,
   selectSearchResult
 } from '../store/transcript'
-import { history } from '../store/history';
+import * as history from '../store/history';
 
 @Component
 export default class Search extends Vue {
@@ -109,21 +109,14 @@ export default class Search extends Vue {
     }))
   }
 
-  stopUndoPropagation(e: KeyboardEvent) {
-    isUndoOrRedo((ev, d) => {
-      console.log('undo or redo', d)
-      e.preventDefault()
-    })
-  }
-
   onFocus() {
     this.focused = true
-    document.removeEventListener('keydown', history.undoListener)
+    history.stopListening()
   }
 
   onBlur() {
     this.focused = false
-    document.addEventListener('keydown', history.undoListener)
+    history.startListening()
   }
 
   playEvent() {

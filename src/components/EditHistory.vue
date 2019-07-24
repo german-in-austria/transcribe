@@ -21,6 +21,7 @@
             <v-icon v-if="item.type === 'ADD'">add_circle_outline</v-icon>
             <v-icon v-if="item.type === 'CHANGE_TOKENS'">edit</v-icon>
             <v-icon v-if="item.type === 'JOIN'">merge_type</v-icon>
+            <v-icon v-if="item.type === 'SPLIT'">call_split</v-icon>
           </v-list-tile-avatar>
           <v-list-tile-content v-if="item.type === 'RESIZE'">
             <v-list-tile-title class="sidebar-title">resize segment</v-list-tile-title>
@@ -46,6 +47,12 @@
           </v-list-tile-content>
           <v-list-tile-content v-else-if="item.type === 'ADD'">
             <v-list-tile-title class="sidebar-title">add segment</v-list-tile-title>
+            <v-list-tile-sub-title class="subtitle">
+              {{ toTime(item.after[0].startTime) }}
+            </v-list-tile-sub-title>
+          </v-list-tile-content>
+          <v-list-tile-content v-else-if="item.type === 'SPLIT'">
+            <v-list-tile-title class="sidebar-title">split segment</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">
               {{ toTime(item.after[0].startTime) }}
             </v-list-tile-sub-title>

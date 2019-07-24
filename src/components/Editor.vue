@@ -183,7 +183,7 @@ import * as fns from 'date-fns'
 import { saveAs } from 'file-saver'
 import * as humanSize from 'human-size'
 import audio from '../service/audio'
-import { requestFrameAsync, isUndoOrRedo, isCmdOrCtrl } from '../util'
+import { requestFrameAsync, isCmdOrCtrl } from '../util'
 
 import {
   getSelectedEvent,
@@ -205,7 +205,7 @@ import {
   scrollToAudioEvent
 } from '../store/transcript'
 
-import { history, undoable, undo, redo } from '../store/history'
+import { history, undoable, startListening } from '../store/history'
 import { serverTranscript } from '../service/backend-server'
 import { generateProjectFile } from '../service/backend-files'
 
@@ -355,28 +355,7 @@ export default class Editor extends Vue {
   }
 
   mounted() {
-    this.createUndoListener()
-  }
-
-  createUndoListener() {
-    history.undoListener = isUndoOrRedo((e, d) => {
-      if (d.undo === true) {
-        const action = undo()
-        if (action !== undefined) {
-          e.preventDefault()
-          selectEvents(action.before || action.after)
-          scrollToAudioEvent(action.before[0] || action.after[0])
-        }
-      } else if (d.redo === true) {
-        const action = redo()
-        if (action !== undefined) {
-          e.preventDefault()
-          selectEvents(action.after || action.before)
-          scrollToAudioEvent(action.after[0] || action.before[0])
-        }
-      }
-    })
-    document.addEventListener('keydown', history.undoListener)
+    startListening()
   }
 
   handleScroll() {
