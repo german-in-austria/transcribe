@@ -3,10 +3,10 @@
     <v-navigation-drawer
       stateless
       style="padding: 0"
-      v-model="drawer"
+      v-model="settings.showDrawer"
       right
       app>
-      <sidebar disable-resize-watcher :active="drawer"/>
+      <sidebar disable-resize-watcher :active="settings.showDrawer"/>
     </v-navigation-drawer>
     <v-content class="main-content">
       <v-container fluid fill-height class="pa-0">
@@ -95,7 +95,7 @@
           class="max-width"
           justify-center>
           <v-flex xs12>
-            <editor @toggle-drawer="e => drawer = !drawer" />
+            <editor @toggle-drawer="() => settings.showDrawer = !settings.showDrawer" />
             <router-view />
             <player-bar />
           </v-flex>
@@ -162,7 +162,6 @@ import {
 export default class App extends Vue {
 
   importingLocalFile = false
-  drawer = false
   xmlText: string|null = null
   xml: any = null
   settings = settings

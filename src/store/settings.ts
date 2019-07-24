@@ -4,6 +4,7 @@ import { platform, setNumberInBounds } from '../util'
 import { eventStore } from './transcript'
 
 export interface Settings {
+  showDrawer: boolean
   spectrogramGradient: number[][]
   spectrogramColors: Color[]
   waveFormColors: string[]
@@ -173,6 +174,7 @@ export function decreaseVolume(by: number) {
 }
 
 const settings: Settings = {
+  showDrawer: false,
   spectrogramGradient: makeGradient(spectrogramPresets[1].colors),
   spectrogramColors: spectrogramPresets[1].colors,
   waveFormColors: [ '#fb7676', '#6699CC' ],
