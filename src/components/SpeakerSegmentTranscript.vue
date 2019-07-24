@@ -62,7 +62,12 @@ import contenteditableDirective from 'vue-contenteditable-directive'
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
 import parseCsv from 'tiny-csv'
-import { clone, isEqualDeep, requestFrameAsync } from '../util'
+import {
+  clone,
+  isEqualDeep,
+  requestFrameAsync,
+  isUndoOrRedo
+} from '../util'
 import {
   LocalTranscriptEvent,
   LocalTranscriptToken,
