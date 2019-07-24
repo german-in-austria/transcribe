@@ -39,7 +39,7 @@ import Resizer from './helper/Resizer.vue'
 import ResizeParent from './helper/ResizeParent.vue'
 import { undoable } from '../store/history'
 import settings from '../store/settings'
-// tslint:disable-next-line:max-line-length
+
 import {
   playEvent,
   resizeEvents,
