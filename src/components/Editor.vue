@@ -205,7 +205,7 @@ import {
   scrollToAudioEvent
 } from '../store/transcript'
 
-import { history, undoable, startListening } from '../store/history'
+import { history, undoable, startListening as startUndoListener } from '../store/history'
 import { serverTranscript } from '../service/backend-server'
 import { generateProjectFile } from '../service/backend-files'
 
@@ -355,7 +355,15 @@ export default class Editor extends Vue {
   }
 
   mounted() {
-    startListening()
+    startUndoListener()
+    window.onbeforeunload = (e) => {
+      if (history.actions.length > 0) {
+        e.preventDefault()
+        // Chrome requires returnValue to be set
+        e.returnValue = ''
+        alert('You have unsaved changes. Press CANCEL to save.')
+      }
+    }
   }
 
   handleScroll() {
