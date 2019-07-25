@@ -25,6 +25,7 @@
       <speaker-segment-transcript
         @focus="(e, event) => $emit('focus', e, event)"
         class="tokens"
+        :index="index"
         :previous-event="previousEvent"
         :next-event="nextEvent"
         :event="event"
