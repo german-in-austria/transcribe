@@ -492,6 +492,8 @@ export default class Waveform extends Vue {
                 animationDuration
               )
               requestAnimationFrame(step)
+            } else {
+              el.scrollLeft = targetOffset
             }
           }
           requestAnimationFrame(step)
