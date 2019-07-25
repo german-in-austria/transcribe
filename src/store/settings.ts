@@ -5,6 +5,7 @@ import { eventStore } from './transcript'
 
 export interface Settings {
   showDrawer: boolean
+  contrast: number
   spectrogramGradient: number[][]
   spectrogramColors: Color[]
   waveFormColors: string[]
@@ -175,6 +176,7 @@ export function decreaseVolume(by: number) {
 
 const settings: Settings = {
   showDrawer: false,
+  contrast: 1,
   spectrogramGradient: makeGradient(spectrogramPresets[1].colors),
   spectrogramColors: spectrogramPresets[1].colors,
   waveFormColors: [ '#fb7676', '#6699CC' ],

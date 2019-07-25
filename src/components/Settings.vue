@@ -41,6 +41,12 @@
                     <v-switch v-model="settings.darkMode" />
                   </v-list-tile-action>
                 </v-list-tile>
+                <v-list-tile>
+                  <v-list-tile-title>Theme Contrast</v-list-tile-title>
+                  <v-list-tile-action>
+                    <v-slider v-model="settings.contrast" :step=".1" :min="1" :max="1.5" />
+                  </v-list-tile-action>
+                </v-list-tile>
                 <v-subheader>Visualization</v-subheader>
                 <v-divider />
                 <v-list-tile>
