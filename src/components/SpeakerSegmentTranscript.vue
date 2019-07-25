@@ -28,6 +28,8 @@
       @focus="onFocus"
       @input="updateLocalTokens"
       @blur="updateAndCommitLocalTokens"
+      @keydown.tab.shift.exact="focusPreviousFrom(defaultTier)"
+      @keydown.tab.exact="focusNextFrom(defaultTier)"
       @keydown.enter.meta="playEvent(event)"
       @keydown.enter.exact.stop.prevent="viewAudioEvent(event)"
       @copy.prevent="copyTokens"
@@ -48,6 +50,8 @@
         v-text="getTierFreeTextText(tier.id)"
         contenteditable="true"
         class="secondary-free-text-tier-text"
+        @keydown.tab.shift.exact="focusPreviousFrom(tier.id)"
+        @keydown.tab.exact="focusNextFrom(tier.id)"
         @blur="(e) => updateAndCommitLocalEventTier(e, tier.id, tier.type)"
         @focus="(e) => $emit('focus', e, event)"
         @keydown.enter.meta="playEvent(event)"
@@ -107,6 +111,14 @@ export default class SpeakerSegmentTranscript extends Vue {
   playEvent = playEvent
   updateSpeakerEvent = updateSpeakerEvent
 
+  focusPreviousFrom(tier: string) {
+    console.log('prev', tier, eventStore.metadata.tiers, this.speaker, eventStore.metadata.speakers)
+  }
+
+  focusNextFrom(tier: string) {
+    console.log('next', tier, eventStore.metadata.tiers, this.speaker, eventStore.metadata.speakers)
+  }
+
   // TODO: redundant?
   @Watch('event')
   onUpdateEvent(newEvent: LocalTranscriptEvent) {
@@ -135,6 +147,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   onFocus(e: FocusEvent) {
+    e.preventDefault()
     this.$emit('focus', e, this.event)
     console.log('this.$el.getBoundingClientRect()', this.$el.getBoundingClientRect())
   }

@@ -17,7 +17,6 @@
             :key="event.eventId"
             :is-selected="isEventSelected(event.eventId)"
             :class="['segment', isEventSelected(event.eventId) && 'segment-selected']"
-            @focus="(e, event) => doScrollToEvent(event)"
             @element-unrender="(width) => handleUnrender(width, i, event.eventId)"
             @element-render="(width) => handleRender(width, i, event.eventId)"
           />
