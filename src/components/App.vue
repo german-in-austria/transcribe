@@ -1,5 +1,10 @@
 <template>
-  <v-app :style="{ filter: `contrast(${ settings.contrast })` }" :dark="settings.darkMode">
+  <v-app
+    :style="settings.contrast > 1
+      ? `filter: contrast(${settings.contrast})`
+      : ''"
+    :dark="settings.darkMode"
+    >
     <v-navigation-drawer
       stateless
       style="padding: 0"
