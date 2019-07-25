@@ -92,6 +92,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   @Prop() nextEvent: LocalTranscriptEvent|undefined
   @Prop() previousEvent: LocalTranscriptEvent|undefined
   @Prop() speaker: number
+  @Prop() index: number
 
   tierHeight = 25
   localEvent = clone(this.event)
@@ -280,10 +281,16 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   commit() {
     if (
-      // it doesn’t exist or
-      this.event.speakerEvents[this.speaker] === undefined ||
-      // it has changed
-      !isEqualDeep(this.localTokens, this.event.speakerEvents[this.speaker].tokens)
+      // it’s new and not empty
+      (
+        this.event.speakerEvents[this.speaker] === undefined &&
+        this.localTokens.length !== 0
+      ) ||
+      // it’s old and it has changed
+      (
+        this.event.speakerEvents[this.speaker] !== undefined &&
+        !isEqualDeep(this.localTokens, this.event.speakerEvents[this.speaker].tokens)
+      )
     ) {
       // perform update
       undoable(updateSpeakerEvent(this.localEvent, this.speaker, this.localTokens))
