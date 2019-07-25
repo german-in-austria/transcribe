@@ -617,7 +617,6 @@ export function pause() {
 }
 
 function emitUpdateTimeUntilPaused(t: number, maxT?: number) {
-  console.log('emit update time until paused')
   const startTime = performance.now()
   eventStore.currentTime = t
   eventBus.$emit('updateTime', t)
@@ -642,7 +641,9 @@ function emitUpdateTimeUntilPaused(t: number, maxT?: number) {
 }
 
 export function playAllFrom(t: number) {
+  pause()
   eventStore.playAllFrom = t
+  eventStore.audioElement.currentTime = t
   eventStore.audioElement.play()
   eventStore.isPaused = false
   eventBus.$emit('playAudio', t)

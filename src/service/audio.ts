@@ -459,13 +459,6 @@ async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuff
     console.log({startPage, endPage})
     throw new Error('Could not find all required pages')
   } else {
-    // console.log({
-    //   pageDuration: endPage.timestamp - startPage.timestamp,
-    //   start: overflowStart,
-    //   end: to - from + overflowStart,
-    //   duration: to - from
-    // })
-    // console.log('bytes', endPage.byteOffset - startPage.byteOffset)
     const decodedBuffer = await decodeBufferByteRange(startPage.byteOffset, endPage.byteOffset, buffer)
     // TODO: WHY .2?
     const overflowStart = Math.max(0, from - startPage.timestamp + .2)
