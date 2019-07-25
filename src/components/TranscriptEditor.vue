@@ -17,6 +17,7 @@
             :key="event.eventId"
             :is-selected="isEventSelected(event.eventId)"
             :class="['segment', isEventSelected(event.eventId) && 'segment-selected']"
+            @focus="(e, event) => doScrollToEvent(event)"
             @element-unrender="(width) => handleUnrender(width, i, event.eventId)"
             @element-render="(width) => handleRender(width, i, event.eventId)"
           />
@@ -71,8 +72,9 @@ export default class TranscriptEditor extends Vue {
 
   @Watch('userState.viewingTranscriptEvent')
   doScrollToEvent(e?: LocalTranscriptEvent|null) {
-    // right in the middle
+    console.log('do scroll to event', e)
     if (e !== null && e !== undefined) {
+      // right in the middle
       const i = findEventById(e.eventId) - Math.floor(defaultLimit / 2)
       this.currentIndex = Math.max(0, i)
       this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)

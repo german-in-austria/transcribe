@@ -25,7 +25,7 @@
       </span>
     </div>
     <div
-      @focus="(e) => $emit('focus', e, event)"
+      @focus="onFocus"
       @input="updateLocalTokens"
       @blur="updateAndCommitLocalTokens"
       @keydown.enter.meta="playEvent(event)"
@@ -132,6 +132,11 @@ export default class SpeakerSegmentTranscript extends Vue {
     } else {
       // nothing is selected, copy nothing.
     }
+  }
+
+  onFocus(e: FocusEvent) {
+    this.$emit('focus', e, this.event)
+    console.log('this.$el.getBoundingClientRect()', this.$el.getBoundingClientRect())
   }
 
   copyTokens(e: ClipboardEvent) {
