@@ -224,7 +224,7 @@ export default class Search extends Vue {
   findNext() {
     const selectedEvent = eventStore.events[findEventById(eventStore.selectedEventIds[0])]
     const e = findNextEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults)
-    if (e) {
+    if (e !== undefined) {
       this.goToResult(e)
     } else {
       this.goToResult(_(eventStore.searchResults).first())
@@ -233,7 +233,7 @@ export default class Search extends Vue {
   findPrevious() {
     const selectedEvent = eventStore.events[findEventById(eventStore.selectedEventIds[0])]
     const e = findPreviousEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults)
-    if (e) {
+    if (e !== undefined) {
       this.goToResult(e)
     } else {
       this.goToResult(_(eventStore.searchResults).last())

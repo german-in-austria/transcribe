@@ -573,7 +573,7 @@ export function findNextEventAt(seconds: number, events = eventStore.events): Lo
 
 export function findPreviousEventAt(seconds: number, events = eventStore.events): LocalTranscriptEvent|undefined {
   const i = _(events).findLastIndex((e) => e.startTime < seconds)
-  return events[Math.max(0, i - 1)]
+  return events[i - 1]
 }
 
 export function findEventAt(seconds: number): LocalTranscriptEvent|undefined {
