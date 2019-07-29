@@ -637,7 +637,7 @@ function emitUpdateTimeUntilPaused(t: number, maxT?: number) {
       return requestAnimationFrame(step)
     }
   }
-  step(performance.now())
+  return step(performance.now())
 }
 
 export function playAllFrom(t: number) {
