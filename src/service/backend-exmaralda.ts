@@ -315,16 +315,19 @@ export default function parseTree(xmlTree: BasicNode): ParsedExmaraldaXML {
         return {
           timeline: commonTimelineByTli,
           speakers: tiersBySpeakers,
-          speakerTiers: _(tiersBySpeakers).reduce((m, el, i, l) => {
-            return m.concat(_(el).map(v => ({
-              speaker_name: i,
-              select_for_import: false,
-              to_speaker: null,
-              to_tier_type: null,
-              to_tier_name: null,
-              token_tier_type: null,
-              ...v
-            })).value())
+          speakerTiers: _(tiersBySpeakers)
+            .reduce((m, el, i, l) => {
+              return m.concat(_(el).map(v => ({
+                speaker_name: i,
+                select_for_import: false,
+                to_speaker: null,
+                to_tier_type: null,
+                to_tier_name: null,
+                token_tier_type: null,
+                ...v
+              }))
+              .sortBy((st) => st.display_name)
+              .value())
           }, [] as any[])
         }
       } else {

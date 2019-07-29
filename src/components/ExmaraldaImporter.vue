@@ -114,123 +114,141 @@
                 lazy-validation
                 v-model="tiersValid">
                 <v-layout
+                  column
                   v-for="(speakerTier, i) in importable.speakerTiers"
                   :key="i"
                   class="pl-3 pt-3">
-                  <v-flex class="pl-3" xs1>
-                    <v-checkbox
-                      class="pt-0"
-                      @change="updateIsEverthingSelected"
-                      v-model="speakerTier.select_for_import"
-                    />
-                  </v-flex>
-                  <v-flex xs5 :class="[!speakerTier.select_for_import && 'disabled']">
-                    <h4 class="ellipsis">{{ speakerTier.display_name }} <span class="caption grey--text">— {{ speakerTier.speaker_name }}</span></h4>
-                    <v-chip small>
-                      <label>category</label>{{ speakerTier.category }}
-                    </v-chip>
-                    <v-chip small>
-                      <label>type</label> {{ speakerTier.type }}
-                    </v-chip>
-                    <v-chip small>
-                      <label>events</label> {{ speakerTier.events.length }}
-                    </v-chip>
-                  </v-flex>
-                  <v-flex xs2 :class="[!speakerTier.select_for_import && 'disabled']" class="pl-2">
-                    <v-select
-                      :rules="[ speakerTier.select_for_import && speakerTier.to_speaker === null && 'Select a Speaker' ]"
-                      dense
-                      label="Speaker"
-                      v-model="speakerTier.to_speaker"
-                      return-object
-                      item-value="pk"
-                      item-text="Kuerzel"
-                      :items="surveySpeakers">
-                      <template slot="item" slot-scope="item">
-                        <v-list-tile-content>
-                          <v-list-tile-title>
-                            {{ item.item.Kuerzel }}
-                          </v-list-tile-title>
-                        </v-list-tile-content>
-                        <v-list-tile-action-text class="pl-5">
-                          {{ item.item.Vorname }} {{ item.item.Name }}, {{ item.item.Geburtsdatum }}
-                        </v-list-tile-action-text>
-                      </template>
-                    </v-select>
-                  </v-flex>
-                  <v-flex :class="[ !speakerTier.select_for_import && 'disabled' ]" xs2 class="pl-2">
-                    <v-select
-                      label="Tier Type"
-                      :value="speakerTier.to_tier_type"
-                      @input="(e) => updateTierType(speakerTier, e, i)"
-                      :disabled="speakerTier.to_speaker === null"
-                      :rules="[
-                        speakerTier.select_for_import === true &&
-                        speakerTier.to_tier_type === null &&
-                        'Select a Type'
-                        ,
-                        isDuplicateDefaultTierForSpeaker(speakerTier) &&
-                        'Select one Default Tier per Speaker'
-                      ]"
-                      :items="[{
-                        text: 'default',
-                        value: 'default',
-                        disabled: isDefaultTierSelectedForSpeaker(speakerTier.to_speaker),
-                        description: 'the base transcript'
-                      }, {
-                        text: 'token data',
-                        value: 'tokenized',
-                        description: 'metadata for tokens'
-                      }, {
-                        text: 'event based',
-                        value: 'freeText',
-                        description: 'event based, e.g. comments'
-                      }]"
-                      dense>
-                      <template slot="item" slot-scope="item">
-                        <v-list-tile-content>
-                          <v-list-tile-title>
-                            {{ item.item.text }}
-                          </v-list-tile-title>
-                        </v-list-tile-content>
-                        <v-list-tile-action-text class="pl-5">
-                          {{ item.item.description }}
-                        </v-list-tile-action-text>
-                      </template>
-                    </v-select>
-                  </v-flex>
-                  <v-flex :class="[ !speakerTier.select_for_import && 'disabled' ]" xs2 class="pl-2 pr-2">
-                    <!-- select which type of transcript the token tier is -->
-                    <v-select
-                      v-if="speakerTier.to_tier_type === 'tokenized' || speakerTier.to_tier_type === 'default'"
-                      label="Transcript Type"
-                      dense
-                      v-model="speakerTier.token_tier_type"
-                      :rules="[
-                        speakerTier.select_for_import && speakerTier.token_tier_type == null && 'Select a Transcript Type'
-                      ]"
-                      :items="tokenTiersAvailable(speakerTier.to_speaker)">
-                      <template slot="item" slot-scope="item">
-                        <v-list-tile-content>
-                          <v-list-tile-title>
-                            {{ item.item.text }}
-                          </v-list-tile-title>
-                        </v-list-tile-content>
-                        <v-list-tile-action-text class="pl-5">
-                          {{ item.item.description }}
-                        </v-list-tile-action-text>
-                      </template>
-                    </v-select>
-                    <!-- choose tier name, if it’s not the default tier -->
-                    <v-text-field
-                      v-else
-                      validate-on-blur
-                      label="Tier Name"
-                      :disabled="speakerTier.to_tier_type === null"
-                      v-model="speakerTier.to_tier_name"
-                      :rules="[ speakerTier.select_for_import && !speakerTier.to_tier_name && 'Specify a name' ]"
-                    />
-                  </v-flex>
+                  <v-layout>
+                    <v-flex class="pl-3" xs1>
+                      <v-checkbox
+                        class="pt-0"
+                        @change="updateIsEverthingSelected"
+                        v-model="speakerTier.select_for_import"
+                      />
+                    </v-flex>
+                    <v-flex xs5 :class="[!speakerTier.select_for_import && 'disabled']">
+                      <h4 class="ellipsis">{{ speakerTier.display_name }} <span class="caption grey--text">— {{ speakerTier.speaker_name }}</span></h4>
+                      <v-chip small>
+                        <label>category</label>{{ speakerTier.category }}
+                      </v-chip>
+                      <v-chip small>
+                        <label>type</label> {{ speakerTier.type }}
+                      </v-chip>
+                      <v-chip small>
+                        <label>events</label> {{ speakerTier.events.length }}
+                      </v-chip>
+                    </v-flex>
+                    <v-flex xs2 :class="[!speakerTier.select_for_import && 'disabled']" class="pl-2">
+                      <v-select
+                        :rules="[ speakerTier.select_for_import && speakerTier.to_speaker === null && 'Select a Speaker' ]"
+                        dense
+                        label="Speaker"
+                        v-model="speakerTier.to_speaker"
+                        return-object
+                        item-value="pk"
+                        item-text="Kuerzel"
+                        :items="surveySpeakers">
+                        <template slot="item" slot-scope="item">
+                          <v-list-tile-content>
+                            <v-list-tile-title>
+                              {{ item.item.Kuerzel }}
+                            </v-list-tile-title>
+                          </v-list-tile-content>
+                          <v-list-tile-action-text class="pl-5">
+                            {{ item.item.Vorname }} {{ item.item.Name }}, {{ item.item.Geburtsdatum }}
+                          </v-list-tile-action-text>
+                        </template>
+                      </v-select>
+                    </v-flex>
+                    <v-flex :class="[ !speakerTier.select_for_import && 'disabled' ]" xs2 class="pl-2">
+                      <v-select
+                        label="Tier Type"
+                        :value="speakerTier.to_tier_type"
+                        @input="(e) => updateTierType(speakerTier, e, i)"
+                        :disabled="speakerTier.to_speaker === null"
+                        :rules="[
+                          speakerTier.select_for_import === true &&
+                          speakerTier.to_tier_type === null &&
+                          'Select a Type'
+                          ,
+                          isDuplicateDefaultTierForSpeaker(speakerTier) &&
+                          'Select one Default Tier per Speaker'
+                        ]"
+                        :items="[{
+                          text: 'default',
+                          value: 'default',
+                          disabled: isDefaultTierSelectedForSpeaker(speakerTier.to_speaker),
+                          description: 'the base transcript'
+                        }, {
+                          text: 'token data',
+                          value: 'tokenized',
+                          description: 'metadata for tokens'
+                        }, {
+                          text: 'event based',
+                          value: 'freeText',
+                          description: 'event based, e.g. comments'
+                        }]"
+                        dense>
+                        <template slot="item" slot-scope="item">
+                          <v-list-tile-content>
+                            <v-list-tile-title>
+                              {{ item.item.text }}
+                            </v-list-tile-title>
+                          </v-list-tile-content>
+                          <v-list-tile-action-text class="pl-5">
+                            {{ item.item.description }}
+                          </v-list-tile-action-text>
+                        </template>
+                      </v-select>
+                    </v-flex>
+                    <v-flex :class="[ !speakerTier.select_for_import && 'disabled' ]" xs2 class="pl-2 pr-2">
+                      <!-- select which type of transcript the token tier it is -->
+                      <v-select
+                        v-if="speakerTier.to_tier_type === 'tokenized' || speakerTier.to_tier_type === 'default'"
+                        label="Transcript Type"
+                        dense
+                        v-model="speakerTier.token_tier_type"
+                        :rules="[
+                          speakerTier.select_for_import && speakerTier.token_tier_type == null && 'Select a Transcript Type'
+                        ]"
+                        :items="tokenTiersAvailable(speakerTier.to_speaker)">
+                        <template slot="item" slot-scope="item">
+                          <v-list-tile-content>
+                            <v-list-tile-title>
+                              {{ item.item.text }}
+                            </v-list-tile-title>
+                          </v-list-tile-content>
+                          <v-list-tile-action-text class="pl-5">
+                            {{ item.item.description }}
+                          </v-list-tile-action-text>
+                        </template>
+                      </v-select>
+                      <!-- choose tier name, if it’s not the default tier -->
+                      <v-text-field
+                        v-else
+                        validate-on-blur
+                        label="Tier Name"
+                        :disabled="speakerTier.to_tier_type === null"
+                        v-model="speakerTier.to_tier_name"
+                        :rules="[ speakerTier.select_for_import && !speakerTier.to_tier_name && 'Specify a name' ]"
+                      />
+                    </v-flex>
+                    <v-flex>
+                      <v-btn @click="togglePreview(speakerTier.id)" small round icon>
+                        <v-icon v-if="!isPreviewShown(speakerTier.id)">arrow_drop_down_down</v-icon>
+                        <v-icon v-else>arrow_drop_down_up</v-icon>
+                      </v-btn>
+                    </v-flex>
+                  </v-layout>
+                  <v-expand-transition>
+                    <v-layout v-if="isPreviewShown(speakerTier.id)">
+                      <div
+                        v-for="(i) in 10"
+                        :key="i">
+                        {{ speakerTier.events[i] ? speakerTier.events[i].text : '' }}
+                      </div>
+                    </v-layout>
+                  </v-expand-transition>
                 </v-layout>
               </v-form>
             </v-window-item>
@@ -335,9 +353,22 @@ export default class ExmaraldaImporter extends Vue {
 
   showMissingDefaultTierError = false
   isAnythingOrAllSelected: boolean|null = false
+  visiblePreviewTier: string|null = null
 
   async mounted() {
     this.surveys = await getSurveys()
+  }
+
+  isPreviewShown(id: string): boolean {
+    return this.visiblePreviewTier === id
+  }
+
+  togglePreview(id: string) {
+    if (this.visiblePreviewTier === id) {
+      this.visiblePreviewTier = null
+    } else {
+      this.visiblePreviewTier = id
+    }
   }
 
   updateFile(file: File|null) {
