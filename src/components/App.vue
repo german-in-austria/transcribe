@@ -301,22 +301,24 @@ export default class App extends Vue {
   }
 
   openFile() {
-    const x = document.createElement('input')
-    x.addEventListener('input', (e) => {
+    const el = document.createElement('input')
+    el.addEventListener('input', (e) => {
       console.log('change', e)
-      if (x.files !== null) {
-        if (x.files[0].name.endsWith('.transcript')) {
-          this.openProjectFile(x.files[0])
-        } else if (x.files[0].name.endsWith('.exb')) {
-          this.openExmaraldaFile(x.files[0])
+      if (el.files !== null) {
+        if (el.files[0].name.endsWith('.transcript')) {
+          this.openProjectFile(el.files[0])
+        } else if (el.files[0].name.endsWith('.exb')) {
+          this.openExmaraldaFile(el.files[0])
         } else {
           throw new Error('unrecognized file extension')
         }
       }
     })
-    x.type = 'file'
-    x.accept = '.transcript,.exb'
-    x.click()
+    el.type = 'file'
+    el.accept = '.transcript,.exb'
+    this.$nextTick(() => {
+      el.click()
+    })
   }
 
   initializeEmptyTranscript() {
