@@ -57,42 +57,41 @@ export function canUndo(): boolean {
 }
 
 export function goToInitialState() {
-  history.actions = history.actions.map(a => {
-    if (a.apply === true) {
+  jumpToStateIndex(-1)
+}
+
+function applyOrUnApplyUntil(si: number) {
+  return (a: HistoryEventAction, i: number) => {
+    if (si >= i && a.apply === false) {
+      redoAction(a)
+    } else if (si < i && a.apply === true) {
       undoAction(a)
     }
-    return { ...a, apply: false }
-  })
+  }
+}
+
+function jumpToStateIndex(target: number) {
+  if (target > - 1) {
+    const lastAppliedActionIndex = _.findLastIndex(history.actions, a => a.apply === true)
+    if (target < lastAppliedActionIndex) {
+      // undo: right to left, latest to oldest
+      _(history.actions).forEachRight(applyOrUnApplyUntil(target))
+    } else {
+      // redo: left to right, oldest to latest
+      _(history.actions).forEach(applyOrUnApplyUntil(target))
+    }
+    history.actions = history.actions.map((a, i) => ({ ...a,  apply: i <= target}))
+  } else {
+    // target is <= -1, go to initial state
+    _(history.actions).forEachRight(applyOrUnApplyUntil(target))
+    history.actions = history.actions.map((a, i) => ({ ...a,  apply: false}))
+  }
 }
 
 export function jumpToState(action: HistoryEventAction) {
   const ai = history.actions.findIndex((a) => a.id === action.id)
   // if the index was found.
-  if (ai > - 1) {
-    history.actions = history.actions.map((a, hi) => {
-      // everything before this action must
-      // be applied
-      if (ai >= hi) {
-        // side effect
-        if (a.apply === false) {
-          redoAction(a)
-        }
-        // mark applied in history
-        return { ...a, apply: true }
-      // everything after this action
-      // must NOT be applied
-      } else {
-        // side effect
-        if (a.apply === true) {
-          undoAction(a)
-        }
-        // mark UNapplied in history
-        return { ...a, apply: false }
-      }
-    })
-  } else {
-    // can’t jump to state that’s not on record.
-  }
+  jumpToStateIndex(ai)
 }
 
 function undoAction(a: HistoryEventAction) {
