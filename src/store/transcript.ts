@@ -463,14 +463,28 @@ export function resizeEvents(...es: LocalTranscriptEvent[]): HistoryEventAction 
 export function resizeEvent(id: number, startTime: number, endTime: number): HistoryEventAction {
   const i = findEventById(id)
   return resizeEvents({...eventStore.events[i], startTime, endTime})
+  // const i = findEventById(id)
+  // const before = clone(eventStore.events[i])
+  // console.log('params', startTime, endTime)
+  // console.log('before', before.startTime, before.endTime, before)
+  // eventStore.events[i].startTime = startTime
+  // eventStore.events[i].endTime = endTime
+  // const after = clone(eventStore.events[i])
+  // console.log('after', after.startTime, after.endTime, after)
+  // return {
+  //   id: _.uniqueId(),
+  //   apply: true,
+  //   type: 'RESIZE',
+  //   before: [ before ],
+  //   after: [ after ]
+  // }
 }
 
 export function insertEvent(e: LocalTranscriptEvent): HistoryEventAction {
-  const existingEventIndex = findEventById(e.eventId)
   const nextEvent = findNextEventAt(e.startTime)
   if (nextEvent !== undefined) {
     const i = findEventById(nextEvent.eventId)
-    eventStore.events.splice(i, existingEventIndex > -1 ? 1 : 0, e)
+    eventStore.events.splice(i, 0, e)
   } else {
     eventStore.events.push(e)
   }
@@ -512,23 +526,21 @@ export function deleteSelectedEvents(): HistoryEventAction {
     id: _.uniqueId(),
     apply: true,
     type: 'DELETE',
-    before: _(eventStore.selectedEventIds).map(deleteEventById).compact().flatMap(a => a.before).value(),
+    before: _(eventStore.selectedEventIds).map(deleteEventById).flatMap(a => a.before).value(),
     after: []
   }
 }
 
-export function deleteEvent(event: LocalTranscriptEvent): HistoryEventAction|undefined {
+export function deleteEvent(event: LocalTranscriptEvent): HistoryEventAction {
   const i = findEventById(event.eventId)
-  if (i > -1) {
-    const e = clone(eventStore.events[i])
-    eventStore.events.splice(i, 1)
-    return {
-      id: _.uniqueId(),
-      apply: true,
-      type: 'DELETE',
-      before: [ e ],
-      after: []
-    }
+  const e = clone(eventStore.events[i])
+  eventStore.events.splice(i, 1)
+  return {
+    id: _.uniqueId(),
+    apply: true,
+    type: 'DELETE',
+    before: [ e ],
+    after: []
   }
 }
 
@@ -692,7 +704,6 @@ function getEventsByIds(ids: number[]): LocalTranscriptEvent[] {
 export function replaceEvents(oldEvents: LocalTranscriptEvent[], newEvents: LocalTranscriptEvent[]) {
   oldEvents.forEach(deleteEvent)
   newEvents.forEach(insertEvent)
-  console.log('replaced', oldEvents, newEvents)
 }
 
 export function joinEvents(eventIds: number[]): HistoryEventAction {
