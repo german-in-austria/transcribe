@@ -234,19 +234,19 @@
                       />
                     </v-flex>
                     <v-flex>
-                      <v-btn @click="togglePreview(speakerTier.id)" small round icon>
-                        <v-icon v-if="!isPreviewShown(speakerTier.id)">arrow_drop_down_down</v-icon>
+                      <v-btn @click="toggleSpeakerTierPreview(speakerTier.id)" small round icon>
+                        <v-icon v-if="!isSpeakerTierPreviewShown(speakerTier.id)">arrow_drop_down_down</v-icon>
                         <v-icon v-else>arrow_drop_down_up</v-icon>
                       </v-btn>
                     </v-flex>
                   </v-layout>
                   <v-expand-transition>
-                    <v-layout v-if="isPreviewShown(speakerTier.id)">
-                      <div
+                    <v-layout v-if="isSpeakerTierPreviewShown(speakerTier.id)">
+                      <v-flex xs12
                         v-for="(i) in 10"
                         :key="i">
                         {{ speakerTier.events[i] ? speakerTier.events[i].text : '' }}
-                      </div>
+                      </v-flex>
                     </v-layout>
                   </v-expand-transition>
                 </v-layout>
@@ -359,11 +359,11 @@ export default class ExmaraldaImporter extends Vue {
     this.surveys = await getSurveys()
   }
 
-  isPreviewShown(id: string): boolean {
+  isSpeakerTierPreviewShown(id: string): boolean {
     return this.visiblePreviewTier === id
   }
 
-  togglePreview(id: string) {
+  toggleSpeakerTierPreview(id: string) {
     if (this.visiblePreviewTier === id) {
       this.visiblePreviewTier = null
     } else {
