@@ -46,7 +46,7 @@
             v-if="transcriptList === null && loggedIn === true"/>
             <v-flex v-if="transcriptList !== null">
               <v-layout justify-center row>
-              <v-flex class="pt-5" xs12 md6>
+              <v-flex class="pt-5 pl-2 pr-2" xs12 md6>
                 <h1 class="text-xs-center text-light text-uppercase mt-3 mb-4">
                   Transcribe
                 </h1>
