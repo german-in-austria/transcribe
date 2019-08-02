@@ -241,7 +241,7 @@
                     </v-flex>
                   </v-layout>
                   <v-expand-transition>
-                    <v-layout v-if="isSpeakerTierPreviewShown(speakerTier.id)">
+                    <v-layout column v-if="isSpeakerTierPreviewShown(speakerTier.id)">
                       <v-flex xs12
                         v-for="(i) in 10"
                         :key="i">
