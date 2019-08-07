@@ -41,6 +41,7 @@
                     class="pb-5"
                     v-model="basicInfoValid">
                     <v-autocomplete
+                      :disabled="surveys === null"
                       :loading="surveys === null"
                       :rules="[ selectedSurvey === null && 'Select a Survey' ]"
                       label="Survey"
@@ -101,7 +102,7 @@
                     <span v-else>select all</span>
                   </v-tooltip>
                 </v-flex>
-                <v-flex class="grey--text caption pt-2" xs5>
+                <v-flex class="grey--text caption pt-2" xs4>
                   From Exmaralda File
                 </v-flex>
                 <v-flex class="grey--text caption pt-2" xs6>
@@ -119,14 +120,14 @@
                   :key="i"
                   class="pl-3 pt-3">
                   <v-layout>
-                    <v-flex class="pl-3" xs1>
+                    <v-flex xs1 class="pl-3">
                       <v-checkbox
                         class="pt-0"
                         @change="updateIsEverthingSelected"
                         v-model="speakerTier.select_for_import"
                       />
                     </v-flex>
-                    <v-flex xs5 :class="[!speakerTier.select_for_import && 'disabled']">
+                    <v-flex xs4 :class="[!speakerTier.select_for_import && 'disabled']">
                       <h4 class="ellipsis">{{ speakerTier.display_name }} <span class="caption grey--text">— {{ speakerTier.speaker_name }}</span></h4>
                       <v-chip small>
                         <label>category</label>{{ speakerTier.category }}
@@ -160,7 +161,7 @@
                         </template>
                       </v-select>
                     </v-flex>
-                    <v-flex :class="[ !speakerTier.select_for_import && 'disabled' ]" xs2 class="pl-2">
+                    <v-flex xs2 :class="[ !speakerTier.select_for_import && 'disabled' ]" class="pl-2">
                       <v-select
                         label="Tier Type"
                         :value="speakerTier.to_tier_type"
@@ -201,15 +202,46 @@
                         </template>
                       </v-select>
                     </v-flex>
-                    <v-flex :class="[ !speakerTier.select_for_import && 'disabled' ]" xs2 class="pl-2 pr-2">
+                    <v-flex xs2
+                      :class="[ !speakerTier.select_for_import && 'disabled', 'pl-2', 'pr-2' ]">
                       <!-- select which type of transcript the token tier it is -->
+                      <!-- placeholder -->
                       <v-select
-                        v-if="speakerTier.to_tier_type === 'tokenized' || speakerTier.to_tier_type === 'default'"
+                        v-if="speakerTier.to_tier_type === null"
+                        :items="[]"
+                        disabled
+                        label="Transcript Type"
+                      />
+                      <!-- default tiers -->
+                      <v-select
+                        v-if="speakerTier.to_tier_type === 'default'"
+                        :disabled="speakerTier.to_tier_type === null"
+                        label="Transcript Type"
+                        dense
+                        :value="globalDefaultTier"
+                        @input="(e) => updateTierTokenTypeAndGlobalDefault(i, e)"
+                        :items="tokenTiersAvailable(speakerTier.to_speaker)">
+                        <template slot="item" slot-scope="item">
+                          <v-list-tile-content>
+                            <v-list-tile-title>
+                              {{ item.item.text }}
+                            </v-list-tile-title>
+                          </v-list-tile-content>
+                          <v-list-tile-action-text class="pl-5">
+                            {{ item.item.description }}
+                          </v-list-tile-action-text>
+                        </template>
+                      </v-select>
+                      <!-- token metadata -->
+                      <v-select
+                        v-if="speakerTier.to_tier_type === 'tokenized'"
                         label="Transcript Type"
                         dense
                         v-model="speakerTier.token_tier_type"
                         :rules="[
-                          speakerTier.select_for_import && speakerTier.token_tier_type == null && 'Select a Transcript Type'
+                          speakerTier.select_for_import &&
+                          speakerTier.token_tier_type == null &&
+                          'Select a Transcript Type'
                         ]"
                         :items="tokenTiersAvailable(speakerTier.to_speaker)">
                         <template slot="item" slot-scope="item">
@@ -223,9 +255,9 @@
                           </v-list-tile-action-text>
                         </template>
                       </v-select>
-                      <!-- choose tier name, if it’s not the default tier -->
+                      <!-- tier name for free text tiers -->
                       <v-text-field
-                        v-else
+                        v-if="speakerTier.to_tier_type === 'freeText'"
                         validate-on-blur
                         label="Tier Name"
                         :disabled="speakerTier.to_tier_type === null"
@@ -233,22 +265,15 @@
                         :rules="[ speakerTier.select_for_import && !speakerTier.to_tier_name && 'Specify a name' ]"
                       />
                     </v-flex>
-                    <v-flex>
-                      <v-btn @click="toggleSpeakerTierPreview(speakerTier.id)" small round icon>
-                        <v-icon v-if="!isSpeakerTierPreviewShown(speakerTier.id)">arrow_drop_down_down</v-icon>
-                        <v-icon v-else>arrow_drop_down_up</v-icon>
+                    <v-flex xs1>
+                      <v-btn v-ripple="false" icon @click="toggleSpeakerTierPreview(speakerTier.id)">
+                        &bull;
                       </v-btn>
                     </v-flex>
                   </v-layout>
-                  <v-expand-transition>
-                    <v-layout column v-if="isSpeakerTierPreviewShown(speakerTier.id)">
-                      <v-flex xs12
-                        v-for="(i) in 10"
-                        :key="i">
-                        {{ speakerTier.events[i] ? speakerTier.events[i].text : '' }}
-                      </v-flex>
-                    </v-layout>
-                  </v-expand-transition>
+                  <exmaralda-tier-preview
+                    v-if="isSpeakerTierPreviewShown(speakerTier.id)"
+                    :tier="speakerTier" />
                 </v-layout>
               </v-form>
             </v-window-item>
@@ -323,15 +348,18 @@ import {
 import {
   getSurveys,
   ServerInformant,
-  ServerSurvey
+  ServerSurvey,
+  TokenTierType
 } from '../store/transcript'
 
+import ExmaraldaTierPreview from './ExmaraldaTierPreview.vue'
 import DropFile from './DropFile.vue'
 import _ from 'lodash'
 
 @Component({
   components: {
-    DropFile
+    DropFile,
+    ExmaraldaTierPreview
   }
 })
 export default class ExmaraldaImporter extends Vue {
@@ -346,6 +374,7 @@ export default class ExmaraldaImporter extends Vue {
   basicInfoValid = false
   tiersValid = false
 
+  globalDefaultTier: TokenTierType|null = null
   transcriptName: string|null = null
   selectedSurvey: ServerSurvey|null = null
   fileName: string|null = null
@@ -357,6 +386,11 @@ export default class ExmaraldaImporter extends Vue {
 
   async mounted() {
     this.surveys = await getSurveys()
+  }
+
+  updateTierTokenTypeAndGlobalDefault(i: number, t: TokenTierType) {
+    this.importable.speakerTiers[i].token_tier_type = t
+    this.globalDefaultTier = t
   }
 
   isSpeakerTierPreviewShown(id: string): boolean {
@@ -463,32 +497,28 @@ export default class ExmaraldaImporter extends Vue {
       .filter(t =>
         t.select_for_import === true &&
         t.to_speaker !== null &&
-        t.to_speaker.pk === to_speaker.pk)
+        t.to_speaker.pk === to_speaker.pk
+      )
+      .map(t => t.token_tier_type)
 
     return [
         {
           text: 'orthographic',
           value: 'ortho',
           description: 'standard orthographic transcript',
-          disabled: selectedTiersForSpeaker.findIndex((t) => {
-            return t.token_tier_type === 'ortho'
-          }) > -1
+          disabled: selectedTiersForSpeaker.indexOf('ortho') > -1 || this.globalDefaultTier === 'ortho'
         },
         {
           text: 'variational',
           value: 'text',
           description: 'phonetic transcription\n using the latin alphabet',
-          disabled: selectedTiersForSpeaker.findIndex((t) => {
-            return t.token_tier_type === 'text'
-          }) > -1
+          disabled: selectedTiersForSpeaker.indexOf('text') > -1 || this.globalDefaultTier === 'text'
         },
         {
           text: 'phonetic',
           value: 'phon',
           description: 'actual phonetic transcription',
-          disabled: selectedTiersForSpeaker.findIndex((t) => {
-            return t.token_tier_type === 'phon'
-          }) > -1
+          disabled: selectedTiersForSpeaker.indexOf('phon') > -1 || this.globalDefaultTier === 'phon'
         }
       ]
   }
@@ -514,17 +544,26 @@ export default class ExmaraldaImporter extends Vue {
       }
     } else if (this.step === 2) {
       if ((this.$refs.tierForm as any).validate()) {
-        if (this.everySelectedSpeakerHasExactlyOneDefaultTier()) {
+        if (this.everySelectedSpeakerHasExactlyOneDefaultTier() && this.globalDefaultTier !== null) {
           this.step = this.step + 1
         } else {
           this.showMissingDefaultTierError = true
         }
       }
     } else if (this.step === 3) {
-      if (this.transcriptName !== null && this.selectedSurvey !== null) {
+      if (
+        this.transcriptName !== null &&
+        this.selectedSurvey !== null &&
+        this.globalDefaultTier !== null
+      ) {
         this.$emit(
           'finish',
-          importableToServerTranscript(this.importable, this.transcriptName, this.selectedSurvey),
+          importableToServerTranscript(
+            this.importable,
+            this.transcriptName,
+            this.selectedSurvey,
+            this.globalDefaultTier
+          ),
           this.selectedFile
         )
       }

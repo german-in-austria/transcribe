@@ -137,7 +137,8 @@ function getTierToken(
 export function importableToServerTranscript(
   importable: ParsedExmaraldaXML,
   name: string,
-  selectedSurvey: ServerSurvey
+  selectedSurvey: ServerSurvey,
+  defaultTier: TokenTierType,
 ): ServerTranscript {
 
   const tiersBySpeakers = _(importable.speakerTiers)
@@ -148,9 +149,7 @@ export function importableToServerTranscript(
   // TODO: since now there can only be one
   // default tier type for all speakers
   // this should be handled more explicitly
-  const defaultTokenTierType = (
-    _(importable.speakerTiers).filter(t => t.to_tier_type === 'default').value()[0] || { token_tier_type: 'text' }
-  ).token_tier_type
+  const defaultTokenTierType = defaultTier
 
   const tokens: _.Dictionary<ServerToken> = {}
   const tiers: ServerTranscript['aTiers'] = {}
@@ -260,7 +259,7 @@ export function importableToServerTranscript(
     aTokens: tokens,
     aEvents: events,
     aTranskript: {
-      default_tier: defaultTokenTierType,
+      default_tier: defaultTier,
       n: name,
       pk: -1,
       ut: 'now' // TODO:
