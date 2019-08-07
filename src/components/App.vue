@@ -137,6 +137,7 @@ import {
 import {
   ServerTranscript,
   ServerTranscriptListItem,
+  getServerTranscripts,
   getTranscript,
   mergeServerTranscript,
   serverTranscriptToLocal,
@@ -197,13 +198,11 @@ export default class App extends Vue {
   async loadTranscriptList() {
     try {
       this.errorMessage = null
-      const res = (await (await fetch(`${ this.eventStore.backEndUrl }/routes/transcripts`, {
-        credentials: 'include'
-      })).json())
+      const res = await getServerTranscripts()
       if (res.transcripts !== undefined) {
         this.loggedIn = true
         this.transcriptList = res.transcripts
-      } else if (res.error === 'login') {
+      } else if ((res as any).error === 'login') {
         this.loggedIn = false
       }
     } catch (e) {

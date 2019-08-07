@@ -479,7 +479,7 @@ export async function createEmptyTranscript(
   defaultTier: TokenTierType
 ): Promise<ServerTranscriptId> {
 
-  const res = await (await fetch(`${ eventStore.backEndUrl }/routes/transcript/create`), {
+  const res = await (await fetch(`${ eventStore.backEndUrl }/routes/transcript/create`, {
     credentials: 'include',
     method: 'POST',
     headers: {
@@ -491,10 +491,17 @@ export async function createEmptyTranscript(
       id_einzelerhebung: surveyId,
       default_tier: defaultTier
     })
-  })
+  })).json()
   console.log({res})
   // TODO:
   return -1
+}
+
+export async function getServerTranscripts(): Promise<{transcripts: ServerTranscriptListItem[]}> {
+  const res = await (await fetch(`${ eventStore.backEndUrl }/routes/transcripts`, {
+    credentials: 'include'
+  })).json()
+  return res
 }
 
 export async function getTranscript(
@@ -505,25 +512,20 @@ export async function getTranscript(
   totalSteps?: number,
 ): Promise<LocalTranscript> {
   try {
-
     // download transcript page
     const res = await (await fetch(`${ eventStore.backEndUrl }/routes/transcript/${ id }/${ chunk }`, {
       credentials: 'include'
     })).json() as ServerTranscript
-
     // when it’s the first page
     if (res.aNr === 0) {
       eventStore.metadata = getMetadataFromServerTranscript(res)
     }
-
     // convert and concat
     eventStore.events = buffer.concat(serverTranscriptToLocal(res))
-
     // progress callback with data
     if (onProgress !== undefined) {
       onProgress(res.aNr / (totalSteps || res.aTmNr || 10), eventStore.events, res)
     }
-
     // get next (recursion) or finish
     if (res.nNr > res.aNr)  {
       return getTranscript(
