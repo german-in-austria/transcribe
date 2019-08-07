@@ -4,20 +4,147 @@ import PromiseWorker from 'promise-worker-transferable'
 import {
   LocalTranscriptEvent,
   eventStore,
-  ServerTranscript,
-  SaveResponse,
-  ServerTranscriptSaveResponse,
   LocalTranscript,
   timeToSeconds,
-  ServerEvent,
-  ServerToken,
-  ServerTranscriptSaveRequest,
   LocalTranscriptTier,
   LocalTranscriptSpeakerEventTiers,
   TokenTierType
 } from '../store/transcript'
 import { clone } from '../util/index'
 import serverTranscriptDiff from './backend-server-transcript-diff.worker'
+
+type ServerTranscriptId = number
+
+export interface ServerTranscriptListItem {
+  pk: number
+  ut: string
+  n: string
+}
+
+export type SaveRequest<T> = T & {
+  status: 'update'|'delete'|'insert'
+}
+
+export type SaveResponse<T> = SaveRequest<T> & {
+  newStatus: 'updated'|'deleted'|'inserted'|'error'
+  error?: string
+  newPk?: number
+}
+
+export interface ServerTranscriptSaveResponse extends ServerTranscript {
+  aTokens: {
+    [token_id: string]: SaveResponse<ServerToken>
+  }
+  aEvents: Array<SaveResponse<ServerEvent>>
+}
+
+export interface ServerTranscriptSaveRequest extends ServerTranscript {
+  aTokens: {
+    [token_id: string]: SaveRequest<ServerToken>
+  }
+  aEvents: Array<SaveRequest<ServerEvent>>
+}
+
+export interface ServerInformant {
+  weiblich: boolean
+  Kuerzel: string
+  Geburtsdatum: string|null
+  Wohnbezirk: number|null
+  Vorname: string|null
+  Kuerzel_anonym: string|null
+  Name: string|null
+  pk: number
+}
+
+export interface ServerSurvey {
+  pk: number
+  FX_Informanten: ServerInformant[]
+  ID_Erh: number
+  Ort: string
+  Audiofile: string
+  Dateipfad: string
+  Datum: string
+}
+
+export interface ServerTranscriptInformants {
+  [speaker_id: number]: {
+    ka: string // abbrev anonymized
+    k: string // abbrev
+  }
+}
+
+export interface ServerTranscript {
+  aTiers: {
+    [tier_id: string]: string
+  }
+  aTokens: {
+    [token_id: string]: ServerToken
+  }
+  aEinzelErhebung?: {
+    af: string
+    d: string
+    dp: string
+    e: number
+    pk: number
+    trId: number
+  }
+  aInformanten?: ServerTranscriptInformants
+  aTokenSets?: {
+    [setId: number]: {
+      ivt: number // starting at token id (von)
+      ibt: number // ending at token id (bis)
+    }
+  }
+  aTranskript?: {
+    default_tier?: TokenTierType|null
+    n: string // name
+    pk: ServerTranscriptId
+    ut: string
+  }
+  aTokenTypes?: {
+    [id: string]: {
+      n: string // word
+    }
+  }
+  aEvents: ServerEvent[]
+  nNr: number
+  aNr: number
+  aTmNr?: number
+}
+
+
+export interface ServerToken {
+  tr: number // token reihung
+  tt: number // token type
+  sr: number // sequence in sentence
+  t: string // text
+  to: string // text in ortho
+  s: number // sentence id
+  i: number // inf id
+  e: number // event id
+  o?: string // ortho
+  p?: string // TODO: add phon on server
+  fo?: number // fragment of
+}
+
+export interface ServerEvent {
+  pk: number
+  tid: {
+    [speaker_id: string]: number[]
+  }
+  event_tiers: {
+    [speaker_id: string]: {
+      [event_tier_id: string]: {
+        // event tier string
+        t: string
+        ti: string
+      }
+    }
+  }
+  e: string // end
+  s: string // start
+  l: 0
+}
 
 const diffWorker = new PromiseWorker(new serverTranscriptDiff())
 const textEncoder = new TextEncoder()
@@ -332,6 +459,42 @@ export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
     })
     .orderBy(e => e.startTime)
     .value()
+}
+
+export async function getSurveys(): Promise<ServerSurvey[]> {
+  const x = await (await fetch(`${ eventStore.backEndUrl }/routes/einzelerhebungen`, {
+    credentials: 'include',
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    }
+  })).json()
+  return x.einzelerhebungen
+}
+
+export async function createEmptyTranscript(
+  surveyId: number,
+  name: string,
+  defaultTier: TokenTierType
+): Promise<ServerTranscriptId> {
+
+  const res = await (await fetch(`${ eventStore.backEndUrl }/routes/transcript/create`), {
+    credentials: 'include',
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      name,
+      id_einzelerhebung: surveyId,
+      default_tier: defaultTier
+    })
+  })
+  console.log({res})
+  // TODO:
+  return -1
 }
 
 export async function getTranscript(

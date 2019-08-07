@@ -1,12 +1,15 @@
 import {
+  LocalTranscript,
+  LocalTranscriptToken
+} from '../store/transcript'
+
+import {
+  ServerEvent,
   ServerToken,
   ServerTranscript,
-  ServerEvent,
-  LocalTranscript,
-  LocalTranscriptToken,
   ServerTranscriptSaveRequest,
   SaveRequest
-} from '../store/transcript'
+} from '../service/backend-server'
 
 const registerPromiseWorker = require('promise-worker-transferable/register')
 const textDecoder = new TextDecoder('utf-8')

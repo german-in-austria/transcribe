@@ -1,6 +1,7 @@
 
 import * as jszip from 'jszip'
-import { ServerTranscript, convertToServerTranscript } from '../store/transcript'
+import { convertToServerTranscript } from '../store/transcript'
+import { ServerTranscript } from '../service/backend-server'
 import { Settings } from '../store/settings'
 import { HistoryEventAction } from '../store/history'
 

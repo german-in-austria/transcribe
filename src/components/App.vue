@@ -127,7 +127,6 @@ import {
   LocalTranscriptEvent,
   eventStore,
   speakerEventHasErrors,
-  ServerTranscript
 } from '../store/transcript'
 
 import {
@@ -136,10 +135,12 @@ import {
 } from '../util'
 
 import {
+  ServerTranscript,
+  ServerTranscriptListItem,
   getTranscript,
   mergeServerTranscript,
   serverTranscriptToLocal,
-  getMetadataFromServerTranscript
+  getMetadataFromServerTranscript,
 } from '../service/backend-server'
 
 import {

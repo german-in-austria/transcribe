@@ -1,14 +1,17 @@
 import _ from 'lodash'
 import {
-  ServerInformant,
-  makeEventId,
-  makeTierId,
-  makeTokenId,
   ServerEvent,
   ServerSurvey,
   ServerToken,
+  ServerInformant,
   ServerTranscript,
   ServerTranscriptInformants,
+} from '../service/backend-server'
+
+import {
+  makeEventId,
+  makeTierId,
+  makeTokenId,
   timeFromSeconds,
   tokenize,
   TokenTierType

@@ -340,15 +340,19 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 
 import {
+  ServerInformant,
+  ServerSurvey,
+  createEmptyTranscript,
+  getSurveys
+} from '../service/backend-server'
+
+import {
   ParsedExmaraldaXML,
   SpeakerTierImportable,
   importableToServerTranscript
 } from '../service/backend-exmaralda'
 
 import {
-  getSurveys,
-  ServerInformant,
-  ServerSurvey,
   TokenTierType
 } from '../store/transcript'
 
@@ -537,7 +541,7 @@ export default class ExmaraldaImporter extends Vue {
     return this.speakersWithMissingDefaultTier.length === 0
   }
 
-  validateAndNext() {
+  async validateAndNext() {
     if (this.step === 1) {
       if ((this.$refs.basicInfoForm as any).validate()) {
         this.step = this.step + 1
@@ -556,6 +560,11 @@ export default class ExmaraldaImporter extends Vue {
         this.selectedSurvey !== null &&
         this.globalDefaultTier !== null
       ) {
+        await createEmptyTranscript(
+          this.selectedSurvey.pk,
+          this.transcriptName,
+          this.globalDefaultTier
+        )
         this.$emit(
           'finish',
           importableToServerTranscript(

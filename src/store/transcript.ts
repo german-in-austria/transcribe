@@ -11,7 +11,9 @@ import {
   localTranscriptToServerSaveRequest,
   serverTranscript,
   serverTranscriptToLocal,
-  updateServerTranscriptWithChanges
+  updateServerTranscriptWithChanges,
+  ServerTranscriptSaveResponse,
+  ServerTranscript
 } from '../service/backend-server'
 
 declare global {
@@ -19,135 +21,6 @@ declare global {
     AudioContext: AudioContext
     webkitAudioContext: AudioContext
   }
-  interface ServerTranscriptListItem {
-    pk: number
-    ut: string
-    n: string
-  }
-}
-
-export type SaveRequest<T> = T & {
-  status: 'update'|'delete'|'insert'
-}
-
-export type SaveResponse<T> = SaveRequest<T> & {
-  newStatus: 'updated'|'deleted'|'inserted'|'error'
-  error?: string
-  newPk?: number
-}
-
-export interface ServerTranscriptSaveResponse extends ServerTranscript {
-  aTokens: {
-    [token_id: string]: SaveResponse<ServerToken>
-  }
-  aEvents: Array<SaveResponse<ServerEvent>>
-}
-
-export interface ServerTranscriptSaveRequest extends ServerTranscript {
-  aTokens: {
-    [token_id: string]: SaveRequest<ServerToken>
-  }
-  aEvents: Array<SaveRequest<ServerEvent>>
-}
-
-export interface ServerInformant {
-  weiblich: boolean
-  Kuerzel: string
-  Geburtsdatum: string|null
-  Wohnbezirk: number|null
-  Vorname: string|null
-  Kuerzel_anonym: string|null
-  Name: string|null
-  pk: number
-}
-
-export interface ServerSurvey {
-  pk: number
-  FX_Informanten: ServerInformant[]
-  ID_Erh: number
-  Ort: string
-  Audiofile: string
-  Dateipfad: string
-  Datum: string
-}
-
-export interface ServerTranscriptInformants {
-  [speaker_id: number]: {
-    ka: string // abbrev anonymized
-    k: string // abbrev
-  }
-}
-
-export interface ServerTranscript {
-  aTiers: {
-    [tier_id: string]: string
-  }
-  aTokens: {
-    [token_id: string]: ServerToken
-  }
-  aEinzelErhebung?: {
-    af: string
-    d: string
-    dp: string
-    e: number
-    pk: number
-    trId: number
-  }
-  aInformanten?: ServerTranscriptInformants
-  aTokenSets?: {
-    [setId: number]: {
-      ivt: number // starting at token id (von)
-      ibt: number // ending at token id (bis)
-    }
-  }
-  aTranskript?: {
-    default_tier?: TokenTierType|null
-    n: string // name
-    pk: number
-    ut: string
-  }
-  aTokenTypes?: {
-    [id: string]: {
-      n: string // word
-    }
-  }
-  aEvents: ServerEvent[]
-  nNr: number
-  aNr: number
-  aTmNr?: number
-}
-
-export interface ServerToken {
-  tr: number // token reihung
-  tt: number // token type
-  sr: number // sequence in sentence
-  t: string // text
-  to: string // text in ortho
-  s: number // sentence id
-  i: number // inf id
-  e: number // event id
-  o?: string // ortho
-  p?: string // TODO: add phon on server
-  fo?: number // fragment of
-}
-
-export interface ServerEvent {
-  pk: number
-  tid: {
-    [speaker_id: string]: number[]
-  }
-  event_tiers: {
-    [speaker_id: string]: {
-      [event_tier_id: string]: {
-        // event tier string
-        t: string
-        ti: string
-      }
-    }
-  }
-  e: string // end
-  s: string // start
-  l: 0
 }
 
 interface LocalTranscriptTokenTier {
@@ -438,6 +311,7 @@ export function updateSpeakerEvent(
   }
   return {
     id: _.uniqueId(),
+    time: new Date(),
     apply: true,
     type: 'CHANGE_TOKENS',
     before: [ clone(oldEvent) ],
@@ -453,6 +327,7 @@ export function resizeEvents(...es: LocalTranscriptEvent[]): HistoryEventAction 
   replaceEvents(oldEs, es)
   return {
     id: _.uniqueId(),
+    time: new Date(),
     apply: true,
     type: 'RESIZE',
     before: oldEs,
@@ -490,6 +365,7 @@ export function insertEvent(e: LocalTranscriptEvent): HistoryEventAction {
   }
   return {
     id: _.uniqueId(),
+    time: new Date(),
     apply: true,
     type: 'INSERT',
     before: [],
@@ -514,6 +390,7 @@ export function addEvent(atTime: number): HistoryEventAction {
   }
   return {
     id: _.uniqueId(),
+    time: new Date(),
     apply: true,
     type: 'ADD',
     before: [],
@@ -524,6 +401,7 @@ export function addEvent(atTime: number): HistoryEventAction {
 export function deleteSelectedEvents(): HistoryEventAction {
   return {
     id: _.uniqueId(),
+    time: new Date(),
     apply: true,
     type: 'DELETE',
     before: _(eventStore.selectedEventIds).map(deleteEventById).flatMap(a => a.before).value(),
@@ -537,6 +415,7 @@ export function deleteEvent(event: LocalTranscriptEvent): HistoryEventAction {
   eventStore.events.splice(i, 1)
   return {
     id: _.uniqueId(),
+    time: new Date(),
     apply: true,
     type: 'DELETE',
     before: [ e ],
@@ -560,6 +439,7 @@ export function splitEvent(event: LocalTranscriptEvent, splitAt: number): Histor
   eventStore.events.splice(i, 1, leftEvent, rightEvent)
   return {
     id: _.uniqueId(),
+    time: new Date(),
     apply: true,
     type: 'SPLIT',
     before: [ before ],
@@ -737,6 +617,7 @@ export function joinEvents(eventIds: number[]): HistoryEventAction {
   eventStore.selectedEventIds = [ joinedEvent.eventId ]
   return {
     id: _.uniqueId(),
+    time: new Date(),
     type: 'JOIN',
     apply: true,
     before: clone(events),
@@ -835,18 +716,6 @@ export async function convertToServerTranscript(es: LocalTranscriptEvent[]): Pro
   } else {
     return null
   }
-}
-
-export async function getSurveys(): Promise<ServerSurvey[]> {
-  const x = await (await fetch(`${ eventStore.backEndUrl }/routes/einzelerhebungen`, {
-    credentials: 'include',
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    }
-  })).json()
-  return x.einzelerhebungen
 }
 
 export async function saveChangesToServer() {
