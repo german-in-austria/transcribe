@@ -63,6 +63,8 @@ img[lazy=loaded] {
 }
 .v-menu__content, .context-menu,
 .v-autocomplete__content.v-menu__content, .v-autocomplete__content.v-menu__content .v-card {
+  backdrop-filter: blur(30px);
+  background: rgba(20,20,20,.6) !important;
   border: 1px solid #616161;
   border-radius: 4px;
   box-shadow: 0 5px 30px rgba(0,0,0,.2);
@@ -77,8 +79,8 @@ img[lazy=loaded] {
   margin-left: -10px;
 }
 .v-navigation-drawer{
-  background: #272727 !important;
-  opacity: .95;
+  background: rgba(20,20,20,.6) !important;
+  backdrop-filter: blur(20px);
   border-left: 1px solid rgba(255,255,255,.075);
 }
 .v-navigation-drawer__border{
@@ -123,7 +125,21 @@ img[lazy=loaded] {
 .theme--dark.v-list .v-list--disabled {
   color: hsla(0,0%,100%,.3)!important;
 }
-
+.v-overlay{
+  transition: none !important;
+}
+.v-dialog{
+  transition: none;
+}
+.v-dialog > .v-card.theme--dark {
+  background-color: rgb(40,40,40) !important;
+}
+.v-dialog .v-tabs__bar.theme--dark{
+  background: transparent !important;
+}
+.v-list{
+  background: transparent !important;
+}
 .application.theme--dark .text--disabled
 .theme--dark.v-icon,
 .theme--dark.v-list .v-list--disabled

@@ -150,10 +150,10 @@ export default class SearchResults extends Vue {
       opacity .2
   .result-overview
     width 7px
-    height 25px
+    height 14px
     position absolute
     border-radius 0
-    top -5px
+    top 0
     border-left 1px solid white
     opacity .3
     transition .1s transform

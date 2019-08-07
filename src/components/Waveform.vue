@@ -664,8 +664,8 @@ export default class Waveform extends Vue {
 .overview-waveform
   z-index -1
   white-space nowrap
-  // svg path
-  //   mix-blend-mode overlay
+  svg path
+    mix-blend-mode overlay
 
 .wave-form-inner
   svg
