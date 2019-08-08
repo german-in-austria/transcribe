@@ -1,7 +1,10 @@
 
 import _ from 'lodash'
 import audio from '../service/audio'
-import { clone } from '../util'
+import {
+  clone,
+  fileToUint8ArrayAndName
+} from '../util'
 import settings from '../store/settings'
 import { HistoryEventAction } from './history'
 import eventBus from '../service/event-bus'
@@ -131,6 +134,30 @@ export function tokenTypeFromToken(token: string) {
       id: -1
     }
   }
+}
+
+export function loadAudioFile(f: File|Uint8Array|null): Promise<HTMLAudioElement> {
+  return new Promise(async (resolve, reject) => {
+    let audioUrl = ''
+    const a = document.createElement('audio')
+    if (f instanceof File) {
+      const { b, n } = await fileToUint8ArrayAndName(f)
+      const blob = new Blob([b], { type: 'audio/ogg' })
+      audioUrl = URL.createObjectURL(blob)
+      audio.store.uint8Buffer = b
+    } else if (f instanceof Uint8Array) {
+      const blob = new Blob([ f ], { type: 'audio/ogg' })
+      audioUrl = URL.createObjectURL(blob)
+      audio.store.uint8Buffer = f
+    }
+    a.src = audioUrl
+    a.addEventListener('durationchange', function listener() {
+      a.removeEventListener('durationchange', listener)
+      audio.store.isLocalFile = true
+      eventStore.audioElement = a
+      resolve(a as HTMLAudioElement)
+    })
+  })
 }
 
 export function tokenize(s: string): string[] {

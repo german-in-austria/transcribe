@@ -57,7 +57,10 @@
           </v-list>
         </v-menu>
         <v-tooltip transition="none" bottom>
-          <v-btn slot="activator" @click.stop="$emit('toggle-drawer')" icon flat>
+          <v-btn
+            slot="activator"
+            @click.stop="() => settings.showDrawer = !settings.showDrawer"
+            icon flat>
             <v-badge color="error" overlap :value="errors.length > 0">
               <span slot="badge">{{ errors.length }}</span>
               <v-icon>history</v-icon>
@@ -78,6 +81,7 @@
       :event="spectrogramEvent"
     />
     <wave-form
+      v-if="eventStore.audioElement.src"
       tabindex="-1"
       class="no-outline"
       @keydown.native="handleWaveformKey"
@@ -150,18 +154,20 @@
         </v-menu>
       </div>
       <div slot="overview">
-        <div v-if="eventStore.audioElement !== undefined" class="error-overview-container">
+        <div class="error-overview-container">
           <div
             v-for="(error) in errors"
             :key="error.eventId"
             class="error-overview"
             :style="{ left: `${ error.startTime / eventStore.audioElement.duration * 100}%` }" />
         </div>
-        <div v-if="eventStore.audioElement !== undefined" class="search-overview-container">
+        <div class="search-overview-container">
           <search-results />
         </div>
       </div>
     </wave-form>
+    <drop-file @update="loadAudioFile" class="fill-height" v-else>
+    </drop-file>
     <transcript-editor />
   </div>
 </template>
@@ -178,6 +184,8 @@ import searchResults from './SearchResults.vue'
 import transcriptEditor from './TranscriptEditor.vue'
 import playHead from './PlayHead.vue'
 import scrollbar from './Scrollbar.vue'
+import dropFile from './DropFile.vue'
+
 import * as _ from 'lodash'
 import * as fns from 'date-fns'
 import { saveAs } from 'file-saver'
@@ -202,7 +210,8 @@ import {
   joinEvents,
   isEventSelected,
   saveChangesToServer,
-  scrollToAudioEvent
+  scrollToAudioEvent,
+  loadAudioFile
 } from '../store/transcript'
 
 import { history, undoable, startListening as startUndoListener } from '../store/history'
@@ -218,7 +227,8 @@ import { generateProjectFile } from '../service/backend-files'
     playHead,
     search,
     searchResults,
-    scrollbar
+    scrollbar,
+    dropFile
   }
 })
 export default class Editor extends Vue {
@@ -229,6 +239,7 @@ export default class Editor extends Vue {
   getSelectedEvent = getSelectedEvent
   isEventSelected = isEventSelected
   history = history
+  loadAudioFile = loadAudioFile
 
   scrollTranscriptIndex: number = 0
   scrollTranscriptTime: number = 0

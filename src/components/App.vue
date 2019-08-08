@@ -50,40 +50,87 @@
                 <h1 class="text-xs-center text-light text-uppercase mt-3 mb-4">
                   Transcribe
                 </h1>
+                <v-layout>
+                  <v-flex class="pr-1" xs6>
+                    <v-btn
+                      :loading="importingLocalFile" @click="openFile" class="mb-2 elevation-0" style="height: 40px;" block>
+                      Open/Import File
+                    </v-btn>
+                  </v-flex>
+                  <v-flex class="pl-1" xs6>
+                    <v-btn @click="newTranscript" class="mb-2 elevation-0" style="height: 40px;" block>
+                      New File
+                    </v-btn>
+                  </v-flex>
+                </v-layout>
                 <v-text-field
                   solo
                   v-model="searchTerm"
                   placeholder="search…"
+                  hide-details
                   prepend-inner-icon="search"
                   autofocus />
-                <v-btn :loading="importingLocalFile" @click="openFile" class="mb-2 elevation-0" style="height: 40px;" block>
-                  Open/Import File
-                </v-btn>
                 <v-list two-line style="background: transparent">
-                  <template v-for="transcript in filteredTranscriptList">
-                    <v-list-tile
-                      :key="transcript.pk" 
-                      :disabled="loadingTranscriptId !== null"
-                      @click="loadRemoteTranscript(transcript.pk)">
-                      <v-list-tile-avatar>
-                        <v-progress-circular
-                          class="mb-2"
-                          size="20"
-                          width="2"
-                          v-if="loadingTranscriptId === transcript.pk"
-                          indeterminate />
-                        <v-icon color="grey" v-else>cloud_queue</v-icon>
-                      </v-list-tile-avatar>
-                      <v-list-tile-content>
-                        <v-list-tile-title>
-                          {{ transcript.n }}
-                        </v-list-tile-title>
-                        <v-list-tile-sub-title>
-                          {{ transcript.ut }}
-                        </v-list-tile-sub-title>
-                      </v-list-tile-content>
-                    </v-list-tile>
-                    <v-divider :key="'d' + transcript.pk" />
+                  <v-subheader v-if="recentlyOpened.length > 0 && searchTerm === ''">
+                    Recently Opened
+                  </v-subheader>
+                  <template v-for="transcript in recentlyOpened">
+                    <v-divider v-if="searchTerm === ''" :key="'d' + transcript.pk" />
+                    <transition-group :key="'t'+ transcript.pk">
+                      <v-list-tile
+                        v-if="searchTerm === ''"
+                        :key="'recently_' + transcript.pk" 
+                        :disabled="loadingTranscriptId !== null"
+                        @click="loadRemoteTranscript(transcript)">
+                        <v-list-tile-avatar>
+                          <v-progress-circular
+                            class="mb-2"
+                            size="20"
+                            width="2"
+                            v-if="loadingTranscriptId === transcript.pk"
+                            indeterminate />
+                          <v-icon color="grey" v-else>cloud_queue</v-icon>
+                        </v-list-tile-avatar>
+                        <v-list-tile-content>
+                          <v-list-tile-title>
+                            {{ transcript.n }}
+                          </v-list-tile-title>
+                          <v-list-tile-sub-title>
+                            {{ transcript.ut }}
+                          </v-list-tile-sub-title>
+                        </v-list-tile-content>
+                      </v-list-tile>
+                    </transition-group>
+                  </template>
+                  <v-subheader>
+                    Server Transcripts
+                  </v-subheader>
+                  <template v-for="(transcript) in filteredTranscriptList">
+                    <v-divider :key="'dk' + transcript.pk" />
+                    <transition-group :key="'ts'+ transcript.pk">
+                      <v-list-tile
+                        :key="transcript.pk" 
+                        :disabled="loadingTranscriptId !== null"
+                        @click="loadRemoteTranscript(transcript)">
+                        <v-list-tile-avatar>
+                          <v-progress-circular
+                            class="mb-2"
+                            size="20"
+                            width="2"
+                            v-if="loadingTranscriptId === transcript.pk"
+                            indeterminate />
+                          <v-icon color="grey" v-else>cloud_queue</v-icon>
+                        </v-list-tile-avatar>
+                        <v-list-tile-content>
+                          <v-list-tile-title>
+                            {{ transcript.n }}
+                          </v-list-tile-title>
+                          <v-list-tile-sub-title>
+                            {{ transcript.ut }}
+                          </v-list-tile-sub-title>
+                        </v-list-tile-content>
+                      </v-list-tile>
+                    </transition-group>
                   </template>
                   <v-list-tile class="text-xs-center" v-if="filteredTranscriptList.length === 0">
                     <span class="caption">
@@ -96,12 +143,11 @@
           </v-flex>
         </v-layout>
         <v-layout
-          v-if="eventStore.status !== 'empty' && eventStore.audioElement !== null"
+          v-if="eventStore.status !== 'empty'"
           class="max-width"
           justify-center>
           <v-flex xs12>
-            <editor @toggle-drawer="() => settings.showDrawer = !settings.showDrawer" />
-            <router-view />
+            <editor />
             <player-bar />
           </v-flex>
         </v-layout>
@@ -127,6 +173,7 @@ import {
   LocalTranscriptEvent,
   eventStore,
   speakerEventHasErrors,
+  loadAudioFile
 } from '../store/transcript'
 
 import {
@@ -168,31 +215,45 @@ import {
 })
 export default class App extends Vue {
 
-  importingLocalFile = false
-  xmlText: string|null = null
-  xml: any = null
-  settings = settings
-  transcriptList: ServerTranscriptListItem[]|null = null
-  loadingTranscriptId: number|null = null
-  searchTerm = ''
-  loggedIn = true
   eventStore = eventStore
-  log = console.log
-  importableExmaraldaFile: ParsedExmaraldaXML|null = null
-  errorMessage: string|null = null
+  settings = settings
+
   backEndUrls = [
     'https://dissdb.dioe.at',
     'http://localhost:8000',
     'https://dioedb.dioe.at'
   ]
 
+  searchTerm = ''
+  recentlyOpened: ServerTranscriptListItem[] = []
+  importingLocalFile = false
+  transcriptList: ServerTranscriptListItem[]|null = null
+  loadingTranscriptId: number|null = null
+  loggedIn: boolean = true
+  importableExmaraldaFile: ParsedExmaraldaXML|null = null
+  errorMessage: string|null = null
+
   updateBackEndUrl(url: string) {
     localStorage.setItem('backEndUrl', url)
     this.loadTranscriptList()
   }
 
+  addRecentlyOpened(t: ServerTranscriptListItem) {
+    this.recentlyOpened.unshift(t)
+    this.recentlyOpened = _(this.recentlyOpened)
+      .uniqBy(ts => ts.pk)
+      .take(3)
+      .value()
+    localStorage.setItem('recentlyOpened', JSON.stringify(this.recentlyOpened))
+  }
+
+  getRecentlyOpened() {
+    return JSON.parse(localStorage.getItem('recentlyOpened') || '[]')
+  }
+
   async mounted() {
     this.loadTranscriptList()
+    this.recentlyOpened = this.getRecentlyOpened()
   }
 
   async loadTranscriptList() {
@@ -264,33 +325,15 @@ export default class App extends Vue {
     return url
   }
 
-  loadLocalTranscript(t: ServerTranscript, audioData: File|Uint8Array|null): Promise<string> {
-    return new Promise(async (resolve, reject) => {
-      let u = ''
-      const a = document.createElement('audio')
-      if (audioData instanceof File) {
-        const { b, n } = await fileToUint8ArrayAndName(audioData)
-        const blob = new Blob([b], { type: 'audio/ogg' })
-        u = URL.createObjectURL(blob)
-        audio.store.uint8Buffer = b
-      } else if (audioData instanceof Uint8Array) {
-        const blob = new Blob([audioData], { type: 'audio/ogg' })
-        u = URL.createObjectURL(blob)
-        audio.store.uint8Buffer = audioData
-      }
-      a.src = u
-      a.addEventListener('durationchange', () => {
-        this.importingLocalFile = false
-        this.loadingTranscriptId = null
-        mergeServerTranscript(t)
-        eventStore.metadata = getMetadataFromServerTranscript(t)
-        eventStore.events = serverTranscriptToLocal(t)
-        audio.store.isLocalFile = true
-        eventStore.audioElement = a
-        eventStore.status = 'finished'
-        resolve(u)
-      })
-    })
+  async loadLocalTranscript(t: ServerTranscript, audioData: File|Uint8Array|null): Promise<string> {
+    const audioElement = await loadAudioFile(audioData)
+    this.importingLocalFile = false
+    this.loadingTranscriptId = null
+    mergeServerTranscript(t)
+    eventStore.metadata = getMetadataFromServerTranscript(t)
+    eventStore.events = serverTranscriptToLocal(t)
+    eventStore.status = 'finished'
+    return audioElement.src
   }
 
   async openExmaraldaFile(f: File) {
@@ -298,6 +341,10 @@ export default class App extends Vue {
     const { t, n } = await fileToTextAndName(f)
     this.importableExmaraldaFile = exmaraldaToImportable(n, t)
     this.importingLocalFile = false
+  }
+
+  newTranscript() {
+    eventStore.status = 'new'
   }
 
   openFile() {
@@ -325,17 +372,18 @@ export default class App extends Vue {
     this.eventStore.status = 'new'
   }
 
-  async loadRemoteTranscript(pk: number) {
+  async loadRemoteTranscript(t: ServerTranscriptListItem) {
     // TODO: ugly
-    this.loadingTranscriptId = pk
+    this.loadingTranscriptId = t.pk
     const y = document.createElement('audio')
-    getTranscript(pk, (progress, events, serverTranscript) => {
+    getTranscript(t.pk, (progress, events, serverTranscript) => {
       this.eventStore.transcriptDownloadProgress = progress
       mergeServerTranscript(serverTranscript)
       if (this.eventStore.metadata.audioUrl !== null) {
         console.log(this.eventStore.metadata)
         y.src = this.eventStore.metadata.audioUrl
         y.addEventListener('durationchange', (e) => {
+          this.addRecentlyOpened(t)
           this.loadingTranscriptId = null
           eventStore.audioElement = y
           if (eventStore.status !== 'finished') {
@@ -347,13 +395,6 @@ export default class App extends Vue {
   }
 }
 </script>
-<style lang="stylus" scoped>
-// .pick-transcript-container
-//   background #222
-  // background url('/static/img/bg-waveform.png')
-  // background-repeat no-repeat
-  // background-position center 100px
-  // background-size 1740px 290px
-  // background-color rgba(0,0,0,.3)
 
+<style lang="stylus" scoped>
 </style>

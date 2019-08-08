@@ -614,7 +614,7 @@ export default class ExmaraldaImporter extends Vue {
 .table-header
   position sticky
   top 0
-  background #353535
+  background #222
   z-index 2
 
 .v-form > .layout:nth-child(odd)
