@@ -46,7 +46,7 @@
             v-if="transcriptList === null && loggedIn === true"/>
             <v-flex v-if="transcriptList !== null">
               <v-layout justify-center row>
-              <v-flex class="pt-5 pl-2 pr-2" xs12 md6>
+              <v-flex class="pt-5 pl-4 pr-4" xs12 md6>
                 <h1 class="text-xs-center text-light text-uppercase mt-3 mb-4">
                   Transcribe
                 </h1>
@@ -71,10 +71,10 @@
                   prepend-inner-icon="search"
                   autofocus />
                 <v-list two-line style="background: transparent">
-                  <v-subheader v-if="recentlyOpened.length > 0 && searchTerm === ''">
+                  <v-subheader v-if="eventStore.recentlyOpened.length > 0 && searchTerm === ''">
                     Recently Opened
                   </v-subheader>
-                  <template v-for="transcript in recentlyOpened">
+                  <template v-for="transcript in eventStore.recentlyOpened">
                     <v-divider v-if="searchTerm === ''" :key="'d' + transcript.pk" />
                     <transition-group :key="'t'+ transcript.pk">
                       <v-list-tile
@@ -173,7 +173,8 @@ import {
   LocalTranscriptEvent,
   eventStore,
   speakerEventHasErrors,
-  loadAudioFile
+  loadAudioFile,
+  addRecentlyOpened
 } from '../store/transcript'
 
 import {
@@ -219,13 +220,13 @@ export default class App extends Vue {
   settings = settings
 
   backEndUrls = [
+    'https://dissdb-test.dioe.at',
     'https://dissdb.dioe.at',
     'http://localhost:8000',
     'https://dioedb.dioe.at'
   ]
 
   searchTerm = ''
-  recentlyOpened: ServerTranscriptListItem[] = []
   importingLocalFile = false
   transcriptList: ServerTranscriptListItem[]|null = null
   loadingTranscriptId: number|null = null
@@ -238,22 +239,8 @@ export default class App extends Vue {
     this.loadTranscriptList()
   }
 
-  addRecentlyOpened(t: ServerTranscriptListItem) {
-    this.recentlyOpened.unshift(t)
-    this.recentlyOpened = _(this.recentlyOpened)
-      .uniqBy(ts => ts.pk)
-      .take(3)
-      .value()
-    localStorage.setItem('recentlyOpened', JSON.stringify(this.recentlyOpened))
-  }
-
-  getRecentlyOpened() {
-    return JSON.parse(localStorage.getItem('recentlyOpened') || '[]')
-  }
-
   async mounted() {
     this.loadTranscriptList()
-    this.recentlyOpened = this.getRecentlyOpened()
   }
 
   async loadTranscriptList() {
@@ -377,13 +364,12 @@ export default class App extends Vue {
     this.loadingTranscriptId = t.pk
     const y = document.createElement('audio')
     getTranscript(t.pk, (progress, events, serverTranscript) => {
-      this.eventStore.transcriptDownloadProgress = progress
+      eventStore.transcriptDownloadProgress = progress
       mergeServerTranscript(serverTranscript)
-      if (this.eventStore.metadata.audioUrl !== null) {
-        console.log(this.eventStore.metadata)
-        y.src = this.eventStore.metadata.audioUrl
+      if (eventStore.metadata.audioUrl !== null) {
+        y.src = eventStore.metadata.audioUrl
         y.addEventListener('durationchange', (e) => {
-          this.addRecentlyOpened(t)
+          addRecentlyOpened(t)
           this.loadingTranscriptId = null
           eventStore.audioElement = y
           if (eventStore.status !== 'finished') {
