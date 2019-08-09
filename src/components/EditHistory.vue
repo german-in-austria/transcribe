@@ -13,7 +13,7 @@
         :item-size="40">
         <template v-slot="{ item }">
           <v-list-tile
-            :class="item.apply === false && 'undone'"
+            :class="[item.apply === false && 'undone', 'history-list-item']"
             @dblclick="playEvent(item.before[0])"
             @mouseover="(ev) => handleEventMouseOver(ev, item)"
             @mouseout="handleEventMouseOut"
@@ -90,8 +90,8 @@
       :position-x="menuX"
       :position-y="menuY"
       :value="hoveredEvent !== null">
-      <v-card v-if="hoveredEvent !== null" class="pa-0 action-preview-container">
-        <div style="background: rgba(0,0,0,.1)">
+      <v-card v-if="hoveredEvent !== null" class="pa-0 action-preview-container context-menu">
+        <div class="pt-2 pb-2" style="background: rgba(0,0,0,.2)">
           <segment-transcript
             v-for="eventBefore in hoveredEvent.before"
             :key="'before-' + eventBefore.eventId"
@@ -101,7 +101,7 @@
         <div class="text-xs-center">
           <v-icon>arrow_downward</v-icon>
         </div>
-        <div>
+        <div class="pt-2 pb-2">
           <segment-transcript
             v-for="eventAfter in hoveredEvent.after"
             :key="'after-' + eventAfter.eventId"

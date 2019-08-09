@@ -16,7 +16,7 @@
       :position-x="menuX"
       :position-y="menuY"
       :value="hoveredEvent !== null">
-      <v-card class="pt-2">
+      <v-card class="pt-2 context-menu">
         <segment-transcript
           v-if="hoveredEvent !== null"
           :event="hoveredEvent"
