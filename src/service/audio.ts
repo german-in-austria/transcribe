@@ -15,6 +15,8 @@ import GetFrequenciesWorker from './get-frequencies.worker'
 const getFrequenciesWorker = new PromiseWorker(new GetFrequenciesWorker(''))
 
 import OggIndexWorker from './oggindex.worker'
+import { toTime } from '../store/transcript'
+import _ from 'lodash';
 const oggIndexWorker = new PromiseWorker(new OggIndexWorker(''))
 
 const textEncoder = new TextEncoder()
@@ -562,6 +564,30 @@ async function getAudioMetadata(url: string): Promise<AudioMetaData> {
   }
 }
 
+async function decodeAudioBufferProgressively({
+  buffer,
+  onProgress
+}: {
+  buffer: Uint8Array,
+  onProgress: (chunk: AudioBuffer, from: number, to: number) => any
+}
+) {
+  const { pages } = await audio.getOggIndexAsync(buffer.buffer)
+  const chunks = _.chunk(pages, 1000)
+  for (const chunk of chunks) {
+    const firstPage = _.first(chunk)
+    const lastPage = _.last(chunk)
+    if (firstPage !== undefined && lastPage !== undefined) {
+      const decoded = await audio.decodeBufferByteRange(
+        firstPage.byteOffset,
+        lastPage.byteOffset,
+        buffer.buffer
+      )
+      await onProgress(decoded, firstPage.timestamp, lastPage.timestamp)
+    }
+  }
+}
+
 async function processAndStoreAudioDownloadChunk(
   b: Uint8Array,
   c: (chunk: AudioBuffer, from: number, to: number) => any
@@ -577,14 +603,12 @@ async function processAndStoreAudioDownloadChunk(
     const lastPage = pages[pages.length - 1]
     if (firstPage && lastPage && audio.store.uint8Buffer.byteLength > 0) {
       try {
-        console.log({lastPage})
-        audio.decodeBufferByteRange(
+        const decoded = await audio.decodeBufferByteRange(
           audio.store.uint8Buffer.byteLength - lastPage.byteOffset,
           audio.store.uint8Buffer.byteLength,
           audio.store.uint8Buffer.buffer
-        ).then((decoded) => {
-          c(decoded, firstPage.timestamp, lastPage.timestamp)
-        })
+        )
+        await c(decoded, firstPage.timestamp, lastPage.timestamp)
       } catch (e) {
         console.log('streaming decoder error', e)
       }
@@ -592,7 +616,7 @@ async function processAndStoreAudioDownloadChunk(
   }
 }
 
-async function downloadAudioStream({
+async function downloadAndDecodeAudioStream({
     url,
     chunkSize = 2048 * 1024,
     onStart,
@@ -604,33 +628,39 @@ async function downloadAudioStream({
     onProgress: (chunk: AudioBuffer, from: number, to: number) => any
   }
 ) {
-  metadata = await getAudioMetadata(url)
-  const x = await fetch(url, { credentials: 'include' }).then(async (res) => {
-    onStart(metadata)
-    let preBuffer = new Uint8Array(0)
-    if (res.body instanceof ReadableStream) {
-      const reader = res.body.getReader()
-      console.log('total length in bytes', res.headers.get('Content-Length'))
-      await reader.read().then(async function process(chunk: {value: Uint8Array, done: boolean}): Promise<any> {
-        if (chunk.value && chunk.value.buffer instanceof ArrayBuffer) {
-          [ preBuffer ] = await util.concatUint8ArrayAsync(preBuffer, chunk.value)
-          if (preBuffer.byteLength > chunkSize) {
-            await processAndStoreAudioDownloadChunk(preBuffer, onProgress)
-            preBuffer = new Uint8Array(0)
-          }
-        } else {
-          console.log('received non-buffer', chunk)
-        }
-        if (chunk.done === false) {
-          return reader.read().then(process)
-        } else {
-          await processAndStoreAudioDownloadChunk(preBuffer, onProgress)
-          audio.store.isBufferComplete = true
-          audio.cacheOggIndex(audio.store.uint8Buffer.buffer)
-        }
-      })
-    }
-    return res
+  return new Promise(async (resolve, reject) => {
+    metadata = await getAudioMetadata(url)
+    fetch(url, { credentials: 'include' }).then(async (res) => {
+      onStart(metadata)
+      let preBuffer = new Uint8Array(0)
+      if (res.body instanceof ReadableStream) {
+        const reader = res.body.getReader()
+        console.log('total length in bytes', res.headers.get('Content-Length'))
+        await reader
+          .read()
+          .then(async function process(chunk: {value: Uint8Array, done: boolean}): Promise<any> {
+            if (chunk.done === false) {
+              if (chunk.value && chunk.value.buffer instanceof ArrayBuffer) {
+                [ preBuffer ] = await util.concatUint8ArrayAsync(preBuffer, chunk.value)
+                if (preBuffer.byteLength > chunkSize) {
+                  await processAndStoreAudioDownloadChunk(preBuffer, onProgress)
+                  preBuffer = new Uint8Array(0)
+                }
+              } else {
+                console.log('received non-buffer', chunk)
+              }
+              // recursion
+              return reader.read().then(process)
+            } else {
+              await processAndStoreAudioDownloadChunk(preBuffer, onProgress)
+              audio.store.isBufferComplete = true
+              await audio.cacheOggIndex(audio.store.uint8Buffer.buffer)
+              // done.
+              resolve()
+            }
+          })
+      }
+    })
   })
 }
 
@@ -649,7 +679,8 @@ const audio = {
   concatBuffer,
   decodeBufferByteRange,
   decodeBufferTimeSlice,
-  downloadAudioStream,
+  decodeAudioBufferProgressively,
+  downloadAndDecodeAudioStream,
   drawSpectrogramAsync,
   drawWave,
   drawWavePath,

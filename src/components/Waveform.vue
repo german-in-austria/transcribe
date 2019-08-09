@@ -530,7 +530,7 @@ export default class Waveform extends Vue {
     }
   }
 
-  @Watch('eventStore.audioElement')
+  // @Watch('eventStore.audioElement')
   async initWithAudio() {
     if (eventStore.audioElement !== null && !isNaN(eventStore.audioElement.duration)) {
       this.loading = true
@@ -539,8 +539,14 @@ export default class Waveform extends Vue {
       const that = this
       if (audio.store.isLocalFile === true) {
         this.loading = false
+        await audio.decodeAudioBufferProgressively({
+          buffer: audio.store.uint8Buffer,
+          onProgress: async (chunk: AudioBuffer, from: number, to: number) => {
+            await this.drawOverviewWaveformPiece(from, to, chunk)
+          }
+        })
       } else {
-        await audio.downloadAudioStream({
+        await audio.downloadAndDecodeAudioStream({
           url: eventStore.audioElement.src,
           onStart: (metadata) => {
             if (metadata !== null) {
@@ -551,9 +557,9 @@ export default class Waveform extends Vue {
             this.initWithCache()
             this.doMaybeRerender()
           },
-          onProgress: (chunk: AudioBuffer, from: number, to: number) => {
+          onProgress: async (chunk: AudioBuffer, from: number, to: number) => {
             if (localStorage.getItem(eventStore.metadata.audioUrl + '_overview') === null) {
-              this.drawOverviewWaveformPiece(from, to, chunk)
+              await this.drawOverviewWaveformPiece(from, to, chunk)
             }
           }
         })
@@ -598,6 +604,7 @@ export default class Waveform extends Vue {
     ])
     await util.requestFrameAsync()
     const el = (this.$el.querySelector('.overview-waveform svg') as HTMLElement);
+    console.log('drawing overview from to', toTime(startTime), toTime(endTime))
     el.insertAdjacentHTML(
       'beforeend',
       `<path fill="${ settings.waveFormColors[0] }" d="${ svg1 }" />
@@ -644,9 +651,36 @@ export default class Waveform extends Vue {
 </script>
 
 <style lang="stylus">
-@-webkit-keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-@-moz-keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@-webkit-keyframes fadeIn {
+  from {
+    transform scaleY(0)
+    opacity 0
+  }
+  to {
+    transform scaleY(1)
+    opacity 1
+  }
+}
+@-moz-keyframes fadeIn {
+  from {
+    transform scaleY(0)
+    opacity 0
+  }
+  to {
+    transform scaleY(1)
+    opacity 1
+  }
+}
+@keyframes fadeIn {
+  from {
+    transform scaleY(0)
+    opacity 0
+  }
+  to {
+    transform scaleY(1)
+    opacity 1
+  }
+}
 
 .second-marker
   will-change transform
@@ -665,6 +699,10 @@ export default class Waveform extends Vue {
   z-index -1
   white-space nowrap
   svg path
+    transform-origin 50% 50%
+    animation .2s fadeIn
+    animation-iteration-count 1
+    animation-direction initial
     mix-blend-mode overlay
 
 .wave-form-inner

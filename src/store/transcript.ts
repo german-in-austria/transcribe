@@ -16,6 +16,7 @@ import {
   serverTranscriptToLocal,
   updateServerTranscriptWithChanges,
   ServerTranscriptSaveResponse,
+  ServerTranscriptListItem,
   ServerTranscript
 } from '../service/backend-server'
 
@@ -95,6 +96,7 @@ export const eventStore = {
   playingEvent: null as LocalTranscriptEvent|null,
   isPaused: true as boolean,
   currentTime: 0,
+  recentlyOpened: JSON.parse(localStorage.getItem('recentlyOpened') || '[]'),
   metadata: {
     defaultTier: 'text' as TokenTierType,
     speakers: {} as LocalTranscriptSpeakers,
@@ -114,12 +116,9 @@ export const eventStore = {
   transcriptDownloadProgress: 0 as number,
   status: 'empty' as 'empty'|'loading'|'finished'|'new',
   playAllFrom: null as number|null,
-  backEndUrl: localStorage.getItem('backEndUrl') || 'https://dissdb.dioe.at',
+  backEndUrl: localStorage.getItem('backEndUrl') || 'https://dissdb-test.dioe.at',
   audioElement: document.createElement('audio')
 }
-
-// ;
-// (window as any)._eventStore = eventStore
 
 export function tokenTypeFromToken(token: string) {
   const type = _(settings.tokenTypes).find((tt) => {
@@ -134,6 +133,19 @@ export function tokenTypeFromToken(token: string) {
       id: -1
     }
   }
+}
+
+export function addRecentlyOpened(t: ServerTranscriptListItem): ServerTranscriptListItem[] {
+  eventStore.recentlyOpened = _([t])
+    .concat(eventStore.recentlyOpened)
+    .uniqBy(ts => ts.pk)
+    .take(3)
+    .value()
+  localStorage.setItem(
+    'recentlyOpened',
+    JSON.stringify(eventStore.recentlyOpened)
+  )
+  return eventStore.recentlyOpened
 }
 
 export function loadAudioFile(f: File|Uint8Array|null): Promise<HTMLAudioElement> {
