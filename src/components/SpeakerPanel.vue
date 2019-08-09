@@ -47,7 +47,6 @@ import { eventStore } from '../store/transcript'
 @Component
 export default class SpeakerPanel extends Vue {
 
-  @Prop() prop: string|null
   settings = settings
   eventStore = eventStore
   tierHeight = 25
