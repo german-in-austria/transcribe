@@ -9,7 +9,8 @@
     "einzelerhebung",
     "einzelerhebungen",
     "undoable",
-    "wasm"
+    "wasm",
+    "weiblich"
   ],
   "search.exclude": {
     "**/dist": true
