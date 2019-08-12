@@ -112,7 +112,6 @@ export interface ServerTranscript {
   aTmNr?: number
 }
 
-
 export interface ServerToken {
   tr: number // token reihung
   tt: number // token type
@@ -157,10 +156,12 @@ export function getMetadataFromServerTranscript(res: ServerTranscript) {
     tokenTypes: res.aTokenTypes!,
     transcriptName: res.aTranskript!.n,
     defaultTier: res.aTranskript!.default_tier || 'text',
-    audioUrl: `${ eventStore.backEndUrl }/private-media`
-      + res.aEinzelErhebung!.dp.split('\\').join('/')
-      + res.aEinzelErhebung!.af
-      + '.ogg',
+    audioUrl: res.aEinzelErhebung!.af !== undefined
+      ? `${ eventStore.backEndUrl }/private-media`
+        + res.aEinzelErhebung!.dp.split('\\').join('/')
+        + res.aEinzelErhebung!.af
+        + '.ogg'
+      : null,
     tiers: _(res.aTiers).map((t, tid) => {
       return {
         type: 'freeText',
