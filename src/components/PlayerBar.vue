@@ -147,7 +147,7 @@ export default class PlayerBar extends Vue {
 
 .playerbar
   z-index 3
-  position fixed
+  position sticky
   left 0
   right 0
   bottom 0

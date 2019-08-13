@@ -10,6 +10,7 @@
         <div :style="{transform: `translate3d(${ innerLeft }px, 0, 0)`}" ref="inner" class="transcript-segments-inner">
           <segment-transcript
             v-for="(event, i) in visibleEvents"
+            :data-event-id="event.eventId"
             :index="i"
             :event="event"
             :previous-event="visibleEvents[i - 1]"
@@ -41,7 +42,7 @@ import {
   eventStore,
   LocalTranscriptEvent,
   isEventSelected,
-  findEventById,
+  findEventIndexById,
   findEventAt,
   findEventIndexAt
 } from '../store/transcript'
@@ -74,19 +75,22 @@ export default class TranscriptEditor extends Vue {
     console.log('do scroll to event', e)
     if (e !== null && e !== undefined) {
       // right in the middle
-      const i = findEventById(e.eventId) - Math.floor(defaultLimit / 2)
+      const i = findEventIndexById(e.eventId) - Math.floor(defaultLimit / 2)
       this.currentIndex = Math.max(0, i)
       this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
       this.$nextTick(() => {
         requestAnimationFrame(() => {
-          const el = this.$el.querySelector('.segment-selected')
+          const el = this.$el.querySelector(`[data-event-id="${e.eventId}"]`)
           const c = this.$refs.tracks
           const inner = this.$refs.inner
-          if (c instanceof HTMLElement && el instanceof HTMLElement && inner instanceof HTMLElement) {
-            inner.style.transition = '.3s'
-            this.innerLeft = el.offsetLeft * -1 + c.clientWidth / 2 - el.clientWidth / 2
-            setTimeout(() => { inner.style.transition = 'none' }, 300)
-            this.debouncedEmitScroll()
+          if (
+            c instanceof HTMLElement &&
+            el instanceof HTMLElement &&
+            inner instanceof HTMLElement
+          ) {
+            inner.style.transition = '.2s'
+            this.innerLeft = el.offsetLeft * -1 + c.clientWidth / 2 - el.clientWidth / 2 - 25
+            setTimeout(() => { inner.style.transition = 'none' }, 200)
           }
         })
       })

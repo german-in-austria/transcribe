@@ -107,7 +107,11 @@
         <slot name="overview" />
       </v-flex>
       <v-flex>
-        <scroll-lock-button style="margin-top: 11px;" v-model="settings.lockScroll" />
+        <scroll-lock-button
+          style="margin-top: 20px;"
+          :value="settings.lockScroll"
+          @input="handleScrollLockToggle"
+        />
       </v-flex>
     </v-layout>
   </div>
@@ -199,6 +203,11 @@ export default class Waveform extends Vue {
     if (eventStore.playAllFrom !== null) {
       this.disableAutoScrollDuringPlayback()
     }
+  }
+
+  handleScrollLockToggle(v: boolean) {
+    settings.lockPlayHead = v
+    settings.lockScroll = v
   }
 
   @Watch('eventStore.events')

@@ -123,7 +123,7 @@ import {
   toTime,
   scrollToAudioEvent,
   scrollToTranscriptEvent,
-  findEventById,
+  findEventIndexById,
   LocalTranscriptEvent,
   selectEvent,
   playEvent,
@@ -157,7 +157,7 @@ export default class EditHistory extends Vue {
   menuY = 0
 
   showEventIfExists(e: LocalTranscriptEvent) {
-    const i = findEventById(e.eventId)
+    const i = findEventIndexById(e.eventId)
     if (i > -1) {
       selectEvent(e)
       scrollToAudioEvent(e)

@@ -1,14 +1,34 @@
 <template>
   <v-tabs v-if="active" hide-slider class="sidebar layout fill-height column" height="64" grow v-model="activeTab">
-    <v-tab ripple>
-      History
+    <v-tab>
+      <v-icon>edit</v-icon>
     </v-tab>
-    <v-tab ripple>
+    <v-tab>
+      <v-icon>history</v-icon>
+    </v-tab>
+    <v-tab>
       <v-badge :value="errors.length > 0" color="grey">
-        Errors <span slot="badge">{{ errors.length }}</span>
+        <v-icon>error_outline</v-icon> <span slot="badge">{{ errors.length }}</span>
       </v-badge>
     </v-tab>
     <v-tabs-items class="sidebar-scrollable">
+      <v-tab-item>
+        <v-list dense>
+          <v-list-tile>
+            <v-list-tile-avatar>
+              <v-icon>call_split</v-icon>
+            </v-list-tile-avatar>
+            <v-list-tile-content>
+              <v-list-tile-title>
+                split
+              </v-list-tile-title>
+            </v-list-tile-content>
+            <v-list-tile-action>
+              ⌘S
+            </v-list-tile-action>
+          </v-list-tile>
+        </v-list>
+      </v-tab-item>
       <v-tab-item>
         <edit-history v-if="history.actions.length > 0" />
         <div v-else class="text-xs-center grey--text mt-4">
@@ -32,7 +52,7 @@ import * as _ from 'lodash'
 import {
   LocalTranscriptEvent,
   scrollToAudioEvent,
-  findEventById,
+  findEventIndexById,
   scrollToTranscriptEvent,
   eventStore,
   selectEvent,

@@ -35,7 +35,7 @@ import {
   selectEvent,
   scrollToAudioEvent,
   scrollToTranscriptEvent,
-  findEventById,
+  findEventIndexById,
   playEvent,
   LocalTranscriptEvent,
   selectSearchResult
@@ -58,7 +58,7 @@ export default class SearchResults extends Vue {
   handleDoubleClick(ev: MouseEvent) {
     const eventId = ev.toElement.getAttribute('data-event-id')
     if (eventId !== null) {
-      const i = findEventById(Number(eventId))
+      const i = findEventIndexById(Number(eventId))
       const e = eventStore.events[i]
       playEvent(e)
     }
@@ -67,7 +67,7 @@ export default class SearchResults extends Vue {
   handleResultMouseOver(ev: MouseEvent) {
     const eventId = ev.toElement.getAttribute('data-event-id')
     if (eventId !== null) {
-      const i = findEventById(Number(eventId))
+      const i = findEventIndexById(Number(eventId))
       const e = eventStore.events[i]
       const rect = ev.toElement.getBoundingClientRect()
       this.menuX = rect.left
@@ -83,7 +83,7 @@ export default class SearchResults extends Vue {
   handleResultClick(ev: MouseEvent) {
     const eventId = ev.toElement.getAttribute('data-event-id')
     if (eventId !== null) {
-      const i = findEventById(Number(eventId))
+      const i = findEventIndexById(Number(eventId))
       const e = eventStore.events[i]
       selectSearchResult(e)
     }

@@ -1,9 +1,17 @@
 <template>
-  <div :class="{ selected: isSelected, segment: true, 'fragment-of': hasFragmentOfInAnyFirstToken }">
+  <div :class="{
+    selected: isSelected,
+    segment: true,
+    'fragment-of': hasFragmentOfInAnyFirstToken
+  }">
     <div
       style="outline: 0;"
       tabindex="-1"
-      :class="{time: true, error: hasErrors}"
+      :class="{
+        time: true,
+        error: hasErrors,
+        viewing: isViewingEvent(event)
+      }"
       @keydown.enter.meta="playEvent(event)"
       @keydown.delete.exact="deleteSelectedEvents"
       @keydown.backspace.exact="deleteSelectedEvents"
@@ -83,6 +91,11 @@ export default class SegmentTranscript extends Vue {
     })
   }
 
+  isViewingEvent(e: LocalTranscriptEvent) {
+    return eventStore.userState.viewingTranscriptEvent !== null
+      && eventStore.userState.viewingTranscriptEvent.eventId === e.eventId
+  }
+
   deleteSelectedEvents() {
     undoable(deleteSelectedEvents())
   }
@@ -157,6 +170,9 @@ export default class SegmentTranscript extends Vue {
     background rgba(255,255,255,.1)
   &.error
     color white
+  &.viewing
+    background #ccc
+    color #333
 
 .selected .time
   background cornflowerblue

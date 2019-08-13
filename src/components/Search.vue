@@ -72,7 +72,7 @@ import { isCmdOrCtrl } from '../util'
 import {
   findNextEventAt,
   findPreviousEventAt,
-  findEventById,
+  findEventIndexById,
   eventStore,
   getSelectedEvent,
   LocalTranscriptEvent,
@@ -222,7 +222,7 @@ export default class Search extends Vue {
     }
   }
   findNext() {
-    const selectedEvent = eventStore.events[findEventById(eventStore.selectedEventIds[0])]
+    const selectedEvent = eventStore.events[findEventIndexById(eventStore.selectedEventIds[0])]
     const e = findNextEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults)
     if (e !== undefined) {
       this.goToResult(e)
@@ -231,7 +231,7 @@ export default class Search extends Vue {
     }
   }
   findPrevious() {
-    const selectedEvent = eventStore.events[findEventById(eventStore.selectedEventIds[0])]
+    const selectedEvent = eventStore.events[findEventIndexById(eventStore.selectedEventIds[0])]
     const e = findPreviousEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults)
     if (e !== undefined) {
       this.goToResult(e)

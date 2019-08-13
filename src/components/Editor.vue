@@ -38,14 +38,9 @@
             </template>
           </v-btn>
           <v-list dense class="context-menu-list">
-            <v-list-tile @click="exportJSON">
-              <v-list-tile-content>
-                <v-list-tile-title>Export Transcript</v-list-tile-title>
-              </v-list-tile-content>
-            </v-list-tile>
             <v-list-tile @click="exportProject">
               <v-list-tile-content>
-                <v-list-tile-title>Export Project</v-list-tile-title>
+                <v-list-tile-title>Download Project</v-list-tile-title>
               </v-list-tile-content>
             </v-list-tile>
             <v-divider />
@@ -63,7 +58,7 @@
             icon flat>
             <v-badge color="error" overlap :value="errors.length > 0">
               <span slot="badge">{{ errors.length }}</span>
-              <v-icon>history</v-icon>
+              <v-icon>widgets</v-icon>
             </v-badge>
           </v-btn>
           <span>History & Errors</span>

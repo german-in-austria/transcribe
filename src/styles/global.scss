@@ -70,9 +70,13 @@ img[lazy=loaded] {
   box-shadow: 0 5px 30px rgba(0,0,0,.2);
 }
 .v-menu__content .avatar i.v-icon,
-.context-menu .avatar i.v-icon {
+.context-menu .avatar i.v-icon{
   font-size: 1.1em;
 }
+.v-tabs__item i.v-icon{
+  font-size: 1.2em;
+}
+
 .v-menu__content .v-list__tile__avatar,
 .context-menu .v-list__tile__avatar{
   min-width: 40px;
