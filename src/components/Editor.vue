@@ -128,6 +128,19 @@
               <v-list-tile-action>J</v-list-tile-action>
             </v-list-tile>
             <v-list-tile
+              :disabled="eventStore.selectedEventIds.length === 0"
+              @click="exportEventAudio(eventStore.selectedEventIds)">
+              <v-list-tile-content>
+                <v-list-tile-title>
+                  Export Audio {{
+                    eventStore.selectedEventIds.length > 1
+                    ? '(' + eventStore.selectedEventIds.length + ')'
+                    : ''
+                  }}
+                </v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+            <v-list-tile
               @click="scrollToTranscriptEvent(getSelectedEvent())">
               <v-list-tile-content>
                 <v-list-tile-title>Show Transcript</v-list-tile-title>
@@ -211,7 +224,8 @@ import {
   isEventSelected,
   saveChangesToServer,
   scrollToAudioEvent,
-  loadAudioFile
+  loadAudioFile,
+  exportEventAudio
 } from '../store/transcript'
 
 import { history, undoable, startListening as startUndoListener } from '../store/history'
@@ -240,6 +254,7 @@ export default class Editor extends Vue {
   isEventSelected = isEventSelected
   history = history
   loadAudioFile = loadAudioFile
+  exportEventAudio = exportEventAudio
 
   scrollTranscriptIndex: number = 0
   scrollTranscriptTime: number = 0

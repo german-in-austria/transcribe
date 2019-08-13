@@ -137,6 +137,7 @@ export default class ResizeParent extends Vue {
                 this.previous.style.width = this.previous.offsetWidth - overlap + 'px'
               }
             } else {
+              // tslint:disable-next-line:max-line-length
               this.parent.style.width = (this.parentStartGeometry.offsetX + this.parentStartGeometry.width) - this.leftMin + 'px'
               this.parent.style.left = this.leftMin + 'px'
               this.previous.style.width = this.parentMinWidth + 'px'
@@ -164,12 +165,12 @@ export default class ResizeParent extends Vue {
         right: this.parent.offsetLeft + this.parent.offsetWidth
       },
       next: (() => {
-        console.log('next geometry', this.nextStartGeometry, this.next.offsetLeft)
         if (
           this.next instanceof HTMLElement &&
           this.nextStartGeometry !== null &&
           this.next.offsetLeft !== this.nextStartGeometry.offsetX
         ) {
+          // console.log('next geometry', this.nextStartGeometry, this.next.offsetLeft)
           return {
             left: this.next.offsetLeft,
             right: this.next.offsetLeft + this.next.offsetWidth
@@ -179,12 +180,12 @@ export default class ResizeParent extends Vue {
         }
       })(),
       previous: (() => {
-        console.log('previous geometry', this.previousStartGeometry, this.previous.offsetWidth)
         if (
           this.previous instanceof HTMLElement &&
           this.previousStartGeometry !== null &&
           this.previous.offsetWidth !== this.previousStartGeometry.width
         ) {
+          // console.log('previous geometry', this.previousStartGeometry, this.previous.offsetWidth)
           return {
             left: this.previous.offsetLeft,
             right:  this.previous.offsetLeft + this.previous.offsetWidth

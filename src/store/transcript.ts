@@ -1,5 +1,6 @@
 
 import _ from 'lodash'
+import { saveAs } from 'file-saver'
 import audio from '../service/audio'
 import {
   clone,
@@ -146,6 +147,28 @@ export function addRecentlyOpened(t: ServerTranscriptListItem): ServerTranscript
     JSON.stringify(eventStore.recentlyOpened)
   )
   return eventStore.recentlyOpened
+}
+
+export async function exportEventAudio(eventIds: number[]) {
+  const sortedEvents = sortEvents(getEventsByIds(eventIds))
+  const [firstEvent, lastEvent] = [_(sortedEvents).first(), _(sortedEvents).last()]
+  console.log({ firstEvent, lastEvent })
+  if (firstEvent !== undefined && lastEvent !== undefined) {
+    const buffer = await audio.decodeBufferTimeSlice(
+      firstEvent.startTime,
+      lastEvent.endTime,
+      audio.store.uint8Buffer.buffer
+    )
+    const wav = audio.audioBufferToWav(buffer)
+    const blob = new Blob([new Uint8Array(wav)])
+    saveAs(
+      blob,
+      eventStore.metadata.transcriptName
+      + '__'
+      + toTime(firstEvent.startTime).replace(':', '-')
+      + '.wav'
+    )
+  }
 }
 
 export function loadAudioFile(f: File|Uint8Array|null): Promise<HTMLAudioElement> {
@@ -553,6 +576,11 @@ function emitUpdateTimeUntilPaused(t: number, maxT?: number) {
       return false
     } else {
       // continue emitting
+      const e = findEventAt(eventStore.currentTime)
+      if (e !== undefined && e.eventId !== eventStore.selectedEventIds[0]) {
+        eventStore.selectedEventIds[0] = e.eventId
+        scrollToTranscriptEvent(e)
+      }
       return requestAnimationFrame(step)
     }
   }
