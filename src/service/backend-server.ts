@@ -478,8 +478,7 @@ export async function createEmptyTranscript(
   surveyId: number,
   name: string,
   defaultTier: TokenTierType
-): Promise<ServerTranscriptId> {
-
+): Promise<{error: string|null, transcript_id: ServerTranscriptId}> {
   const res = await (await fetch(`${ eventStore.backEndUrl }/routes/transcript/create`, {
     credentials: 'include',
     method: 'POST',
@@ -493,9 +492,11 @@ export async function createEmptyTranscript(
       default_tier: defaultTier
     })
   })).json()
-  console.log({res})
-  // TODO:
-  return -1
+  if (res.error === null) {
+    return res
+  } else {
+    throw new Error('Could not create empty transcript')
+  }
 }
 
 export async function getServerTranscripts(): Promise<{transcripts: ServerTranscriptListItem[]}> {
