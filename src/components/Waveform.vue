@@ -221,6 +221,10 @@ export default class Waveform extends Vue {
     localStorage.setItem(eventStore.metadata.audioUrl + '_overview', el.innerHTML)
   }
 
+  hasOverviewCache(): boolean {
+    return localStorage.getItem(eventStore.metadata.audioUrl + '_overview') !== undefined
+  }
+
   get containerStyle() {
     return {
       background: this.settings.darkMode ? '#191919' : '#e8e8e8'
@@ -555,24 +559,39 @@ export default class Waveform extends Vue {
           }
         })
       } else {
-        await audio.downloadAndDecodeAudioStream({
-          url: eventStore.audioElement.src,
-          onStart: (metadata) => {
-            if (metadata !== null) {
-              eventStore.metadata.audioUrl = metadata.url
-              eventStore.audioMetadata.fileSize = metadata.fileSize
-              eventStore.audioMetadata.length = eventStore.audioElement.duration
+        if (this.hasOverviewCache()) {
+          await audio.downloadAudioStream({
+            url: eventStore.audioElement.src,
+            onStart: (metadata) => {
+              if (metadata !== null) {
+                eventStore.metadata.audioUrl = metadata.url
+                eventStore.audioMetadata.fileSize = metadata.fileSize
+                eventStore.audioMetadata.length = eventStore.audioElement.duration
+              }
+              this.initWithCache()
+              this.doMaybeRerender()
             }
-            this.initWithCache()
-            this.doMaybeRerender()
-          },
-          onProgress: async (chunk: AudioBuffer, from: number, to: number) => {
-            if (localStorage.getItem(eventStore.metadata.audioUrl + '_overview') === null) {
-              await this.drawOverviewWaveformPiece(from, to, chunk)
+          })
+        } else {
+          await audio.downloadAndDecodeAudioStream({
+            url: eventStore.audioElement.src,
+            onStart: (metadata) => {
+              if (metadata !== null) {
+                eventStore.metadata.audioUrl = metadata.url
+                eventStore.audioMetadata.fileSize = metadata.fileSize
+                eventStore.audioMetadata.length = eventStore.audioElement.duration
+              }
+              this.initWithCache()
+              this.doMaybeRerender()
+            },
+            onProgress: async (chunk: AudioBuffer, from: number, to: number) => {
+              if (localStorage.getItem(eventStore.metadata.audioUrl + '_overview') === null) {
+                await this.drawOverviewWaveformPiece(from, to, chunk)
+              }
             }
-          }
-        })
-        this.cacheOverviewWaveform()
+          })
+          this.cacheOverviewWaveform()
+        }
         console.log('download done.')
       }
     }

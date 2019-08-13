@@ -118,8 +118,7 @@ export default class Sidebar extends Vue {
 </script>
 <style lang="stylus">
 .sidebar-scrollable
-  margin-bottom 70px
-  height calc(100% - 140px)
+  height calc(100% - 70px)
   .v-window__container
   .v-window-item
   .v-list

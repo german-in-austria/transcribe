@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div style="height: 100%">
     <v-list v-if="history.actions.length > 0" dense>
       <v-list-tile @click="goToInitialState">
         <v-list-tile-avatar><small>(1)</small></v-list-tile-avatar>
