@@ -100,13 +100,14 @@ interface Speakers {
 }
 
 export interface ParsedExmaraldaXML {
+  fileName: string
   timeline: Timeline
   speakers: Speakers
   speakerTiers: SpeakerTierImportable[]
 }
 
 export function exmaraldaToImportable(fileName: string, xml: string): ParsedExmaraldaXML {
-  return parseTree(parseXML(xml))
+  return parseTree(parseXML(xml), fileName)
 }
 
 function getTokenTypeId(t: string): number {
@@ -272,7 +273,7 @@ export function importableToServerTranscript(
   }
 }
 
-export default function parseTree(xmlTree: BasicNode): ParsedExmaraldaXML {
+export default function parseTree(xmlTree: BasicNode, fileName: string): ParsedExmaraldaXML {
 
   if (xmlTree.children && xmlTree.children[0] && xmlTree.children[0].children) {
     const basicBody = _(xmlTree.children[0].children).find({ name: 'basic-body' })
@@ -315,6 +316,7 @@ export default function parseTree(xmlTree: BasicNode): ParsedExmaraldaXML {
           })
           .value()
         return {
+          fileName,
           timeline: commonTimelineByTli,
           speakers: tiersBySpeakers,
           speakerTiers: _(tiersBySpeakers)

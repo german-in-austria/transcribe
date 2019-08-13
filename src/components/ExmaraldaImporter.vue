@@ -22,7 +22,7 @@
       max-width="1200">
       <v-card>
         <v-card-title class="display-block text-xs-center grey--text">
-          <v-spacer />Import Exmaralda File<v-spacer />
+          <v-spacer />Import "{{ importable.fileName }}"<v-spacer />
         </v-card-title>
         <v-divider />
         <v-card-text class="pa-0">
@@ -287,8 +287,8 @@
                 </v-flex>
                 <v-flex>
                   <drop-file
-                    @update="updateFile"
-                    :initial-file-name="fileName" />
+                    @update="updateAudioFile"
+                    :initial-file-name="audioFileName" />
                 </v-flex>
               </v-layout>
             </v-window-item>
@@ -371,18 +371,15 @@ export default class ExmaraldaImporter extends Vue {
   @Prop({ required: true }) importable: ParsedExmaraldaXML
   surveys: ServerSurvey[]|null = null
 
-  log = console.log
-
   step = 1
-
   basicInfoValid = false
   tiersValid = false
 
   globalDefaultTier: TokenTierType|null = null
-  transcriptName: string|null = null
+  transcriptName: string|null = this.importable.fileName.replace('.exb', '')
   selectedSurvey: ServerSurvey|null = null
-  fileName: string|null = null
-  selectedFile: File|null = null
+  audioFileName: string|null = null
+  selectedAudioFile: File|null = null
 
   showMissingDefaultTierError = false
   isAnythingOrAllSelected: boolean|null = false
@@ -409,9 +406,9 @@ export default class ExmaraldaImporter extends Vue {
     }
   }
 
-  updateFile(file: File|null) {
-    this.selectedFile = file
-    this.fileName = file === null ? null : file.name
+  updateAudioFile(file: File|null) {
+    this.selectedAudioFile = file
+    this.audioFileName = file === null ? null : file.name
   }
 
   get surveySpeakers() {
@@ -424,13 +421,13 @@ export default class ExmaraldaImporter extends Vue {
     return (
       (this.step === 1 && this.basicInfoValid === true && this.surveys !== null) ||
       (this.step === 2 && this.tiersValid === true && this.isAnythingOrAllSelected !== false) ||
-      (this.step === 3 && this.fileName !== null)
+      (this.step === 3 && this.audioFileName !== null)
     )
   }
 
   selectSurvey(survey: ServerSurvey) {
     this.selectedSurvey = survey
-    this.fileName = survey.Audiofile
+    this.audioFileName = survey.Audiofile
   }
 
   getSelectedDefaultTierForSpeaker(to_speaker: ServerInformant): SpeakerTierImportable[] {
@@ -458,12 +455,6 @@ export default class ExmaraldaImporter extends Vue {
     i: number
   ) {
     this.importable.speakerTiers[i].to_tier_type = to_tier_type
-    // this.$nextTick(() => {
-    //   this.importable.speakerTiers[i] = {
-    //     ...speakerTier,
-    //     to_tier_type
-    //   }
-    // })
   }
 
   isDuplicateDefaultTierForSpeaker(speakerTier: SpeakerTierImportable): boolean {
@@ -560,11 +551,6 @@ export default class ExmaraldaImporter extends Vue {
         this.selectedSurvey !== null &&
         this.globalDefaultTier !== null
       ) {
-        await createEmptyTranscript(
-          this.selectedSurvey.pk,
-          this.transcriptName,
-          this.globalDefaultTier
-        )
         this.$emit(
           'finish',
           importableToServerTranscript(
@@ -573,7 +559,7 @@ export default class ExmaraldaImporter extends Vue {
             this.selectedSurvey,
             this.globalDefaultTier
           ),
-          this.selectedFile
+          this.selectedAudioFile
         )
       }
     }
