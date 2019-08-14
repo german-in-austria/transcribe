@@ -17,9 +17,7 @@
             v-text="token.tiers[tier.name] !== undefined ? token.tiers[tier.name].text : undefined"
             contenteditable="true"
             @blur="(e) => updateAndCommitLocalTokenTier(e, tier.name, i)"
-            @focus="(e) => $emit('focus', e, event)"
-            @keydown.enter.meta="playEvent(event)"
-            @keydown.enter.exact.stop.prevent="viewAudioEvent(event)" />
+            @focus="(e) => $emit('focus', e, event)" />
           <span v-else class="secondary-token-tier-text" />
         </span>
       </span>
@@ -30,8 +28,6 @@
       @blur="updateAndCommitLocalTokens"
       @keydown.tab.shift.exact="focusPreviousFrom(defaultTier)"
       @keydown.tab.exact="focusNextFrom(defaultTier)"
-      @keydown.enter.meta="playEvent(event)"
-      @keydown.enter.exact.stop.prevent="viewAudioEvent(event)"
       @copy.prevent="copyTokens"
       @cut.prevent="cutTokens"
       @paste="pasteTokens"
@@ -53,9 +49,7 @@
         @keydown.tab.shift.exact="focusPreviousFrom(tier.id)"
         @keydown.tab.exact="focusNextFrom(tier.id)"
         @blur="(e) => updateAndCommitLocalEventTier(e, tier.id, tier.type)"
-        @focus="(e) => $emit('focus', e, event)"
-        @keydown.enter.meta="playEvent(event)"
-        @keydown.enter.exact.stop.prevent="viewAudioEvent(event)" />
+        @focus="(e) => $emit('focus', e, event)" />
     </div>
   </div>
 </template>

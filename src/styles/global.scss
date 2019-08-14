@@ -103,6 +103,9 @@ img[lazy=loaded] {
   background: rgba(0,0,0,.4);
   border-right: 1px solid #181818;
 }
+.v-select--chips.keyboard-chips .v-chip--small{
+  border-radius: 3px
+} 
 .no-flex-direction{
   flex-direction: unset;
 }

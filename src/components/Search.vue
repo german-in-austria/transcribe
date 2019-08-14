@@ -9,8 +9,6 @@
         @keydown.esc.exact="handleEsc"
         @keydown.enter.exact="findNext"
         @keydown.enter.shift.exact="findPrevious"
-        @keydown.enter.meta.exact="playEvent"
-        @keydown.enter.ctrl.exact="playEvent"
         @input="(e) => handleSearch(e.target.value)"
         @focus="onFocus"
         @blur="onBlur"
@@ -80,7 +78,6 @@ import {
   scrollToAudioEvent,
   scrollToTranscriptEvent,
   selectEvent,
-  playEvent,
   toTime,
   LocalTranscriptToken,
   selectSearchResult
@@ -115,13 +112,6 @@ export default class Search extends Vue {
   onBlur() {
     this.focused = false
     history.startListening()
-  }
-
-  playEvent() {
-    const e = getSelectedEvent()
-    if (e !== undefined) {
-      playEvent(e)
-    }
   }
 
   get searchSettings() {

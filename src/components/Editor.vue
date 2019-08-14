@@ -181,10 +181,15 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import * as _ from 'lodash'
+import * as fns from 'date-fns'
+import { saveAs } from 'file-saver'
+import * as humanSize from 'human-size'
 
 import waveForm from './Waveform.vue'
 import settingsView from './Settings.vue'
-import settings, { handleGlobalShortcut } from '../store/settings'
+import settings from '../store/settings'
+import { handleGlobalShortcut } from '../service/keyboard'
 import spectrogram from './Spectrogram.vue'
 import search from './Search.vue'
 import searchResults from './SearchResults.vue'
@@ -192,11 +197,6 @@ import transcriptEditor from './TranscriptEditor.vue'
 import playHead from './PlayHead.vue'
 import scrollbar from './Scrollbar.vue'
 import dropFile from './DropFile.vue'
-
-import * as _ from 'lodash'
-import * as fns from 'date-fns'
-import { saveAs } from 'file-saver'
-import * as humanSize from 'human-size'
 
 import {
   getSelectedEvent,
@@ -382,7 +382,6 @@ export default class Editor extends Vue {
         e.preventDefault()
         // Chrome requires returnValue to be set
         e.returnValue = ''
-        alert('You have unsaved changes. Press CANCEL to save.')
       }
     }
     document.addEventListener('keydown', handleGlobalShortcut)

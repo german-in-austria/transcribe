@@ -1,26 +1,29 @@
 <template>
   <div class="pa-4">
-    <v-layout v-for="(e, i) in settings.keyboardShortcuts" :key="i" row>
-      <v-flex xs5>
+    <v-layout class="pt-2" v-for="(e, i) in settings.keyboardShortcuts" :key="i" row>
+      <v-flex xs7>
         <div>{{ e.name }}</div>
         <small class="grey--text">{{ e.description }}</small>
       </v-flex>
-      <v-flex xs5>
+      <v-flex xs3>
         <v-select
+          class="keyboard-chips"
           hide-details
+          small-chips
           dense
           v-model="e.modifier"
           no-data-text="none"
-          :items="['alt', 'shift', 'ctrlOrCmd', 'ctrl']"
+          :items="modifierKeys"
           multiple
           chips
-          label="modifier"
-          attach>
+          reverse>
         </v-select>
       </v-flex>
       <v-flex xs2>
         <v-select
+          class="keyboard-chips"
           hide-details
+          small-chips
           dense
           v-model="e.key"
           label="key"
@@ -35,19 +38,25 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
+import { modifierKeys, specialKeys } from '../service/keyboard'
 
 @Component
 export default class KeyboardShortcutSettings extends Vue {
+
   settings = settings
 
-  keys = 'abcdefghijklmnopqrstuvwxyz1234567890+-'
-    .split('')
-    .concat([
-      'ArrowLeft',
-      'ArrowRight',
-      'Backspace',
-      'Enter'
-    ])
+  get keys() {
+    return 'abcdefghijklmnopqrstuvwxyz1234567890+-'
+      .split('')
+      .map(l => ({ text: l.toUpperCase(), value: l }))
+      .concat(
+        specialKeys.map(k => ({ text: k.displayName, value: k.jsName }))
+      )
+  }
+
+  get modifierKeys() {
+    return modifierKeys.map(k => ({ text: k.displayName, value: k.name }))
+  }
 }
 </script>
 <style lang="scss" scoped>

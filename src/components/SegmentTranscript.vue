@@ -12,9 +12,6 @@
         error: hasErrors,
         viewing: isViewingEvent(event)
       }"
-      @keydown.enter.meta="playEvent(event)"
-      @keydown.delete.exact="deleteSelectedEvents"
-      @keydown.backspace.exact="deleteSelectedEvents"
       @dblclick="playEvent(event)"
       @mousedown.meta.stop="selectOrDeselectEvent(event)"
       @mousedown.exact="selectAndScrollToEvent(event)">
