@@ -153,9 +153,7 @@
               <v-list-tile-content>
                 <v-list-tile-title>Delete</v-list-tile-title>
               </v-list-tile-content>
-              <v-list-tile-action>
-                &larr;
-              </v-list-tile-action>
+              <v-list-tile-action>⌫</v-list-tile-action>
             </v-list-tile>
           </v-list>
         </v-menu>

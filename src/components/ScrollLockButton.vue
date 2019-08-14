@@ -27,7 +27,7 @@ export default class ScrollLockButton extends Vue {
   opacity .6 !important
   border-radius 3px
   width 10px
-  height 4px
+  height 3px
   background white
 
 </style>
