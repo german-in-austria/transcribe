@@ -110,21 +110,6 @@ export default class PlayerBar extends Vue {
     eventBus.$on('updateTime', this.onChangeTime)
     eventBus.$on('scrubAudio', this.onChangeTime)
     this.onChangeTime(eventStore.currentTime)
-    document.addEventListener('keydown', isCmdOrCtrl((e) => {
-      if (e.shiftKey) {
-        if (e.key === 'ArrowUp') {
-          increaseVolume(.1)
-        } else if (e.key === 'ArrowDown') {
-          decreaseVolume(.1)
-        }
-      } else {
-        if (e.key === 'ArrowUp') {
-          increasePlaybackSpeed(.1)
-        } else if (e.key === 'ArrowDown') {
-          decreasePlaybackSpeed(.1)
-        }
-      }
-    }))
   }
 }
 </script>
