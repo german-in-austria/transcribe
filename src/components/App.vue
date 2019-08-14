@@ -22,6 +22,8 @@
           @finish="loadImportedTranscript"
         />
         <v-layout
+          @dragover.prevent=""
+          @drop.stop.prevent="onDropFile"
           v-if="eventStore.status === 'empty'"
           class="max-width pick-transcript-container"
           :align-center="transcriptList === null"
@@ -53,7 +55,7 @@
                 <v-layout>
                   <v-flex class="pr-1" xs6>
                     <v-btn
-                      :loading="importingLocalFile" @click="openFile" class="mb-2 elevation-0" style="height: 40px;" block>
+                      :loading="importingLocalFile" @click="openFileDialog" class="mb-2 elevation-0" style="height: 40px;" block>
                       Open/Import File
                     </v-btn>
                   </v-flex>
@@ -240,6 +242,17 @@ export default class App extends Vue {
     this.loadTranscriptList()
   }
 
+  onDropFile(e: DragEvent) {
+    if (e instanceof DragEvent && e.dataTransfer !== null) {
+      if (
+        e.dataTransfer.files !== null &&
+        e.dataTransfer.files.length === 1
+      ) {
+        this.openFile(e.dataTransfer.files[0])
+      }
+    }
+  }
+
   async mounted() {
     this.loadTranscriptList()
   }
@@ -341,25 +354,28 @@ export default class App extends Vue {
     eventStore.status = 'new'
   }
 
-  openFile() {
+  openFileDialog() {
     const el = document.createElement('input')
-    el.addEventListener('input', (e) => {
-      console.log('change', e)
-      if (el.files !== null) {
-        if (el.files[0].name.endsWith('.transcript')) {
-          this.openProjectFile(el.files[0])
-        } else if (el.files[0].name.endsWith('.exb')) {
-          this.openExmaraldaFile(el.files[0])
-        } else {
-          throw new Error('unrecognized file extension')
-        }
-      }
-    })
     el.type = 'file'
     el.accept = '.transcript,.exb'
+    el.addEventListener('input', (e) => {
+      if (el.files !== null) {
+        this.openFile(el.files[0])
+      }
+    })
     this.$nextTick(() => {
       el.click()
     })
+  }
+
+  openFile(f: File) {
+    if (f.name.endsWith('.transcript')) {
+      this.openProjectFile(f)
+    } else if (f.name.endsWith('.exb')) {
+      this.openExmaraldaFile(f)
+    } else {
+      throw new Error('unrecognized file extension')
+    }
   }
 
   initializeEmptyTranscript() {
