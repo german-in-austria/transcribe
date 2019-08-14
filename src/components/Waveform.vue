@@ -222,7 +222,7 @@ export default class Waveform extends Vue {
   }
 
   hasOverviewCache(): boolean {
-    return localStorage.getItem(eventStore.metadata.audioUrl + '_overview') !== undefined
+    return localStorage.getItem(eventStore.metadata.audioUrl + '_overview') !== null
   }
 
   get containerStyle() {
