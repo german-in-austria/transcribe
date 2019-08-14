@@ -51,7 +51,7 @@ function isInputElement(t: EventTarget|null): boolean {
 export async function handleGlobalShortcut(e: KeyboardEvent) {
   _(keyboardShortcuts).forEach(async (sc) => {
     if (
-      // the shortcut is allowed in text fields OR we’re not in one.
+      // the shortcut is allowed in text fields OR we’re not in a text field.
       (sc.ignoreInTextField === false || !isInputElement(e.target)) &&
       // the required key was pressed
       (e.key === sc.key) &&
@@ -234,6 +234,26 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         scrollToAudioEvent(e)
         scrollToTranscriptEvent(e)
       }
+    }
+  },
+  selectAllEvents: {
+    ignoreInTextField: true,
+    modifier: [ 'ctrlOrCmd' ],
+    key: 'a',
+    name: 'Select All',
+    description: 'Selects all Events',
+    action: () => {
+      eventStore.selectedEventIds = eventStore.events.map(e => e.eventId)
+    }
+  },
+  selectNone: {
+    ignoreInTextField: true,
+    modifier: [ 'ctrlOrCmd' ],
+    key: 'd',
+    name: 'Select none',
+    description: 'Selects no Events',
+    action: () => {
+      eventStore.selectedEventIds = []
     }
   }
 }
