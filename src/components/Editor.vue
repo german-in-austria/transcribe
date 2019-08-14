@@ -120,7 +120,7 @@
               <v-list-tile-content>
                 <v-list-tile-title>Join</v-list-tile-title>
               </v-list-tile-content>
-              <v-list-tile-action>J</v-list-tile-action>
+              <v-list-tile-action>⌘J</v-list-tile-action>
             </v-list-tile>
             <v-list-tile
               :disabled="eventStore.selectedEventIds.length === 0"
