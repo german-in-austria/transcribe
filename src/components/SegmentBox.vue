@@ -4,8 +4,6 @@
     @mousedown.meta="selectOrDeselectEvent(event)"
     @mousedown.shift="selectEventRange(event)"
     @dblclick="playEvent(event)"
-    @keydown.enter.meta.stop.prevent="playEvent(event)"
-    @keydown.enter.exact="scrollToTranscriptEvent(event)"
     tabindex="-1"
     :class="[ 'segment', isEventSelected(event.eventId) && 'selected', hasOverlap && 'has-overlap' ]"
     :style="{ left: offset + 'px', width: width + 'px' }">

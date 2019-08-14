@@ -704,16 +704,18 @@ export function isMostRecentSelection(id: number) {
   return _.last(eventStore.selectedEventIds) === id
 }
 
-export function selectNextEvent(increase: 1|-1 = 1) {
+export function selectNextEvent(increase: 1|-1 = 1): LocalTranscriptEvent|undefined {
   if (eventStore.selectedEventIds.length > 0) {
     const i = findEventIndexById(eventStore.selectedEventIds[0])
     const e = eventStore.events[i + increase]
-    selectEvent(e)
+    return selectEvent(e)[0]
+  } else {
+    return eventStore.events[0]
   }
 }
 
-export function selectPreviousEvent() {
-  selectNextEvent(-1)
+export function selectPreviousEvent(): LocalTranscriptEvent|undefined {
+  return selectNextEvent(-1)
 }
 
 export function deselectEvents() {
@@ -725,7 +727,7 @@ export function selectEvents(es: LocalTranscriptEvent[]): LocalTranscriptEvent[]
   return es
 }
 
-export function selectEvent(e: LocalTranscriptEvent) {
+export function selectEvent(e: LocalTranscriptEvent): LocalTranscriptEvent[] {
   return selectEvents([ e ])
 }
 

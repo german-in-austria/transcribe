@@ -143,28 +143,7 @@
               </v-list>
             </v-tab-item>
             <v-tab-item>
-              <v-list class="pa-4">
-                <v-list-tile v-for="(e, i) in settings.keyboardShortcuts" :key="i">
-                  <v-list-tile-content>
-                    <v-list-tile-title>{{ e.name }}</v-list-tile-title>
-                    <v-list-tile-sub-title>{{ e.description }}</v-list-tile-sub-title>
-                  </v-list-tile-content>
-                  <v-list-tile-action class="no-flex-direction">
-                    <select v-model="e.modifier">
-                      <option :value="null"></option>
-                      <option value="altKey">alt</option>
-                      <option value="ctrlKey">ctrl</option>
-                      <option value="metaKey">command</option>
-                      <option value="shiftKey">shift</option>
-                    </select>
-                    <select v-model="e.key">
-                      <option :value="l" :selected="i === 1" v-for="(l, i) in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')" :key="i">
-                        {{ l }}
-                      </option>
-                    </select>
-                  </v-list-tile-action>
-                </v-list-tile>
-              </v-list>
+              <keyboard-shortcut-settings />
             </v-tab-item>
           </v-tabs-items>
         </v-tabs>
@@ -178,10 +157,12 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
 import { makeGradient } from '../lib/gradient'
 import { Chrome as ColorPicker } from 'vue-color'
+import KeyboardShortcutSettings from './KeyboardShortcutSettings.vue'
 
 @Component({
   components: {
-    ColorPicker
+    ColorPicker,
+    KeyboardShortcutSettings
   }
 })
 export default class Settings extends Vue {
@@ -225,9 +206,6 @@ export default class Settings extends Vue {
 </style>
 
 <style lang="stylus" scoped>
-
-.no-flex-direction
-  flex-direction: unset
 
 select
   cursor pointer

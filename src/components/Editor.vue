@@ -79,7 +79,6 @@
       v-if="eventStore.audioElement.src"
       tabindex="-1"
       class="no-outline"
-      @keydown.native="handleWaveformKey"
       @scroll="handleScroll"
       @show-menu="doShowMenu"
       @add-segment="addEvent"
@@ -185,7 +184,7 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 
 import waveForm from './Waveform.vue'
 import settingsView from './Settings.vue'
-import settings from '../store/settings'
+import settings, { handleGlobalShortcut } from '../store/settings'
 import spectrogram from './Spectrogram.vue'
 import search from './Search.vue'
 import searchResults from './SearchResults.vue'
@@ -198,8 +197,6 @@ import * as _ from 'lodash'
 import * as fns from 'date-fns'
 import { saveAs } from 'file-saver'
 import * as humanSize from 'human-size'
-import audio from '../service/audio'
-import { requestFrameAsync, isCmdOrCtrl } from '../util'
 
 import {
   getSelectedEvent,
@@ -223,6 +220,8 @@ import {
   exportEventAudio
 } from '../store/transcript'
 
+import audio from '../service/audio'
+import { requestFrameAsync, isCmdOrCtrl, platform } from '../util'
 import { history, undoable, startListening as startUndoListener } from '../store/history'
 import { serverTranscript } from '../service/backend-server'
 import { generateProjectFile } from '../service/backend-files'
@@ -333,6 +332,7 @@ export default class Editor extends Vue {
 
   // TODO: these are actually global shortcuts
   // where do i put them?
+
   async handleWaveformKey(e: KeyboardEvent) {
     if (e.key === 's') {
       const eventUnderPlayHead = findEventAt(eventStore.currentTime)
@@ -385,6 +385,11 @@ export default class Editor extends Vue {
         alert('You have unsaved changes. Press CANCEL to save.')
       }
     }
+    document.addEventListener('keydown', handleGlobalShortcut)
+  }
+
+  beforeDestroy() {
+    document.removeEventListener('keydown', handleGlobalShortcut)
   }
 
   handleScroll() {

@@ -103,6 +103,9 @@ img[lazy=loaded] {
   background: rgba(0,0,0,.4);
   border-right: 1px solid #181818;
 }
+.no-flex-direction{
+  flex-direction: unset;
+}
 .v-tabs__item--active {
   background: transparent
 }

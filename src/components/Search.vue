@@ -68,6 +68,7 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
+import eventBus from '../service/event-bus'
 import { isCmdOrCtrl } from '../util'
 import {
   findNextEventAt,
@@ -100,14 +101,10 @@ export default class Search extends Vue {
   isCmdOrCtrl = isCmdOrCtrl
 
   mounted() {
-    document.body.addEventListener('keydown', isCmdOrCtrl((e) => {
-      if (e.key === 'f') {
-        e.preventDefault()
-        e.stopPropagation();
-        (this.$refs.input as HTMLInputElement).focus();
-        (this.$refs.input as HTMLInputElement).select();
-      }
-    }))
+    eventBus.$on('focusSearch', () => {
+      (this.$refs.input as HTMLInputElement).focus();
+      (this.$refs.input as HTMLInputElement).select();
+    })
   }
 
   onFocus() {
