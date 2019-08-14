@@ -71,30 +71,36 @@ export default class TranscriptEditor extends Vue {
   isEventSelected = isEventSelected
 
   @Watch('userState.viewingTranscriptEvent')
-  doScrollToEvent(e?: LocalTranscriptEvent|null) {
-    console.log('do scroll to event', e)
+  onChangeViewingEvent(e?: LocalTranscriptEvent|null) {
     if (e !== null && e !== undefined) {
-      // right in the middle
-      const i = findEventIndexById(e.eventId) - Math.floor(defaultLimit / 2)
-      this.currentIndex = Math.max(0, i)
-      this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
-      this.$nextTick(() => {
-        requestAnimationFrame(() => {
-          const el = this.$el.querySelector(`[data-event-id="${e.eventId}"]`)
-          const c = this.$refs.tracks
-          const inner = this.$refs.inner
-          if (
-            c instanceof HTMLElement &&
-            el instanceof HTMLElement &&
-            inner instanceof HTMLElement
-          ) {
+      this.doScrollToEvent(e, true)
+    }
+  }
+
+  @Watch('userState.')
+  doScrollToEvent(e: LocalTranscriptEvent, animate = true) {
+    // right in the middle
+    const i = findEventIndexById(e.eventId) - Math.floor(defaultLimit / 2)
+    this.currentIndex = Math.max(0, i)
+    this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
+    this.$nextTick(() => {
+      requestAnimationFrame(() => {
+        const el = this.$el.querySelector(`[data-event-id="${e.eventId}"]`)
+        const c = this.$refs.tracks
+        const inner = this.$refs.inner
+        if (
+          c instanceof HTMLElement &&
+          el instanceof HTMLElement &&
+          inner instanceof HTMLElement
+        ) {
+          if (animate === true) {
             inner.style.transition = '.2s'
-            this.innerLeft = el.offsetLeft * -1 + c.clientWidth / 2 - el.clientWidth / 2 - 25
             setTimeout(() => { inner.style.transition = 'none' }, 200)
           }
-        })
+          this.innerLeft = el.offsetLeft * -1 + c.clientWidth / 2 - el.clientWidth / 2 - 25
+        }
       })
-    }
+    })
   }
 
   @Watch('eventStore.events')
