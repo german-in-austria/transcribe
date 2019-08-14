@@ -40,13 +40,13 @@ import settings from '../store/settings'
 export default class KeyboardShortcutSettings extends Vue {
   settings = settings
 
-  keys = 'abcdefghijklmnopqrstuvwxyz+-1234567890'
+  keys = 'abcdefghijklmnopqrstuvwxyz1234567890+-'
     .split('')
-    .concat()
     .concat([
       'ArrowLeft',
       'ArrowRight',
-      'Backspace'
+      'Backspace',
+      'Enter'
     ])
 }
 </script>
