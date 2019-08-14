@@ -11,8 +11,14 @@
         <v-icon>error_outline</v-icon> <span slot="badge">{{ errors.length }}</span>
       </v-badge>
     </v-tab>
+    <v-tab>
+      <v-icon>bookmark_border</v-icon>
+    </v-tab>
     <v-tabs-items class="sidebar-scrollable">
       <v-tab-item>
+        <v-subheader>
+          <small>Actions</small>
+        </v-subheader>
         <v-list dense>
           <v-list-tile>
             <v-list-tile-avatar>
@@ -39,6 +45,11 @@
         <error-list :errors="errors" v-if="errors.length > 0" />
         <div v-else class="text-xs-center grey--text mt-4">
           <small>Errors will appear here.</small>
+        </div>
+      </v-tab-item>
+      <v-tab-item>
+        <div class="text-xs-center grey--text mt-4">
+          <small>Bookmarks will appear here</small>
         </div>
       </v-tab-item>
     </v-tabs-items>
