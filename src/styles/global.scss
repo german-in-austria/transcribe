@@ -87,6 +87,9 @@ img[lazy=loaded] {
   backdrop-filter: blur(20px);
   border-left: 1px solid rgba(255,255,255,.075);
 }
+.v-navigation-drawer.theme--light{
+  background: rgba(200,200,200,.4) !important
+}
 .v-navigation-drawer__border{
   display: none;
 }
