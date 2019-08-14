@@ -244,10 +244,7 @@ export default class App extends Vue {
 
   onDropFile(e: DragEvent) {
     if (e instanceof DragEvent && e.dataTransfer !== null) {
-      if (
-        e.dataTransfer.files !== null &&
-        e.dataTransfer.files.length === 1
-      ) {
+      if (e.dataTransfer.files !== null && e.dataTransfer.files.length === 1) {
         this.openFile(e.dataTransfer.files[0])
       }
     }
