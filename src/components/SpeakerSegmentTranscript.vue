@@ -1,5 +1,5 @@
 <template>
-  <div :class="['segment-editor', isMarkedWithFragment && 'has-next-fragment']">
+  <div :data-speaker-id="speaker" :class="['segment-editor', isMarkedWithFragment && 'has-next-fragment']">
     <div :class="['token-display', 'segment-text']">
       <span
         class="token"
@@ -26,8 +26,8 @@
       @focus="onFocus"
       @input="updateLocalTokens"
       @blur="updateAndCommitLocalTokens"
-      @keydown.tab.shift.exact="focusPreviousFrom(defaultTier)"
-      @keydown.tab.exact="focusNextFrom(defaultTier)"
+      @keydown.tab.shift.exact="focusPreviousFrom($event, defaultTier)"
+      @keydown.tab.exact="focusNextFrom($event, defaultTier)"
       @copy.prevent="copyTokens"
       @cut.prevent="cutTokens"
       @paste="pasteTokens"
@@ -76,12 +76,14 @@ import {
   findPreviousSpeakerEvent,
   makeTokenId,
   playEvent,
-  tokenTypeFromToken
+  tokenTypeFromToken,
+  findEventIndexById
 } from '../store/transcript'
 import * as copyPaste from '../service/copy-paste'
 import { undoable } from '../store/history'
 import * as _ from 'lodash'
 import * as jsdiff from 'diff'
+import eventBus from '../service/event-bus'
 
 @Component
 export default class SpeakerSegmentTranscript extends Vue {
@@ -105,12 +107,41 @@ export default class SpeakerSegmentTranscript extends Vue {
   playEvent = playEvent
   updateSpeakerEvent = updateSpeakerEvent
 
-  focusPreviousFrom(tier: string) {
-    console.log('prev', tier, eventStore.metadata.tiers, this.speaker, eventStore.metadata.speakers)
+  isFirstSpeaker(speakerId: number) {
+    return _(eventStore.metadata.speakers)
+      .map((s, id) => ({...s, id}))
+      .findIndex(s => s.id === String(speakerId)) === 0
   }
 
-  focusNextFrom(tier: string) {
+  isLastSpeaker(speakerId: number) {
+    return _(eventStore.metadata.speakers)
+      .map((s, id) => ({...s, id}))
+      .findIndex(s => s.id === String(speakerId)) === _(eventStore.metadata.speakers).toArray().value().length - 1
+  }
+
+  focusPreviousFrom(e: KeyboardEvent, tier: string) {
+    console.log('prev', tier, eventStore.metadata.tiers, this.speaker, eventStore.metadata.speakers)
+    if (this.isFirstSpeaker(this.speaker)) {
+      e.preventDefault()
+      const i = findEventIndexById(this.event.eventId)
+      eventBus.$emit(
+        'scrollToTranscriptEvent',
+        eventStore.events[i > 0 ? i - 1 : 0],
+        { animate: true, focusSpeaker: this.speaker }
+      )
+    }
+  }
+
+  focusNextFrom(e: KeyboardEvent, tier: string) {
     console.log('next', tier, eventStore.metadata.tiers, this.speaker, eventStore.metadata.speakers)
+    if (this.isLastSpeaker(this.speaker)) {
+      e.preventDefault()
+      const i = findEventIndexById(this.event.eventId)
+      eventBus.$emit('scrollToTranscriptEvent',
+        eventStore.events[i > 0 ? i + 1 : 0],
+        { animate: true, focusSpeaker: this.speaker }
+      )
+    }
   }
 
   // TODO: redundant?

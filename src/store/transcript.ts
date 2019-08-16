@@ -18,6 +18,8 @@ import {
   updateServerTranscriptWithChanges,
   ServerTranscriptSaveResponse,
   ServerTranscriptListItem,
+  ServerTranscriptInformants,
+  ServerTranscriptTokenTypes,
   ServerTranscript
 } from '../service/backend-server'
 
@@ -32,8 +34,8 @@ interface LocalTranscriptTokenTier {
   text: string
   type: number|null
 }
-type LocalTranscriptSpeakers = ServerTranscript['aInformanten']
-type LocalTranscriptTokenTypes = ServerTranscript['aTokenTypes']
+type LocalTranscriptSpeakers = ServerTranscriptInformants
+type LocalTranscriptTokenTypes = ServerTranscriptTokenTypes
 
 export type TokenTierType = 'text'|'ortho'|'phon'
 
@@ -216,8 +218,15 @@ export function scrollToAudioEvent(e: LocalTranscriptEvent) {
   eventStore.userState.viewingAudioEvent = e
 }
 
-export function scrollToTranscriptEvent(e: LocalTranscriptEvent) {
+export function scrollToTranscriptEvent(
+  e: LocalTranscriptEvent, opts?: { animate: boolean, focusSpeaker: number|null }
+) {
   eventStore.userState.viewingTranscriptEvent = e
+  eventBus.$emit('scrollToTranscriptEvent', e, {
+    animate: true,
+    focusSpeaker: null,
+    ...opts
+  })
 }
 
 export function makeEventId() {
@@ -581,7 +590,7 @@ function emitUpdateTimeUntilPaused(t: number, maxT?: number) {
         const e = findEventAt(eventStore.currentTime)
         if (e !== undefined && e.eventId !== currentlyPlayingEventId) {
           currentlyPlayingEventId = e.eventId
-          scrollToTranscriptEvent(e)
+          scrollToTranscriptEvent(e, { animate: false, focusSpeaker: null })
         }
       }
       // continue emitting

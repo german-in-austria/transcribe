@@ -4,6 +4,8 @@ const EventBus = new Vue()
 export type BusEvent =
   'scrollWaveform'|
   'scrollTranscript'|
+  'scrollToTranscriptEvent'|
+  'scrollToWaveformEvent'|
   'playAudio'|
   'pauseAudio'|
   'playEvents'|
@@ -12,7 +14,7 @@ export type BusEvent =
   'focusSearch'
 
 export default EventBus as {
-  $on: (e: BusEvent, fn: (e: any) => any) => void
-  $off: (e: BusEvent, fn: (e: any) => any) => void
-  $emit: (e: BusEvent, p?: any) => void
+  $on: (e: BusEvent, fn: (e: any, opts?: any) => any) => void
+  $off: (e: BusEvent, fn: (e: any, opts?: any) => any) => void
+  $emit: (e: BusEvent, p?: any, opts?: any) => void
 }

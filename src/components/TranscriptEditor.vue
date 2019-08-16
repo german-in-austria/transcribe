@@ -70,15 +70,13 @@ export default class TranscriptEditor extends Vue {
   throttledRenderer = _.throttle(this.updateList, 60)
   isEventSelected = isEventSelected
 
-  @Watch('userState.viewingTranscriptEvent')
-  onChangeViewingEvent(e?: LocalTranscriptEvent|null) {
+  onChangeViewingEvent(e: LocalTranscriptEvent|null, opts: { animate: boolean, focusSpeaker: number|null }) {
     if (e !== null && e !== undefined) {
-      this.doScrollToEvent(e, true)
+      this.doScrollToEvent(e, opts.animate, opts.focusSpeaker)
     }
   }
 
-  @Watch('userState.')
-  doScrollToEvent(e: LocalTranscriptEvent, animate = true) {
+  doScrollToEvent(e: LocalTranscriptEvent, animate = true, focusSpeaker: number|null = null) {
     // right in the middle
     const i = findEventIndexById(e.eventId) - Math.floor(defaultLimit / 2)
     this.currentIndex = Math.max(0, i)
@@ -97,7 +95,11 @@ export default class TranscriptEditor extends Vue {
             inner.style.transition = '.2s'
             setTimeout(() => { inner.style.transition = 'none' }, 200)
           }
-          this.innerLeft = el.offsetLeft * -1 + c.clientWidth / 2 - el.clientWidth / 2 - 25
+          this.innerLeft = el.offsetLeft * -1 + c.clientWidth / 2 - el.clientWidth / 2 - 25;
+          if (focusSpeaker !== null) {
+            // (el.querySelector('[data-speaker-id="' + focusSpeaker + '"] [contenteditable]') as any).focus()
+            (el.querySelector('[contenteditable]') as any).focus()
+          }
         }
       })
     })
@@ -110,10 +112,12 @@ export default class TranscriptEditor extends Vue {
 
   mounted() {
     EventBus.$on('scrollWaveform', this.scrollLockedScroll)
+    EventBus.$on('scrollToTranscriptEvent', this.onChangeViewingEvent)
   }
 
   beforeDestroy() {
     EventBus.$off('scrollWaveform', this.scrollLockedScroll)
+    EventBus.$off('scrollToTranscriptEvent', this.onChangeViewingEvent)
   }
 
   scrollLockedScroll(t: number) {
@@ -125,13 +129,12 @@ export default class TranscriptEditor extends Vue {
   async scrollToSecond(seconds: number) {
     const i = findEventIndexAt(seconds)
     if (i !== -1) {
-      await requestFrameAsync()
       if (i !== this.currentIndex) {
         this.visibleEvents = this.eventStore.events.slice(i, i + defaultLimit)
         this.currentIndex = i
         await this.$nextTick()
       }
-      const [ firstVisibleEvent, innerOffset, width ] = this.findFirstVisibleEventAndDimensions()
+      const [ firstVisibleEvent, innerOffset, width ] = await this.findFirstVisibleEventAndDimensions()
       const eventLength = firstVisibleEvent.endTime - firstVisibleEvent.startTime
       const progressFactor = (firstVisibleEvent.startTime - seconds) / eventLength
       const offsetLeft = width * progressFactor
@@ -139,9 +142,10 @@ export default class TranscriptEditor extends Vue {
     }
   }
 
-  findFirstVisibleEventAndDimensions(): [LocalTranscriptEvent, number, number] {
+  async findFirstVisibleEventAndDimensions(): Promise<[LocalTranscriptEvent, number, number]> {
     let innerOffset = 0
     let width = 0
+    await requestFrameAsync()
     const nodeList = Array.from(this.$el.querySelectorAll('.segment') as NodeListOf<HTMLElement>)
     const firstVisibleIndex = nodeList.findIndex((v, i) => {
       innerOffset = this.innerLeft * -1 - v.offsetLeft
@@ -152,8 +156,8 @@ export default class TranscriptEditor extends Vue {
     return [ firstVisibleEvent, innerOffset, width ]
   }
 
-  debouncedEmitScroll() {
-    const [firstVisibleEvent, innerOffset, width] = this.findFirstVisibleEventAndDimensions()
+  async debouncedEmitScroll() {
+    const [firstVisibleEvent, innerOffset, width] = await this.findFirstVisibleEventAndDimensions()
     const eventLength = firstVisibleEvent.endTime - firstVisibleEvent.startTime
     const progressFactor = innerOffset / width
     const progress = progressFactor * eventLength
