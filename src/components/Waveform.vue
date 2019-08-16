@@ -189,11 +189,13 @@ export default class Waveform extends Vue {
 
   mounted() {
     EventBus.$on('scrollTranscript', this.scrollLockedScroll)
+    EventBus.$on('scrollToAudioEvent', this.doScrollToSegment)
     this.initWithAudio()
   }
 
   beforeDestroy() {
     EventBus.$off('scrollTranscript', this.scrollLockedScroll)
+    EventBus.$off('scrollToAudioEvent', this.doScrollToSegment)
   }
 
   scrollLockedScroll(t: number) {
@@ -515,7 +517,6 @@ export default class Waveform extends Vue {
     }
   }
 
-  @Watch('userState.viewingAudioEvent')
   doScrollToSegment(e?: LocalTranscriptEvent|null) {
     if (eventStore.playAllFrom !== null) {
       this.disableAutoScrollDuringPlayback()

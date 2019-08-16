@@ -216,6 +216,7 @@ export function selectSearchResult(e: LocalTranscriptEvent) {
 
 export function scrollToAudioEvent(e: LocalTranscriptEvent) {
   eventStore.userState.viewingAudioEvent = e
+  eventBus.$emit('scrollToAudioEvent', e)
 }
 
 export function scrollToTranscriptEvent(
