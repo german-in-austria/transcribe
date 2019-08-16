@@ -96,6 +96,12 @@ img[lazy=loaded] {
 .v-navigation-drawer .v-tabs__bar.theme--dark{
   background-color: transparent
 }
+// ..v-list__tile{
+//   transition: none !important;
+// }
+.v-list__tile__sub-title, .v-list__tile__title{
+  transition: none !important;
+}
 .v-menu__content .v-list--dense:not(.list--two-line) a,
 .context-menu .v-list--dense:not(.v-list--two-line) a,
 .v-menu__content .v-list--dense .v-list__tile:not(.v-list__tile--avatar),
