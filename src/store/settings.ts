@@ -206,7 +206,7 @@ const settings: Settings = {
     {
       name: 'delimiter',
       regex: /^(\?|\.|\,|!)/,
-      color: '#000088',
+      color: '#1717FB',
       id: 2
     },
     {
