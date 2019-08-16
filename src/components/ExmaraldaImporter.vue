@@ -68,8 +68,10 @@
                     <v-text-field 
                       v-model="transcriptName"
                       label="Transcript Name"
-                      validate-on-blur
-                      :rules="[ (transcriptName === null || transcriptName.trim() === '') && 'Please enter a name for the transcript' ]" />
+                      :rules="[
+                        (transcriptName === null || transcriptName.trim() === '') && 'Please enter a name for the transcript',
+                        !isTranscriptNameUnique(transcriptName) && 'Name already exists.'
+                      ]" />
                   </v-form>
                 </v-flex>
               </v-layout>
@@ -343,7 +345,8 @@ import {
   ServerInformant,
   ServerSurvey,
   createEmptyTranscript,
-  getSurveys
+  getSurveys,
+  ServerTranscriptListItem
 } from '../service/backend-server'
 
 import {
@@ -369,8 +372,9 @@ import _ from 'lodash'
 export default class ExmaraldaImporter extends Vue {
 
   @Prop({ required: true }) importable: ParsedExmaraldaXML
-  surveys: ServerSurvey[]|null = null
+  @Prop({ default: [] }) transcripts: ServerTranscriptListItem[]
 
+  surveys: ServerSurvey[]|null = null
   step = 1
   basicInfoValid = false
   tiersValid = false
@@ -387,6 +391,10 @@ export default class ExmaraldaImporter extends Vue {
 
   async mounted() {
     this.surveys = await getSurveys()
+  }
+
+  isTranscriptNameUnique(n: string): boolean {
+    return this.transcripts.findIndex(t => t.n === n) === -1
   }
 
   updateTierTokenTypeAndGlobalDefault(i: number, t: TokenTierType) {
@@ -468,16 +476,6 @@ export default class ExmaraldaImporter extends Vue {
       return this.speakerHasDuplicateDefaultTiers(speakerTier.to_speaker)
     }
   }
-
-  // updateTierName(speakerTier: SpeakerTierImportable, to_tier_name: string|null) {
-  //   this.importable.speakerTiers = this.importable.speakerTiers.map((t) => {
-  //     if (t.speaker_name === speakerTier.speaker_name && t.display_name === speakerTier.display_name) {
-  //       return { ...t, to_tier_name }
-  //     } else {
-  //       return t
-  //     }
-  //   })
-  // }
 
   updateAllSelections(v: boolean) {
     this.importable.speakerTiers = this.importable.speakerTiers.map((t) => {

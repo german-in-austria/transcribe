@@ -17,6 +17,7 @@
       <v-container fluid fill-height class="pa-0">
         <exmaralda-importer
           v-if="importableExmaraldaFile !== null"
+          :transcripts="transcriptList"
           :importable="importableExmaraldaFile"
           @close="importableExmaraldaFile = null"
           @finish="loadImportedTranscript"
