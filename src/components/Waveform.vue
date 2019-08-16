@@ -469,7 +469,7 @@ export default class Waveform extends Vue {
 
   scrollToSecondSmooth(targetOffset: number) {
     const el = this.$refs.svgContainer
-    const animationDuration = .3
+    const animationDuration = .25
     const animationDistance = 600
     if (el instanceof HTMLElement) {
       const startTime = performance.now()
@@ -543,7 +543,6 @@ export default class Waveform extends Vue {
     }
   }
 
-  // @Watch('eventStore.audioElement')
   async initWithAudio() {
     if (eventStore.audioElement !== null && !isNaN(eventStore.audioElement.duration)) {
       this.loading = true
