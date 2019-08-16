@@ -178,7 +178,13 @@ export default class EditHistory extends Vue {
     const rect = (ev.currentTarget as HTMLElement).getBoundingClientRect()
     this.menuX = rect.left
     this.menuY = rect.top
-    this.hoveredEvent = e
+    // no more than three events in preview.
+    // (in case somebody edit’s thousands of events at once)
+    this.hoveredEvent = {
+      ...e,
+      before: e.before.slice(0, 3),
+      after: e.after.slice(0, 3)
+    }
   }
 
   handleEventMouseOut() {
