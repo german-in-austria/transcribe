@@ -28,6 +28,7 @@
       @blur="updateAndCommitLocalTokens"
       @keydown.tab.shift.exact="focusPreviousFrom($event, defaultTier)"
       @keydown.tab.exact="focusNextFrom($event, defaultTier)"
+      @keydown.enter.exact.prevent="viewAndSelectAudioEvent(event)"
       @copy.prevent="copyTokens"
       @cut.prevent="cutTokens"
       @paste="pasteTokens"
@@ -60,12 +61,14 @@ import contenteditableDirective from 'vue-contenteditable-directive'
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
 import parseCsv from 'tiny-csv'
+
 import {
   clone,
   isEqualDeep,
   requestFrameAsync,
   isUndoOrRedo
 } from '../util'
+
 import {
   LocalTranscriptEvent,
   LocalTranscriptToken,
@@ -77,8 +80,11 @@ import {
   makeTokenId,
   playEvent,
   tokenTypeFromToken,
-  findEventIndexById
+  findEventIndexById,
+  scrollToAudioEvent,
+  scrollToTranscriptEvent
 } from '../store/transcript'
+
 import * as copyPaste from '../service/copy-paste'
 import { undoable } from '../store/history'
 import * as _ from 'lodash'
@@ -124,8 +130,7 @@ export default class SpeakerSegmentTranscript extends Vue {
     if (this.isFirstSpeaker(this.speaker)) {
       e.preventDefault()
       const i = findEventIndexById(this.event.eventId)
-      eventBus.$emit(
-        'scrollToTranscriptEvent',
+      scrollToTranscriptEvent(
         eventStore.events[i > 0 ? i - 1 : 0],
         { animate: true, focusSpeaker: this.speaker }
       )
@@ -137,8 +142,8 @@ export default class SpeakerSegmentTranscript extends Vue {
     if (this.isLastSpeaker(this.speaker)) {
       e.preventDefault()
       const i = findEventIndexById(this.event.eventId)
-      eventBus.$emit('scrollToTranscriptEvent',
-        eventStore.events[i > 0 ? i + 1 : 0],
+      scrollToTranscriptEvent(
+        eventStore.events[i > -1 ? i + 1 : 0],
         { animate: true, focusSpeaker: this.speaker }
       )
     }
@@ -308,9 +313,9 @@ export default class SpeakerSegmentTranscript extends Vue {
     return text.trim().split(' ').filter((t) => t !== '')
   }
 
-  viewAudioEvent(e: LocalTranscriptEvent) {
+  viewAndSelectAudioEvent(e: LocalTranscriptEvent) {
     eventStore.selectedEventIds = [ e.eventId ]
-    eventStore.userState.viewingAudioEvent = e
+    scrollToAudioEvent(e)
   }
 
   colorFromTokenType(id: number): string {
