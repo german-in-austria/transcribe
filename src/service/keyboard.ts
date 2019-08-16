@@ -24,17 +24,19 @@ import {
 
 import eventBus from '../service/event-bus'
 
+interface KeyboardAction {
+  // can have more than one modifier
+  modifier: Array<'alt'|'shift'|'ctrlOrCmd'>
+  // some shortcuts can’t work in text fields
+  ignoreInTextField: boolean
+  key: KeyboardEvent['key']
+  name: string
+  description: string
+  action: (e: KeyboardEvent) => any
+}
+
 export interface KeyboardShortcuts {
-  [action: string]: {
-    // can be more than one
-    modifier: Array<'alt'|'shift'|'ctrlOrCmd'|null>
-    // some shortcuts can’t work in text fields
-    ignoreInTextField: boolean
-    key: KeyboardEvent['key']
-    name: string
-    description: string
-    action: (e: KeyboardEvent) => any
-  }
+  [action: string]: KeyboardAction
 }
 
 function isInputElement(t: EventTarget|null): boolean {
@@ -77,6 +79,11 @@ export async function handleGlobalShortcut(e: KeyboardEvent) {
   })
 }
 
+export const normalKeys = _('abcdefghijklmnopqrstuvwxyz1234567890+-')
+  .split('')
+  .map(l => ({ name: l, jsName: l, displayName: l.toUpperCase() }))
+  .value()
+
 export const modifierKeys = [
   {
     name: 'ctrlOrCmd',
@@ -118,6 +125,12 @@ export const specialKeys = [
   }
 ]
 
+const keyMap = _(normalKeys)
+  .concat(specialKeys)
+  .concat(modifierKeys)
+  .keyBy(t => t.name)
+  .value()
+
 async function focusEventElement(e: LocalTranscriptEvent) {
   await Vue.nextTick()
   setTimeout(() => {
@@ -130,6 +143,16 @@ async function focusEventElement(e: LocalTranscriptEvent) {
       el.focus()
     }
   }, 0)
+}
+
+export function displayKeyboardAction(a: KeyboardAction): string {
+  return a.modifier
+    // resolve modifier
+    .map(m => keyMap[m] === undefined ? '' : keyMap[m].displayName)
+    // resolve key (including special keys)
+    .concat(keyMap[a.key] === undefined ? '' : keyMap[a.key].displayName)
+    // join
+    .join('')
 }
 
 export const keyboardShortcuts: KeyboardShortcuts = {

@@ -30,7 +30,33 @@
               </v-list-tile-title>
             </v-list-tile-content>
             <v-list-tile-action>
-              ⌘S
+              {{ displayKeyboardAction(keyboardShortcuts.split) }}
+            </v-list-tile-action>
+          </v-list-tile>
+          <v-list-tile :disabled="eventStore.selectedEventIds.length === 0">
+            <v-list-tile-avatar>
+              <v-icon>delete</v-icon>
+            </v-list-tile-avatar>
+            <v-list-tile-content>
+              <v-list-tile-title>
+                delete
+              </v-list-tile-title>
+            </v-list-tile-content>
+            <v-list-tile-action>
+              {{ displayKeyboardAction(keyboardShortcuts.deleteEvents) }}
+            </v-list-tile-action>
+          </v-list-tile>
+          <v-list-tile :disabled="eventStore.selectedEventIds.length < 2">
+            <v-list-tile-avatar>
+              <v-icon>merge_type</v-icon>
+            </v-list-tile-avatar>
+            <v-list-tile-content>
+              <v-list-tile-title>
+                join
+              </v-list-tile-title>
+            </v-list-tile-content>
+            <v-list-tile-action>
+              {{ displayKeyboardAction(keyboardShortcuts.joinEvents) }}
             </v-list-tile-action>
           </v-list-tile>
         </v-list>
@@ -72,6 +98,7 @@ import {
 } from '../store/transcript'
 
 import { history } from '../store/history'
+import { keyboardShortcuts, displayKeyboardAction } from '../service/keyboard'
 
 interface ErrorEvent extends LocalTranscriptEvent {
   error_type: 'time_overlap'|'unknown_token'
@@ -93,6 +120,8 @@ export default class Sidebar extends Vue {
   eventStore = eventStore
   stuckAtBottom = false
   toTime = toTime
+  keyboardShortcuts = keyboardShortcuts
+  displayKeyboardAction = displayKeyboardAction
 
   beforeUpdate() {
     if (this.$el && this.$el.querySelector) {

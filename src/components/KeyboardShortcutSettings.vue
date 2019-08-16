@@ -38,7 +38,7 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
-import { modifierKeys, specialKeys } from '../service/keyboard'
+import { modifierKeys, specialKeys, normalKeys } from '../service/keyboard'
 
 @Component
 export default class KeyboardShortcutSettings extends Vue {
@@ -46,12 +46,7 @@ export default class KeyboardShortcutSettings extends Vue {
   settings = settings
 
   get keys() {
-    return 'abcdefghijklmnopqrstuvwxyz1234567890+-'
-      .split('')
-      .map(l => ({ text: l.toUpperCase(), value: l }))
-      .concat(
-        specialKeys.map(k => ({ text: k.displayName, value: k.jsName }))
-      )
+    return normalKeys.concat(specialKeys).map(k => ({ text: k.displayName, value: k.jsName }))
   }
 
   get modifierKeys() {
