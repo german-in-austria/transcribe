@@ -66,6 +66,13 @@ export interface ServerSurvey {
   Datum: string
 }
 
+export interface ServerTranscriptTokenTypes {
+  // token type id
+  [id: string]: {
+    n: string // token type name
+  }
+}
+
 export interface ServerTranscriptInformants {
   [speaker_id: number]: {
     ka: string // abbrev anonymized
@@ -101,11 +108,7 @@ export interface ServerTranscript {
     pk: ServerTranscriptId
     ut: string
   }
-  aTokenTypes?: {
-    [id: string]: {
-      n: string // word
-    }
-  }
+  aTokenTypes?: ServerTranscriptTokenTypes
   aEvents: ServerEvent[]
   nNr: number
   aNr: number
