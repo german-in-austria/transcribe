@@ -120,7 +120,7 @@
                   column
                   v-for="(speakerTier, i) in importable.speakerTiers"
                   :key="i"
-                  class="pl-3 pt-3">
+                  class="pt-3 pb-3 pl-3">
                   <v-layout>
                     <v-flex xs1 class="pl-3">
                       <v-checkbox
@@ -130,7 +130,7 @@
                       />
                     </v-flex>
                     <v-flex xs4 :class="[!speakerTier.select_for_import && 'disabled']">
-                      <h4 class="ellipsis">{{ speakerTier.display_name }} <span class="caption grey--text">— {{ speakerTier.speaker_name }}</span></h4>
+                      <h4>{{ speakerTier.display_name }} <span class="caption grey--text">— {{ speakerTier.speaker_name }}</span></h4>
                       <v-chip small>
                         <label>category</label>{{ speakerTier.category }}
                       </v-chip>
@@ -397,7 +397,6 @@ export default class ExmaraldaImporter extends Vue {
   }
 
   updateTierTokenTypeAndGlobalDefault(i: number, t: TokenTierType) {
-    this.importable.speakerTiers[i].token_tier_type = t
     this.globalDefaultTier = t
   }
 
@@ -488,6 +487,7 @@ export default class ExmaraldaImporter extends Vue {
     const selectedTiersForSpeaker = this.importable.speakerTiers
       .filter(t =>
         t.select_for_import === true &&
+        (t.to_tier_type === 'tokenized' || t.to_tier_type === 'default') &&
         t.to_speaker !== null &&
         t.to_speaker.pk === to_speaker.pk
       )
