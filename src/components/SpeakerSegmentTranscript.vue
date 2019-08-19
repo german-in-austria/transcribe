@@ -495,10 +495,10 @@ export default class SpeakerSegmentTranscript extends Vue {
     margin-left -1px
     padding 0 2px
     border-radius 5px
-    background #272727
+    background #3e3e3e
     white-space nowrap
     &:empty
-      background #3e3e3e
+      background #252525
     &:focus
       outline 0
       color #fff
