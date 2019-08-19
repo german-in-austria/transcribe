@@ -269,7 +269,7 @@
                     </v-flex>
                     <v-flex xs1>
                       <v-btn v-ripple="false" icon @click="toggleSpeakerTierPreview(speakerTier.id)">
-                        &bull;
+                        &#9662;
                       </v-btn>
                     </v-flex>
                   </v-layout>
@@ -344,7 +344,6 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import {
   ServerInformant,
   ServerSurvey,
-  createEmptyTranscript,
   getSurveys,
   ServerTranscriptListItem
 } from '../service/backend-server'
