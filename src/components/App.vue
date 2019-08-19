@@ -192,8 +192,7 @@ import {
   getTranscript,
   mergeServerTranscript,
   serverTranscriptToLocal,
-  getMetadataFromServerTranscript,
-  createEmptyTranscript
+  getMetadataFromServerTranscript
 } from '../service/backend-server'
 
 import {
@@ -319,12 +318,6 @@ export default class App extends Vue {
   }
 
   async loadImportedTranscript(t: ServerTranscript, audioData: File|null): Promise<string> {
-    const { transcript_id } = await createEmptyTranscript(
-      t.aEinzelErhebung!.pk,
-      t.aTranskript!.n,
-      t.aTranskript!.default_tier!
-    )
-    t.aTranskript!.pk = transcript_id
     const url = await this.loadLocalTranscript(t, audioData)
     this.importableExmaraldaFile = null
     return url
