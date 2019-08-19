@@ -91,7 +91,7 @@ export default class Search extends Vue {
   eventStore = eventStore
   toTime = toTime
   isMenuShown = false
-  caseSensitive = true
+  caseSensitive = false
   useRegEx = false
   defaultTierOnly = false
   isCmdOrCtrl = isCmdOrCtrl
