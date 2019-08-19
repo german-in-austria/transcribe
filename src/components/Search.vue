@@ -73,7 +73,6 @@ import {
   findPreviousEventAt,
   findEventIndexById,
   eventStore,
-  getSelectedEvent,
   LocalTranscriptEvent,
   scrollToAudioEvent,
   scrollToTranscriptEvent,

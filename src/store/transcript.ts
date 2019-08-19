@@ -784,6 +784,10 @@ export function removeEventsFromSelection(es: LocalTranscriptEvent[]) {
   eventStore.selectedEventIds = eventStore.selectedEventIds.filter((eId) => eIds.indexOf(eId) === -1)
 }
 
+export function getSelectedEvents(): LocalTranscriptEvent[] {
+  return getEventsByIds(eventStore.selectedEventIds)
+}
+
 export function getSelectedEvent(): LocalTranscriptEvent|undefined {
   return _.find(eventStore.events, (e) => e.eventId === eventStore.selectedEventIds[0])
 }

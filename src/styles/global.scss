@@ -105,6 +105,10 @@ img[lazy=loaded] {
 .context-menu .v-list--dense .v-list__tile:not(.v-list__tile--avatar){
   height: 33px !important;
 }
+.context-menu-list .v-list__tile.v-list__tile--link{
+  transition: none !important;
+  cursor: default !important;
+}
 .v-tabs__item{
   background: rgba(0,0,0,.4);
   border-right: 1px solid #181818;

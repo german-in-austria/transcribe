@@ -16,6 +16,7 @@ import {
   selectPreviousEvent,
   selectNextEvent,
   getSelectedEvent,
+  getSelectedEvents,
   playEvents,
   scrollToAudioEvent,
   scrollToTranscriptEvent,
@@ -239,9 +240,9 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Play/Pause',
     description: 'Play or Pause the currently selected Event',
     action: () => {
-      const e = getSelectedEvent()
-      if (e !== undefined) {
-        playEvents([ e ])
+      const es = getSelectedEvents()
+      if (es.length > 0) {
+        playEvents(es)
       }
     }
   },
