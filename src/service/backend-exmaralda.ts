@@ -117,9 +117,7 @@ function getTokenTypeId(t: string): number {
   return type ? type.id : -1
 }
 
-// THIS COULD USE A KEYED EVENT CACHE
 function getTierToken(
-    this: any,
     speakerTiers: SpeakerTierImportable[],
     tierType: TokenTierType,
     startTime: string,
@@ -127,10 +125,12 @@ function getTierToken(
   ): string|null {
     const tier = _(speakerTiers).find(t => t.select_for_import === true && t.token_tier_type === tierType)
     if (tier === undefined) {
+      // console.log('tier is undefined', tierType, startTime, tokenIndex, speakerTiers)
       return null
     } else {
       const event = _(tier.events).find(e => e.startTime === startTime)
       if (event === undefined) {
+        console.log('event is undefined')
         return null
       } else {
         return tokenize(event.text)[tokenIndex] || null
@@ -147,19 +147,20 @@ export function importableToServerTranscript(
 
   const tiersBySpeakers = _(importable.speakerTiers)
     .filter(st => st.select_for_import === true)
+    .map(st => {
+      return st.to_tier_type === 'default'
+        ? {...st, token_tier_type: defaultTier}
+        : st
+    })
     .groupBy(st => st.to_speaker!.pk)
     .value()
-
-  // TODO: since now there can only be one
-  // default tier type for all speakers
-  // this should be handled more explicitly
-  const defaultTokenTierType = defaultTier
 
   const tokens: _.Dictionary<ServerToken> = {}
   const tiers: ServerTranscript['aTiers'] = {}
 
   const events = _(tiersBySpeakers)
     .map(speakerTiers => {
+      console.log({speakerTiers})
       return _(speakerTiers)
         // only the default tier and free text (event_tier) tiers
         .filter(st => st.to_tier_type === 'default' || st.to_tier_type === 'freeText')
@@ -176,6 +177,10 @@ export function importableToServerTranscript(
               tiers[tierId] = speakerTier.to_tier_name || speakerTier.to_tier_type || 'untitled'
             }
             return _(speakerTier.events).map((e): ServerEvent => {
+
+              if (!e.text) {
+                console.log('e.text is empty?', {e})
+              }
 
               const eventId = makeEventId()
               const text = e.text || ''
@@ -242,7 +247,7 @@ export function importableToServerTranscript(
     .flatten()
     .flatten()
     .value()
-
+  console.log({ events })
   return {
     aTiers: tiers,
     aEinzelErhebung: {
