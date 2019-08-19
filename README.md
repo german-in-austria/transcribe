@@ -4,11 +4,11 @@ A browser based audio transcription tool.
 
 ## Goals
 
-- frictionless and ergonomic transcription workflow
+- frictionless and ergonomic transcription workflow with lots of discoverable keyboard shortcuts.
 - smooth, native-class user experience
 - independence from back end, can be used stand-alone.
 - no native modules, everything must work in-browser.
-- basic phonetic analysis tools.
+- included phonetic analysis tools.
 - compatibility with [exmaralda](https://exmaralda.org/) file formats.
 
 ## Setup
