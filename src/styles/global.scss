@@ -66,7 +66,8 @@ img[lazy=loaded] {
   border: 1px solid #616161;
   border-radius: 4px !important;
 }
-.v-menu__content .v-card.theme--dark{
+.v-menu__content .v-card.theme--dark,
+.v-menu__content .v-list.theme--dark{
   background: rgba(20,20,20,.6) !important;
   box-shadow: 0 5px 30px rgba(0,0,0,.2);
 }
