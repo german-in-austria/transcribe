@@ -1,7 +1,6 @@
 import Vue from 'vue'
 import Main from './components/Main.vue'
 import router from './router'
-import { platform } from './util'
 import VueRouter from 'vue-router'
 import * as fontLoader from 'webfontloader'
 import Vuetify from 'vuetify'
@@ -21,7 +20,9 @@ Vue.use(VueLazyload, {
 if (window) {
   fontLoader.load({
     custom: {
-      families : ['HKGrotesk']
+      families : [
+        'HKGrotesk'
+      ]
     }
   })
 }
