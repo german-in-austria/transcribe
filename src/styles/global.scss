@@ -50,11 +50,18 @@ img[lazy=loaded] {
 .bold{
   font-weight: bold;
 }
-.dialog{
+.settings-dialog{
   border-radius: 10px;
   align-self: baseline;
-  max-height: 400px;
+  overflow: hidden;
+  overflow-y: initial !important;
+  max-height: initial !important;
 }
+.settings-dialog .v-window__container {
+  max-height: calc(90vh - 40px);
+  overflow-y: auto;
+}
+
 .theme--dark.v-toolbar{
   background-color: #191918 !important;
 }

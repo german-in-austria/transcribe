@@ -4,7 +4,7 @@
     :transition="false"
     @input="$event === false && $emit('close')"
     :value="show"
-    content-class="dialog"
+    content-class="settings-dialog"
     max-width="700">
     <v-card>
       <v-card-text class="pa-0">
@@ -142,7 +142,7 @@
                 </v-layout>
               </v-list>
             </v-tab-item>
-            <v-tab-item>
+            <v-tab-item lazy>
               <keyboard-shortcut-settings />
             </v-tab-item>
           </v-tabs-items>
