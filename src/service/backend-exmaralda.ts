@@ -120,17 +120,17 @@ function getTokenTypeId(t: string): number {
 function getTierToken(
     speakerTiers: SpeakerTierImportable[],
     tierType: TokenTierType,
-    startTime: string,
+    tierEvent: TierEvent,
     tokenIndex: number,
   ): string|null {
     const tier = _(speakerTiers).find(t => t.select_for_import === true && t.token_tier_type === tierType)
+    // this speaker does not have this type of token tier
     if (tier === undefined) {
-      // console.log('tier is undefined', tierType, startTime, tokenIndex, speakerTiers)
       return null
     } else {
-      const event = _(tier.events).find(e => e.startTime === startTime)
+      const event = _(tier.events).find(e => e.startTime === tierEvent.startTime)
+      // this event does not exist in this token tier.
       if (event === undefined) {
-        console.log('event is undefined')
         return null
       } else {
         return tokenize(event.text)[tokenIndex] || null
@@ -203,21 +203,20 @@ export function importableToServerTranscript(
                   }
                 }
               } else {
-                const thisType = speakerTier.token_tier_type
                 const eventTokenIds = _(tokenize(text))
                   .filter(t => t !== '')
                   .map((t, tokenIndex): number => {
                     const tokenId = makeTokenId()
                     const token = {
-                      t: thisType === 'text'
+                      t: speakerTier.token_tier_type === 'text'
                         ? t
-                        : (getTierToken(speakerTiers, 'text', e.startTime, tokenIndex) || ''),
-                      o: thisType === 'ortho'
+                        : (getTierToken(speakerTiers, 'text', e, tokenIndex) || ''),
+                      o: speakerTier.token_tier_type === 'ortho'
                         ? t
-                        : (getTierToken(speakerTiers, 'ortho', e.startTime, tokenIndex) || ''),
-                      p: thisType === 'phon'
+                        : (getTierToken(speakerTiers, 'ortho', e, tokenIndex) || ''),
+                      p: speakerTier.token_tier_type === 'phon'
                         ? t
-                        : (getTierToken(speakerTiers, 'phon', e.startTime, tokenIndex) || ''),
+                        : (getTierToken(speakerTiers, 'phon', e, tokenIndex) || ''),
                       to: '',
                       tr: tokenOrder++,
                       e: eventId,
