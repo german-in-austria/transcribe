@@ -58,7 +58,7 @@
             icon flat>
             <v-badge color="error" overlap :value="errors.length > 0">
               <span slot="badge">{{ errors.length }}</span>
-              <v-icon>widgets</v-icon>
+              <v-icon>mdi-tools</v-icon>
             </v-badge>
           </v-btn>
           <span>History & Errors</span>
