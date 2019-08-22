@@ -5,7 +5,7 @@
     @mousedown.shift="selectEventRange(event)"
     @dblclick="playEvent(event)"
     tabindex="-1"
-    :class="[ 'segment', isEventSelected(event.eventId) && 'selected', hasOverlap && 'has-overlap' ]"
+    :class="[ 'segment', isEventSelected(event.eventId) && 'selected' ]"
     :style="{ left: offset + 'px', width: width + 'px' }">
     <div :style="{ left: width / 2 + 'px' }" class="transcript-tooltip" v-if="isEventSelected(event.eventId)">
       <div class="inner" :key="i" v-for="(se, i) in event.speakerEvents">
@@ -70,16 +70,16 @@ export default class SegmentBox extends Vue {
   isEventSelected = isEventSelected
   playEvent = playEvent
 
-  get hasOverlap() {
-    const x = (
-      this.previousEvent !== undefined &&
-      Number(this.previousEvent.endTime.toPrecision(2)) > Number(this.event.startTime.toPrecision(2))
-    )
-    if (x) {
-      console.log('overlap', this.event, this.previousEvent, this.nextEvent)
-    }
-    return x
-  }
+  // get hasOverlap() {
+  //   const x = (
+  //     this.previousEvent !== undefined &&
+  //     Number(this.previousEvent.endTime.toPrecision(2)) > Number(this.event.startTime.toPrecision(2))
+  //   )
+  //   if (x) {
+  //     console.log('overlap', this.event, this.previousEvent, this.nextEvent)
+  //   }
+  //   return x
+  // }
 
   get offset() {
     return Number(this.event.startTime) * settings.pixelsPerSecond
