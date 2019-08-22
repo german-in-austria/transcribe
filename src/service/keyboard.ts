@@ -109,11 +109,11 @@ function isInputElement(t: EventTarget|null): boolean {
 function keyboardEventHasModifier(e: KeyboardEvent, m: KeyboardModifier): boolean {
   return (
     (
-      (e.ctrlKey === true && m === 'ctrlOrCmd') ||
-      (platform() === 'mac' && e.metaKey === true && m === 'ctrlOrCmd')
+      (m === 'ctrlOrCmd' && e.ctrlKey === true) ||
+      (m === 'ctrlOrCmd' && platform() === 'mac' && e.metaKey === true)
     ) ||
-    (e.altKey === true && m === 'alt') ||
-    (e.shiftKey === true && m === 'shift')
+    (m === 'alt' && e.altKey === true) ||
+    (m === 'shift' && e.shiftKey === true)
   )
 }
 
@@ -132,7 +132,6 @@ export async function handleGlobalShortcut(e: KeyboardEvent) {
         sc.modifier.every(m => keyboardEventHasModifier(e, m))
       )
     ) {
-      console.log('sc', sc)
       e.preventDefault()
       sc.action(e)
       // break the loop when it was found.
@@ -213,8 +212,9 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Move event start left',
     description: 'Move the start time of an event to the left in an interval',
     action: () => {
-      if (eventStore.selectedEventIds.length >= 1) {
-        undoable(moveEventStartTime(eventStore.selectedEventIds[0], settings.moveEventTimeByInterval * -1))
+      const e = getSelectedEvent()
+      if (e !== undefined) {
+        undoable(moveEventStartTime(e, settings.moveEventTimeByInterval * -1))
       }
     }
   },
@@ -225,8 +225,9 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Move event start left',
     description: 'Move the start time of an event to the left in an interval',
     action: () => {
-      if (eventStore.selectedEventIds.length >= 1) {
-        undoable(moveEventStartTime(eventStore.selectedEventIds[0], settings.moveEventTimeByInterval))
+      const e = getSelectedEvent()
+      if (e !== undefined) {
+        undoable(moveEventStartTime(e, settings.moveEventTimeByInterval))
       }
     }
   },

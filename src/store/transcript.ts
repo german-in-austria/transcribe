@@ -408,9 +408,35 @@ export function resizeEvents(...es: LocalTranscriptEvent[]): HistoryEventAction 
   }
 }
 
-export function moveEventStartTime(id: number, by: number): HistoryEventAction {
-  const i = findEventIndexById(id)
-  return resizeEvents({ ...eventStore.events[i], startTime: eventStore.events[i].startTime + by })
+export function findEventOverlaps(e: LocalTranscriptEvent): LocalTranscriptEvent[][] {
+  const left: LocalTranscriptEvent[] = []
+  const middle: LocalTranscriptEvent[] = []
+  const right: LocalTranscriptEvent[] = []
+  eventStore.events.forEach(ev => {
+    if (ev.eventId !== e.eventId) {
+      // left side overlapped
+      if (ev.startTime <= e.startTime && ev.endTime > e.startTime && ev.endTime <= e.endTime) {
+        left.push(ev)
+      } else if (ev.startTime >= e.startTime && ev.endTime <= e.endTime) {
+        // fully overlapped
+        middle.push(ev)
+      } else if (ev.startTime < e.endTime && ev.startTime >= e.startTime && ev.endTime > e.endTime) {
+        // right side overlapped
+        right.push(ev)
+      }
+    }
+  })
+  return [ left, middle, right ]
+}
+
+export function moveEventStartTime(e: LocalTranscriptEvent, by: number): HistoryEventAction {
+  const newEvent = { ...e, startTime: e.startTime + by }
+  const [left, middle, right] = findEventOverlaps(newEvent)
+  if (left.length > 0 ) {
+    // fixEventOverlaps(eventStore)
+    console.log('OVERLAP', [])
+  }
+  return resizeEvents(newEvent)
 }
 
 export function resizeEvent(id: number, startTime: number, endTime: number): HistoryEventAction {
