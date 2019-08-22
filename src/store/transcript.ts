@@ -429,12 +429,22 @@ export function findEventOverlaps(e: LocalTranscriptEvent): LocalTranscriptEvent
   return [ left, middle, right ]
 }
 
+export function moveEventEndTime(e: LocalTranscriptEvent, by: number): HistoryEventAction {
+  const newEvent = { ...e, endTime: e.endTime + by }
+  const [left, middle, right] = findEventOverlaps(newEvent)
+  if (right.length > 0 ) {
+    // fixEventOverlaps(eventStore)
+    console.log('OVERLAP', [left, middle, right])
+  }
+  return resizeEvents(newEvent)
+}
+
 export function moveEventStartTime(e: LocalTranscriptEvent, by: number): HistoryEventAction {
   const newEvent = { ...e, startTime: e.startTime + by }
   const [left, middle, right] = findEventOverlaps(newEvent)
   if (left.length > 0 ) {
     // fixEventOverlaps(eventStore)
-    console.log('OVERLAP', [])
+    console.log('OVERLAP', [left, middle, right])
   }
   return resizeEvents(newEvent)
 }
