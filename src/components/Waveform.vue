@@ -641,7 +641,6 @@ export default class Waveform extends Vue {
   }
 
   async drawWaveFormPiece(i: number) {
-    console.log('drawing', i)
     const isLast = i + 1 === this.amountDrawSegments
     const secondsPerDrawWidth = this.drawWidth / settings.pixelsPerSecond
     const from = i * secondsPerDrawWidth
