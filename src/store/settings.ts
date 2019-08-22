@@ -20,6 +20,7 @@ export interface Settings {
   showSegmentBoxes: boolean
   showSpectrograms: boolean
   useMonoWaveForm: boolean
+  moveEventTimeByInterval: number
   tokenTypes: Array<{
     name: string
     regex: RegExp
@@ -184,6 +185,7 @@ const settings: Settings = {
   showSegmentBoxes: true,
   showSpectrograms: false,
   useMonoWaveForm: false,
+  moveEventTimeByInterval: 0.2,
   tokenTypes: [
     {
       name: 'proper-name',

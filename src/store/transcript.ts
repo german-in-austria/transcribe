@@ -408,24 +408,14 @@ export function resizeEvents(...es: LocalTranscriptEvent[]): HistoryEventAction 
   }
 }
 
+export function moveEventStartTime(id: number, by: number): HistoryEventAction {
+  const i = findEventIndexById(id)
+  return resizeEvents({ ...eventStore.events[i], startTime: eventStore.events[i].startTime + by })
+}
+
 export function resizeEvent(id: number, startTime: number, endTime: number): HistoryEventAction {
   const i = findEventIndexById(id)
   return resizeEvents({...eventStore.events[i], startTime, endTime})
-  // const i = findEventIndexById(id)
-  // const before = clone(eventStore.events[i])
-  // console.log('params', startTime, endTime)
-  // console.log('before', before.startTime, before.endTime, before)
-  // eventStore.events[i].startTime = startTime
-  // eventStore.events[i].endTime = endTime
-  // const after = clone(eventStore.events[i])
-  // console.log('after', after.startTime, after.endTime, after)
-  // return {
-  //   id: _.uniqueId(),
-  //   apply: true,
-  //   type: 'RESIZE',
-  //   before: [ before ],
-  //   after: [ after ]
-  // }
 }
 
 export function insertEvent(e: LocalTranscriptEvent): HistoryEventAction {
@@ -807,6 +797,7 @@ export async function convertToServerTranscript(es: LocalTranscriptEvent[]): Pro
 }
 
 export async function saveChangesToServer() {
+  console.log('save to server', serverTranscript)
   if (serverTranscript !== null) {
     const t = await localTranscriptToServerSaveRequest(serverTranscript, eventStore.events)
     const tid = await (async () => {

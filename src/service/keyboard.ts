@@ -20,14 +20,18 @@ import {
   playEvents,
   scrollToAudioEvent,
   scrollToTranscriptEvent,
-  LocalTranscriptEvent
+  moveEventStartTime,
+  LocalTranscriptEvent,
 } from '../store/transcript'
 
 import eventBus from '../service/event-bus'
+import settings from '../store/settings';
+
+type KeyboardModifier = 'alt'|'shift'|'ctrlOrCmd'
 
 interface KeyboardAction {
   // can have more than one modifier
-  modifier: Array<'alt'|'shift'|'ctrlOrCmd'>
+  modifier: KeyboardModifier[]
   // some shortcuts can’t work in text fields
   ignoreInTextField: boolean
   key: KeyboardEvent['key']
@@ -38,46 +42,6 @@ interface KeyboardAction {
 
 export interface KeyboardShortcuts {
   [action: string]: KeyboardAction
-}
-
-function isInputElement(t: EventTarget|null): boolean {
-  return (
-    t !== null &&
-    t instanceof HTMLElement && (
-      t.isContentEditable === true ||
-      t.tagName.toLowerCase() === 'input'
-    )
-  )
-}
-
-// FIXME: combined modifiers.
-export async function handleGlobalShortcut(e: KeyboardEvent) {
-  _(keyboardShortcuts).forEach(async (sc) => {
-    if (
-      // the shortcut is allowed in text fields OR we’re not in a text field.
-      (sc.ignoreInTextField === false || !isInputElement(e.target)) &&
-      // the required key was pressed
-      (e.key === sc.key) &&
-      // check modifiers:
-      (
-        // no modifiers are required and none are present
-        (sc.modifier.length === 0 && !e.ctrlKey && !e.shiftKey && !e.metaKey && !e.altKey) ||
-        // ctrl is present and required
-        (e.ctrlKey === true && sc.modifier.find((m) => m === 'ctrlOrCmd')) ||
-        // alt key is present and required
-        (e.altKey === true && sc.modifier.find(m => m === 'alt')) ||
-        // shift key is present and required
-        (e.shiftKey === true && sc.modifier.find(m => m === 'shift')) ||
-        // we’re on a mac and cmd is present and required
-        (platform() === 'mac' && e.metaKey === true && sc.modifier.find((m) => m === 'ctrlOrCmd'))
-      )
-    ) {
-      e.preventDefault()
-      await sc.action(e)
-      // break the loop when it was found.
-      return false
-    }
-  })
 }
 
 export const normalKeys = _('abcdefghijklmnopqrstuvwxyz1234567890+-')
@@ -132,7 +96,52 @@ const keyMap = _(normalKeys)
   .keyBy(t => t.name)
   .value()
 
-async function focusEventElement(e: LocalTranscriptEvent) {
+function isInputElement(t: EventTarget|null): boolean {
+  return (
+    t !== null &&
+    t instanceof HTMLElement && (
+      t.isContentEditable === true ||
+      t.tagName.toLowerCase() === 'input'
+    )
+  )
+}
+
+function keyboardEventHasModifier(e: KeyboardEvent, m: KeyboardModifier): boolean {
+  return (
+    (
+      (e.ctrlKey === true && m === 'ctrlOrCmd') ||
+      (platform() === 'mac' && e.metaKey === true && m === 'ctrlOrCmd')
+    ) ||
+    (e.altKey === true && m === 'alt') ||
+    (e.shiftKey === true && m === 'shift')
+  )
+}
+
+export async function handleGlobalShortcut(e: KeyboardEvent) {
+  _(keyboardShortcuts).forEach(sc => {
+    if (
+      // the shortcut is allowed in text fields OR we’re not in a text field.
+      (sc.ignoreInTextField === false || !isInputElement(e.target)) &&
+      // the required key was pressed
+      (e.key === sc.key) &&
+      // check modifiers:
+      (
+        // no modifiers are required and none are present
+        (sc.modifier.length === 0 && !e.ctrlKey && !e.shiftKey && !e.metaKey && !e.altKey) ||
+        // every modifier is present in the event
+        sc.modifier.every(m => keyboardEventHasModifier(e, m))
+      )
+    ) {
+      console.log('sc', sc)
+      e.preventDefault()
+      sc.action(e)
+      // break the loop when it was found.
+      return false
+    }
+  })
+}
+
+async function focusSelectedEventElement(e: LocalTranscriptEvent) {
   await Vue.nextTick()
   setTimeout(() => {
     const el = (
@@ -197,6 +206,30 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       }
     }
   },
+  moveEventStartLeft: {
+    ignoreInTextField: false,
+    modifier: ['ctrlOrCmd', 'shift'],
+    key: 'ArrowLeft',
+    name: 'Move event start left',
+    description: 'Move the start time of an event to the left in an interval',
+    action: () => {
+      if (eventStore.selectedEventIds.length >= 1) {
+        undoable(moveEventStartTime(eventStore.selectedEventIds[0], settings.moveEventTimeByInterval * -1))
+      }
+    }
+  },
+  moveEventStartRight: {
+    ignoreInTextField: false,
+    modifier: ['ctrlOrCmd', 'shift'],
+    key: 'ArrowRight',
+    name: 'Move event start left',
+    description: 'Move the start time of an event to the left in an interval',
+    action: () => {
+      if (eventStore.selectedEventIds.length >= 1) {
+        undoable(moveEventStartTime(eventStore.selectedEventIds[0], settings.moveEventTimeByInterval))
+      }
+    }
+  },
   focusSearch: {
     ignoreInTextField: false,
     modifier: ['ctrlOrCmd'],
@@ -216,7 +249,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     action: async () => {
       const e = selectPreviousEvent()
       if (e !== undefined) {
-        focusEventElement(e)
+        focusSelectedEventElement(e)
       }
     }
   },
@@ -229,7 +262,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     action: async () => {
       const e = selectNextEvent()
       if (e !== undefined) {
-        focusEventElement(e)
+        focusSelectedEventElement(e)
       }
     }
   },
