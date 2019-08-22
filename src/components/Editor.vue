@@ -328,51 +328,6 @@ export default class Editor extends Vue {
     return undoable(splitEvent(e, at))
   }
 
-  // TODO: these are actually global shortcuts
-  // where do i put them?
-
-  async handleWaveformKey(e: KeyboardEvent) {
-    if (e.key === 's') {
-      const eventUnderPlayHead = findEventAt(eventStore.currentTime)
-      if (eventUnderPlayHead === undefined) {
-        const newEvent = this.addEvent(eventStore.currentTime)[0]
-        await this.$nextTick()
-        selectEvents([ newEvent ])
-      } else {
-        const splitAt = eventStore.currentTime - eventUnderPlayHead.startTime
-        this.splitEvent(eventUnderPlayHead, splitAt)
-      }
-    } else if (e.key === 'Backspace') {
-      this.deleteSelectedEvents()
-      deselectEvents()
-    // join
-    } else if (e.key === 'j' && e.metaKey === true || e.ctrlKey === true) {
-      if (eventStore.selectedEventIds.length) {
-        this.joinEvents(eventStore.selectedEventIds)
-      }
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      e.preventDefault()
-      e.stopPropagation()
-      if (e.key === 'ArrowRight') {
-        selectNextEvent()
-      } else {
-        selectPreviousEvent()
-      }
-      this.$nextTick(() => {
-        setTimeout(() => {
-          const el = (
-            // either the previously selected one, or the first.
-            document.querySelector('.segment.selected') ||
-            document.querySelector('.segment')
-          )
-          if (el instanceof HTMLElement) {
-            el.focus()
-          }
-        }, 0)
-      })
-    }
-  }
-
   mounted() {
     startUndoListener()
     window.onbeforeunload = (e) => {
