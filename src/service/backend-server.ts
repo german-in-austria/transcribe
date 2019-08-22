@@ -356,9 +356,9 @@ function mergeEventChanges(
   // rebuild the token_id (tid) reference in their events
   _(ts)
     .mapValues((t, k) => ({...t, token_id: Number(k)}))
-    .groupBy(t => `${t.e}-${t.i}`)
+    .groupBy(t => `${t.e}__${t.i}`)
     .each((speakerTokens, speakerEventId) => {
-      const [ eventId, speakerId ] = speakerEventId.split('-')
+      const [ eventId, speakerId ] = speakerEventId.split('__')
       if (keyedEvents[eventId] !== undefined) {
         keyedEvents[eventId].tid[speakerId] = _(speakerTokens).orderBy(t => t.tr).map(t => t.token_id).value()
       } else {
