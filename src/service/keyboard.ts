@@ -21,6 +21,7 @@ import {
   scrollToAudioEvent,
   scrollToTranscriptEvent,
   moveEventStartTime,
+  moveEventEndTime,
   LocalTranscriptEvent,
 } from '../store/transcript'
 
@@ -29,7 +30,7 @@ import settings from '../store/settings';
 
 type KeyboardModifier = 'alt'|'shift'|'ctrlOrCmd'
 
-interface KeyboardAction {
+export interface KeyboardAction {
   // can have more than one modifier
   modifier: KeyboardModifier[]
   // some shortcuts can’t work in text fields
@@ -222,12 +223,38 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     ignoreInTextField: false,
     modifier: ['ctrlOrCmd', 'shift'],
     key: 'ArrowRight',
-    name: 'Move event start left',
-    description: 'Move the start time of an event to the left in an interval',
+    name: 'Move event start right',
+    description: 'Move the start time of an event to the right in an interval',
     action: () => {
       const e = getSelectedEvent()
       if (e !== undefined) {
         undoable(moveEventStartTime(e, settings.moveEventTimeByInterval))
+      }
+    }
+  },
+  moveEventEndRight: {
+    ignoreInTextField: false,
+    modifier: ['alt', 'shift'],
+    key: 'ArrowRight',
+    name: 'Move event end right',
+    description: 'Move the end time of an event to the right in an interval',
+    action: () => {
+      const e = getSelectedEvent()
+      if (e !== undefined) {
+        undoable(moveEventEndTime(e, settings.moveEventTimeByInterval))
+      }
+    }
+  },
+  moveEventEndLeft: {
+    ignoreInTextField: false,
+    modifier: ['alt', 'shift'],
+    key: 'ArrowLeft',
+    name: 'Move event end left',
+    description: 'Move the end time of an event to the left in an interval',
+    action: () => {
+      const e = getSelectedEvent()
+      if (e !== undefined) {
+        undoable(moveEventEndTime(e, settings.moveEventTimeByInterval * -1))
       }
     }
   },
