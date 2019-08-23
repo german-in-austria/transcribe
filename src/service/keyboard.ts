@@ -45,12 +45,18 @@ export interface KeyboardShortcuts {
   [action: string]: KeyboardAction
 }
 
-export const normalKeys = _('abcdefghijklmnopqrstuvwxyz1234567890+-')
+export interface KeyDescriber {
+  name: string
+  jsName: string
+  displayName: string
+}
+
+export const normalKeys: KeyDescriber[] = _('abcdefghijklmnopqrstuvwxyz1234567890+-')
   .split('')
   .map(l => ({ name: l, jsName: l, displayName: l.toUpperCase() }))
   .value()
 
-export const modifierKeys = [
+export const modifierKeys: KeyDescriber[] = [
   {
     name: 'ctrlOrCmd',
     displayName: platform() === 'mac' ? '⌘' : 'ctrl',
@@ -68,7 +74,7 @@ export const modifierKeys = [
   }
 ]
 
-export const specialKeys = [
+export const specialKeys: KeyDescriber[] = [
   {
     name: 'Enter',
     jsName: 'Enter',
@@ -91,7 +97,7 @@ export const specialKeys = [
   }
 ]
 
-const keyMap = _(normalKeys)
+export const keyMap: _.Dictionary<KeyDescriber> = _(normalKeys)
   .concat(specialKeys)
   .concat(modifierKeys)
   .keyBy(t => t.name)
