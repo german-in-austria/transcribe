@@ -88,9 +88,14 @@ export default class SegmentTranscript extends Vue {
     })
   }
 
-  isViewingEvent(e: LocalTranscriptEvent) {
-    return eventStore.userState.viewingTranscriptEvent !== null
-      && eventStore.userState.viewingTranscriptEvent.eventId === e.eventId
+  isViewingEvent(e?: LocalTranscriptEvent) {
+    return (
+      e !== null &&
+      e !== undefined &&
+      eventStore.userState.viewingTranscriptEvent !== null &&
+      eventStore.userState.viewingTranscriptEvent !== undefined &&
+      eventStore.userState.viewingTranscriptEvent.eventId === e.eventId
+    )
   }
 
   deleteSelectedEvents() {
