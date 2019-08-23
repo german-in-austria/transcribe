@@ -4,8 +4,7 @@ import _ from 'lodash'
 import { undoable } from '../store/history'
 import { platform } from '../util'
 import {
-  focusSelectedEventElement,
-  isWaveformEventVisible
+  focusSelectedEventElement
 } from '../service/events-dom'
 
 import {
