@@ -429,24 +429,78 @@ export function findEventOverlaps(e: LocalTranscriptEvent): LocalTranscriptEvent
   return [ left, middle, right ]
 }
 
+export function isEventDockedToEvent(...es: LocalTranscriptEvent[]): boolean {
+  return sortEvents(es).every((e, i, l) => {
+    // true if it’s either the first event
+    // or the distance to the previous one is smaller than the settings dock interval
+    if (i !== 0) {
+      console.log('distance', e.startTime, e.endTime, e.startTime - l[ i - 1].endTime)
+    }
+    return i === 0 || e.startTime - l[ i - 1].endTime <= settings.eventDockingInterval
+  })
+}
+
 export function moveEventEndTime(e: LocalTranscriptEvent, by: number): HistoryEventAction {
+  // create future event and find next.
   const newEvent = { ...e, endTime: e.endTime + by }
-  const [left, middle, right] = findEventOverlaps(newEvent)
-  if (right.length > 0 ) {
-    // fixEventOverlaps(eventStore)
-    console.log('OVERLAP', [left, middle, right])
+  const nextEvent = findNextEventAt(e.endTime)
+  console.log({ nextEvent, isEventDockedToEvent: nextEvent && isEventDockedToEvent(e, nextEvent) })
+  // there is a next event and it’s docked to
+  // either the current event or the future event
+  if (
+    nextEvent !== undefined && (
+      isEventDockedToEvent(newEvent, nextEvent) ||
+      isEventDockedToEvent(e, nextEvent)
+    )
+  ) {
+    const nextEventFutureLength = nextEvent.endTime - newEvent.endTime
+    // the next event’s length after the operation will be sufficient
+    if (nextEventFutureLength >= settings.minimumEventLength) {
+      return resizeEvents(
+        { ...newEvent },
+        { ...nextEvent, startTime: newEvent.endTime }
+      )
+    // it won’t be
+    } else {
+      // resize the previous event to the minimum length, and fit the current one snugly.
+      return resizeEvents(
+        { ...e, endTime: nextEvent.endTime - settings.minimumEventLength },
+        { ...nextEvent, startTime: nextEvent.endTime - settings.minimumEventLength }
+      )
+    }
+  // there is no next event or it’s not docked
+  } else {
+    // resize just it.
+    return resizeEvents(newEvent)
   }
-  return resizeEvents(newEvent)
 }
 
 export function moveEventStartTime(e: LocalTranscriptEvent, by: number): HistoryEventAction {
+  // same as above but in the other direction and with the previous event.
   const newEvent = { ...e, startTime: e.startTime + by }
-  const [left, middle, right] = findEventOverlaps(newEvent)
-  if (left.length > 0 ) {
-    // fixEventOverlaps(eventStore)
-    console.log('OVERLAP', [left, middle, right])
+  const previousEvent = findPreviousEventAt(e.endTime)
+  console.log({ previousEvent, isEventDockedToEvent: previousEvent && isEventDockedToEvent(e, previousEvent) })
+  if (
+    previousEvent !== undefined && (
+      isEventDockedToEvent(newEvent, previousEvent) ||
+      isEventDockedToEvent(e, previousEvent)
+    )
+  ) {
+    const previousEventFutureLength = newEvent.startTime - previousEvent.startTime
+    if (previousEventFutureLength >= settings.minimumEventLength) {
+      return resizeEvents(
+        { ...previousEvent, endTime: newEvent.startTime },
+        { ...newEvent }
+      )
+    } else {
+      return resizeEvents(
+        { ...previousEvent, endTime: previousEvent.startTime + settings.minimumEventLength },
+        { ...e, startTime: previousEvent.startTime + settings.minimumEventLength }
+      )
+    }
+  } else {
+    return resizeEvents(newEvent)
   }
-  return resizeEvents(newEvent)
 }
 
 export function resizeEvent(id: number, startTime: number, endTime: number): HistoryEventAction {

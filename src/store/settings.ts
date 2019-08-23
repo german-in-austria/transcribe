@@ -19,9 +19,11 @@ export interface Settings {
   darkMode: boolean
   showSegmentBoxes: boolean
   showSpectrograms: boolean
+  minimumEventLength: number
   useMonoWaveForm: boolean
   moveEventTimeByInterval: number
   moveEventTimeByIntervalSmall: number
+  eventDockingInterval: number
   tokenTypes: Array<{
     name: string
     regex: RegExp
@@ -186,8 +188,10 @@ const settings: Settings = {
   showSegmentBoxes: true,
   showSpectrograms: false,
   useMonoWaveForm: false,
+  minimumEventLength: 0.2,
   moveEventTimeByInterval: 0.2,
   moveEventTimeByIntervalSmall: 0.01,
+  eventDockingInterval: 0.05,
   tokenTypes: [
     {
       name: 'proper-name',
