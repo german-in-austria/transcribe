@@ -5,6 +5,7 @@
     @mousedown.shift="selectEventRange(event)"
     @dblclick="playEvent(event)"
     tabindex="-1"
+    :data-event-id="event.eventId"
     :class="[ 'segment', isEventSelected(event.eventId) && 'selected', settings.darkMode && 'theme--dark' ]"
     :style="{ left: offset + 'px', width: width + 'px' }">
     <div :style="{ left: width / 2 + 'px' }" class="transcript-tooltip" v-if="isEventSelected(event.eventId)">
@@ -160,5 +161,8 @@ export default class SegmentBox extends Vue {
     opacity 0
   &:hover:not(.resizing) .resizer
     opacity 1
+  &.resizing
+    border-left-width 1px
+    border-right-width 1px
 
 </style>

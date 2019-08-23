@@ -64,7 +64,7 @@
           <div class="wave-form-placeholder" />
         </div>
         <slot />
-        <div v-if="settings.showSegmentBoxes">
+        <div class="segment-box-container" v-if="settings.showSegmentBoxes">
           <segment-box
             v-for="(event, i) in visibleEvents"
             @contextmenu.native.stop.prevent="(e) => $emit('show-menu', e)"

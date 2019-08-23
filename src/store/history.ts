@@ -1,3 +1,5 @@
+import _ from 'lodash'
+
 import {
   LocalTranscriptEvent,
   replaceEvents,
@@ -5,8 +7,14 @@ import {
   scrollToAudioEvent,
   scrollToTranscriptEvent
 } from './transcript'
-import { isUndoOrRedo } from '../util'
-import _ from 'lodash'
+
+import {
+  isUndoOrRedo
+} from '../util'
+
+import {
+  isWaveformEventVisible
+} from '../service/events-dom'
 
 export interface HistoryEventAction {
   id: string
@@ -21,7 +29,7 @@ export let history = {
   actions: [] as HistoryEventAction[]
 }
 
-function undoRedoListener(e: KeyboardEvent) {
+async function undoRedoHandler(e: KeyboardEvent) {
   const d = isUndoOrRedo(e)
   if (d.undo === true) {
     e.stopPropagation()
@@ -29,8 +37,10 @@ function undoRedoListener(e: KeyboardEvent) {
     const action = undo()
     if (action !== undefined) {
       selectEvents(action.before)
-      scrollToAudioEvent(action.before[0])
-      scrollToTranscriptEvent(action.before[0])
+      if (!await isWaveformEventVisible(action.before[0])) {
+        scrollToAudioEvent(action.before[0])
+        scrollToTranscriptEvent(action.before[0])
+      }
     }
   } else if (d.redo === true) {
     e.stopPropagation()
@@ -38,18 +48,20 @@ function undoRedoListener(e: KeyboardEvent) {
     const action = redo()
     if (action !== undefined) {
       selectEvents(action.after)
-      scrollToAudioEvent(action.after[0])
-      scrollToTranscriptEvent(action.after[0])
+      if (!await isWaveformEventVisible(action.after[0])) {
+        scrollToAudioEvent(action.after[0])
+        scrollToTranscriptEvent(action.after[0])
+      }
     }
   }
 }
 
 export function startListening() {
-  document.addEventListener('keydown', undoRedoListener)
+  document.addEventListener('keydown', undoRedoHandler)
 }
 
 export function stopListening() {
-  document.removeEventListener('keydown', undoRedoListener)
+  document.removeEventListener('keydown', undoRedoHandler)
 }
 
 export function canUndo(): boolean {
