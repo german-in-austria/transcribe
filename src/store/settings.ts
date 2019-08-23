@@ -21,6 +21,7 @@ export interface Settings {
   showSpectrograms: boolean
   useMonoWaveForm: boolean
   moveEventTimeByInterval: number
+  moveEventTimeByIntervalSmall: number
   tokenTypes: Array<{
     name: string
     regex: RegExp
@@ -186,6 +187,7 @@ const settings: Settings = {
   showSpectrograms: false,
   useMonoWaveForm: false,
   moveEventTimeByInterval: 0.2,
+  moveEventTimeByIntervalSmall: 0.01,
   tokenTypes: [
     {
       name: 'proper-name',

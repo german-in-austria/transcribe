@@ -212,7 +212,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       }
     }
   },
-  moveEventStartLeft: {
+  moveEventStartLeftInterval: {
     ignoreInTextField: false,
     modifier: ['ctrlOrCmd', 'shift'],
     key: 'ArrowLeft',
@@ -225,7 +225,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       }
     }
   },
-  moveEventStartRight: {
+  moveEventStartRightInterval: {
     ignoreInTextField: false,
     modifier: ['ctrlOrCmd', 'shift'],
     key: 'ArrowRight',
@@ -238,7 +238,33 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       }
     }
   },
-  moveEventEndRight: {
+  moveEventStartLeft: {
+    ignoreInTextField: false,
+    modifier: ['ctrlOrCmd'],
+    key: 'ArrowLeft',
+    name: 'Move event start left',
+    description: 'Move the start time of an event to the left',
+    action: () => {
+      const e = getSelectedEvent()
+      if (e !== undefined) {
+        undoable(moveEventStartTime(e, settings.moveEventTimeByIntervalSmall * -1))
+      }
+    }
+  },
+  moveEventStartRight: {
+    ignoreInTextField: false,
+    modifier: ['ctrlOrCmd'],
+    key: 'ArrowRight',
+    name: 'Move event start right',
+    description: 'Move the start time of an event to the right',
+    action: () => {
+      const e = getSelectedEvent()
+      if (e !== undefined) {
+        undoable(moveEventStartTime(e, settings.moveEventTimeByIntervalSmall))
+      }
+    }
+  },
+  moveEventEndRightInterval: {
     ignoreInTextField: false,
     modifier: ['alt', 'shift'],
     key: 'ArrowRight',
@@ -251,7 +277,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       }
     }
   },
-  moveEventEndLeft: {
+  moveEventEndLeftInterval: {
     ignoreInTextField: false,
     modifier: ['alt', 'shift'],
     key: 'ArrowLeft',
@@ -261,6 +287,32 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       const e = getSelectedEvent()
       if (e !== undefined) {
         undoable(moveEventEndTime(e, settings.moveEventTimeByInterval * -1))
+      }
+    }
+  },
+  moveEventEndRight: {
+    ignoreInTextField: false,
+    modifier: ['alt'],
+    key: 'ArrowRight',
+    name: 'Move event end right',
+    description: 'Move the end time of an event to the right',
+    action: () => {
+      const e = getSelectedEvent()
+      if (e !== undefined) {
+        undoable(moveEventEndTime(e, settings.moveEventTimeByIntervalSmall))
+      }
+    }
+  },
+  moveEventEndLeft: {
+    ignoreInTextField: false,
+    modifier: ['alt'],
+    key: 'ArrowLeft',
+    name: 'Move event end left',
+    description: 'Move the end time of an event to the right',
+    action: () => {
+      const e = getSelectedEvent()
+      if (e !== undefined) {
+        undoable(moveEventEndTime(e, settings.moveEventTimeByIntervalSmall * -1))
       }
     }
   },
