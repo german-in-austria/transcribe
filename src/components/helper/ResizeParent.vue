@@ -2,10 +2,11 @@
   <div
     @mousedown="startDrag"
     :style="style"
-    class="resize-handle" />
+    :class="['resize-handle', settings.darkMode && 'theme--dark']" />
 </template>
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import settings from '../../store/settings'
 
 export interface ElementGeometry {
   width: number
@@ -23,6 +24,8 @@ export default class ResizeParent extends Vue {
   @Prop({default: false}) bottom: boolean|string
   @Prop({default: 'resizing'}) resizingClass: string
   @Prop({default: 10}) parentMinWidth: number
+
+  settings = settings
 
   startX = 0
   startY = 0
@@ -76,12 +79,12 @@ export default class ResizeParent extends Vue {
 
   get style() {
     return {
-      left: this.side === 'right' ? 'auto' : 0,
-      right: this.side === 'left' ? 'auto' : 0,
-      top: this.side === 'bottom' ? 'auto' : 0,
-      bottom: this.side === 'top' ? 'auto' : 0,
-      width: this.side === 'top' || this.side === 'bottom' ? '100%' : '8px',
-      height: this.side === 'left' || this.side === 'right' ? '100%' : '8px',
+      left: this.side === 'right' ? 'auto' : '-5px',
+      right: this.side === 'left' ? 'auto' : '-5px',
+      top: this.side === 'bottom' ? 'auto' : '10%',
+      bottom: this.side === 'top' ? 'auto' : '10%',
+      width: this.side === 'top' || this.side === 'bottom' ? '80%' : '8px',
+      height: this.side === 'left' || this.side === 'right' ? '80%' : '8px',
       cursor: this.cursor
     }
   }
@@ -258,7 +261,10 @@ export default class ResizeParent extends Vue {
 <style lang="stylus" scoped>
 .resize-handle
   z-index 100
+  border-radius 5px
   -webkit-app-region no-drag
   position absolute
-  background rgba(0,0,0,.35)
+  background cornflowerblue
+  // &.theme--dark
+  //   background rgba(0,0,0,.35)
 </style>

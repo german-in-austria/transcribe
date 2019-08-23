@@ -385,10 +385,8 @@ export default class Editor extends Vue {
   top 5px
   right 5px
 
-.context-menu-list
-  color #b7b7b7
-  a
-    cursor default !important
+.context-menu-list a
+  cursor default !important
 
 .error-overview
   top 12px

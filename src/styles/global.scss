@@ -68,11 +68,16 @@ img[lazy=loaded] {
 .v-btn i {
   font-size: 1.2em !important;
 }
+
 .v-menu__content{
   backdrop-filter: blur(30px);
-  border: 1px solid #616161;
+  border: 1px solid #ddd;
   border-radius: 4px !important;
 }
+.theme--dark .v-menu__content{
+  border: 1px solid #616161;
+}
+
 .v-menu__content .v-card.theme--dark,
 .v-menu__content .v-list.theme--dark{
   background: rgba(20,20,20,.6) !important;
@@ -96,8 +101,10 @@ img[lazy=loaded] {
   backdrop-filter: blur(20px);
   border-left: 1px solid rgba(255,255,255,.075);
 }
+
 .v-navigation-drawer.theme--light{
-  background: rgba(200,200,200,.4) !important
+  background: rgba(200,200,200,.4) !important;
+  border-left: 1px solid rgba(255,255,255,.3)
 }
 .v-navigation-drawer__border{
   display: none;
@@ -119,18 +126,29 @@ img[lazy=loaded] {
   cursor: default !important;
 }
 .v-tabs__item{
+  background: rgba(0,0,0,.2);
+}
+
+.theme--dark .v-tabs__item{
   background: rgba(0,0,0,.4);
   border-right: 1px solid #181818;
 }
+
+.v-tabs__item--active {
+  background: transparent
+}
+
+.theme--dark .v-tabs__item--active{
+  background: rgba(40,40,40, .1) !important
+}
+
 .v-select--chips.keyboard-chips .v-chip--small{
   border-radius: 3px
 } 
 .no-flex-direction{
   flex-direction: unset;
 }
-.v-tabs__item--active {
-  background: transparent
-}
+
 .theme--dark.application {
   background: #191919 !important;
 }

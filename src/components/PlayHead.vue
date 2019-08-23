@@ -1,7 +1,7 @@
 <template>
   <div>
     <div
-      class="play-head"
+      :class="['play-head', settings.darkMode && 'theme--dark']"
       ref="playHead"
       :style="{
         transform: `translate3d(${ left }px, 0, 0)`
@@ -139,11 +139,13 @@ export default class PlayHead extends Vue {
   // performance of "Composite Layers"
   will-change transform
   width 1px
-  background white
   height 90%
   position absolute
   top 5%
   bottom 0
+  background #929292
+  &.theme--dark
+    background white
 
 .play-head-stage
   position absolute
