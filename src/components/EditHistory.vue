@@ -9,7 +9,7 @@
       </v-list-tile>
       <RecycleScroller
         class="scroller"
-        :items="history.actions"
+        :items="groupedHistoryActions"
         :item-size="40">
         <template v-slot="{ item }">
           <v-list-tile
@@ -117,7 +117,10 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SegmentTranscript from './SegmentTranscript.vue'
+import { groupAdjacentBy } from '../util'
 import { RecycleScroller } from 'vue-virtual-scroller'
+import { sortEvents } from '../store/transcript'
+import _ from 'lodash'
 
 import {
   toTime,
@@ -155,6 +158,18 @@ export default class EditHistory extends Vue {
   hoveredEvent: HistoryEventAction|null = null
   menuX = 0
   menuY = 0
+
+  get groupedHistoryActions(): HistoryEventAction[] {
+    // group consecutive historyEventActions by type and all "before" eventIds
+    const groups = groupAdjacentBy(history.actions, (ha: HistoryEventAction) => {
+      return ha.type + '__' + sortEvents(ha.before).map(e => e.eventId).join('__')
+    }) as HistoryEventAction[][]
+    // use the first historyEventAction for the "before" state, and the last for the "after" state.
+    return _(groups)
+      .map(group => ({...group[0], after: group.length > 0 ? group[group.length - 1].after : []}))
+      .flatten()
+      .value()
+  }
 
   showEventIfExists(e: LocalTranscriptEvent) {
     const i = findEventIndexById(e.eventId)

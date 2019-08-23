@@ -4,6 +4,7 @@ import * as PromiseWorker from 'promise-worker-transferable'
 import Worker from '../service/buffer-concat.worker'
 const worker = new Worker('')
 const promiseWorker = new PromiseWorker(worker)
+import _ from 'lodash'
 
 export interface UndoRedo {
   undo: boolean
@@ -84,6 +85,21 @@ export function fileToUint8ArrayAndName(f: File): Promise<{ b: Uint8Array, n: st
       reject(e)
     }
   })
+}
+
+export function groupAdjacentBy<T>(list: T[], callback: (e: T, i: number) => string): T[][] {
+  const c: T[][] = [[]]
+  let latestKey = ''
+  _(list).forEach((e, i) => {
+    const newKey = callback(e, i)
+    if (newKey === latestKey || i === 0) {
+      c[c.length - 1].push(e)
+    } else {
+      latestKey = newKey
+      c.push([ e ])
+    }
+  })
+  return c
 }
 
 export function platform(): 'windows'|'mac'|'linux' {
