@@ -1,5 +1,5 @@
 <template>
-  <div class="pa-4">
+  <div class="pl-5 pr-5 pt-4 pb-4">
     <v-layout class="pt-2" v-for="(e, i) in settings.keyboardShortcuts" :key="i" row>
       <v-flex xs7>
         <div>{{ e.name }}</div>
