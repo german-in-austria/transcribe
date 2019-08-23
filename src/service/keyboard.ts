@@ -206,7 +206,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     modifier: ['alt'],
     key: 'ArrowLeft',
     name: 'Move event start left',
-    description: 'Move the start time of an event to the left',
+    description: 'Move the beginning of an event to the left (use Shift to jump)',
     action: (ev) => {
       const e = getSelectedEvent()
       if (e !== undefined) {
@@ -220,7 +220,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     modifier: ['alt'],
     key: 'ArrowRight',
     name: 'Move event start right',
-    description: 'Move the start time of an event to the right',
+    description: 'Move the beginning of an event to the right (use Shift to jump)',
     action: (ev) => {
       const e = getSelectedEvent()
       if (e !== undefined) {
@@ -234,7 +234,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     modifier: ['ctrlOrCmd'],
     key: 'ArrowRight',
     name: 'Move event end right',
-    description: 'Move the end time of an event to the right',
+    description: 'Move the end of an event to the right (use Shift to jump)',
     action: (ev) => {
       const e = getSelectedEvent()
       if (e !== undefined) {
@@ -248,7 +248,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     modifier: ['ctrlOrCmd'],
     key: 'ArrowLeft',
     name: 'Move event end left',
-    description: 'Move the end time of an event to the right',
+    description: 'Move the end of an event to the left (use Shift to jump)',
     action: (ev) => {
       const e = getSelectedEvent()
       if (e !== undefined) {
