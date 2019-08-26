@@ -461,7 +461,6 @@ export default class Waveform extends Vue {
         const el = (this.$refs.svgContainer as HTMLElement)
         const oldTargetTime = (el.scrollLeft + e.x) / settings.pixelsPerSecond
         // reset state
-        this.clearRenderCache()
         this.transformScaleX = 1
         this.transformOrigin = 0
         this.hideSegments = false
@@ -472,6 +471,7 @@ export default class Waveform extends Vue {
         // scroll to the target time (scrollLeft)
         this.scrollToSecond(oldTargetTime - e.x / settings.pixelsPerSecond)
         // rerender
+        this.clearRenderCache()
         this.doMaybeRerender()
       }
     }
