@@ -17,11 +17,6 @@
       @mousedown.exact="selectAndScrollToEvent(event)">
       {{ toTime(event.startTime) }} - {{ toTime(event.endTime) }}
     </div>
-    <!-- <div class="connect-fragments">
-      <div class="ball-left" />
-      <div class="connection" />
-      <div class="ball-right" />
-    </div> -->
     <div
       class="speaker-segment"
       :style="{ height: speakerHeight }"
@@ -136,27 +131,6 @@ export default class SegmentTranscript extends Vue {
 .segment.fragment-of
   border-color rgba(255,255,255,0)
 
-.connect-fragments
-  position absolute
-  top -3px
-  opacity .4
-  transform translateX(-73%)
-  .ball-left, .ball-right
-    width 8px
-    height 8px
-    background white
-    border-radius 100%
-    display inline-block
-  .ball-left
-    margin-right -4px
-  .connection
-    display inline-block
-    height 3px
-    background white
-    width 15px
-    position relative
-    top -2px
-    margin-right -5px
 .time
   user-select none
   cursor default
