@@ -16,7 +16,7 @@ Vue.use(Vuetify)
 Vue.use(VueLazyload, {
   lazyComponent : true
 })
-// load webfonts asnychronously
+// load webfonts asynchronously
 if (window) {
   fontLoader.load({
     custom: {
