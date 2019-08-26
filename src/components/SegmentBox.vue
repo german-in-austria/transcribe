@@ -108,7 +108,7 @@ export default class SegmentBox extends Vue {
 <style lang="stylus" scoped>
 .transcript-tooltip
   position absolute
-  top -40px
+  top -31px
   transform translate3d(-50%, 0, 0)
   text-align center
   padding 2px 10px
@@ -123,7 +123,7 @@ export default class SegmentBox extends Vue {
 
 .segment
   // performance of "Composite Layers"
-  will-change width, left
+  will-change left
   min-width 12px
   height 150px
   top 75px
