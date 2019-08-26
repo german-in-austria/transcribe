@@ -1,6 +1,12 @@
 <template>
-  <div class="pl-5 pr-5 pt-4 pb-4">
-    <v-layout class="pt-2" v-for="(e, i) in settings.keyboardShortcuts" :key="i" row>
+  <div class="pa-4">
+    <v-layout>
+      <v-flex xs12>
+        <v-subheader>Keyboard Shortcuts</v-subheader>
+        <v-divider />
+      </v-flex>
+    </v-layout>
+    <v-layout class="pl-3 pt-3" v-for="(e, i) in settings.keyboardShortcuts" :key="i" row>
       <v-flex xs7>
         <div>{{ e.name }}</div>
         <small class="grey--text">{{ e.description }}</small>
