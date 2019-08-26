@@ -330,7 +330,7 @@ export default class Waveform extends Vue {
       Math.floor(right / settings.pixelsPerSecond)]
     const visibleSeconds = util
       .range(Math.max(startSecond, 0), Math.min(endSecond, this.audioLength))
-      .filter((s, i) => settings.pixelsPerSecond > 60 || i % 2 === 0)
+      .filter((s, i) => settings.pixelsPerSecond > 60 || s % 2 === 0)
     await util.requestFrameAsync()
     const el = this.$el.querySelector('.second-marker-row') as HTMLElement
     el.innerHTML = visibleSeconds.map(s => {
