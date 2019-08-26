@@ -87,7 +87,7 @@ export function fileToUint8ArrayAndName(f: File): Promise<{ b: Uint8Array, n: st
   })
 }
 
-export function groupAdjacentBy<T>(list: T[], callback: (e: T, i: number) => string): T[][] {
+export function groupConsecutiveBy<T>(list: T[], callback: (e: T, i: number) => string): T[][] {
   const c: T[][] = [[]]
   let latestKey = ''
   _(list).forEach((e, i) => {

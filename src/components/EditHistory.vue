@@ -117,7 +117,7 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SegmentTranscript from './SegmentTranscript.vue'
-import { groupAdjacentBy } from '../util'
+import { groupConsecutiveBy } from '../util'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import { sortEvents } from '../store/transcript'
 import _ from 'lodash'
@@ -161,7 +161,7 @@ export default class EditHistory extends Vue {
 
   get groupedHistoryActions(): HistoryEventAction[] {
     // group consecutive historyEventActions by type and all "before" eventIds
-    const groups = groupAdjacentBy(history.actions, (ha: HistoryEventAction) => {
+    const groups = groupConsecutiveBy(history.actions, (ha: HistoryEventAction) => {
       return ha.type + '__' + sortEvents(ha.before).map(e => e.eventId).join('__')
     }) as HistoryEventAction[][]
     // use the first historyEventAction for the "before" state, and the last for the "after" state.
