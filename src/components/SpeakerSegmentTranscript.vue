@@ -9,11 +9,11 @@
           v-text="token.tiers[defaultTier].text"
           :class="['token-type-indicator', focused && 'focused']"
           :style="{ backgroundColor: colorFromTokenType(token.tiers[defaultTier].type) }">
-        </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span class="secondary-token-tier" v-for="(tier, tierIndex) in secondaryTiers" :key="tier.name">
+        </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span :class="['secondary-token-tier', settings.darkMode === true && 'theme--dark']" v-for="(tier, tierIndex) in secondaryTiers" :key="tier.name">
           <span
             v-if="tier.type === 'token'"
             :style="{top: (tierIndex + 1) * tierHeight + 'px'}"
-            class="secondary-token-tier-text"
+            :class="['secondary-token-tier-text', settings.darkMode === true && 'theme--dark']"
             v-text="token.tiers[tier.name] !== undefined ? token.tiers[tier.name].text : undefined"
             contenteditable="true"
             @blur="(e) => updateAndCommitLocalTokenTier(e, tier.name, i)"
@@ -41,12 +41,12 @@
       v-for="(tier, i) in secondaryTiers"
       :key="i"
       :style="{ height: tierHeight + 1 + 'px' }"
-      class="secondary-free-text-tier">
+      :class="['secondary-free-text-tier', settings.darkMode === true && 'theme--dark']">
       <span
         v-if="localTokens.length && tier.type === 'freeText'"
         v-text="getTierFreeTextText(tier.id)"
         contenteditable="true"
-        class="secondary-free-text-tier-text"
+        :class="['secondary-free-text-tier-text', settings.darkMode === true && 'theme--dark']"
         @keydown.tab.shift.exact="focusPreviousFrom(tier.id)"
         @keydown.tab.exact="focusNextFrom(tier.id)"
         @blur="(e) => updateAndCommitLocalEventTier(e, tier.id, tier.type)"
@@ -488,40 +488,53 @@ export default class SpeakerSegmentTranscript extends Vue {
 <style lang="stylus" scoped>
 
 .secondary-free-text-tier
-  color #777
+  &.theme--dark
+    color #777
   .secondary-free-text-tier-text
     display inline-block
     min-width 1.6em
     margin-left -1px
     padding 0 2px
     border-radius 5px
-    background #3e3e3e
     white-space nowrap
+    background #ccc
+    color #333
+    &.theme--dark
+      background #3e3e3e
     &:empty
-      background #252525
+      background #eee
+      &.theme--dark
+        background #252525
     &:focus
       outline 0
-      color #fff
-      background #777
+      color #333
+      background #fff
+      &.theme--dark
+        color #fff
+        background #777
 
 .secondary-token-tier
-  color #777
+  &.theme--dark
+    color #777
   .secondary-token-tier-text
     position absolute
     display block
     margin-left -1px
     padding-left 2px
-    background #3e3e3e
-    color #ddd
     width calc(100% - 2px)
     overflow hidden
     white-space nowrap
+    background #ccc
+    color #333
+    &.theme--dark
+      background #3e3e3e
+      color #ddd
     &:empty
-      background #252525
+      background #eee
+      &.theme--dark
+        background #252525
     &:focus
       box-shadow 5px 0 10px rgba(0,0,0,.5)
-      color #fff
-      background #777
       outline 0
       border-radius 2px
       transform scale(1.1)
@@ -531,6 +544,11 @@ export default class SpeakerSegmentTranscript extends Vue {
       width auto
       overflow unset
       padding-right 2px
+      color #333
+      background #fff
+      &.theme--dark
+        color #fff
+        background #777
 
 .segment-editor
   position relative
