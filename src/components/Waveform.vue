@@ -182,7 +182,7 @@ export default class Waveform extends Vue {
   // state
   disabled = false
   loading = false
-  scaleFactorY = 1
+  scaleFactorY = .85
   scaleFactorX = 1
   overviewHeight = 60
   visibleSeconds: number[] = []
@@ -265,18 +265,23 @@ export default class Waveform extends Vue {
     // zooming
     if (e.ctrlKey === true) {
       e.preventDefault()
-      this.hideSegments = true
-      this.hideSecondMarkers = true
       const el = (this.$el as HTMLElement).querySelector('.wave-form-inner')
       const c = this.$refs.svgContainer
       if (el instanceof HTMLElement && c instanceof HTMLElement) {
-        this.transformScaleX = Math.max(.25, this.transformScaleX - e.deltaY * 0.02)
-        console.log('scale value', this.transformScaleX)
         this.transformOrigin = e.x + c.scrollLeft
+        if (
+          this.scaleFactorX * this.transformScaleX - e.deltaY * 0.02 >= .25 &&
+          this.scaleFactorX * this.transformScaleX - e.deltaY * 0.02 <= 4
+        ) {
+          this.hideSegments = true
+          this.hideSecondMarkers = true
+          this.transformScaleX = Math.max(.25, this.transformScaleX - e.deltaY * 0.02)
+        }
       }
     // user initiated scrolling
     } else {
       if (settings.emulateHorizontalScrolling === true) {
+        // emulate horizontal scrolling (windows etc.)
         const c = this.$refs.svgContainer
         if (c instanceof HTMLElement) {
           e.preventDefault()
@@ -448,24 +453,27 @@ export default class Waveform extends Vue {
 
   endZoom(e: WheelEvent) {
     if (e.ctrlKey === true) {
-      const el = (this.$refs.svgContainer as HTMLElement)
-      const oldTargetTime = (el.scrollLeft + e.x) / settings.pixelsPerSecond
-      this.scaleFactorX = this.scaleFactorX * this.transformScaleX
-
-      // reset state
-      this.clearRenderCache()
-      this.transformScaleX = 1
-      this.transformOrigin = 0
-      this.hideSegments = false
-      this.hideSecondMarkers = false
-
-      settings.pixelsPerSecond = this.initialPixelsPerSecond * this.scaleFactorX
-
-      this.totalWidth = this.audioLength * settings.pixelsPerSecond
-      console.log({ newTargetTime: oldTargetTime - e.x / settings.pixelsPerSecond })
-      this.scrollToSecond(oldTargetTime - e.x / settings.pixelsPerSecond)
-
-      this.doMaybeRerender()
+      // if it should transform by some factor.
+      if (this.transformScaleX !== 1) {
+        // compute the new scale factor
+        this.scaleFactorX = this.scaleFactorX * this.transformScaleX
+        // get the target time at the current mouse pos
+        const el = (this.$refs.svgContainer as HTMLElement)
+        const oldTargetTime = (el.scrollLeft + e.x) / settings.pixelsPerSecond
+        // reset state
+        this.clearRenderCache()
+        this.transformScaleX = 1
+        this.transformOrigin = 0
+        this.hideSegments = false
+        this.hideSecondMarkers = false
+        // set zoom via scale factor
+        settings.pixelsPerSecond = this.initialPixelsPerSecond * this.scaleFactorX
+        this.totalWidth = this.audioLength * settings.pixelsPerSecond
+        // scroll to the target time (scrollLeft)
+        this.scrollToSecond(oldTargetTime - e.x / settings.pixelsPerSecond)
+        // rerender
+        this.doMaybeRerender()
+      }
     }
   }
 
