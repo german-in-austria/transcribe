@@ -182,7 +182,7 @@ const settings: Settings = {
   lockPlayHead: true,
   playbackSpeed: 1,
   playbackVolume: 1,
-  darkMode: true,
+  darkMode: false,
   pixelsPerSecond: 150,
   emulateHorizontalScrolling: platform() === 'windows' || platform() === 'linux',
   showSegmentBoxes: true,
