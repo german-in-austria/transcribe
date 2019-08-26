@@ -1,5 +1,5 @@
 <template>
-  <div class="search-results-container">
+  <div :class="['search-results-container', settings.darkTheme === true && 'theme--dark']">
     <div
       @mouseover="handleResultMouseOver"
       @mouseout="handleResultMouseOut"
@@ -16,7 +16,7 @@
       :position-x="menuX"
       :position-y="menuY"
       :value="hoveredEvent !== null">
-      <v-card class="pt-2 context-menu">
+      <v-card class="pt-2 context-menu blur-background">
         <segment-transcript
           v-if="hoveredEvent !== null"
           :event="hoveredEvent"
@@ -28,7 +28,7 @@
 
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import segmentTranscript from './SegmentTranscript.vue'
+import SegmentTranscript from './SegmentTranscript.vue'
 import {
   eventStore,
   isEventSelected,
@@ -40,11 +40,12 @@ import {
   LocalTranscriptEvent,
   selectSearchResult
 } from '../store/transcript'
+import settings from '../store/settings'
 import * as _ from 'lodash'
 
 @Component({
   components: {
-    SegmentTranscript: segmentTranscript
+    SegmentTranscript
   }
 })
 export default class SearchResults extends Vue {
@@ -54,6 +55,7 @@ export default class SearchResults extends Vue {
   hoveredEvent: LocalTranscriptEvent|null = null
   eventStore = eventStore
   isEventSelected = isEventSelected
+  settings = settings
 
   handleDoubleClick(ev: MouseEvent) {
     const eventId = ev.toElement.getAttribute('data-event-id')
@@ -154,14 +156,15 @@ export default class SearchResults extends Vue {
     position absolute
     border-radius 0
     top 0
-    border-left 1px solid white
-    opacity .3
-    transition .1s transform
+    border-left 1px solid cornflowerblue
+    opacity .5
     &.result-selected, &:hover
       z-index 1
       opacity 1
+      border-left-color #fb7676
     &.result-selected
       width 1px
       border-width 2px
       box-shadow 0 0 30px white
+
 </style>
