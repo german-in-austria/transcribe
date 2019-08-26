@@ -3,6 +3,7 @@
     @keydown.left="emitScroll"
     @keydown.right="emitScroll"
     class="waveform-outer"
+    @mousewheel="debouncedEndZoom"
     :style="containerStyle"
     :class="{ disabled, loading }">
     <!-- <v-layout class="pa-3" style="position: relative;">
@@ -46,7 +47,7 @@
       ref="svgContainer"
       @mousewheel="onMousewheel"
       @scroll="onScroll">
-      <div class="second-marker-row" />
+      <div style="transition: .2s opacity" :class="['second-marker-row', hideSecondMarkers === true && 'hidden']" />
       <div
         :style="stageStyle"
         class="wave-form-inner">
@@ -64,7 +65,10 @@
           <div class="wave-form-placeholder" />
         </div>
         <slot />
-        <div class="segment-box-container" v-if="settings.showSegmentBoxes">
+        <div
+          :class="['segment-box-container', hideSegments === true && 'hidden']"
+          style="transition: .2s opacity"
+          v-if="settings.showSegmentBoxes">
           <segment-box
             v-for="(event, i) in visibleEvents"
             @contextmenu.native.stop.prevent="(e) => $emit('show-menu', e)"
@@ -172,6 +176,9 @@ export default class Waveform extends Vue {
   userState = eventStore.userState
   eventStore = eventStore
 
+  onScroll = _.throttle(this.handleScroll, 350)
+  debouncedEndZoom = _.debounce(this.endZoom, 350)
+
   // state
   disabled = false
   loading = false
@@ -185,7 +192,12 @@ export default class Waveform extends Vue {
   totalWidth = this.audioLength * settings.pixelsPerSecond
   log = console.log
   scrollTimeout = null
-  onScroll = _.throttle(this.handleScroll, 350)
+
+  transformOrigin = 0
+  transformScaleX = 1
+
+  hideSegments = false
+  hideSecondMarkers = false
 
   mounted() {
     EventBus.$on('scrollTranscript', this.scrollLockedScroll)
@@ -249,16 +261,31 @@ export default class Waveform extends Vue {
   }
 
   onMousewheel(e: MouseWheelEvent) {
-    this.emitScroll()
-    if (settings.emulateHorizontalScrolling === true) {
+    this.emitScroll();
+    // zooming
+    if (e.ctrlKey === true) {
+      e.preventDefault()
+      this.hideSegments = true
+      this.hideSecondMarkers = true
+      const el = (this.$el as HTMLElement).querySelector('.wave-form-inner')
       const c = this.$refs.svgContainer
-      if (c instanceof HTMLElement) {
-        e.preventDefault()
-        c.scrollLeft = c.scrollLeft + (e.deltaY) / (e.shiftKey === true ? 10 : 1)
+      if (el instanceof HTMLElement && c instanceof HTMLElement) {
+        this.transformScaleX = Math.max(.25, this.transformScaleX - e.deltaY * 0.02)
+        console.log('scale value', this.transformScaleX)
+        this.transformOrigin = e.x + c.scrollLeft
       }
-    }
-    if (eventStore.playAllFrom !== null) {
-      this.disableAutoScrollDuringPlayback()
+    // user initiated scrolling
+    } else {
+      if (settings.emulateHorizontalScrolling === true) {
+        const c = this.$refs.svgContainer
+        if (c instanceof HTMLElement) {
+          e.preventDefault()
+          c.scrollLeft = c.scrollLeft + (e.deltaY) / (e.shiftKey === true ? 10 : 1)
+        }
+      }
+      if (eventStore.playAllFrom !== null) {
+        this.disableAutoScrollDuringPlayback()
+      }
     }
   }
 
@@ -395,6 +422,7 @@ export default class Waveform extends Vue {
   }
 
   clearRenderCache() {
+    Array.from((this.$el as HTMLElement).querySelectorAll('.wave-form-segment')).forEach(e => e.innerHTML = '')
     this.renderedWaveFormPieces = []
   }
 
@@ -413,35 +441,40 @@ export default class Waveform extends Vue {
     this.doMaybeRerender()
   }
 
-  @Watch('scaleFactorX')
-  onChangeScaleFactorX(current: number) {
-    this.endScaleX()
-  }
   @Watch('height')
   onChangeHeight() {
     this.clearRenderCache()
   }
-  endScaleX() {
-    const el = (this.$refs.svgContainer as HTMLElement)
-    const oldProgress = el.scrollLeft / settings.pixelsPerSecond
-    requestAnimationFrame(() => {
-      settings.pixelsPerSecond = this.initialPixelsPerSecond * this.scaleFactorX
-      this.$nextTick(() => {
-        this.scrollToSecond(oldProgress)
-      })
-      // clear cache
+
+  endZoom(e: WheelEvent) {
+    if (e.ctrlKey === true) {
+      const el = (this.$refs.svgContainer as HTMLElement)
+      const oldTargetTime = (el.scrollLeft + e.x) / settings.pixelsPerSecond
+      this.scaleFactorX = this.scaleFactorX * this.transformScaleX
+
+      // reset state
       this.clearRenderCache()
-      this.doMaybeRerender()
+      this.transformScaleX = 1
+      this.transformOrigin = 0
+      this.hideSegments = false
+      this.hideSecondMarkers = false
+
+      settings.pixelsPerSecond = this.initialPixelsPerSecond * this.scaleFactorX
+
       this.totalWidth = this.audioLength * settings.pixelsPerSecond
-    })
+      console.log({ newTargetTime: oldTargetTime - e.x / settings.pixelsPerSecond })
+      this.scrollToSecond(oldTargetTime - e.x / settings.pixelsPerSecond)
+
+      this.doMaybeRerender()
+    }
   }
 
   get stageStyle() {
-    const c = this.$refs.svgContainer
     return {
       height: this.height + 'px',
       width: this.totalWidth + 'px',
-      transition: '.5s'
+      transformOrigin: this.transformOrigin + 'px',
+      transform: `scaleX(${this.transformScaleX >= 0.1 ? this.transformScaleX : 0.1})`
     }
   }
 
@@ -763,13 +796,16 @@ export default class Waveform extends Vue {
   &::-webkit-resizer
     opacity 0
   .wave-form-inner
-    transition .5s transform
+    // transition .5s transform
     overflow-y hidden
     position relative
 
 .overview
   position relative
   
+.hidden
+  opacity 0
+
 .fade-slow-enter-active, .fade-leave-active 
   transition opacity 3.5s
 
