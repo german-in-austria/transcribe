@@ -4,6 +4,7 @@
       <input
         type="text"
         ref="input"
+        :class="[settings.darkMode && 'theme--dark']"
         :value="eventStore.searchTerm"
         :style="{ color: useRegEx && !isValidRegex ? 'red' : undefined }"
         @keydown.esc.exact="handleEsc"
@@ -14,7 +15,7 @@
         @blur="onBlur"
         placeholder="Search…"
       />
-      <v-card tabindex="-1" class="context-menu">
+      <v-card tabindex="-1" class="context-menu blur-background">
         <v-list class="context-menu-list" dense>
           <v-list-tile v-if="useRegEx && !isValidRegex" disabled>
             <v-list-tile-avatar>
@@ -67,7 +68,8 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
 import eventBus from '../service/event-bus'
-import { isCmdOrCtrl } from '../util'
+import settings from '../store/settings'
+
 import {
   findNextEventAt,
   findPreviousEventAt,
@@ -87,6 +89,7 @@ import * as history from '../store/history';
 export default class Search extends Vue {
 
   defaultTier = eventStore.metadata.defaultTier
+  settings = settings
   focused = false
   eventStore = eventStore
   toTime = toTime
@@ -94,7 +97,6 @@ export default class Search extends Vue {
   caseSensitive = false
   useRegEx = false
   defaultTierOnly = false
-  isCmdOrCtrl = isCmdOrCtrl
 
   mounted() {
     eventBus.$on('focusSearch', () => {
@@ -236,14 +238,17 @@ export default class Search extends Vue {
     display block
   &:focus-within input
     width 200px
+
 input
-  background rgba(255,255,255,.1)
+  background rgba(0,0,0,.1)
   transition .25s width
   height 32px
   width 78px
   padding 0 10px
   border-radius 5px
   outline 0
+  &.theme--dark
+    background rgba(255,255,255,.1)
 
 .context-menu
   top 100%

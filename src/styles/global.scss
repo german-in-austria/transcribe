@@ -24,6 +24,10 @@ a{
   border-top: 0;
 }
 
+.theme--light.v-sheet{
+  border-color: rgba(255,255,255,.2)
+}
+
 table thead tr{
   border-bottom: 0 !important;
 }
@@ -69,7 +73,9 @@ img[lazy=loaded] {
   font-size: 1.2em !important;
 }
 
-.v-menu__content{
+.v-menu__content,
+.blur-background{
+  background: transparent !important;
   backdrop-filter: blur(30px);
   border: 1px solid #ddd;
   border-radius: 4px !important;
@@ -77,8 +83,8 @@ img[lazy=loaded] {
 .theme--dark .v-menu__content{
   border: 1px solid #616161;
 }
-
 .v-menu__content .v-card.theme--dark,
+.blur-background .v-list.theme--dark,
 .v-menu__content .v-list.theme--dark{
   background: rgba(20,20,20,.6) !important;
   box-shadow: 0 5px 30px rgba(0,0,0,.2);
