@@ -28,6 +28,10 @@ a{
   border-color: rgba(255,255,255,.2)
 }
 
+.theme--light.v-btn{
+  color: rgba(0,0,0,.5)
+}
+
 table thead tr{
   border-bottom: 0 !important;
 }
@@ -133,6 +137,15 @@ img[lazy=loaded] {
 }
 .v-tabs__item{
   background: rgba(0,0,0,.2);
+}
+
+.v-input--slider label.v-label{
+  font-size: 80%;
+}
+
+.v-input--slider{
+  margin-top: 10px;
+  margin-bottom: 10px;
 }
 
 .theme--dark .v-tabs__item{
