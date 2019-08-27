@@ -173,6 +173,7 @@
     </wave-form>
     <drop-file @update="loadAudioFile" class="fill-height" v-else>
     </drop-file>
+    <player-bar />
     <transcript-editor />
   </div>
 </template>
@@ -183,7 +184,7 @@ import * as _ from 'lodash'
 import * as fns from 'date-fns'
 import { saveAs } from 'file-saver'
 import * as humanSize from 'human-size'
-
+import playerBar from './PlayerBar'
 import waveForm from './Waveform.vue'
 import settingsView from './Settings.vue'
 import settings from '../store/settings'
@@ -235,7 +236,8 @@ import { isWaveformEventVisible } from '../service/events-dom';
     search,
     searchResults,
     scrollbar,
-    dropFile
+    dropFile,
+    playerBar
   }
 })
 export default class Editor extends Vue {

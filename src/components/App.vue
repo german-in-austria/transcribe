@@ -151,7 +151,6 @@
           justify-center>
           <v-flex xs12>
             <editor />
-            <player-bar />
           </v-flex>
         </v-layout>
       </v-container>
@@ -368,7 +367,7 @@ export default class App extends Vue {
       this.initializeEmptyTranscript()
       loadAudioFile(f)
     } else {
-      throw new Error('unrecognized file extension')
+      alert('Unrecognized File type.')
     }
   }
 

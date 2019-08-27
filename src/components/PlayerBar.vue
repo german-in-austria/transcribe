@@ -1,11 +1,11 @@
 <template>
-  <div :class="['playerbar', settings.darkMode && 'theme--dark']">
+  <div :style="{minHeight: height}" :class="['playerbar', settings.darkMode && 'theme--dark']">
     <v-layout row>
       <v-flex xs4 text-xs-right>
-        <player-bar-button>
+        <player-bar-button :size="height">
           <v-icon>mdi-contain-start</v-icon>
         </player-bar-button>
-        <player-bar-button>
+        <player-bar-button :size="height">
           <v-icon>mdi-contain-end</v-icon>
         </player-bar-button>
       </v-flex>
@@ -16,7 +16,7 @@
         ]"
         xs4
         align-content-center>
-        <player-bar-button @click="playPause">
+        <player-bar-button @click="playPause" :size="height">
           <v-icon v-if="eventStore.isPaused">play_arrow</v-icon>
           <v-icon v-else>pause</v-icon>
         </player-bar-button>
@@ -25,10 +25,10 @@
       <v-flex xs4>
         <v-layout>
           <v-flex text-xs-left>
-            <player-bar-button>
+            <player-bar-button :size="height">
               <v-icon>mdi-replay</v-icon>
             </player-bar-button>
-            <player-bar-button>
+            <player-bar-button :size="height">
               <v-icon class="mirror">mdi-replay</v-icon>
             </player-bar-button>
           </v-flex>
@@ -37,9 +37,10 @@
             <v-menu
               :close-on-content-click="false"
               nudge-top="50"
+              min-width="310"
               open-on-hover
               top>
-              <player-bar-button @click="toggleVolumeOnOff" slot="activator">
+              <player-bar-button @click="toggleVolumeOnOff" slot="activator" :size="height">
                 <v-icon v-if="settings.playbackVolume <= .33">
                   mdi-volume-low
                 </v-icon>
@@ -54,7 +55,6 @@
                 <v-slider
                   hide-details
                   :label="`Volume (${ (settings.playbackVolume * 100).toFixed(0) }%)`"
-                  inverse-label
                   :min="0"
                   :max="100"
                   :value="settings.playbackVolume * 100"
@@ -64,9 +64,10 @@
             <v-menu
               :close-on-content-click="false"
               nudge-top="50"
+              min-width="310"
               open-on-hover
               top>
-              <player-bar-button @click="toggleSpeed" slot="activator">
+              <player-bar-button @click="toggleSpeed" slot="activator" :size="height">
                 <v-icon v-if="settings.playbackSpeed <= .33">mdi-speedometer-slow</v-icon>
                 <v-icon v-if="settings.playbackSpeed > .33 && settings.playbackSpeed <= .66">mdi-speedometer-medium</v-icon>
                 <v-icon v-if="settings.playbackSpeed > .66">mdi-speedometer</v-icon>
@@ -75,7 +76,6 @@
                 <v-slider
                   hide-details
                   :label="`Speed (${ (settings.playbackSpeed * 100).toFixed(0) }%)`"
-                  inverse-label
                   :min="10"
                   :max="100"
                   :value="settings.playbackSpeed * 100"
@@ -118,6 +118,8 @@ import { requestFrameAsync, isCmdOrCtrl } from '../util/index'
 })
 export default class PlayerBar extends Vue {
 
+  @Prop({ default: 64 }) height: number
+
   eventStore = eventStore
   audioStore = audio.store
   currentTime = eventStore.audioElement.currentTime
@@ -127,7 +129,7 @@ export default class PlayerBar extends Vue {
   toTime = toTime
 
   cachedVolume = settings.playbackVolume
-  cachedSpeed = settings.playbackSpeed
+  cachedSpeed = .5
 
   toggleVolumeOnOff() {
     if (settings.playbackVolume === 0) {
@@ -189,29 +191,21 @@ export default class PlayerBar extends Vue {
 </style>
 
 <style lang="stylus" scoped>
-.display-area
-  background white
-  &.theme--dark
-    background rgba(0,0,0,.3)
+// .display-area
+//   background white
+//   &.theme--dark
+//     background rgba(0,0,0,.3)
 
 .playerbar
   z-index 3
-  position sticky
-  left 0
-  right 0
-  bottom 0
-  min-height 70px
+  // position sticky
+  // left 0
+  // right 0
+  // bottom 0
   text-align center
   background #efefef
   &.theme--dark
-    background #191919
+    background #1d1d1d
 
-.play-button
-  margin-left -10px
-
-.button
-  position relative
-  top 3px
-  margin-top -7px
 </style>
 

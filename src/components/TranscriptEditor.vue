@@ -1,5 +1,5 @@
 <template>
-  <v-layout class="transcript-editor-outer divide-before" style="height: auto">
+  <v-layout class="transcript-editor-outer" style="height: auto">
     <speaker-panel />
     <v-flex ref="outer" class="tracks-outer pt-2">
       <div
