@@ -6,41 +6,6 @@
     @mousewheel="debouncedEndZoom"
     :style="containerStyle"
     :class="{ disabled, loading }">
-    <!-- <v-layout class="pa-3" style="position: relative;">
-      <v-flex xs2 text-xs-left>
-        <label for="scaleFactorY" class="caption grey--text lighten-2">
-          Gain
-        </label>
-        <select
-          name="scaleFactorY"
-          class="ml-2 no-outline"
-          style="padding: .1em .1em 0 1em; font-size: 90%"
-          v-model="scaleFactorY">
-          <option
-            v-for="(v, i) in zoomLevels"
-            :value="v"
-            :key="i">
-            {{ v }}x
-          </option>
-        </select>
-      </v-flex>
-      <v-flex class="text-xs-center" xs10>
-        <slot name="headline" />
-      </v-flex>
-      <v-flex xs2 text-xs-right>
-        <span class="caption grey--text lighten-2">
-          Zoom
-        </span>
-        <select class="ml-2 no-outline" style="padding: .1em .1em 0 1em; font-size: 90%" v-model="scaleFactorX">
-          <option
-            v-for="(v, i) in zoomLevels"
-            :value="v"
-            :key="i">
-            {{ v }}x
-          </option>
-        </select>
-      </v-flex>
-    </v-layout> -->
     <div
       class="wave-form"
       :style="{height: `${height}px`, width: `${totalWidth}px`}"
@@ -345,9 +310,8 @@ export default class Waveform extends Vue {
   }
 
   async getVisibleEvents(l: number, r: number, es = eventStore.events): Promise<LocalTranscriptEvent[]> {
-    // await util.requestFrameAsync()
     const ves = _(es)
-      .filter(s => s.startTime >= l && s.endTime <= r)
+      .filter(s => (s.endTime >= l && s.startTime <= r))
       .sortBy('startTime')
       .value()
     await util.requestFrameAsync()
@@ -415,7 +379,6 @@ export default class Waveform extends Vue {
               resolve(y)
             }
           } catch (e) {
-            console.log(e)
             // remove from cache index if it failed
             const i = this.renderedWaveFormPieces.indexOf(p)
             this.renderedWaveFormPieces.splice(i)
@@ -708,10 +671,8 @@ export default class Waveform extends Vue {
     if (this.$refs.svgContainer instanceof HTMLElement) {
       requestAnimationFrame(() => {
         const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
-        // console.time('render')
         el.innerHTML = svg
         el.style.width = `${(to - from) * settings.pixelsPerSecond}px`
-        // console.timeEnd('render')
       })
     }
   }
