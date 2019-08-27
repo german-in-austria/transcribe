@@ -364,13 +364,16 @@ export default class App extends Vue {
       this.openProjectFile(f)
     } else if (f.name.endsWith('.exb')) {
       this.openExmaraldaFile(f)
+    } else if (f.name.endsWith('.ogg')) {
+      this.initializeEmptyTranscript()
+      loadAudioFile(f)
     } else {
       throw new Error('unrecognized file extension')
     }
   }
 
   initializeEmptyTranscript() {
-    this.eventStore.status = 'new'
+    eventStore.status = 'new'
   }
 
   async loadRemoteTranscript(t: ServerTranscriptListItem) {
