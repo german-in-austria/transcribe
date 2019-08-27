@@ -4,7 +4,7 @@ import _ from 'lodash'
 import { undoable } from '../store/history'
 import { platform } from '../util'
 import {
-  focusSelectedEventElement
+  focusSelectedEventElement, isWaveformEventVisible
 } from '../service/events-dom'
 
 import {
@@ -167,14 +167,17 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     key: 's',
     name: 'Split Event',
     description: 'Split an Event at the current play-head position.',
-    action: () => {
+    action: async () => {
       const eventUnderPlayHead = findEventAt(eventStore.currentTime)
       if (eventUnderPlayHead === undefined) {
         const e = undoable(addEvent(eventStore.currentTime))
         selectEvents(e)
       } else {
         const splitAt = eventStore.currentTime - eventUnderPlayHead.startTime
-        undoable(splitEvent(eventUnderPlayHead, splitAt))
+        const [leftEvent] = undoable(splitEvent(eventUnderPlayHead, splitAt))
+        if (!(await isWaveformEventVisible(leftEvent))) {
+          scrollToAudioEvent(leftEvent)
+        }
       }
     }
   },
