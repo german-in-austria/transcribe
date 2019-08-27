@@ -14,10 +14,10 @@ import {
   makeTokenId,
   timeFromSeconds,
   tokenize,
-  TokenTierType
+  TokenTierType,
+  tokenTypeFromToken
 } from '../store/transcript'
 
-import settings from '../store/settings'
 import * as parseXML from '@rgrove/parse-xml'
 import { padEnd } from '../util/index'
 
@@ -111,10 +111,7 @@ export function exmaraldaToImportable(fileName: string, xml: string): ParsedExma
 }
 
 function getTokenTypeId(t: string): number {
-  const type = _(settings.tokenTypes).find((tt) => {
-    return tt.regex.test(t)
-  })
-  return type ? type.id : -1
+  return tokenTypeFromToken(t).id
 }
 
 function getTierToken(
