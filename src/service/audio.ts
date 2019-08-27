@@ -507,21 +507,25 @@ async function getOrFetchAudioBuffer(
   audioLength: number,
   url: string
 ): Promise<AudioBuffer> {
-  try {
-    return await audio.decodeBufferTimeSlice(from, to, audio.store.uint8Buffer.buffer)
-  } catch (e) {
-    console.log('could not find audio range locally, attempting download…', {from, to, audioLength}, e)
-    const headerBuffer = await getOrFetchHeaderBuffer(url)
-    const startByte = Math.max(fileSize * (from / audioLength) - 1024 * 1024, 0).toFixed(0)
-    const endByte   = Math.min(fileSize * (to / audioLength) + 1024 * 1024, fileSize).toFixed(0)
-    const buffer = await (await fetch(url, {
-      credentials: 'include',
-      headers: { Range: `bytes=${startByte}-${endByte}` }
-    })).arrayBuffer()
-    const { pages } = await audio.getOggIndexAsync(buffer)
-    const trimmedBuffer = buffer.slice(pages[0].byteOffset, pages[pages.length - 1].byteOffset)
-    const combinedBuffer = audio.concatBuffer(headerBuffer, trimmedBuffer)
-    return await audio.decodeBufferTimeSlice(from, to, combinedBuffer)
+  if (from < to && to <= audioLength) {
+    try {
+      return await audio.decodeBufferTimeSlice(from, to, audio.store.uint8Buffer.buffer)
+    } catch (e) {
+      console.log('could not find audio range locally, attempting download…', {from, to, audioLength}, e)
+      const headerBuffer = await getOrFetchHeaderBuffer(url)
+      const startByte = Math.max(fileSize * (from / audioLength) - 1024 * 1024, 0).toFixed(0)
+      const endByte   = Math.min(fileSize * (to / audioLength) + 1024 * 1024, fileSize).toFixed(0)
+      const buffer = await (await fetch(url, {
+        credentials: 'include',
+        headers: { Range: `bytes=${startByte}-${endByte}` }
+      })).arrayBuffer()
+      const { pages } = await audio.getOggIndexAsync(buffer)
+      const trimmedBuffer = buffer.slice(pages[0].byteOffset, pages[pages.length - 1].byteOffset)
+      const combinedBuffer = audio.concatBuffer(headerBuffer, trimmedBuffer)
+      return await audio.decodeBufferTimeSlice(from, to, combinedBuffer)
+    }
+  } else {
+    throw new Error('range is not in audio file')
   }
 }
 
