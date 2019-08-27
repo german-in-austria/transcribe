@@ -1,5 +1,11 @@
 <template>
-  <div :data-speaker-id="speaker" :class="['segment-editor', isMarkedWithFragment && 'has-next-fragment']">
+  <div
+    :data-speaker-id="speaker"
+    :class="[
+      'segment-editor',
+      isMarkedWithFragment && 'has-next-fragment',
+      settings.darkMode === false && 'theme--light'
+    ]">
     <div :class="['token-display', 'segment-text']">
       <span
         class="token"
@@ -7,7 +13,7 @@
         :key="token.id">
         <span
           v-text="token.tiers[defaultTier].text"
-          :class="['token-type-indicator', focused && 'focused']"
+          :class="['token-type-indicator', focused && 'focused', 'type-' + token.tiers[defaultTier].type]"
           :style="{ backgroundColor: colorFromTokenType(token.tiers[defaultTier].type) }">
         </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span :class="['secondary-token-tier', settings.darkMode === true && 'theme--dark']" v-for="(tier, tierIndex) in secondaryTiers" :key="tier.name">
           <span
@@ -557,6 +563,14 @@ export default class SpeakerSegmentTranscript extends Vue {
   transition .25s background-color
   border-radius 2px
   display inline
+  pointer-events none
+
+// in the light theme, the text inside of the
+// indicator should be in front and white.
+.theme--light .token-type-indicator:not(.type-1)
+  z-index 1
+  position relative
+  color white
 
 .token-display
   .token
