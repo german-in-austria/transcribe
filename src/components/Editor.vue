@@ -29,7 +29,7 @@
             <v-icon>save_alt</v-icon>
             <template v-slot:loader>
               <v-progress-circular
-                color="#fff"
+                :color="settings.darkMode ? '#fff' : '#333'"
                 :size="16"
                 :rotate="-90"
                 :width="2"
@@ -223,6 +223,7 @@ import { requestFrameAsync, isCmdOrCtrl, platform } from '../util'
 import { history, undoable, startListening as startUndoListener } from '../store/history'
 import { serverTranscript } from '../service/backend-server'
 import { generateProjectFile } from '../service/backend-files'
+import { isWaveformEventVisible } from '../service/events-dom';
 
 @Component({
   components: {
@@ -324,8 +325,11 @@ export default class Editor extends Vue {
     return undoable(addEvent(pos))
   }
 
-  splitEvent(e: LocalTranscriptEvent, at: number) {
-    return undoable(splitEvent(e, at))
+  async splitEvent(e: LocalTranscriptEvent, at: number) {
+    const [ leftEvent ] = undoable(splitEvent(e, at))
+    if (!(await isWaveformEventVisible(leftEvent))) {
+      scrollToAudioEvent(leftEvent)
+    }
   }
 
   mounted() {
