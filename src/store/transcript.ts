@@ -193,6 +193,8 @@ export function loadAudioFile(f: File|Uint8Array|null): Promise<HTMLAudioElement
       a.removeEventListener('durationchange', listener)
       audio.store.isLocalFile = true
       eventStore.audioElement = a
+      eventStore.audioMetadata.length = a.duration
+      eventStore.audioMetadata.fileSize = audio.store.uint8Buffer.byteLength
       resolve(a as HTMLAudioElement)
     })
   })
