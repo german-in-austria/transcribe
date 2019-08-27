@@ -1,87 +1,91 @@
 <template>
   <div :class="['playerbar', settings.darkMode && 'theme--dark']">
-    <v-container class="pt-0 pb-0" fill-height align-content-center justify-center>
-      <v-layout row justify-space-between>
-        <v-flex text-xs-left>
-          <v-btn icon flat large>
-            <v-icon>mdi-contain-start</v-icon>
-          </v-btn>
-          <v-btn icon flat large>
-            <v-icon>mdi-contain-end</v-icon>
-          </v-btn>
-        </v-flex>
-        <v-flex
-          :class="[
-            'pt-3',
-            'display-area',
-            settings.darkMode && 'theme--dark'
-          ]"
-          xs6
-          align-content-center>
-          <v-btn class="play-button button" @click="playPause" large icon flat>
-            <v-icon v-if="eventStore.isPaused" x-large>play_arrow</v-icon>
-            <v-icon v-else x-large>pause</v-icon>
-          </v-btn>
-          <div ref="currentTime" class="current-time"></div>
-        </v-flex>
-        <v-flex text-xs-left>
-          <v-menu
-            :close-on-content-click="false"
-            nudge-top="40"
-            allow-overflow
-            open-on-hover
-            class="pl-2 pr-2"
-            top
-            center>
-            <v-btn slot="activator" flat icon large>
-              <v-icon v-if="settings.playbackVolume <= .33">
-                mdi-volume-low
-              </v-icon>
-              <v-icon v-if="settings.playbackVolume > .33 && settings.playbackVolume <= .66">
-                mdi-volume-medium
-              </v-icon>
-              <v-icon v-if="settings.playbackVolume > .66">
-                mdi-volume-high
-              </v-icon>
-            </v-btn>
-            <div class="pl-4 pr-4">
-              <v-slider
-                hide-details
-                :label="`Volume (${ (settings.playbackVolume * 100).toFixed(0) }%)`"
-                inverse-label
-                :min="0"
-                :max="100"
-                :value="settings.playbackVolume * 100"
-                @input="setPlaybackVolume($event / 100)" />
-            </div>
-          </v-menu>
-          <v-menu
-            :close-on-content-click="false"
-            nudge-top="40"
-            allow-overflow
-            open-on-hover
-            class="pl-2 pr-2"
-            top
-            center>
-            <v-btn slot="activator" flat icon large>
-              <v-icon v-if="settings.playbackSpeed <= .33">mdi-speedometer-slow</v-icon>
-              <v-icon v-if="settings.playbackSpeed > .33 && settings.playbackSpeed <= .66">mdi-speedometer-medium</v-icon>
-              <v-icon v-if="settings.playbackSpeed > .66">mdi-speedometer</v-icon>
-            </v-btn>
-            <div class="pl-4 pr-4">
-              <v-slider
-                hide-details
-                :label="`Speed (${ (settings.playbackSpeed * 100).toFixed(0) }%)`"
-                inverse-label
-                :min="10"
-                :max="100"
-                :value="settings.playbackSpeed * 100"
-                @input="setPlaybackSpeed($event / 100)" />
-            </div>
-          </v-menu>
-        </v-flex>
-      </v-layout>
-    </v-container>
+    <v-layout row>
+      <v-flex xs4 text-xs-right>
+        <player-bar-button>
+          <v-icon>mdi-contain-start</v-icon>
+        </player-bar-button>
+        <player-bar-button>
+          <v-icon>mdi-contain-end</v-icon>
+        </player-bar-button>
+      </v-flex>
+      <v-flex
+        :class="[
+          'display-area',
+          settings.darkMode && 'theme--dark'
+        ]"
+        xs4
+        align-content-center>
+        <player-bar-button @click="playPause">
+          <v-icon v-if="eventStore.isPaused">play_arrow</v-icon>
+          <v-icon v-else>pause</v-icon>
+        </player-bar-button>
+        <div ref="currentTime" class="current-time"></div>
+      </v-flex>
+      <v-flex xs4>
+        <v-layout>
+          <v-flex text-xs-left>
+            <player-bar-button>
+              <v-icon>mdi-replay</v-icon>
+            </player-bar-button>
+            <player-bar-button>
+              <v-icon class="mirror">mdi-replay</v-icon>
+            </player-bar-button>
+          </v-flex>
+          <v-flex text-xs-right>
+            <v-spacer />
+            <v-menu
+              :close-on-content-click="false"
+              nudge-top="50"
+              open-on-hover
+              top>
+              <player-bar-button @click="toggleVolumeOnOff" slot="activator">
+                <v-icon v-if="settings.playbackVolume <= .33">
+                  mdi-volume-low
+                </v-icon>
+                <v-icon v-if="settings.playbackVolume > .33 && settings.playbackVolume <= .66">
+                  mdi-volume-medium
+                </v-icon>
+                <v-icon v-if="settings.playbackVolume > .66">
+                  mdi-volume-high
+                </v-icon>
+              </player-bar-button>
+              <div class="pl-4 pr-4">
+                <v-slider
+                  hide-details
+                  :label="`Volume (${ (settings.playbackVolume * 100).toFixed(0) }%)`"
+                  inverse-label
+                  :min="0"
+                  :max="100"
+                  :value="settings.playbackVolume * 100"
+                  @input="setPlaybackVolume($event / 100)" />
+              </div>
+            </v-menu>
+            <v-menu
+              :close-on-content-click="false"
+              nudge-top="50"
+              open-on-hover
+              top>
+              <player-bar-button @click="toggleSpeed" slot="activator">
+                <v-icon v-if="settings.playbackSpeed <= .33">mdi-speedometer-slow</v-icon>
+                <v-icon v-if="settings.playbackSpeed > .33 && settings.playbackSpeed <= .66">mdi-speedometer-medium</v-icon>
+                <v-icon v-if="settings.playbackSpeed > .66">mdi-speedometer</v-icon>
+              </player-bar-button>
+              <div class="pl-4 pr-4">
+                <v-slider
+                  hide-details
+                  :label="`Speed (${ (settings.playbackSpeed * 100).toFixed(0) }%)`"
+                  inverse-label
+                  :min="10"
+                  :max="100"
+                  :value="settings.playbackSpeed * 100"
+                  @input="setPlaybackSpeed($event / 100)" />
+              </div>
+            </v-menu>
+          </v-flex>
+        </v-layout>
+      </v-flex>
+    </v-layout>
   </div>
 </template>
 
@@ -98,6 +102,7 @@ import settings, {
 } from '../store/settings'
 import audio from '../service/audio'
 import eventBus from '../service/event-bus'
+import PlayerBarButton from './PlayerBarButton.vue'
 import {
   eventStore,
   toTime,
@@ -106,7 +111,11 @@ import {
 } from '../store/transcript'
 import { requestFrameAsync, isCmdOrCtrl } from '../util/index'
 
-@Component
+@Component({
+  components: {
+    PlayerBarButton
+  }
+})
 export default class PlayerBar extends Vue {
 
   eventStore = eventStore
@@ -116,6 +125,27 @@ export default class PlayerBar extends Vue {
   setPlaybackVolume = setPlaybackVolume
   settings = settings
   toTime = toTime
+
+  cachedVolume = settings.playbackVolume
+  cachedSpeed = settings.playbackSpeed
+
+  toggleVolumeOnOff() {
+    if (settings.playbackVolume === 0) {
+      setPlaybackVolume(this.cachedVolume)
+    } else {
+      this.cachedVolume = settings.playbackVolume
+      setPlaybackVolume(0)
+    }
+  }
+
+  toggleSpeed() {
+    if (settings.playbackSpeed === 1) {
+      setPlaybackSpeed(this.cachedSpeed)
+    } else {
+      this.cachedSpeed = settings.playbackSpeed
+      setPlaybackSpeed(1)
+    }
+  }
 
   playPause(e: Event) {
     if (eventStore.isPaused) {
@@ -154,7 +184,6 @@ export default class PlayerBar extends Vue {
     display inline-block
     width 155px
     margin 0 auto
-    border-radius 1em
     span:nth-last-child(-n+4)
       opacity .5
 </style>
@@ -171,7 +200,7 @@ export default class PlayerBar extends Vue {
   left 0
   right 0
   bottom 0
-  height 70px
+  min-height 70px
   text-align center
   background #efefef
   &.theme--dark

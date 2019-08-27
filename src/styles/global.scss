@@ -12,7 +12,9 @@
 a{
   color: #7cabda;
 }
-
+.mirror{
+  transform: rotateY(180deg)
+}
 .application {
   font-family: 'HKGrotesk', sans-serif
 }
