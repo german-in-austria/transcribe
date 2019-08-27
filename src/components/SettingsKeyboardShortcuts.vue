@@ -47,7 +47,7 @@ import settings from '../store/settings'
 import { modifierKeys, specialKeys, normalKeys } from '../service/keyboard'
 
 @Component
-export default class KeyboardShortcutSettings extends Vue {
+export default class SettingsKeyboardShortcuts extends Vue {
 
   settings = settings
 

@@ -111,39 +111,11 @@
                 </div>
               </v-list>
             </v-tab-item>
-            <v-tab-item>
-              <v-list subheader class="pa-4">
-                <v-subheader>Token Types</v-subheader>
-                <v-divider class="mb-3" />
-                <v-layout class="ml-3" row :key="type.name" v-for="(type, i) in settings.tokenTypes">
-                  <v-flex xs1>
-                    <v-menu
-                      class="mt-2"
-                      offset-y
-                      lazy
-                      :close-on-content-click="false">
-                      <v-btn
-                        small
-                        icon
-                        slot="activator"
-                        :style="{background: type.color, border: '1px solid #ccc'}"
-                        dark />
-                      <color-picker
-                        :value="type.color" 
-                        @input="(e) => type.color = e.hex" />
-                    </v-menu>
-                  </v-flex>
-                  <v-flex xs5>
-                    <v-text-field label="Name" :value="type.name" />
-                  </v-flex>
-                  <v-flex xs5>
-                    <v-text-field :rules="regExInputRules" @input="(e) => updateRegEx(i, e)" label="Regular Expression" :value="type.regex.toString()" />
-                  </v-flex>
-                </v-layout>
-              </v-list>
+            <v-tab-item lazy>
+              <settings-token-types class="pa-4" />
             </v-tab-item>
             <v-tab-item lazy>
-              <keyboard-shortcut-settings />
+              <settings-keyboard-shortcuts class="pa-4" />
             </v-tab-item>
           </v-tabs-items>
         </v-tabs>
@@ -155,48 +127,20 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
-import { makeGradient } from '../lib/gradient'
-import { Chrome as ColorPicker } from 'vue-color'
-import KeyboardShortcutSettings from './KeyboardShortcutSettings.vue'
+import SettingsKeyboardShortcuts from './SettingsKeyboardShortcuts.vue'
+import SettingsTokenTypes from './SettingsTokenTypes.vue'
 
 @Component({
   components: {
-    ColorPicker,
-    KeyboardShortcutSettings
+    SettingsKeyboardShortcuts,
+    SettingsTokenTypes
   }
 })
 export default class Settings extends Vue {
+
   @Prop({ default: false }) show: boolean
   settings = settings
   activeTab = null
-
-  regExInputRules = [
-    (e: string) => {
-      try {
-        console.log('tried')
-        const x = new RegExp(e)
-        return true
-      } catch (e) {
-        console.log('failed')
-        return 'Invalid Regular Expression'
-      }
-    }
-  ]
-
-  updateRegEx(...args: any[]) {
-    console.log(args)
-  }
-
-  updateWaveFormColor(...args: any[]) {
-    console.log(args)
-  }
-
-  updateGradient(i: number, c: any) {
-    this.settings.spectrogramColors[i].c = [c.rgba.r, c.rgba.g, c.rgba.b, c.rgba.a]
-    console.log(this.settings.spectrogramColors[i].c)
-    const g = makeGradient(this.settings.spectrogramColors)
-    this.settings.spectrogramGradient = g
-  }
 }
 </script>
 <style lang="stylus">
@@ -206,7 +150,6 @@ export default class Settings extends Vue {
 </style>
 
 <style lang="stylus" scoped>
-
 select
   cursor pointer
   -webkit-appearance none
