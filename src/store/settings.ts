@@ -24,6 +24,7 @@ export interface Settings {
   moveEventTimeByInterval: number
   moveEventTimeByIntervalSmall: number
   eventDockingInterval: number
+  skipInterval: number
   tokenTypes: Array<{
     name: string
     regex: RegExp
@@ -192,6 +193,7 @@ const settings: Settings = {
   moveEventTimeByInterval: 0.2,
   moveEventTimeByIntervalSmall: 0.01,
   eventDockingInterval: 0.05,
+  skipInterval: 1,
   tokenTypes: [
     {
       name: 'proper-name',
