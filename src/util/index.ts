@@ -62,11 +62,11 @@ export function isUndoOrRedo(e: KeyboardEvent): UndoRedo {
   }
 }
 
-export function isCmdOrCtrl(fn: (e: KeyboardEvent) => any) {
-  return (e: KeyboardEvent) => {
-    if ((platform() === 'mac' && e.metaKey) || (platform() !== 'mac' && e.ctrlKey)) {
-      return fn(e)
-    }
+export function isCmdOrCtrl(e: KeyboardEvent|MouseEvent|WheelEvent): boolean {
+  if ((platform() === 'mac' && e.metaKey) || (platform() !== 'mac' && e.ctrlKey)) {
+    return true
+  } else {
+    return false
   }
 }
 
