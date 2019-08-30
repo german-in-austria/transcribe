@@ -1,8 +1,17 @@
 import Vue from 'vue'
 
 import { LocalTranscriptEvent } from '../store/transcript'
-import Waveform from '../components/Waveform.vue'
 import { requestFrameAsync } from '../util'
+
+export async function getScrollLeftAudio(): Promise<number> {
+  await requestFrameAsync()
+  const e = document.querySelector('.wave-form')
+  if (e instanceof HTMLElement) {
+    return e.scrollLeft
+  } else {
+    throw new Error('can’t find element with class "wave-form"')
+  }
+}
 
 export async function focusSelectedEventElement(e: LocalTranscriptEvent) {
   await Vue.nextTick()
