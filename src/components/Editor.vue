@@ -81,7 +81,6 @@
       class="no-outline"
       @scroll="handleScroll"
       @show-menu="doShowMenu"
-      @add-segment="addEvent"
       :height="300">
       <play-head />
       <div
@@ -181,14 +180,11 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
-import * as fns from 'date-fns'
 import { saveAs } from 'file-saver'
-import * as humanSize from 'human-size'
-import playerBar from './PlayerBar'
+
+import playerBar from './PlayerBar.vue'
 import waveForm from './Waveform.vue'
 import settingsView from './Settings.vue'
-import settings from '../store/settings'
-import { handleGlobalShortcut } from '../service/keyboard'
 import spectrogram from './Spectrogram.vue'
 import search from './Search.vue'
 import searchResults from './SearchResults.vue'
@@ -198,33 +194,51 @@ import scrollbar from './Scrollbar.vue'
 import dropFile from './DropFile.vue'
 
 import {
-  getSelectedEvent,
-  selectEvents,
   LocalTranscriptEvent,
-  eventStore,
-  playEvent,
-  addEvent,
+  addEventsToSelection,
   deleteSelectedEvents,
-  splitEvent,
-  findEventAt,
   deselectEvents,
-  selectNextEvent,
-  selectPreviousEvent,
-  scrollToTranscriptEvent,
-  joinEvents,
+  eventStore,
+  exportEventAudio,
+  findEventAt,
+  getSelectedEvent,
   isEventSelected,
+  joinEvents,
+  loadAudioFile,
+  playEvent,
   saveChangesToServer,
   scrollToAudioEvent,
-  loadAudioFile,
-  exportEventAudio
+  scrollToTranscriptEvent,
+  selectEventRange,
+  selectEvents,
+  selectNextEvent,
+  selectPreviousEvent,
+  splitEvent,
 } from '../store/transcript'
 
+import { handleGlobalShortcut } from '../service/keyboard'
+
+import {
+  requestFrameAsync,
+  isCmdOrCtrl,
+  platform
+} from '../util'
+
+import {
+  history,
+  undoable,
+  startListening as startUndoListener
+} from '../store/history'
+
+import {
+  isWaveformEventVisible,
+  getScrollLeftAudio
+} from '../service/events-dom'
+
+import settings from '../store/settings'
 import audio from '../service/audio'
-import { requestFrameAsync, isCmdOrCtrl, platform } from '../util'
-import { history, undoable, startListening as startUndoListener } from '../store/history'
 import { serverTranscript } from '../service/backend-server'
 import { generateProjectFile } from '../service/backend-files'
-import { isWaveformEventVisible } from '../service/events-dom';
 
 @Component({
   components: {
@@ -305,9 +319,19 @@ export default class Editor extends Vue {
     }
   }
 
-  doShowMenu(e: MouseEvent) {
+  async doShowMenu(e: MouseEvent) {
     // this is used for splitting
     this.layerX = e.layerX
+    const ev = findEventAt(((await getScrollLeftAudio()) + e.x) / settings.pixelsPerSecond)
+    if (ev !== undefined) {
+      if (isCmdOrCtrl(e)) {
+        addEventsToSelection([ev])
+      } else if (e.shiftKey === true) {
+        selectEventRange(ev)
+      } else {
+        selectEvents([ ev ])
+      }
+    }
     this.menuX = e.x
     this.menuY = e.y
     this.showMenu = true
@@ -321,10 +345,6 @@ export default class Editor extends Vue {
   showSpectrogram(e: LocalTranscriptEvent) {
     this.isSpectrogramVisible = true
     this.spectrogramEvent = e
-  }
-
-  addEvent(pos: number) {
-    return undoable(addEvent(pos))
   }
 
   async splitEvent(e: LocalTranscriptEvent, at: number) {
