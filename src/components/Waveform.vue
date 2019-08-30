@@ -3,36 +3,52 @@
     @keydown.left="emitScroll"
     @keydown.right="emitScroll"
     class="waveform-outer"
-    @mousewheel="debouncedEndZoom"
+    @mousewheel="debouncedZoom"
     :style="containerStyle"
-    :class="{ disabled, loading }">
+    :class="{
+      disabled,
+      loading
+    }">
     <div
       class="wave-form"
-      :style="{height: `${height}px`, width: `${totalWidth}px`}"
+      :style="{
+        height: `${height}px`,
+        width: `${totalWidth}px`
+      }"
       ref="svgContainer"
-      @mousewheel="onMousewheel"
+      @mousewheel="scrollOrZoomPreview"
       @scroll="onScroll">
-      <div style="transition: .2s opacity" :class="['second-marker-row', hideSecondMarkers === true && 'hidden']" />
+      <div :class="[
+        'fade-in-out-quick',
+        'second-marker-row',
+        hideSecondMarkers === true && 'hidden'
+      ]" />
       <div
         :style="stageStyle"
         class="wave-form-inner">
         <div
           v-for="(x, i) in Array(amountDrawSegments)"
+          @dblclick.stop="addEventAt"
+          :class="[
+            'wave-form-segment',
+            'draw-segment-' + i
+          ]"
           :style="{
             transform: `scaleY(${scaleFactorY})`,
             left: drawWidth * i + 'px',
             width: i + 1 < amountDrawSegments ? drawWidth + 'px' : 'auto',
             height: height + 'px'
           }"
-          :key="i"
-          @dblclick.stop="addEventAt"
-          :class="['wave-form-segment', 'draw-segment-'+i]">
+          :key="i" >
           <div class="wave-form-placeholder" />
         </div>
         <slot />
         <div
-          :class="['segment-box-container', hideSegments === true && 'hidden']"
-          style="transition: .2s opacity"
+          :class="[
+            'fade-in-out-quick',
+            'segment-box-container',
+            hideSegments === true && 'hidden'
+          ]"
           v-if="settings.showSegmentBoxes">
           <segment-box
             v-for="(event, i) in visibleEvents"
@@ -47,10 +63,16 @@
     </div>
     <v-layout row style="margin-top: -40px; padding-bottom: 20px;">
       <v-flex xs12 class="ml-3">
-        <scrollbar class="scrollbar" update-on="scrollWaveform" @scroll="scrollFromScrollbar" />
+        <scrollbar  
+          class="scrollbar"
+          update-on="scrollWaveform"
+          @scroll="scrollFromScrollbar"
+        />
         <div
           class="overview"
-          :style="{height: overviewHeight + 'px'}">
+          :style="{
+            height: overviewHeight + 'px'
+          }">
           <div
             ref="overview"
             class="overview-waveform">
@@ -96,14 +118,17 @@ import scrollbar from './Scrollbar.vue'
 import segmentBox from './SegmentBox.vue'
 
 import settings from '../store/settings'
+import { undoable } from '../store/history'
 import audio from '../service/audio'
 import * as util from '../util'
 import EventBus from '../service/event-bus'
+
 import {
   eventStore,
   findEventAt,
   LocalTranscriptEvent,
   scrollToTranscriptEvent,
+  addEvent,
   toTime
 } from '../store/transcript'
 
@@ -142,7 +167,7 @@ export default class Waveform extends Vue {
   eventStore = eventStore
 
   onScroll = _.throttle(this.handleScroll, 350)
-  debouncedEndZoom = _.debounce(this.endZoom, 350)
+  debouncedZoom = _.debounce(this.zoom, 350)
 
   // state
   disabled = false
@@ -155,11 +180,10 @@ export default class Waveform extends Vue {
   audioLength = 0
   renderedWaveFormPieces: number[] = []
   totalWidth = this.audioLength * settings.pixelsPerSecond
-  log = console.log
   scrollTimeout = null
 
-  transformOrigin = 0
-  transformScaleX = 1
+  temporaryZoomOrigin = 0
+  temporaryScaleX = 1
 
   hideSegments = false
   hideSecondMarkers = false
@@ -212,7 +236,7 @@ export default class Waveform extends Vue {
 
   addEventAt(e: MouseEvent) {
     const c = this.$refs.svgContainer as HTMLDivElement
-    this.$emit('add-segment', (c.scrollLeft + e.pageX) / settings.pixelsPerSecond)
+    return undoable(addEvent((c.scrollLeft + e.pageX) / settings.pixelsPerSecond))
   }
 
   disableAutoScrollDuringPlayback() {
@@ -225,33 +249,42 @@ export default class Waveform extends Vue {
     )
   }
 
-  onMousewheel(e: MouseWheelEvent) {
-    this.emitScroll();
+  zoomPreview(e: MouseWheelEvent) {
+    e.preventDefault()
+    const el = (this.$el as HTMLElement).querySelector('.wave-form-inner')
+    const c = this.$refs.svgContainer
+    if (el instanceof HTMLElement && c instanceof HTMLElement) {
+      this.temporaryZoomOrigin = e.x + c.scrollLeft
+      if (
+        this.scaleFactorX * this.temporaryScaleX - e.deltaY * 0.02 >= .25 &&
+        this.scaleFactorX * this.temporaryScaleX - e.deltaY * 0.02 <= 4
+      ) {
+        this.hideSegments = true
+        this.hideSecondMarkers = true
+        this.temporaryScaleX = Math.max(.25, this.temporaryScaleX - e.deltaY * 0.02)
+      }
+    }
+  }
+
+  emulateHorizontalScrolling(e: MouseWheelEvent) {
+    const c = this.$refs.svgContainer
+    if (c instanceof HTMLElement) {
+      e.preventDefault()
+      c.scrollLeft = c.scrollLeft + (e.deltaY) / (e.shiftKey === true ? 10 : 1)
+    }
+  }
+
+  scrollOrZoomPreview(e: MouseWheelEvent) {
+    // notify others
+    this.emitScroll()
     // zooming
     if (e.ctrlKey === true) {
-      e.preventDefault()
-      const el = (this.$el as HTMLElement).querySelector('.wave-form-inner')
-      const c = this.$refs.svgContainer
-      if (el instanceof HTMLElement && c instanceof HTMLElement) {
-        this.transformOrigin = e.x + c.scrollLeft
-        if (
-          this.scaleFactorX * this.transformScaleX - e.deltaY * 0.02 >= .25 &&
-          this.scaleFactorX * this.transformScaleX - e.deltaY * 0.02 <= 4
-        ) {
-          this.hideSegments = true
-          this.hideSecondMarkers = true
-          this.transformScaleX = Math.max(.25, this.transformScaleX - e.deltaY * 0.02)
-        }
-      }
+      this.zoomPreview(e)
     // user initiated scrolling
     } else {
       if (settings.emulateHorizontalScrolling === true) {
         // emulate horizontal scrolling (windows etc.)
-        const c = this.$refs.svgContainer
-        if (c instanceof HTMLElement) {
-          e.preventDefault()
-          c.scrollLeft = c.scrollLeft + (e.deltaY) / (e.shiftKey === true ? 10 : 1)
-        }
+        this.emulateHorizontalScrolling(e)
       }
       if (eventStore.playAllFrom !== null) {
         this.disableAutoScrollDuringPlayback()
@@ -414,21 +447,21 @@ export default class Waveform extends Vue {
     this.clearRenderCache()
   }
 
-  endZoom(e: WheelEvent) {
+  zoom(e: WheelEvent) {
     if (e.ctrlKey === true) {
       // if it should transform by some factor.
-      if (this.transformScaleX !== 1) {
+      if (this.temporaryScaleX !== 1) {
         // compute the new scale factor
-        this.scaleFactorX = this.scaleFactorX * this.transformScaleX
+        this.scaleFactorX = this.scaleFactorX * this.temporaryScaleX
         // get the target time at the current mouse pos
         const el = (this.$refs.svgContainer as HTMLElement)
         const oldTargetTime = (el.scrollLeft + e.x) / settings.pixelsPerSecond
         // reset state
-        this.transformScaleX = 1
-        this.transformOrigin = 0
+        this.temporaryScaleX = 1
+        this.temporaryZoomOrigin = 0
         this.hideSegments = false
         this.hideSecondMarkers = false
-        // set zoom via scale factor
+        // set actual pixel per second value via scale factor
         settings.pixelsPerSecond = this.initialPixelsPerSecond * this.scaleFactorX
         this.totalWidth = this.audioLength * settings.pixelsPerSecond
         // scroll to the target time (scrollLeft)
@@ -444,8 +477,8 @@ export default class Waveform extends Vue {
     return {
       height: this.height + 'px',
       width: this.totalWidth + 'px',
-      transformOrigin: this.transformOrigin + 'px',
-      transform: `scaleX(${this.transformScaleX >= 0.1 ? this.transformScaleX : 0.1})`
+      transformOrigin: this.temporaryZoomOrigin + 'px',
+      transform: `scaleX(${this.temporaryScaleX >= 0.1 ? this.temporaryScaleX : 0.1})`
     }
   }
 
