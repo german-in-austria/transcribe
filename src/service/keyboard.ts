@@ -170,11 +170,11 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     action: async () => {
       const eventUnderPlayHead = findEventAt(eventStore.currentTime)
       if (eventUnderPlayHead === undefined) {
-        const e = undoable(addEvent(eventStore.currentTime))
-        selectEvents(e)
+        const es = undoable(addEvent(eventStore.currentTime))
+        selectEvents(es)
       } else {
         const splitAt = eventStore.currentTime - eventUnderPlayHead.startTime
-        const [leftEvent] = undoable(splitEvent(eventUnderPlayHead, splitAt))
+        const [ leftEvent ] = undoable(splitEvent(eventUnderPlayHead, splitAt))
         if (!(await isWaveformEventVisible(leftEvent))) {
           scrollToAudioEvent(leftEvent)
         }
