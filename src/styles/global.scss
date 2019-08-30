@@ -12,6 +12,9 @@
 a{
   color: #7cabda;
 }
+.fade-in-out-quick{
+  transition: .2s opacity;
+}
 .mirror{
   transform: rotateY(180deg)
 }
