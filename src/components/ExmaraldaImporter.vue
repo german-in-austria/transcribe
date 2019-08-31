@@ -88,7 +88,13 @@
                   as it forms the basis for any token related metadata.
                 </p>
               </div>
-              <v-layout class="pl-3 pb-2 pt-2 table-header">
+              <v-layout :class="[
+                'pl-3',
+                'pb-2',
+                'pt-2',
+                'table-header',
+                settings.darkMode === true && 'theme--dark'
+              ]">
                 <v-flex class="pl-3" xs1>
                   <v-tooltip z-index="999" top>
                     <v-checkbox
@@ -112,7 +118,10 @@
                 </v-flex>
               </v-layout>
               <v-form
-                class="pb-5"
+                :class="[
+                  'pb-5',
+                  settings.darkMode === true && 'theme--dark'
+                ]"
                 ref="tierForm"
                 lazy-validation
                 v-model="tiersValid">
@@ -340,6 +349,7 @@
 </template>
 <script lang='ts'>
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import settings from '../store/settings'
 
 import {
   ServerInformant,
@@ -377,6 +387,7 @@ export default class ExmaraldaImporter extends Vue {
   step = 1
   basicInfoValid = false
   tiersValid = false
+  settings = settings
 
   globalDefaultTier: TokenTierType|null = null
   transcriptName: string|null = this.importable.fileName.replace('.exb', '')
@@ -597,10 +608,15 @@ export default class ExmaraldaImporter extends Vue {
 .table-header
   position sticky
   top 0
-  background #222
   z-index 2
+  background white
+  &.theme--dark
+    background #222
 
 .v-form > .layout:nth-child(odd)
+  background rgba(0,0,0,.05)
+
+.v-form.theme--dark > .layout:nth-child(odd)
   background rgba(255,255,255,.05)
 
 .disabled
