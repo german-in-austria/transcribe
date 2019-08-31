@@ -10,7 +10,7 @@ registerPromiseWorker((message: {buffer: ArrayBuffer, options: ArrayBuffer}, wit
   const {options, buffer} = message
   const opts = JSON.parse(textDecoder.decode(options))
   const chanData = new Float32Array(buffer)
-  const step = Math.ceil( chanData.length / opts.width )
+  const step = Math.floor( chanData.length / opts.width )
   const amp = opts.height / 2
   // console.time('draw wave async')
   for (let i = 0; i < opts.width; i++) {
