@@ -29,6 +29,7 @@
         <div
           v-for="(x, i) in Array(amountDrawSegments)"
           @dblclick.stop="addEventAt"
+          :key="i"
           :class="[
             'wave-form-segment',
             'draw-segment-' + i
@@ -38,8 +39,7 @@
             left: drawWidth * i + 'px',
             width: i + 1 < amountDrawSegments ? drawWidth + 'px' : 'auto',
             height: height + 'px'
-          }"
-          :key="i" >
+          }">
           <div class="wave-form-placeholder" />
         </div>
         <slot />
@@ -253,15 +253,16 @@ export default class Waveform extends Vue {
     e.preventDefault()
     const el = (this.$el as HTMLElement).querySelector('.wave-form-inner')
     const c = this.$refs.svgContainer
+    const newVirtualTempScaleX = this.temporaryScaleX - e.deltaY * 0.02
     if (el instanceof HTMLElement && c instanceof HTMLElement) {
       this.temporaryZoomOrigin = e.x + c.scrollLeft
       if (
-        this.scaleFactorX * this.temporaryScaleX - e.deltaY * 0.02 >= .25 &&
-        this.scaleFactorX * this.temporaryScaleX - e.deltaY * 0.02 <= 4
+        this.scaleFactorX * newVirtualTempScaleX >= .25 &&
+        this.scaleFactorX * newVirtualTempScaleX <= 4
       ) {
         this.hideSegments = true
         this.hideSecondMarkers = true
-        this.temporaryScaleX = Math.max(.25, this.temporaryScaleX - e.deltaY * 0.02)
+        this.temporaryScaleX = newVirtualTempScaleX
       }
     }
   }
@@ -293,7 +294,7 @@ export default class Waveform extends Vue {
   }
 
   get drawWidth(): number {
-    return 5000 * this.scaleFactorX
+    return 5000
   }
 
   async handleScroll() {
@@ -384,7 +385,6 @@ export default class Waveform extends Vue {
       eventStore.audioMetadata.length,
       eventStore.audioElement.src
     )
-    console.log({ from, to, duration: to - from })
     const width = isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth
     const [c, f] = (await audio.drawSpectrogramAsync(buffer, width, this.height))
     const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
@@ -462,7 +462,7 @@ export default class Waveform extends Vue {
         this.hideSegments = false
         this.hideSecondMarkers = false
         // set actual pixel per second value via scale factor
-        settings.pixelsPerSecond = this.initialPixelsPerSecond * this.scaleFactorX
+        settings.pixelsPerSecond = Math.round(this.initialPixelsPerSecond * this.scaleFactorX)
         this.totalWidth = this.audioLength * settings.pixelsPerSecond
         // scroll to the target time (scrollLeft)
         this.scrollToSecond(oldTargetTime - e.x / settings.pixelsPerSecond)
@@ -690,6 +690,16 @@ export default class Waveform extends Vue {
       eventStore.audioMetadata.length,
       eventStore.audioElement.src
     )
+
+    console.log({
+      from,
+      to,
+      duration: to - from,
+      drawWidth: this.drawWidth,
+      secondsPerDrawWidth,
+      bufferDuration: buffer.duration,
+      pixelsPerSecond: settings.pixelsPerSecond
+    })
 
     const svg = await (async () => {
       if (settings.useMonoWaveForm === true) {
