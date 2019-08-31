@@ -343,6 +343,7 @@ async function drawWavePathAsync(
   mono = false
 ): Promise<string> {
   const buf = (() => {
+    // console.log('buffer.duration', buffer.duration)
     if (mono === true) {
       return sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
     } else {
@@ -426,10 +427,12 @@ async function drawWave(
   channel = 0,
   mono = false
 ) {
-  // tslint:disable-next-line:max-line-length
-  const svgStart = `<svg viewBox="0 0 ${ width.toFixed(0) } ${ height }" height="${ height }" width="${ width.toFixed(0) }"><path fill="${ color }" d="`
-  const svgEnd = '" /></svg>'
-  return svgStart + await drawWavePathAsync(buffer, width, height, channel, 0, mono) + svgEnd
+  return (
+    // tslint:disable-next-line:max-line-length
+    `<svg viewBox="0 0 ${ width.toFixed(0) } ${ height }" height="${ height }" width="${ width.toFixed(0) }"><path fill="${ color }" d="`
+    + await drawWavePathAsync(buffer, width, height, channel, 0, mono)
+    + `" /></svg>`
+  )
 }
 
 // tslint:disable-next-line:max-line-length
@@ -469,9 +472,7 @@ async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuff
     console.log('start end', overflowStart, overflowEnd)
     try {
       const slicedBuffer = await sliceAudioBuffer(decodedBuffer, overflowStart * 1000, overflowEnd * 1000)
-      console.log(slicedBuffer.duration, 'sliced buffer duration')
-      // console.timeEnd('decode buffer segment from ' + from + ' to ' + to)
-      // console.log({slicedDuration: slicedBuffer.duration})
+      console.log(slicedBuffer.duration, 'sliced buffer duration for', startPage.timestamp, endPage.timestamp)
       return slicedBuffer
     } catch (e) {
       console.error(e)
@@ -507,7 +508,9 @@ async function getOrFetchAudioBuffer(
   audioLength: number,
   url: string
 ): Promise<AudioBuffer> {
-  if (from < to && to <= audioLength) {
+  if (from > to || audioLength < to) {
+    throw new Error('range is not in audio file')
+  } else {
     try {
       return await audio.decodeBufferTimeSlice(from, to, audio.store.uint8Buffer.buffer)
     } catch (e) {
@@ -524,8 +527,6 @@ async function getOrFetchAudioBuffer(
       const combinedBuffer = audio.concatBuffer(headerBuffer, trimmedBuffer)
       return await audio.decodeBufferTimeSlice(from, to, combinedBuffer)
     }
-  } else {
-    throw new Error('range is not in audio file')
   }
 }
 
