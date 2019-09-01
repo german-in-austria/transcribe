@@ -229,8 +229,8 @@ export default class TranscriptEditor extends Vue {
     e.preventDefault()
     this.lastScrollLeft = this.innerLeft
     this.innerLeft = this.innerLeft - (e.deltaX || e.deltaY) / (e.shiftKey === true ? 10 : 1)
-    this.debouncedEmitScroll()
     this.throttledRenderer(this.innerLeft <= this.lastScrollLeft)
+    this.debouncedEmitScroll()
     this.lastScrollLeft = this.innerLeft
   }
 }
