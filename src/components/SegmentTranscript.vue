@@ -66,6 +66,7 @@ export default class SegmentTranscript extends Vue {
   @Prop() previousEvent: LocalTranscriptEvent|undefined
   @Prop({ default: false }) isSelected: boolean
   @Prop() index: number
+  @Prop() width?: number
 
   eventStore = eventStore
   offsetWidth = 0
@@ -98,7 +99,15 @@ export default class SegmentTranscript extends Vue {
   }
 
   mounted() {
-    this.offsetWidth = (this.$el as HTMLElement).offsetWidth + 1
+    // if the width argument is undefined, that means it’s never been rendered.
+    if (this.width === undefined) {
+      // compute the width (perform layout op)
+      this.offsetWidth = (this.$el as HTMLElement).offsetWidth + 1
+    // if it’s set, we’ll just re-use the width from the last time it was rendered.
+    } else {
+      this.offsetWidth = this.width
+    }
+    // emit the new width
     this.$emit('element-render', this.offsetWidth)
   }
 
