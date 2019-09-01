@@ -1,5 +1,62 @@
 import _ from 'lodash'
 
+import uuid from 'uuid/v4'
+const peerId = uuid()
+console.log('user id', peerId)
+import Peer from 'peerjs'
+const peer = new Peer(peerId)
+console.log({peer})
+
+function handleRemotePeerEvent(data: [HistoryEventAction|HistoryEventAction[]|number, HistoryApplicationType]) {
+  const [p, t] = data
+  console.log('remote data', data)
+  if (typeof p === 'number') {
+    if (t === 'JUMPTOSTATE') {
+      jumpToStateIndex(p)
+    }
+  } else {
+    if (t === 'DO') {
+      history.actions = history.actions
+        .filter(a => a.apply === true)
+        .concat(p)
+      if (_.isArray(p)) {
+        _(p).forEach(a => replaceEvents(a.before, a.after))
+      } else {
+        replaceEvents(p.before, p.after)
+      }
+    } else if (t === 'UNDO') {
+      if (_.isArray(p)) {
+        p.forEach(undoAction)
+      } else {
+        undoAction(p)
+      }
+    } else if (t === 'REDO') {
+      if (_.isArray(p)) {
+        p.forEach(redoAction)
+      } else {
+        redoAction(p)
+      }
+    }
+  }
+}
+
+const cons: string[] = []
+
+peer.on('connection', (con) => {
+  console.log('new connection')
+  console.log(peer.connections)
+  if (cons.indexOf(con.peer) === -1) {
+    con.on('data', handleRemotePeerEvent)
+    console.log('connected')
+    cons.push(con.peer)
+    peer.connect(con.peer)
+  } else {
+    con.close()
+  }
+})
+
+type HistoryApplicationType = 'UNDO'|'REDO'|'DO'|'JUMPTOSTATE'
+
 import {
   LocalTranscriptEvent,
   replaceEvents,
@@ -36,6 +93,7 @@ async function undoRedoHandler(e: KeyboardEvent) {
     e.preventDefault()
     const action = undo()
     if (action !== undefined) {
+      notifyPeers(action, 'UNDO')
       selectEvents(action.before)
       if (!await isWaveformEventVisible(action.before[0])) {
         scrollToAudioEvent(action.before[0])
@@ -47,6 +105,7 @@ async function undoRedoHandler(e: KeyboardEvent) {
     e.preventDefault()
     const action = redo()
     if (action !== undefined) {
+      notifyPeers(action, 'REDO')
       selectEvents(action.after)
       if (!await isWaveformEventVisible(action.after[0])) {
         scrollToAudioEvent(action.after[0])
@@ -104,7 +163,16 @@ function jumpToStateIndex(target: number) {
 export function jumpToState(action: HistoryEventAction) {
   const ai = history.actions.findIndex((a) => a.id === action.id)
   // if the index was found.
+  notifyPeers(ai, 'JUMPTOSTATE')
   jumpToStateIndex(ai)
+}
+
+function notifyPeers(a: HistoryEventAction|HistoryEventAction[]|number, t: HistoryApplicationType) {
+  _(peer.connections).forEach((con, key) => {
+    if (con.length > 0 && key !== peerId) {
+      con.forEach((c: any) => c.send([a, t]))
+    }
+  })
 }
 
 function undoAction(a: HistoryEventAction) {
@@ -144,6 +212,7 @@ export function undoable(action: HistoryEventAction|HistoryEventAction[]): Local
   // all things that have been undone before
   // are not re-doable anymore, and are deleted.
   // the new undoable action is appended.
+  notifyPeers(action, 'DO')
   history.actions = history.actions
     .filter(a => a.apply === true)
     .concat(action)
