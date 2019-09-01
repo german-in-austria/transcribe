@@ -411,6 +411,7 @@ export default class Waveform extends Vue {
               const y = await this.drawWaveFormPiece(p)
               resolve(y)
             }
+            this.updateSecondsMarkers()
           } catch (e) {
             // remove from cache index if it failed
             const i = this.renderedWaveFormPieces.indexOf(p)
