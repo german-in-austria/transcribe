@@ -30,7 +30,7 @@
               <v-icon v-if="tier.show === true">check</v-icon>
             </v-list-tile-avatar>
             <v-list-tile-content>
-              <v-list-tile-title>{{ tier.id }}</v-list-tile-title>
+              <v-list-tile-title>{{ tier.name }}</v-list-tile-title>
             </v-list-tile-content>
           </v-list-tile>
         </v-list>
@@ -63,7 +63,7 @@ export default class SpeakerPanel extends Vue {
     if (this.settings.darkMode) {
       return {}
     } else {
-      return { background: '#efefef' }
+      return { background: '#fafafa' }
     }
   }
 }
