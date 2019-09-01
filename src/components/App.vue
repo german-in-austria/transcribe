@@ -9,6 +9,7 @@
       stateless
       style="padding: 0"
       v-model="settings.showDrawer"
+      :width="settings.drawerWidth"
       right
       app>
       <sidebar disable-resize-watcher :active="settings.showDrawer"/>

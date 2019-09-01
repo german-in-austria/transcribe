@@ -6,6 +6,7 @@ import { eventStore } from './transcript'
 
 export interface Settings {
   showDrawer: boolean
+  drawerWidth: number
   contrast: number
   spectrogramGradient: number[][]
   spectrogramColors: Color[]
@@ -175,6 +176,7 @@ export function decreaseVolume(by: number) {
 
 const settings: Settings = {
   showDrawer: false,
+  drawerWidth: 300,
   contrast: 1,
   spectrogramGradient: makeGradient(spectrogramPresets[1].colors),
   spectrogramColors: spectrogramPresets[1].colors,
