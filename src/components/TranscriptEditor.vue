@@ -11,6 +11,7 @@
           <segment-transcript
             v-for="(event, i) in visibleEvents"
             :data-event-id="event.eventId"
+            :width="eventWidthCache[event.eventId]"
             :index="i"
             :event="event"
             :previous-event="visibleEvents[i - 1]"
@@ -69,6 +70,7 @@ export default class TranscriptEditor extends Vue {
   emitScrollDebouncer: number|null = null
   throttledRenderer = _.throttle(this.updateList, 60)
   isEventSelected = isEventSelected
+  eventWidthCache: {[eventId: string]: number} = {}
 
   onChangeViewingEvent(e: LocalTranscriptEvent|null, opts: { animate: boolean, focusSpeaker: number|null }) {
     if (e !== null && e !== undefined) {
@@ -164,7 +166,8 @@ export default class TranscriptEditor extends Vue {
     EventBus.$emit('scrollTranscript', firstVisibleEvent.startTime + progress)
   }
 
-  handleRender(width: number, index: number, segment_id: string) {
+  handleRender(width: number, index: number, eventId: string) {
+    this.eventWidthCache[eventId] = width
     if (index === 0) {
       // console.log('rendered leftmost item', width, segment_id)
       this.innerLeft = this.innerLeft - width
@@ -174,7 +177,8 @@ export default class TranscriptEditor extends Vue {
       // this.innerLeft = this.innerLeft + width
     }
   }
-  handleUnrender(width: number, index: number, segment_id: string) {
+  handleUnrender(width: number, index: number, eventId: string) {
+    this.eventWidthCache[eventId] = width
     // LEFTMOST ITEM
     if (index === 0) {
       // console.log('unrendered leftmost item', width, segment_id)
