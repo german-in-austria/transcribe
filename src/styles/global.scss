@@ -84,8 +84,7 @@ img[lazy=loaded] {
 
 .v-menu__content,
 .blur-background{
-  background: transparent !important;
-  backdrop-filter: blur(30px);
+  background: rgba(243, 243, 243, 0.95);
   border: 1px solid #ddd;
   border-radius: 4px !important;
 }
@@ -95,9 +94,23 @@ img[lazy=loaded] {
 .v-menu__content .v-card.theme--dark,
 .blur-background .v-list.theme--dark,
 .v-menu__content .v-list.theme--dark{
-  background: rgba(20,20,20,.6) !important;
+  background: rgba(41, 41, 41, 0.95) !important;
   box-shadow: 0 5px 30px rgba(0,0,0,.2);
 }
+
+@supports (backdrop-filter: blur(30px)) {
+  .v-menu__content,
+  .blur-background {
+    background: transparent !important;
+    backdrop-filter: blur(30px);
+  }
+  .v-menu__content .v-card.theme--dark,
+  .blur-background .v-list.theme--dark,
+  .v-menu__content .v-list.theme--dark {
+    background: rgba(20,20,20,.6) !important;
+  }
+}
+
 .v-menu__content .avatar i.v-icon,
 .context-menu .avatar i.v-icon{
   font-size: 1.1em;
@@ -112,15 +125,23 @@ img[lazy=loaded] {
   margin-left: -10px;
 }
 .v-navigation-drawer{
-  background: rgba(20,20,20,.6) !important;
-  backdrop-filter: blur(20px);
+  background: rgba(20,20,20,.95) !important;
   border-left: 1px solid rgba(255,255,255,.075);
 }
-
 .v-navigation-drawer.theme--light{
-  background: rgba(200,200,200,.4) !important;
+  background: rgba(228, 228, 228, 0.95) !important;
   border-left: 1px solid rgba(255,255,255,.3)
 }
+@supports (backdrop-filter: blur(20px)) {
+  .v-navigation-drawer{
+    background: rgba(20,20,20,.6) !important;
+    backdrop-filter: blur(20px);
+  }
+  .v-navigation-drawer.theme--light{
+    background: rgba(200,200,200,.4) !important;
+  }
+}
+
 .v-navigation-drawer__border{
   display: none;
 }
