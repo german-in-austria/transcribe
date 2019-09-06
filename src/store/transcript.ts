@@ -21,7 +21,8 @@ import {
   ServerTranscriptInformants,
   ServerTranscriptTokenTypes,
   ServerTranscript,
-  createEmptyTranscript
+  createEmptyTranscript,
+  ServerTranscriptSaveRequest
 } from '../service/backend-server'
 
 declare global {
@@ -578,18 +579,47 @@ export function deleteEvent(event: LocalTranscriptEvent): HistoryEventAction {
   }
 }
 
+function splitTokensAtFactor(ts: LocalTranscriptToken[], factor: number): LocalTranscriptToken[][] {
+  // _.partition would have been nicer here
+  // but typescript keeps getting confused with it.
+  return ts.reduce((m, e, i, l) => {
+    m[ i / l.length <= factor ? 0 : 1 ].push(e)
+    return m
+  }, [[], []] as LocalTranscriptToken[][])
+}
+
 export function splitEvent(event: LocalTranscriptEvent, splitAt: number): HistoryEventAction {
   const i = findEventIndexById(event.eventId)
+  const eventLength = event.endTime - event.startTime
+  const cutAtProgressFactor = splitAt / eventLength
   const before = clone(eventStore.events[i])
+  console.log({ cutAtProgressFactor })
   const leftEvent: LocalTranscriptEvent = {
     ...event,
+    speakerEvents: {
+      ..._(event.speakerEvents).mapValues(se => {
+        console.log(splitTokensAtFactor(se.tokens, cutAtProgressFactor))
+        return {
+          ...se,
+          tokens: splitTokensAtFactor(se.tokens, cutAtProgressFactor)[0]
+        }
+      }).value()
+    },
     endTime: event.startTime + splitAt
   }
   const rightEvent: LocalTranscriptEvent = {
     startTime: event.startTime + splitAt,
     endTime: event.endTime,
     eventId: makeEventId(),
-    speakerEvents: {}
+    speakerEvents: {
+      ..._(event.speakerEvents).mapValues(se => {
+        console.log(splitTokensAtFactor(se.tokens, cutAtProgressFactor))
+        return {
+          ...se,
+          tokens: splitTokensAtFactor(se.tokens, cutAtProgressFactor)[1]
+        }
+      }).value()
+    },
   }
   eventStore.events.splice(i, 1, leftEvent, rightEvent)
   return {
@@ -888,52 +918,69 @@ export async function convertToServerTranscript(es: LocalTranscriptEvent[]): Pro
   }
 }
 
+function logServerResponse(req: ServerTranscriptSaveRequest, res: ServerTranscriptSaveResponse) {
+  console.log({
+    localChanges: _(req.aTokens).toArray().value(),
+    localDeletionsAndInserts: _(req.aTokens).toArray().filter((token) => {
+      return token.status === 'delete' || token.status === 'insert'
+    }).value(),
+    serverDeletionsAndErrorsAndInserts: _(res.aTokens).toArray().filter((token) => {
+      return token.newStatus === 'deleted' || token.newStatus === 'inserted' || token.newStatus === 'error'
+    }).value(),
+    groupedErrors: _(res.aTokens)
+      .toArray()
+      .filter(token => token.error !== undefined)
+      .groupBy(token => token.error)
+      .value()
+  })
+}
+
+async function performSaveRequest(id: number, t: ServerTranscriptSaveRequest): Promise<ServerTranscriptSaveResponse> {
+  return await (
+    await fetch(`${ eventStore.backEndUrl }/routes/transcript/save/${ id }`, {
+    credentials: 'include',
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(t),
+  })).json() as ServerTranscriptSaveResponse
+}
+
 export async function saveChangesToServer() {
   console.log('save to server', serverTranscript)
-  if (serverTranscript !== null) {
-    const t = await localTranscriptToServerSaveRequest(serverTranscript, eventStore.events)
-    const tid = await (async () => {
-      if (t.aTranskript !== undefined) {
-        if (t.aTranskript.pk > -1) {
-          return t.aTranskript.pk
-        } else {
-          const { transcript_id } = await createEmptyTranscript(
-            t.aEinzelErhebung!.pk,
-            t.aTranskript!.n,
-            t.aTranskript!.default_tier!
-          )
-          return transcript_id
-        }
-      }
-    })()
-    if (tid !== undefined) {
-      const serverChanges = await (
-        await fetch(`${ eventStore.backEndUrl }/routes/transcript/save/${ tid }`, {
-        credentials: 'include',
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(t),
-      })).json() as ServerTranscriptSaveResponse
-      console.log({
-        localChanges: _(t.aTokens).toArray().value(),
-        localDeletionsAndInserts: _(t.aTokens).toArray().filter((token) => {
-          return token.status === 'delete' || token.status === 'insert'
-        }).value(),
-        serverDeletionsAndErrorsAndInserts: _(serverChanges.aTokens).toArray().filter((token) => {
-          return token.newStatus === 'deleted' || token.newStatus === 'inserted' || token.newStatus === 'error'
-        }).value(),
-        groupedErrors: _(serverChanges.aTokens)
-          .toArray()
-          .filter(token => token.error !== undefined)
-          .groupBy(token => token.error)
-          .value()
-      })
+  // there’s no transcript or no id => throw
+  if ( serverTranscript === null || serverTranscript.aTranskript === undefined ) {
+    throw new Error('transcript id is undefined')
+  } else {
+    // it’s already on the server
+    if (serverTranscript.aTranskript.pk > -1) {
+      const t = await localTranscriptToServerSaveRequest(serverTranscript, eventStore.events)
+      const serverChanges = await performSaveRequest(serverTranscript.aTranskript.pk, t)
+      logServerResponse(t, serverChanges)
       eventStore.events = serverTranscriptToLocal(updateServerTranscriptWithChanges(serverChanges))
+    // it’s a new transcript
     } else {
-      throw new Error('transcript id is undefined')
+      const { transcript_id } = await createEmptyTranscript(
+        serverTranscript.aEinzelErhebung!.pk,
+        serverTranscript.aTranskript.n,
+        serverTranscript.aTranskript.default_tier!
+      )
+      console.log('created transcript with id', transcript_id)
+      const transcriptWithoutTokensAndEvents = {
+        ...serverTranscript,
+        aTranscript: {
+          ...serverTranscript.aTranskript,
+          pk: transcript_id
+        },
+        aTokens: {},
+        aEvents: []
+      }
+      const t = await localTranscriptToServerSaveRequest(transcriptWithoutTokensAndEvents, eventStore.events)
+      const serverChanges = await performSaveRequest(transcript_id, t)
+      logServerResponse(t, serverChanges)
+      eventStore.events = serverTranscriptToLocal(updateServerTranscriptWithChanges(serverChanges))
     }
   }
 }
