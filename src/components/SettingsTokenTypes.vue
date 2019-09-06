@@ -1,7 +1,9 @@
 <template>
   <v-list subheader>
-    <v-subheader>Token Types</v-subheader>
-    <v-divider class="mb-3" />
+    <v-layout class="settings-header">
+      <v-subheader>Token Types</v-subheader>
+      <v-divider class="mb-3" />
+    </v-layout>
     <v-layout class="ml-3" row :key="type.name" v-for="(type, i) in settings.tokenTypes">
       <v-flex xs1>
         <v-menu

@@ -1,6 +1,6 @@
 <template>
   <div class="pa-4">
-    <v-layout>
+    <v-layout class="settings-header">
       <v-flex xs12>
         <v-subheader>Keyboard Shortcuts</v-subheader>
         <v-divider />

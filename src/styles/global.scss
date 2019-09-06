@@ -74,7 +74,15 @@ img[lazy=loaded] {
   max-height: calc(90vh - 40px);
   overflow-y: auto;
 }
-
+.settings-header{
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 2;
+}
+.theme--dark .settings-header{
+  background: #333;
+}
 .theme--dark.v-toolbar{
   background-color: #191918 !important;
 }
