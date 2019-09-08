@@ -588,36 +588,27 @@ function splitTokensAtFactor(ts: LocalTranscriptToken[], factor: number): LocalT
   }, [[], []] as LocalTranscriptToken[][])
 }
 
-export function splitEvent(event: LocalTranscriptEvent, splitAt: number): HistoryEventAction {
+export function splitEvent(event: LocalTranscriptEvent, splitTime: number): HistoryEventAction {
   const i = findEventIndexById(event.eventId)
-  const eventLength = event.endTime - event.startTime
-  const cutAtProgressFactor = splitAt / eventLength
   const before = clone(eventStore.events[i])
-  console.log({ cutAtProgressFactor })
+  const eventLength = event.endTime - event.startTime
+  const cutAtProgressFactor = splitTime / eventLength
   const leftEvent: LocalTranscriptEvent = {
     ...event,
     speakerEvents: {
       ..._(event.speakerEvents).mapValues(se => {
-        console.log(splitTokensAtFactor(se.tokens, cutAtProgressFactor))
-        return {
-          ...se,
-          tokens: splitTokensAtFactor(se.tokens, cutAtProgressFactor)[0]
-        }
+        return { ...se, tokens: splitTokensAtFactor(se.tokens, cutAtProgressFactor)[0] }
       }).value()
     },
-    endTime: event.startTime + splitAt
+    endTime: event.startTime + splitTime
   }
   const rightEvent: LocalTranscriptEvent = {
-    startTime: event.startTime + splitAt,
+    startTime: event.startTime + splitTime,
     endTime: event.endTime,
     eventId: makeEventId(),
     speakerEvents: {
       ..._(event.speakerEvents).mapValues(se => {
-        console.log(splitTokensAtFactor(se.tokens, cutAtProgressFactor))
-        return {
-          ...se,
-          tokens: splitTokensAtFactor(se.tokens, cutAtProgressFactor)[1]
-        }
+        return { ...se, tokens: splitTokensAtFactor(se.tokens, cutAtProgressFactor)[1] }
       }).value()
     },
   }
