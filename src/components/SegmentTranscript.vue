@@ -52,7 +52,8 @@ import {
 } from '../store/transcript'
 
 import { undoable } from '../store/history'
-import settings from '../store/settings';
+import { getTextWidth } from '../util'
+import settings from '../store/settings'
 
 @Component({
   components: {
@@ -98,17 +99,37 @@ export default class SegmentTranscript extends Vue {
     undoable(deleteSelectedEvents())
   }
 
-  mounted() {
-    // if the width argument is undefined, that means it’s never been rendered.
-    if (this.width === undefined) {
-      // compute the width (perform layout op)
-      this.offsetWidth = (this.$el as HTMLElement).offsetWidth + 1
-    // if it’s set, we’ll just reuse the width from the last time it was rendered.
-    } else {
-      this.offsetWidth = this.width
+  getLongestSpeakerText(e: LocalTranscriptEvent): string[]|undefined {
+    return _(e.speakerEvents)
+      .map(se => se.tokens.map(t => t.tiers[eventStore.metadata.defaultTier].text))
+      .sortBy(ts => ts.length)
+      .last()
+  }
+
+  created() {
+    // if (this.width === undefined) {
+    const totalPadding = 20
+    const longestText = this.getLongestSpeakerText(this.event)
+    if (longestText !== undefined) {
+      this.offsetWidth = Math.max(getTextWidth(longestText.join(' '), 14, 'HKGrotesk') + totalPadding, 146)
+      this.$emit('element-render', this.offsetWidth)
     }
-    // emit the new width
-    this.$emit('element-render', this.offsetWidth)
+    // }
+  }
+
+  mounted() {
+    // // if the width argument is undefined, that means it’s never been rendered.
+    // if (this.width === undefined) {
+    //   // compute the width (perform layout op)
+    //   this.offsetWidth = (this.$el as HTMLElement).offsetWidth + 1
+    //   console.log(this.event.eventId, 'offsetWidth', this.offsetWidth)
+    //   console.log(this.event.eventId, 'BrowserText', this.bw)
+    // // if it’s set, we’ll just reuse the width from the last time it was rendered.
+    // } else {
+    //   this.offsetWidth = this.width
+    // }
+    // // emit the new width
+    // this.$emit('element-render', this.offsetWidth)
   }
 
   get hasErrors() {

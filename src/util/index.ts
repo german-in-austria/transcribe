@@ -15,6 +15,18 @@ interface FileReaderEventTarget extends EventTarget {
   result: ArrayBuffer|string
 }
 
+const textWidthCanvas = document.createElement('canvas')
+const textWidthContext = textWidthCanvas.getContext('2d')
+
+export function getTextWidth(text: string, fontSize: number, fontFace: string) {
+  if (textWidthContext !== null) {
+    textWidthContext.font = fontSize + 'px ' + fontFace
+    return textWidthContext.measureText(text).width
+  } else {
+    throw new Error('context not available')
+  }
+}
+
 export function setNumberInBounds(n: number, min = 0, max = 1) {
   if (n <= min) {
     return min
