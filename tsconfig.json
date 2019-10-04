@@ -12,6 +12,9 @@
         "target": "es5",
         "experimentalDecorators": true,
         "baseUrl": "src",
+        "types": [
+          "webrtc"
+        ],
         "typeRoots": [
           "node_modules/@types",
           "manual_typings"
