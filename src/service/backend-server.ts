@@ -80,7 +80,34 @@ export interface ServerTranscriptInformants {
   }
 }
 
+export interface ServerAnswer {
+  // there are other properties here
+  // that we don’t care about now
+  it: number // token id
+}
+
+export interface ServerAnswerSet {
+  // there are other properties here
+  // that we don’t care about now
+  its: number // token set id
+}
+
+export interface TokenRange {
+  ivt: number // token id (id von token)
+  ibt: number // token id (id bis token)
+}
+
+export interface TokenSet {
+  t: number[] // token ids
+}
+
 export interface ServerTranscript {
+  aAntworten?: {
+    [answer_id: string]: ServerAnswer|ServerAnswerSet
+  }
+  aTokenSets?: {
+    [set_id: number]: TokenRange|TokenSet
+  }
   aTiers: {
     [tier_id: string]: string
   }
@@ -96,12 +123,6 @@ export interface ServerTranscript {
     trId: number
   }
   aInformanten?: ServerTranscriptInformants
-  aTokenSets?: {
-    [setId: number]: {
-      ivt: number // starting at token id (von)
-      ibt: number // ending at token id (bis)
-    }
-  }
   aTranskript?: {
     default_tier?: TokenTierType|null
     n: string // name
