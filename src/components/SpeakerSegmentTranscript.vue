@@ -390,12 +390,15 @@ export default class SpeakerSegmentTranscript extends Vue {
   async updateLocalTokens(e: Event) {
     // await requestFrameAsync()
     const newTokens = this.tokenizeText((e.target as HTMLDivElement).textContent as string).map((t, i) => {
-      return { text: t, index: i }
+      return { text: t, index: i, id: -1 }
     })
-    const oldTokens = this.localTokens.map((t, i) => ({ text: t.tiers[this.defaultTier].text, index: i }))
-    console.log({ newTokens, oldTokens })
+    const oldTokens = this.localTokens.map((t, i) => ({
+      text: t.tiers[this.defaultTier].text,
+      id: t.id,
+      index: i
+    }))
     const hunks = jsdiff.diffArrays(oldTokens, newTokens, { comparator: (l, r) => l.text === r.text })
-    console.log({hunks})
+    console.log({ hunks })
     const changes = _(hunks)
       .filter((h) => h.added === true || h.removed === true)
       .map((h) => h.value.map(v => ({
@@ -414,6 +417,7 @@ export default class SpeakerSegmentTranscript extends Vue {
         if (g.length > 1) {
           return [{
             ...g[1],
+            id: g[0].id,
             type: 'update'
           }]
         } else {
@@ -423,10 +427,11 @@ export default class SpeakerSegmentTranscript extends Vue {
       .flatten()
       .value()
 
+    console.log({changes})
+
     let addedCounter = 0
     _.each(changes, (change, i) => {
       if (change.type === 'update') {
-        console.log('update', this.localTokens[change.index + addedCounter])
         this.localTokens[change.index + addedCounter] = {
           ...this.localTokens[change.index + addedCounter],
           tiers: {
@@ -464,8 +469,19 @@ export default class SpeakerSegmentTranscript extends Vue {
         })
         addedCounter = addedCounter + 1
       } else if (change.type === 'remove') {
-        this.localTokens.splice(change.index + addedCounter, 1)
-        addedCounter = addedCounter - 1
+        if (change.id !== -1 && eventStore.lockedTokens.indexOf(change.id) > -1) {
+          // can’t delete
+          console.log('can’t delete')
+          // update display text
+          setTimeout(() => {
+            // tslint:disable-next-line:max-line-length
+            this.segmentText = this.localTokens ? this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ') : ''
+          }, 16)
+          console.log(this.segmentText)
+        } else {
+          this.localTokens.splice(change.index + addedCounter, 1)
+          addedCounter = addedCounter - 1
+        }
       }
     })
     this.localTokens = this.localTokens.map((t, i) => {
