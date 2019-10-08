@@ -172,7 +172,7 @@ export interface ServerEvent {
 const diffWorker = new PromiseWorker(new serverTranscriptDiff())
 const textEncoder = new TextEncoder()
 
-export let serverTranscript = null as ServerTranscript|null
+export let serverTranscript: ServerTranscript|null = null
 
 export function getMetadataFromServerTranscript(res: ServerTranscript) {
   const v = {
@@ -219,10 +219,25 @@ export function getMetadataFromServerTranscript(res: ServerTranscript) {
 }
 
 export function mergeServerTranscript(s: ServerTranscript) {
-  const oldSt = (serverTranscript === null ? {aTokens: undefined, aEvents: []} : serverTranscript)
+
+  const oldSt = (serverTranscript === null ? {
+    aTokens: undefined,
+    aEvents: [],
+    aAntworten: undefined,
+    aTokenSets: undefined
+  } : serverTranscript)
+
   serverTranscript = {
     ...oldSt,
     ...s,
+    aAntworten: {
+      ...oldSt.aAntworten,
+      ...s.aAntworten
+    },
+    aTokenSets: {
+      ...oldSt.aTokenSets,
+      ...s.aTokenSets
+    },
     aTokens: {
       ...oldSt.aTokens,
       ...s.aTokens
@@ -523,6 +538,35 @@ export async function createEmptyTranscript(
   }
 }
 
+export function getLockedTokensFromServerTranscript(t: ServerTranscript): number[] {
+  if (t.aAntworten !== undefined) {
+    return _(t.aAntworten!).reduce((m = [], e) => {
+      // single token
+      if ('it' in e) {
+        return m.concat(e.it)
+      // token set or range
+      } else if ('its' in e && t.aTokenSets !== undefined) {
+        const ts = t.aTokenSets[e.its]
+        if (ts !== undefined) {
+          if ('t' in ts) {
+            // token set
+            return m.concat(ts.t)
+          } else {
+            // token range
+            return m.concat([ ts.ivt, ts.ibt ])
+          }
+        } else {
+          return m
+        }
+      } else {
+        return m
+      }
+    }, [] as number[])
+  } else {
+    return []
+  }
+}
+
 export async function getServerTranscripts(): Promise<{transcripts: ServerTranscriptListItem[]}> {
   const res = await (await fetch(`${ eventStore.backEndUrl }/routes/transcripts`, {
     credentials: 'include'
@@ -547,6 +591,7 @@ export async function getTranscript(
       eventStore.metadata = getMetadataFromServerTranscript(res)
     }
     // convert and concat
+    eventStore.lockedTokens = eventStore.lockedTokens.concat(getLockedTokensFromServerTranscript(res))
     eventStore.events = buffer.concat(serverTranscriptToLocal(res))
     // progress callback with data
     if (onProgress !== undefined) {

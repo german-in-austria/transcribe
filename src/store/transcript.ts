@@ -102,6 +102,7 @@ export const eventStore = {
   isPaused: true as boolean,
   currentTime: 0,
   recentlyOpened: JSON.parse(localStorage.getItem('recentlyOpened') || '[]'),
+  lockedTokens: [] as number[],
   metadata: {
     defaultTier: 'text' as TokenTierType,
     speakers: {} as LocalTranscriptSpeakers,

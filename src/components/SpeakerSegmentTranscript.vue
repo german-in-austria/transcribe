@@ -13,7 +13,12 @@
         :key="token.id">
         <span
           v-text="token.tiers[defaultTier].text"
-          :class="['token-type-indicator', focused && 'focused', 'type-' + token.tiers[defaultTier].type]"
+          :class="[
+            'token-type-indicator',
+            focused && 'focused',
+            'type-' + token.tiers[defaultTier].type,
+            eventStore.lockedTokens.indexOf(token.id) > -1 && 'locked-token'
+          ]"
           :style="{ backgroundColor: colorFromTokenType(token.tiers[defaultTier].type) }">
         </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span :class="['secondary-token-tier', settings.darkMode === true && 'theme--dark']" v-for="(tier, tierIndex) in secondaryTiers" :key="tier.name">
           <span
@@ -108,6 +113,7 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   tierHeight = 25
   localEvent = clone(this.event)
+  eventStore = eventStore
   localTokens = this.localEvent.speakerEvents[this.speaker]
     ? this.localEvent.speakerEvents[this.speaker].tokens
     : []
@@ -185,7 +191,6 @@ export default class SpeakerSegmentTranscript extends Vue {
   onFocus(e: FocusEvent) {
     e.preventDefault()
     this.$emit('focus', e, this.event)
-    console.log('this.$el.getBoundingClientRect()', this.$el.getBoundingClientRect())
   }
 
   copyTokens(e: ClipboardEvent) {
@@ -564,6 +569,9 @@ export default class SpeakerSegmentTranscript extends Vue {
   border-radius 2px
   display inline
   pointer-events none
+
+.locked-token
+  border-bottom 3px solid red
 
 // in the light theme, the text inside of the
 // indicator should be in front and white.
