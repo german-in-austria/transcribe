@@ -23,7 +23,6 @@
       v-for="(speaker, speakerKey) in eventStore.metadata.speakers"
       :key="speakerKey">
       <speaker-segment-transcript
-        @focus="(e, event) => $emit('focus', e, event)"
         class="tokens"
         :index="index"
         :previous-event="previousEvent"

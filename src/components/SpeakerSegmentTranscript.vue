@@ -46,6 +46,8 @@
       contenteditable="true"
       v-text="segmentText"
       :style="textStyle"
+      :data-speaker-id="speaker"
+      :data-event-id="event.eventId"
       class="tokens-input segment-text">
     </div>
     <div
@@ -470,14 +472,15 @@ export default class SpeakerSegmentTranscript extends Vue {
         addedCounter = addedCounter + 1
       } else if (change.type === 'remove') {
         if (change.id !== -1 && eventStore.lockedTokens.indexOf(change.id) > -1) {
-          // can’t delete
+          // can’t delete because it’s locked.
           console.log('can’t delete')
+
+          // FIXME: this doesn’t always work.
           // update display text
           setTimeout(() => {
             // tslint:disable-next-line:max-line-length
             this.segmentText = this.localTokens ? this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ') : ''
           }, 16)
-          console.log(this.segmentText)
         } else {
           this.localTokens.splice(change.index + addedCounter, 1)
           addedCounter = addedCounter - 1

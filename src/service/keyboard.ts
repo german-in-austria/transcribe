@@ -10,6 +10,7 @@ import {
 import {
   eventStore,
   splitEvent,
+  splitEventAtChar,
   findEventAt,
   addEvent,
   deleteSelectedEvents,
@@ -179,6 +180,26 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         const [ leftEvent ] = undoable(splitEvent(eventUnderPlayHead, splitAt))
         if (!(await isWaveformEventVisible(leftEvent))) {
           scrollToAudioEvent(leftEvent)
+        }
+      }
+    }
+  },
+  splitAtChar: {
+    ignoreInTextField: false,
+    modifier: [ 'ctrlOrCmd' ],
+    key: '1',
+    name: 'Split Event At Character',
+    description: 'Split an Event at the Text Cursor position',
+    icon: 'mdi-arrow-split-vertical',
+    action: async (ev) => {
+      const s = document.getSelection()
+      const e = ev.target
+      if (s !== null && e instanceof HTMLElement) {
+        const speakerId = e.getAttribute('data-speaker-id')
+        const eventId = e.getAttribute('data-event-id')
+        if (speakerId !== null && eventId !== null) {
+          undoable(splitEventAtChar(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
+          console.log({ speakerId, eventId, s })
         }
       }
     }

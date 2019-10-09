@@ -212,6 +212,10 @@ export function tokenize(s: string): string[] {
     .filter(t => t !== '')
 }
 
+export function getTextFromTokens(ts: LocalTranscriptToken[], defaultTier: TokenTierType): string {
+  return ts.map(t => t.tiers[defaultTier].text).join(' ')
+}
+
 export function selectSearchResult(e: LocalTranscriptEvent) {
   eventStore.selectedSearchResult  = e
   scrollToAudioEvent(e)
@@ -589,6 +593,18 @@ function splitTokensAtFactor(ts: LocalTranscriptToken[], factor: number): LocalT
   }, [[], []] as LocalTranscriptToken[][])
 }
 
+function splitTokensAtChar(ts: LocalTranscriptToken[], charIndex: number): LocalTranscriptToken[][] {
+  let charCount = 0
+  return ts.reduce((m, e, i, l) => {
+    const tLength = e.tiers[eventStore.metadata.defaultTier].text.length
+    charCount = charCount + tLength
+    const distance = charIndex
+    // TODO: e.substring(0, x) : e.substring(x, y)
+    m[ charCount <= charIndex ? 0 : 1 ].push( charCount <= charIndex ?  e : e)
+    return m
+  }, [[], []] as LocalTranscriptToken[][])
+}
+
 export function splitEvent(event: LocalTranscriptEvent, splitTime: number): HistoryEventAction {
   const i = findEventIndexById(event.eventId)
   const before = clone(eventStore.events[i])
@@ -621,6 +637,59 @@ export function splitEvent(event: LocalTranscriptEvent, splitTime: number): Hist
     type: 'SPLIT',
     before: [ before ],
     after: [ clone(leftEvent), clone(rightEvent) ]
+  }
+}
+
+export function splitEventAtChar(
+  eventId: number,
+  speakerId: number,
+  start: number,
+  end: number
+): HistoryEventAction[]  {
+  const [ left, right ] = [start, end].sort()
+  const i = findEventIndexById(eventId)
+  if (i !== -1) {
+    const e = eventStore.events[i]
+    const before = clone(e)
+    // selection is collapsed: split into two
+    if (left === right && left !== 0) {
+      const tokens = e.speakerEvents[speakerId].tokens
+      const splitFactor = left / getTextFromTokens(tokens, eventStore.metadata.defaultTier).length
+      const splitTime = splitFactor * (e.endTime - e.startTime)
+      const leftEvent: LocalTranscriptEvent = {
+        ...e,
+        speakerEvents: {
+          ..._(e.speakerEvents).mapValues(se => {
+            return { ...se, tokens: splitTokensAtChar(se.tokens, left)[0] }
+          }).value()
+        },
+        endTime: e.startTime + splitTime
+      }
+      const rightEvent: LocalTranscriptEvent = {
+        startTime: e.startTime + splitTime,
+        endTime: e.endTime,
+        eventId: makeEventId(),
+        speakerEvents: {
+          ..._(e.speakerEvents).mapValues(se => {
+            return { ...se, tokens: splitTokensAtChar(se.tokens, left)[1] }
+          }).value()
+        },
+      }
+      eventStore.events.splice(i, 1, leftEvent, rightEvent)
+      return [{
+        id: _.uniqueId(),
+        time: new Date(),
+        apply: true,
+        type: 'SPLIT',
+        before: [ before ],
+        after: [ clone(leftEvent), clone(rightEvent) ]
+      }]
+    } else {
+      // double split
+      return []
+    }
+  } else {
+    return []
   }
 }
 
@@ -757,6 +826,10 @@ function getSpeakersFromEvents(es: LocalTranscriptEvent[]): string[] {
     .flatMap((e, i) => _(e.speakerEvents).map((v, k) => k).value())
     .uniq()
     .value()
+}
+
+function getEventById(id: number): LocalTranscriptEvent|undefined {
+  return getEventsByIds([ id ])[0]
 }
 
 function getEventsByIds(ids: number[]): LocalTranscriptEvent[] {
