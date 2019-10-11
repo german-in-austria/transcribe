@@ -9,6 +9,7 @@ import {
 import settings from '../store/settings'
 import { HistoryEventAction } from './history'
 import eventBus from '../service/event-bus'
+import { collectTokensViaOffsets } from '../service/copy-paste'
 
 import {
   localTranscriptToServerTranscript,
@@ -351,6 +352,22 @@ function setFirstTokenFragmentOf(
   }
 }
 
+export function updateSpeakerEvents(
+  es: LocalTranscriptEvent[],
+  speakerId: number,
+  eTokens: LocalTranscriptToken[][]
+): HistoryEventAction {
+  const heas = es.map((e, i) => updateSpeakerEvent(e, speakerId, eTokens[i]))
+  return {
+    id: _.uniqueId(),
+    time: new Date(),
+    apply: true,
+    type: 'CHANGE_TOKENS',
+    before: _(heas).map(hea => clone(hea.before)).flatten().value(),
+    after: _(heas).map(hea => clone(hea.after)).flatten().value()
+  }
+}
+
 export function updateSpeakerEvent(
   event: LocalTranscriptEvent,
   speakerId: number,
@@ -593,16 +610,146 @@ function splitTokensAtFactor(ts: LocalTranscriptToken[], factor: number): LocalT
   }, [[], []] as LocalTranscriptToken[][])
 }
 
-function splitTokensAtChar(ts: LocalTranscriptToken[], charIndex: number): LocalTranscriptToken[][] {
-  let charCount = 0
-  return ts.reduce((m, e, i, l) => {
-    const tLength = e.tiers[eventStore.metadata.defaultTier].text.length
-    charCount = charCount + tLength
-    const distance = charIndex
-    // TODO: e.substring(0, x) : e.substring(x, y)
-    m[ charCount <= charIndex ? 0 : 1 ].push( charCount <= charIndex ?  e : e)
-    return m
-  }, [[], []] as LocalTranscriptToken[][])
+export function shiftCharsLeft(eventId: number, speakerId: number, start: number, end: number): HistoryEventAction {
+  return shiftCharsAcrossEvents(eventId, speakerId, start, end, -1)
+}
+
+export function shiftCharsRight(eventId: number, speakerId: number, start: number, end: number): HistoryEventAction {
+  return shiftCharsAcrossEvents(eventId, speakerId, start, end, 1)
+}
+
+export function shiftCharsAcrossEvents(
+  eventId: number,
+  speakerId: number,
+  start: number,
+  end: number,
+  direction: 1|-1
+): HistoryEventAction {
+  const [ left, right ] = [start, end].sort()
+  const i = findEventIndexById(eventId)
+  const e = eventStore.events[i]
+  const targetE = eventStore.events[i + direction]
+  // it exists, and there’s also one to the left of it.
+  if (e !== undefined && targetE !== undefined) {
+    // selection is collapsed
+    const ts = e.speakerEvents[speakerId].tokens
+    const text = getTextFromTokens(ts, eventStore.metadata.defaultTier)
+    return updateSpeakerEvents([e, targetE ], speakerId, [
+      // source event
+      collectTokensViaOffsets(
+        e.speakerEvents[speakerId].tokens,
+        direction === -1 ? left : 0,
+        direction === -1 ? text.length : left
+      ),
+      // target event
+      (() => {
+        // nothing there to merge into => assign
+        if (
+          targetE.speakerEvents[speakerId] === undefined ||
+          targetE.speakerEvents[speakerId].tokens.length === 0
+        ) {
+          return collectTokensViaOffsets(
+            e.speakerEvents[speakerId].tokens,
+            direction === -1 ? 0 : left,
+            direction === -1 ? left : text.length
+          )
+        // merge
+        } else {
+          // append
+          if (direction === -1) {
+            return [
+              ...targetE.speakerEvents[speakerId].tokens,
+              ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, 0, left)
+            ]
+          // prepend
+          } else {
+            return [
+              ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, left, text.length),
+              ...targetE.speakerEvents[speakerId].tokens
+            ]
+          }
+        }
+      })()
+    ])
+    // return [
+    //   updateSpeakerEvent(e, speakerId, collectTokensViaOffsets(
+    //       e.speakerEvents[speakerId].tokens,
+    //       direction === -1 ? left : 0,
+    //       direction === -1 ? text.length : left
+    //     )
+    //   ),
+    //   updateSpeakerEvent(targetE, speakerId, (() => {
+    //     if (
+    //       targetE.speakerEvents[speakerId] === undefined ||
+    //       targetE.speakerEvents[speakerId].tokens.length === 0
+    //     ) {
+    //       return collectTokensViaOffsets(
+    //         e.speakerEvents[speakerId].tokens,
+    //         direction === -1 ? 0 : left,
+    //         direction === -1 ? left : text.length
+    //       )
+    //     } else {
+    //       if (direction === -1) {
+    //         return [
+    //           ...targetE.speakerEvents[speakerId].tokens,
+    //           ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, 0, left)
+    //         ]
+    //       } else {
+    //         return [
+    //           ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, left, text.length),
+    //           ...targetE.speakerEvents[speakerId].tokens
+    //         ]
+    //       }
+    //     }
+    //   })())
+    // ]
+    // const updatedE: LocalTranscriptEvent = {
+    //   ...e,
+    //   speakerEvents: {
+    //     ...e.speakerEvents,
+    //     [ speakerId ]: {
+    //       ...e.speakerEvents[speakerId],
+    //       tokens: 
+    //     }
+    //   }
+    // }
+    // const speakerEventEmpty: LocalTranscriptEvent['speakerEvents'] = {
+    //   [ speakerId ] : {
+    //     speakerEventId: targetE + '__' + speakerId,
+    //     speakerEventTiers: {},
+    //     tokens: []
+    //   }
+    // }
+    // const updatedTargetE: LocalTranscriptEvent = {
+    //   ...targetE,
+    //   speakerEvents: {
+    //     ...targetE.speakerEvents,
+    //     [ speakerId ]: {
+    //       ...targetE.speakerEvents[speakerId],
+    //       tokens: [
+    //         // TODO: sorting for direction right (+1)
+    //         ...targetE.speakerEvents[speakerId].tokens,
+    //         ...collectTokensViaOffsets(
+    //           e.speakerEvents[speakerId].tokens,
+    //           direction === -1 ? 0 : left,
+    //           direction === -1 ? left : text.length
+    //         )
+    //       ]
+    //     }
+    //   }
+    // }
+    // replaceEvents(esBefore, [updatedTargetE, updatedE])
+    // return [{
+    //   id: _.uniqueId(),
+    //   time: new Date(),
+    //   before: esBefore,
+    //   after: [ updatedTargetE, updatedE ],
+    //   apply: true,
+    //   type: 'CHANGE_TOKENS'
+    // }]
+  } else {
+    throw new Error()
+  }
 }
 
 export function splitEvent(event: LocalTranscriptEvent, splitTime: number): HistoryEventAction {
@@ -648,20 +795,23 @@ export function splitEventAtChar(
 ): HistoryEventAction[]  {
   const [ left, right ] = [start, end].sort()
   const i = findEventIndexById(eventId)
+  // event exists
   if (i !== -1) {
     const e = eventStore.events[i]
     const before = clone(e)
     // selection is collapsed: split into two
     if (left === right && left !== 0) {
       const tokens = e.speakerEvents[speakerId].tokens
-      const splitFactor = left / getTextFromTokens(tokens, eventStore.metadata.defaultTier).length
+      const segmentCharacters = getTextFromTokens(tokens, eventStore.metadata.defaultTier).length
+      const splitFactor = left / segmentCharacters
       const splitTime = splitFactor * (e.endTime - e.startTime)
       const leftEvent: LocalTranscriptEvent = {
         ...e,
         speakerEvents: {
-          ..._(e.speakerEvents).mapValues(se => {
-            return { ...se, tokens: splitTokensAtChar(se.tokens, left)[0] }
-          }).value()
+          ..._(e.speakerEvents).mapValues(se => ({
+            ...se,
+            tokens: collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, 0, left)
+          })).value()
         },
         endTime: e.startTime + splitTime
       }
@@ -670,9 +820,10 @@ export function splitEventAtChar(
         endTime: e.endTime,
         eventId: makeEventId(),
         speakerEvents: {
-          ..._(e.speakerEvents).mapValues(se => {
-            return { ...se, tokens: splitTokensAtChar(se.tokens, left)[1] }
-          }).value()
+          ..._(e.speakerEvents).mapValues(se => ({
+              ...se,
+              tokens: collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, left, segmentCharacters)
+          })).value()
         },
       }
       eventStore.events.splice(i, 1, leftEvent, rightEvent)

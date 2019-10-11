@@ -127,14 +127,14 @@ export function unserializeTokenTiers(tokens: string): Array<Pastable<LocalTrans
 }
 
 export function collectTokensViaOffsets(
-  localTokens: LocalTranscriptToken[], start: number, end: number): Array<Pastable<LocalTranscriptToken>> {
+  tokens: LocalTranscriptToken[], start: number, end: number): Array<Pastable<LocalTranscriptToken>> {
   // start and end are not necessarily from left to right
   const left = Math.min(start, end)
   const right = Math.max(start, end)
   // init cursor
   let cursor = 0
   // reduce to relevant tokens and mark partiality
-  return localTokens.reduce((m, e, i) => {
+  return tokens.reduce((m, e, i) => {
     // get range for token
     const tokenStart = cursor
     const tokenEnd = cursor + e.tiers[ eventStore.metadata.defaultTier ].text.length

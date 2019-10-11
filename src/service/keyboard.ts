@@ -26,7 +26,8 @@ import {
   scrollToTranscriptEvent,
   moveEventStartTime,
   moveEventEndTime,
-  LocalTranscriptEvent,
+  shiftCharsLeft,
+  shiftCharsRight
 } from '../store/transcript'
 
 import eventBus from '../service/event-bus'
@@ -199,7 +200,47 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         const eventId = e.getAttribute('data-event-id')
         if (speakerId !== null && eventId !== null) {
           undoable(splitEventAtChar(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
-          console.log({ speakerId, eventId, s })
+        }
+      }
+    }
+  },
+  shiftCharsRight: {
+    ignoreInTextField: false,
+    modifier: ['ctrlOrCmd', 'shift'],
+    key: 'r',
+    name: 'Shift Characters Right',
+    description: 'Shift characters to the next event',
+    icon: null,
+    action: async (ev) => {
+      ev.preventDefault()
+      const s = document.getSelection()
+      const e = ev.target
+      if (s !== null && e instanceof HTMLElement) {
+        const speakerId = e.getAttribute('data-speaker-id')
+        const eventId = e.getAttribute('data-event-id')
+        if (speakerId !== null && eventId !== null) {
+          undoable(shiftCharsRight(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
+        }
+      }
+    }
+  },
+  shiftCharsLeft: {
+    ignoreInTextField: false,
+    modifier: ['ctrlOrCmd', 'shift'],
+    key: 'l',
+    name: 'Shift Characters Left',
+    description: 'Shift characters to the previous event',
+    icon: null,
+    action: (ev) => {
+      ev.preventDefault()
+      const s = document.getSelection()
+      const e = ev.target
+      if (s !== null && e instanceof HTMLElement) {
+        const speakerId = e.getAttribute('data-speaker-id')
+        const eventId = e.getAttribute('data-event-id')
+        if (speakerId !== null && eventId !== null) {
+          undoable(shiftCharsLeft(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
+          return false
         }
       }
     }
