@@ -629,9 +629,8 @@ export function shiftCharsAcrossEvents(
   const i = findEventIndexById(eventId)
   const e = eventStore.events[i]
   const targetE = eventStore.events[i + direction]
-  // it exists, and there’s also one to the left of it.
-  if (e !== undefined && targetE !== undefined) {
-    // selection is collapsed
+  // it exists, and there’s also one to the left of it & selection is collapsed
+  if (e !== undefined && targetE !== undefined && left === right) {
     const ts = e.speakerEvents[speakerId].tokens
     const text = getTextFromTokens(ts, eventStore.metadata.defaultTier)
     return updateSpeakerEvents([e, targetE ], speakerId, [
@@ -643,112 +642,23 @@ export function shiftCharsAcrossEvents(
       ),
       // target event
       (() => {
-        // nothing there to merge into => assign
-        if (
-          targetE.speakerEvents[speakerId] === undefined ||
-          targetE.speakerEvents[speakerId].tokens.length === 0
-        ) {
-          return collectTokensViaOffsets(
-            e.speakerEvents[speakerId].tokens,
-            direction === -1 ? 0 : left,
-            direction === -1 ? left : text.length
-          )
-        // merge
+        // append
+        if (direction === -1) {
+          return [
+            ...targetE.speakerEvents[speakerId] ? targetE.speakerEvents[speakerId].tokens : [],
+            ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, 0, left)
+          ]
+        // prepend
         } else {
-          // append
-          if (direction === -1) {
-            return [
-              ...targetE.speakerEvents[speakerId].tokens,
-              ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, 0, left)
-            ]
-          // prepend
-          } else {
-            return [
-              ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, left, text.length),
-              ...targetE.speakerEvents[speakerId].tokens
-            ]
-          }
+          return [
+            ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, left, text.length),
+            ...targetE.speakerEvents[speakerId] ? targetE.speakerEvents[speakerId].tokens : [],
+          ]
         }
       })()
     ])
-    // return [
-    //   updateSpeakerEvent(e, speakerId, collectTokensViaOffsets(
-    //       e.speakerEvents[speakerId].tokens,
-    //       direction === -1 ? left : 0,
-    //       direction === -1 ? text.length : left
-    //     )
-    //   ),
-    //   updateSpeakerEvent(targetE, speakerId, (() => {
-    //     if (
-    //       targetE.speakerEvents[speakerId] === undefined ||
-    //       targetE.speakerEvents[speakerId].tokens.length === 0
-    //     ) {
-    //       return collectTokensViaOffsets(
-    //         e.speakerEvents[speakerId].tokens,
-    //         direction === -1 ? 0 : left,
-    //         direction === -1 ? left : text.length
-    //       )
-    //     } else {
-    //       if (direction === -1) {
-    //         return [
-    //           ...targetE.speakerEvents[speakerId].tokens,
-    //           ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, 0, left)
-    //         ]
-    //       } else {
-    //         return [
-    //           ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, left, text.length),
-    //           ...targetE.speakerEvents[speakerId].tokens
-    //         ]
-    //       }
-    //     }
-    //   })())
-    // ]
-    // const updatedE: LocalTranscriptEvent = {
-    //   ...e,
-    //   speakerEvents: {
-    //     ...e.speakerEvents,
-    //     [ speakerId ]: {
-    //       ...e.speakerEvents[speakerId],
-    //       tokens: 
-    //     }
-    //   }
-    // }
-    // const speakerEventEmpty: LocalTranscriptEvent['speakerEvents'] = {
-    //   [ speakerId ] : {
-    //     speakerEventId: targetE + '__' + speakerId,
-    //     speakerEventTiers: {},
-    //     tokens: []
-    //   }
-    // }
-    // const updatedTargetE: LocalTranscriptEvent = {
-    //   ...targetE,
-    //   speakerEvents: {
-    //     ...targetE.speakerEvents,
-    //     [ speakerId ]: {
-    //       ...targetE.speakerEvents[speakerId],
-    //       tokens: [
-    //         // TODO: sorting for direction right (+1)
-    //         ...targetE.speakerEvents[speakerId].tokens,
-    //         ...collectTokensViaOffsets(
-    //           e.speakerEvents[speakerId].tokens,
-    //           direction === -1 ? 0 : left,
-    //           direction === -1 ? left : text.length
-    //         )
-    //       ]
-    //     }
-    //   }
-    // }
-    // replaceEvents(esBefore, [updatedTargetE, updatedE])
-    // return [{
-    //   id: _.uniqueId(),
-    //   time: new Date(),
-    //   before: esBefore,
-    //   after: [ updatedTargetE, updatedE ],
-    //   apply: true,
-    //   type: 'CHANGE_TOKENS'
-    // }]
   } else {
-    throw new Error()
+    throw new Error('Move tokens: source or target event not found.')
   }
 }
 
