@@ -136,7 +136,7 @@ export async function handleGlobalShortcut(e: KeyboardEvent) {
       // the shortcut is allowed in text fields OR we’re not in a text field.
       (sc.ignoreInTextField === false || !isInputElement(e.target)) &&
       // the required key was pressed
-      (e.key === sc.key) &&
+      (e.key.toLowerCase() === sc.key.toLowerCase()) &&
       // check modifiers:
       (
         // no modifiers are required and none are present
@@ -160,7 +160,7 @@ export function displayKeyboardAction(a: KeyboardAction): string {
     // resolve key (including special keys)
     .concat(keyMap[a.key] === undefined ? '' : keyMap[a.key].displayName)
     // join
-    .join('')
+    .join(platform() === 'mac' ? '' : '+')
 }
 
 export const keyboardShortcuts: KeyboardShortcuts = {
