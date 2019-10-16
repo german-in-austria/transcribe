@@ -20,20 +20,24 @@
           <small>Actions</small>
         </v-subheader>
         <v-list dense>
-          <v-list-tile>
+          <v-list-tile
+            v-for="(sc, k) in keyboardShortcuts"
+            @click="sc.action($event)"
+            :disabled="sc.disabled ? sc.disabled() : false"
+            :key="k">
             <v-list-tile-avatar>
-              <v-icon>call_split</v-icon>
+              <v-icon>{{ sc.icon }}</v-icon>
             </v-list-tile-avatar>
             <v-list-tile-content>
               <v-list-tile-title>
-                split
+                {{ sc.name }}
               </v-list-tile-title>
             </v-list-tile-content>
             <v-list-tile-action>
-              {{ displayKeyboardAction(keyboardShortcuts.split) }}
+              {{ displayKeyboardAction(sc) }}
             </v-list-tile-action>
           </v-list-tile>
-          <v-list-tile :disabled="eventStore.selectedEventIds.length === 0">
+          <!-- <v-list-tile :disabled="eventStore.selectedEventIds.length === 0">
             <v-list-tile-avatar>
               <v-icon>delete</v-icon>
             </v-list-tile-avatar>
@@ -58,7 +62,7 @@
             <v-list-tile-action>
               {{ displayKeyboardAction(keyboardShortcuts.joinEvents) }}
             </v-list-tile-action>
-          </v-list-tile>
+          </v-list-tile> -->
         </v-list>
       </v-tab-item>
       <v-tab-item>
