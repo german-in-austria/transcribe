@@ -40,11 +40,12 @@ export interface KeyboardAction {
   modifier: KeyboardModifier[]
   // some shortcuts can’t work in text fields
   ignoreInTextField: boolean
+  disabled?: () => boolean
   key: KeyboardEvent['key']
   name: string
   description: string
   icon: string|null
-  action: (e: KeyboardEvent) => any
+  action: (e: KeyboardEvent|MouseEvent) => any
 }
 
 export interface KeyboardShortcuts {
@@ -103,11 +104,15 @@ export const specialKeys: KeyDescriber[] = [
   }
 ]
 
-export const keyMap: _.Dictionary<KeyDescriber> = _(normalKeys)
-  .concat(specialKeys)
-  .concat(modifierKeys)
-  .keyBy(t => t.name)
-  .value()
+export const keyMap: _.Dictionary<KeyDescriber> = {
+  ..._(normalKeys)
+    .concat(specialKeys)
+    .keyBy(t => t.jsName)
+    .value(),
+  ..._(modifierKeys)
+    .keyBy(t => t.name)
+    .value()
+}
 
 function isInputElement(t: EventTarget|null): boolean {
   return (
@@ -171,6 +176,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Split Event',
     description: 'Split an Event at the current play-head position.',
     icon: 'call_split',
+    disabled: () => eventStore.selectedEventIds.length === 0,
     action: async () => {
       const eventUnderPlayHead = findEventAt(eventStore.currentTime)
       if (eventUnderPlayHead === undefined) {
@@ -210,7 +216,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     key: 'r',
     name: 'Shift Characters Right',
     description: 'Shift characters to the next event',
-    icon: null,
+    icon: 'mdi-format-letter-starts-with',
     action: async (ev) => {
       ev.preventDefault()
       const s = document.getSelection()
@@ -230,7 +236,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     key: 'l',
     name: 'Shift Characters Left',
     description: 'Shift characters to the previous event',
-    icon: null,
+    icon: 'mdi-format-letter-ends-with',
     action: (ev) => {
       ev.preventDefault()
       const s = document.getSelection()
@@ -252,6 +258,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Delete Events',
     description: 'Delete selected Events',
     icon: 'delete',
+    disabled: () => eventStore.selectedEventIds.length === 0,
     action: () => {
       undoable(deleteSelectedEvents())
       deselectEvents()
@@ -264,6 +271,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Join Events',
     icon: 'merge_type',
     description: 'Join selected Events',
+    disabled: () => eventStore.selectedEventIds.length < 2,
     action: () => {
       if (eventStore.selectedEventIds.length > 1) {
         undoable(joinEvents(eventStore.selectedEventIds))
@@ -277,6 +285,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Move event start left',
     description: 'Move the beginning of an event to the left (use Shift to jump)',
     icon: 'mdi-arrow-expand-left',
+    disabled: () => eventStore.selectedEventIds.length === 0,
     action: (ev) => {
       const e = getSelectedEvent()
       if (e !== undefined) {
@@ -292,6 +301,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Move event start right',
     description: 'Move the beginning of an event to the right (use Shift to jump)',
     icon: 'mdi-arrow-collapse-right',
+    disabled: () => eventStore.selectedEventIds.length === 0,
     action: (ev) => {
       const e = getSelectedEvent()
       if (e !== undefined) {
@@ -307,6 +317,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Move event end right',
     icon: 'mdi-arrow-expand-right',
     description: 'Move the end of an event to the right (use Shift to jump)',
+    disabled: () => eventStore.selectedEventIds.length === 0,
     action: (ev) => {
       const e = getSelectedEvent()
       if (e !== undefined) {
@@ -322,6 +333,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Move event end left',
     description: 'Move the end of an event to the left (use Shift to jump)',
     icon: 'mdi-arrow-expand-left',
+    disabled: () => eventStore.selectedEventIds.length === 0,
     action: (ev) => {
       const e = getSelectedEvent()
       if (e !== undefined) {
@@ -348,6 +360,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Select Previous Event',
     description: 'Select the Event before the currently selected Event',
     icon: 'mdi-arrow-left',
+    disabled: () => eventStore.selectedEventIds.length === 0,
     action: async () => {
       const e = selectPreviousEvent()
       if (e !== undefined) {
@@ -362,6 +375,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Select Next Event',
     description: 'Select the Event after the currently selected Event',
     icon: 'mdi-arrow-right',
+    disabled: () => eventStore.selectedEventIds.length === 0,
     action: async () => {
       const e = selectNextEvent()
       if (e !== undefined) {
@@ -376,6 +390,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Play/Pause',
     description: 'Play or Pause the currently selected Event',
     icon: 'mdi-play-pause',
+    disabled: () => eventStore.selectedEventIds.length === 0,
     action: () => {
       const es = getSelectedEvents()
       if (es.length > 0) {
@@ -390,6 +405,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Scroll to Event',
     description: 'Scroll to the selected Event',
     icon: 'mdi-eye',
+    disabled: () => eventStore.selectedEventIds.length === 0,
     action: () => {
       const e = getSelectedEvent()
       if (e !== undefined) {
@@ -416,6 +432,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Select none',
     description: 'Selects no Events',
     icon: null,
+    disabled: () => eventStore.selectedEventIds.length === 0,
     action: () => {
       eventStore.selectedEventIds = []
     }
