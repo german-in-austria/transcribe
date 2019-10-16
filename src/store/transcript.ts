@@ -625,28 +625,29 @@ export function shiftCharsAcrossEvents(
   end: number,
   direction: 1|-1
 ): HistoryEventAction {
-  const [ left, right ] = [start, end].sort()
+  const [ left, right ] = [ start, end ].sort()
   const i = findEventIndexById(eventId)
-  const e = eventStore.events[i]
-  const targetE = eventStore.events[i + direction]
+  const e = eventStore.events[ i ]
+  const targetE = eventStore.events[ i + direction ]
   // it exists, and there’s also one to the left of it & selection is collapsed
-  if (e !== undefined && targetE !== undefined && left === right) {
+  if (e !== undefined && targetE !== undefined) {
     const ts = e.speakerEvents[speakerId].tokens
     const text = getTextFromTokens(ts, eventStore.metadata.defaultTier)
-    return updateSpeakerEvents([e, targetE ], speakerId, [
-      // source event
+    return updateSpeakerEvents([ e, targetE ], speakerId, [
+      // changed source event
       collectTokensViaOffsets(
         e.speakerEvents[speakerId].tokens,
-        direction === -1 ? left : 0,
+        //                 keep right  : keep left
+        direction === -1 ? right       : 0,
         direction === -1 ? text.length : left
       ),
-      // target event
+      // changed target event
       (() => {
         // append
         if (direction === -1) {
           return [
             ...targetE.speakerEvents[speakerId] ? targetE.speakerEvents[speakerId].tokens : [],
-            ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, 0, left)
+            ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, 0, right)
           ]
         // prepend
         } else {
