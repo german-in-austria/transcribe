@@ -1,0 +1,30 @@
+{
+    "compilerOptions": {
+        "outDir": "./built/",
+        "sourceMap": true,
+        "strict": true,
+        "strictPropertyInitialization": false,
+        "allowSyntheticDefaultImports": true,
+        "noImplicitAny": true,
+        "module": "commonjs",
+        "lib": ["webworker", "es2015", "dom"],
+        "moduleResolution": "node",
+        "target": "es2017",
+        "allowJs": true,
+        "experimentalDecorators": true,
+        "baseUrl": "src",
+        "types": [
+          "node",
+          "webrtc"
+        ],
+        "typeRoots": [
+          "node_modules/@types",
+          "manual_typings"
+        ],
+        "paths": {
+            "lodash/*": [
+              "node_modules/@types/lodash-es/*"
+            ]
+        }
+    }
+}

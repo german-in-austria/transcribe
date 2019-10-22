@@ -1,4 +1,5 @@
 node_modules/
 dist/*
 static/test-files/
-scripts
+/data
+credentials*

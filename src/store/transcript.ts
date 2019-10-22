@@ -357,17 +357,18 @@ export function updateSpeakerEvents(
   speakerId: number,
   eTokens: LocalTranscriptToken[][]
 ): HistoryEventAction {
-  const heas = es.map((e, i) => updateSpeakerEvent(e, speakerId, eTokens[i]))
+  const updateHistoryActions = es.map((e, i) => updateSpeakerEvent(e, speakerId, eTokens[i]))
   return {
     id: _.uniqueId(),
     time: new Date(),
     apply: true,
     type: 'CHANGE_TOKENS',
-    before: _(heas).map(hea => clone(hea.before)).flatten().value(),
-    after: _(heas).map(hea => clone(hea.after)).flatten().value()
+    before: _(updateHistoryActions).map(hea => clone(hea.before)).flatten().value(),
+    after: _(updateHistoryActions).map(hea => clone(hea.after)).flatten().value()
   }
 }
 
+// TODO: this should also update the speakerEventTiers
 export function updateSpeakerEvent(
   event: LocalTranscriptEvent,
   speakerId: number,
@@ -382,7 +383,7 @@ export function updateSpeakerEvent(
       ...oldEvent.speakerEvents,
       [speakerId] : {
         speakerEventId: event.eventId,
-        speakerEventTiers: {},
+        speakerEventTiers: oldEvent.speakerEvents[speakerId].speakerEventTiers,
         tokens
       }
     })

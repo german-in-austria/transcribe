@@ -353,6 +353,7 @@ export default class SpeakerSegmentTranscript extends Vue {
         !isEqualDeep(this.localTokens, this.event.speakerEvents[this.speaker].tokens)
       )
     ) {
+      // console.log(this.localEvent, this.speaker, this.localTokens)
       // perform update
       undoable(updateSpeakerEvent(this.localEvent, this.speaker, this.localTokens))
     } else {
