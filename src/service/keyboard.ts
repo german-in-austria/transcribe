@@ -1,7 +1,7 @@
 
 import _ from 'lodash'
 
-import { undoable } from '../store/history'
+import { undoable, history } from '../store/history'
 import { platform } from '../util'
 import {
   focusSelectedEventElement, isWaveformEventVisible
@@ -29,7 +29,8 @@ import {
   moveEventEndTime,
   shiftCharsLeft,
   shiftCharsRight,
-  selectEvent
+  selectEvent,
+  saveChangesToServer
 } from '../store/transcript'
 
 import eventBus from '../service/event-bus'
@@ -146,6 +147,8 @@ export async function handleGlobalShortcut(e: KeyboardEvent) {
   console.log(e)
   _(keyboardShortcuts).forEach(sc => {
     if (
+      // the function is not disabled
+      (sc.disabled !== undefined && sc.disabled() === false) &&
       // the shortcut is allowed in text fields OR we’re not in a text field.
       (sc.ignoreInTextField === false || !isInputElement(e.target)) &&
       // the required key was pressed
@@ -154,8 +157,8 @@ export async function handleGlobalShortcut(e: KeyboardEvent) {
       (
         // no modifiers are required and none are present
         (sc.modifier.length === 0 && !e.ctrlKey && !e.shiftKey && !e.metaKey && !e.altKey) ||
-        // every modifier is present in the event
-        sc.modifier.every(m => keyboardEventHasModifier(e, m))
+        // some modifiers are required and every modifier is present in the event
+        sc.modifier.length !== 0 && sc.modifier.every(m => keyboardEventHasModifier(e, m))
       )
     ) {
       e.preventDefault()
@@ -459,5 +462,15 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     action: () => {
       eventStore.selectedEventIds = []
     }
+  },
+  saveTranscript: {
+    ignoreInTextField: false,
+    modifier: [ 'ctrlOrCmd' ],
+    key: 's',
+    name: 'Save Transcript',
+    description: 'Save the Transcript to the Server',
+    disabled: () => history.actions.length === 0,
+    icon: 'save_alt',
+    action: saveChangesToServer
   }
 }
