@@ -174,18 +174,22 @@ const textEncoder = new TextEncoder()
 
 export let serverTranscript: ServerTranscript|null = null
 
+export function getAudioUrlFromServerNames(name: string|undefined, path: string|undefined): string|null {
+  return name !== undefined && path !== undefined
+    ? `${ eventStore.backEndUrl }/private-media`
+      + path.split('\\').join('/')
+      + name
+      + '.ogg'
+    : null
+}
+
 export function getMetadataFromServerTranscript(res: ServerTranscript) {
   const v = {
     speakers: res.aInformanten!,
     tokenTypes: res.aTokenTypes!,
     transcriptName: res.aTranskript!.n,
     defaultTier: res.aTranskript!.default_tier || 'text',
-    audioUrl: res.aEinzelErhebung!.af !== undefined
-      ? `${ eventStore.backEndUrl }/private-media`
-        + res.aEinzelErhebung!.dp.split('\\').join('/')
-        + res.aEinzelErhebung!.af
-        + '.ogg'
-      : null,
+    audioUrl: getAudioUrlFromServerNames(res.aEinzelErhebung!.af, res.aEinzelErhebung!.dp),
     tiers: _(res.aTiers).map((t, tid) => {
       return {
         type: 'freeText',

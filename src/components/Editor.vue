@@ -170,7 +170,7 @@
         </div>
       </div>
     </wave-form>
-    <drop-file @update="loadAudioFile" class="fill-height" v-else>
+    <drop-file @update="loadAudioFromFile" class="fill-height" v-else>
     </drop-file>
     <player-bar />
     <transcript-editor />
@@ -204,7 +204,7 @@ import {
   getSelectedEvent,
   isEventSelected,
   joinEvents,
-  loadAudioFile,
+  loadAudioFromFile,
   playEvent,
   saveChangesToServer,
   scrollToAudioEvent,
@@ -262,7 +262,7 @@ export default class Editor extends Vue {
   getSelectedEvent = getSelectedEvent
   isEventSelected = isEventSelected
   history = history
-  loadAudioFile = loadAudioFile
+  loadAudioFromFile = loadAudioFromFile
   exportEventAudio = exportEventAudio
 
   scrollTranscriptIndex: number = 0

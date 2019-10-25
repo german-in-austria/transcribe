@@ -134,7 +134,7 @@
                     <v-flex xs1 class="pl-3">
                       <v-checkbox
                         class="pt-0"
-                        @change="updateIsEverthingSelected"
+                        @change="updateIsEverythingSelected"
                         v-model="speakerTier.select_for_import"
                       />
                     </v-flex>
@@ -350,12 +350,13 @@
 <script lang='ts'>
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
-
+import { resourceAtUrlExists } from '../util'
 import {
   ServerInformant,
   ServerSurvey,
   getSurveys,
-  ServerTranscriptListItem
+  ServerTranscriptListItem,
+  getAudioUrlFromServerNames
 } from '../service/backend-server'
 
 import {
@@ -393,6 +394,7 @@ export default class ExmaraldaImporter extends Vue {
   transcriptName: string|null = this.importable.fileName.replace('.exb', '')
   selectedSurvey: ServerSurvey|null = null
   audioFileName: string|null = null
+  audioFileUrl: string|null = null
   selectedAudioFile: File|null = null
 
   showMissingDefaultTierError = false
@@ -442,9 +444,15 @@ export default class ExmaraldaImporter extends Vue {
     )
   }
 
-  selectSurvey(survey: ServerSurvey) {
+  async selectSurvey(survey: ServerSurvey) {
     this.selectedSurvey = survey
-    this.audioFileName = survey.Audiofile
+    const audioFileUrl = getAudioUrlFromServerNames(survey.Audiofile, survey.Dateipfad)
+    if (audioFileUrl !== null && await resourceAtUrlExists(audioFileUrl)) {
+      this.audioFileName = survey.Audiofile + '.ogg'
+      this.audioFileUrl = audioFileUrl
+    } else {
+      // not found.
+    }
   }
 
   getSelectedDefaultTierForSpeaker(to_speaker: ServerInformant): SpeakerTierImportable[] {
@@ -490,7 +498,7 @@ export default class ExmaraldaImporter extends Vue {
     this.importable.speakerTiers = this.importable.speakerTiers.map((t) => {
       return { ...t, select_for_import: v }
     })
-    this.updateIsEverthingSelected()
+    this.updateIsEverythingSelected()
   }
 
   tokenTiersAvailable(to_speaker: ServerInformant) {
@@ -529,7 +537,7 @@ export default class ExmaraldaImporter extends Vue {
   get speakersWithMissingDefaultTier(): SpeakerTierImportable[] {
     return _(this.importable.speakerTiers)
       .filter(t => t.select_for_import === true && t.to_speaker !== null)
-      .groupBy((st) => st.to_speaker!.pk)
+      .groupBy(st => st.to_speaker!.pk)
       .filter(tiersBySpeaker => tiersBySpeaker.filter(t => t.to_tier_type === 'default').length !== 1)
       .toArray()
       .flatten()
@@ -567,13 +575,14 @@ export default class ExmaraldaImporter extends Vue {
             this.selectedSurvey,
             this.globalDefaultTier
           ),
-          this.selectedAudioFile
+          this.selectedAudioFile,
+          this.audioFileUrl
         )
       }
     }
   }
 
-  updateIsEverthingSelected() {
+  updateIsEverythingSelected() {
     const every = _(this.importable.speakerTiers).every(t => t.select_for_import)
     if (every) {
       this.isAnythingOrAllSelected = true

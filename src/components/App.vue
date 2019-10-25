@@ -176,8 +176,9 @@ import {
   LocalTranscriptEvent,
   eventStore,
   speakerEventHasErrors,
-  loadAudioFile,
-  addRecentlyOpened
+  loadAudioFromFile,
+  addRecentlyOpened,
+  loadAudioFromUrl
 } from '../store/transcript'
 
 import {
@@ -192,7 +193,8 @@ import {
   getTranscript,
   mergeServerTranscript,
   serverTranscriptToLocal,
-  getMetadataFromServerTranscript
+  getMetadataFromServerTranscript,
+  getAudioUrlFromServerNames
 } from '../service/backend-server'
 
 import {
@@ -317,21 +319,29 @@ export default class App extends Vue {
     history.actions                       = historyFile
   }
 
-  async loadImportedTranscript(t: ServerTranscript, audioData: File|null): Promise<string> {
-    const url = await this.loadLocalTranscript(t, audioData)
+  async loadImportedTranscript(t: ServerTranscript, audioData: File|null, audioUrl?: string): Promise<string> {
+    const url = await this.loadLocalTranscript(t, audioData, audioUrl)
     this.importableExmaraldaFile = null
     return url
   }
 
-  async loadLocalTranscript(t: ServerTranscript, audioData: File|Uint8Array|null): Promise<string> {
-    const audioElement = await loadAudioFile(audioData)
+  async loadLocalTranscript(t: ServerTranscript, audioData: File|Uint8Array|null, audioUrl?: string): Promise<string> {
     this.importingLocalFile = false
     this.loadingTranscriptId = null
     mergeServerTranscript(t)
     eventStore.metadata = getMetadataFromServerTranscript(t)
     eventStore.events = serverTranscriptToLocal(t)
-    eventStore.status = 'finished'
-    return audioElement.src
+    if (audioData !== null) {
+      const audioElement = await loadAudioFromFile(audioData)
+      eventStore.status = 'finished'
+      return audioElement.src
+    } else if (audioUrl !== undefined){
+      const audioElement = await loadAudioFromUrl(audioUrl)
+      eventStore.status = 'finished'
+      return audioElement.src
+    } else {
+      return ''
+    }
   }
 
   async openExmaraldaFile(f: File) {
@@ -366,7 +376,7 @@ export default class App extends Vue {
       this.openExmaraldaFile(f)
     } else if (f.name.endsWith('.ogg')) {
       this.initializeEmptyTranscript()
-      loadAudioFile(f)
+      loadAudioFromFile(f)
     } else {
       alert('Unrecognized File type.')
     }

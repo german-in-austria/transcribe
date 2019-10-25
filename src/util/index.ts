@@ -18,6 +18,21 @@ interface FileReaderEventTarget extends EventTarget {
 const textWidthCanvas = document.createElement('canvas')
 const textWidthContext = textWidthCanvas.getContext('2d')
 
+export async function resourceAtUrlExists(url: string): Promise<Boolean> {
+  try {
+    await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        Range: `bytes=0-${ 100 * 1024 }`
+      }
+    })
+    return true
+  } catch (e) {
+    return false
+  }
+}
+
 export function getTextWidth(text: string, fontSize: number, fontFace: string) {
   if (textWidthContext !== null) {
     textWidthContext.font = fontSize + 'px ' + fontFace

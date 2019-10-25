@@ -177,7 +177,21 @@ export async function exportEventAudio(eventIds: number[]) {
   }
 }
 
-export function loadAudioFile(f: File|Uint8Array|null): Promise<HTMLAudioElement> {
+export function loadAudioFromUrl(url: string): Promise<HTMLAudioElement> {
+  return new Promise((resolve, reject) => {
+    const a = document.createElement('audio')
+    a.src = url
+    a.addEventListener('durationchange', function listener() {
+      a.removeEventListener('durationchange', listener)
+      audio.store.isLocalFile = false
+      eventStore.audioElement = a
+      eventStore.audioMetadata.length = a.duration
+      resolve(a)
+    })
+  })
+}
+
+export function loadAudioFromFile(f: File|Uint8Array): Promise<HTMLAudioElement> {
   return new Promise(async (resolve, reject) => {
     let audioUrl = ''
     const a = document.createElement('audio')
@@ -198,7 +212,7 @@ export function loadAudioFile(f: File|Uint8Array|null): Promise<HTMLAudioElement
       eventStore.audioElement = a
       eventStore.audioMetadata.length = a.duration
       eventStore.audioMetadata.fileSize = audio.store.uint8Buffer.byteLength
-      resolve(a as HTMLAudioElement)
+      resolve(a)
     })
   })
 }
