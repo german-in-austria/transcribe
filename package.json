@@ -59,6 +59,7 @@
     "simple-promise-queue": "^0.1.7",
     "source-map-loader": "^0.2.4",
     "tiny-csv": "^3.0.0",
+    "typed-emitter": "^0.2.0",
     "uglifyjs-webpack-plugin": "^1.1.4",
     "undo-manager": "^1.0.5",
     "uuid": "^3.1.0",

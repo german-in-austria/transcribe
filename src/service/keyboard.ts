@@ -13,6 +13,7 @@ import {
   splitEventAtChar,
   findEventAt,
   addEvent,
+  appendEmptyEventAfter,
   deleteSelectedEvents,
   selectEvents,
   deselectEvents,
@@ -27,7 +28,8 @@ import {
   moveEventStartTime,
   moveEventEndTime,
   shiftCharsLeft,
-  shiftCharsRight
+  shiftCharsRight,
+  selectEvent
 } from '../store/transcript'
 
 import eventBus from '../service/event-bus'
@@ -101,6 +103,11 @@ export const specialKeys: KeyDescriber[] = [
     name: 'right',
     jsName: 'ArrowRight',
     displayName: '→'
+  },
+  {
+    name: 'plus',
+    jsName: '±',
+    displayName: '＋'
   }
 ]
 
@@ -136,6 +143,7 @@ function keyboardEventHasModifier(e: KeyboardEvent, m: KeyboardModifier): boolea
 }
 
 export async function handleGlobalShortcut(e: KeyboardEvent) {
+  console.log(e)
   _(keyboardShortcuts).forEach(sc => {
     if (
       // the shortcut is allowed in text fields OR we’re not in a text field.
@@ -250,6 +258,21 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         }
       }
     }
+  },
+  appendEvent: {
+    ignoreInTextField: false,
+    modifier: [ 'alt' ],
+    key: '±',
+    description: 'Append an event after the currently selected event.',
+    disabled: () => eventStore.selectedEventIds.length === 0,
+    icon: 'mdi-card-plus-outline',
+    name: 'Append Event',
+    action: () => {
+      if (eventStore.selectedEventIds.length > 0) {
+        const es = undoable(appendEmptyEventAfter(eventStore.selectedEventIds))
+        selectEvents(es)
+      }
+    },
   },
   deleteEvents: {
     ignoreInTextField: true,

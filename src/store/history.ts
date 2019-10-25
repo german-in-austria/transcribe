@@ -139,17 +139,21 @@ export function redo(): HistoryEventAction|undefined {
   }
 }
 
-export function undoable(action: HistoryEventAction|HistoryEventAction[]): LocalTranscriptEvent[] {
+export function undoable(action: HistoryEventAction|HistoryEventAction[]|undefined): LocalTranscriptEvent[] {
   // when doing an undoable thing,
   // all things that have been undone before
   // are not re-doable anymore, and are deleted.
   // the new undoable action is appended.
-  history.actions = history.actions
-    .filter(a => a.apply === true)
-    .concat(action)
-  if (_.isArray(action)) {
-    return _(action).flatMap(a => a.after).value()
+  if (action !== undefined) {
+    history.actions = history.actions
+      .filter(a => a.apply === true)
+      .concat(action)
+    if (_.isArray(action)) {
+      return _(action).flatMap(a => a.after).value()
+    } else {
+      return action.after
+    }
   } else {
-    return action.after
+    return []
   }
 }

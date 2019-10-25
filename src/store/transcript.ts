@@ -566,11 +566,31 @@ export function insertEvent(e: LocalTranscriptEvent): HistoryEventAction {
   }
 }
 
-export function addEvent(atTime: number): HistoryEventAction {
+export function appendEmptyEventAfter(eIds: number[]): HistoryEventAction|undefined {
+  const e = _(sortEvents(getEventsByIds(eIds))).last()
+  // an event is selected
+  if (e !== undefined) {
+    const next = findNextEventAt(e.endTime)
+    // there is one after it.
+    if (next !== undefined) {
+      if (isEventDockedToEvent(e, next)) {
+        // it’s docked, so we just select the next one
+        selectEvent(next)
+      } else {
+        // there is room, so we add one
+        return addEvent(e.endTime, Math.min(1, next.startTime - e.endTime))
+      }
+    } else {
+      return addEvent(e.endTime, 1)
+    }
+  }
+}
+
+export function addEvent(atTime: number, length = 1): HistoryEventAction {
   const nextEvent = findNextEventAt(atTime)
   const newEvent: LocalTranscriptEvent = {
     startTime: atTime,
-    endTime: atTime + 1,
+    endTime: atTime + length,
     eventId: makeEventId(),
     speakerEvents: {}
   }
