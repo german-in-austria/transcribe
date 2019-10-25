@@ -397,7 +397,9 @@ export function updateSpeakerEvent(
       ...oldEvent.speakerEvents,
       [speakerId] : {
         speakerEventId: event.eventId,
-        speakerEventTiers: oldEvent.speakerEvents[speakerId].speakerEventTiers,
+        speakerEventTiers: isNew
+          ? {}
+          : oldEvent.speakerEvents[speakerId].speakerEventTiers,
         tokens
       }
     })
