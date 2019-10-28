@@ -4,35 +4,93 @@ import { KeyboardShortcuts, keyboardShortcuts } from '../service/keyboard'
 
 import { eventStore } from './transcript'
 
-export interface Settings {
-  showDrawer: boolean
-  drawerWidth: number
-  contrast: number
-  spectrogramGradient: number[][]
-  spectrogramColors: Color[]
-  waveFormColors: string[]
-  lockScroll: boolean
-  lockPlayHead: boolean
-  playbackSpeed: number,
-  playbackVolume: number,
-  pixelsPerSecond: number
-  emulateHorizontalScrolling: boolean
-  darkMode: boolean
-  showSegmentBoxes: boolean
-  showSpectrograms: boolean
-  minimumEventLength: number
-  useMonoWaveForm: boolean
-  moveEventTimeByInterval: number
-  moveEventTimeByIntervalSmall: number
-  eventDockingInterval: number
-  skipInterval: number
-  tokenTypes: Array<{
+export interface TokenTypesPreset {
+  [ name: string ]: {
     name: string
     regex: RegExp
     color: string
     id: number
-  }>
+  }[]
+}
+
+export interface Settings {
+  contrast: number
+  darkMode: boolean
+  drawerWidth: number
+  emulateHorizontalScrolling: boolean
+  eventDockingInterval: number
   keyboardShortcuts: KeyboardShortcuts
+  lockPlayHead: boolean
+  lockScroll: boolean
+  minimumEventLength: number
+  moveEventTimeByInterval: number
+  moveEventTimeByIntervalSmall: number
+  pixelsPerSecond: number
+  playbackSpeed: number,
+  playbackVolume: number,
+  showDrawer: boolean
+  showSegmentBoxes: boolean
+  showSpectrograms: boolean
+  skipInterval: number
+  spectrogramColors: Color[]
+  spectrogramGradient: number[][]
+  tokenTypesPreset: keyof TokenTypesPreset
+  useMonoWaveForm: boolean
+  waveFormColors: string[]
+}
+
+export const tokenTypesPresets: TokenTypesPreset = {
+  dioeDB: [],
+  dissDB: [
+    {
+      name: 'proper-name',
+      regex: /\{(.+)\}/u,
+      color: '#880000',
+      id: 4
+    },
+    {
+      name: 'pause',
+      regex: /\[[\s\S]{1,}s\]/u,
+      color: '#6B6B6B',
+      id: 3
+    },
+    {
+      name: 'non-verbal',
+      regex: /\(\((.+)\)\)|\[(.+)\]/u,
+      color: '#008800',
+      id: 5
+    },
+    {
+      name: 'delimiter',
+      regex: /^(\?|\.|\,|!)/,
+      color: '#1717FB',
+      id: 2
+    },
+    {
+      name: 'interrupted',
+      regex: /([a-zA-ZÜüÄäÖöß]+\/)/u,
+      color: '#6699CC',
+      id: 6
+    },
+    {
+      name: 'contraction',
+      regex: /_[a-zA-ZÜüÄäÖöß]+|[a-zA-ZÜüÄäÖöß]+_/,
+      color: '#d47d0f',
+      id: 8
+    },
+    {
+      name: 'incomprehensible',
+      regex: /\((.+)\)/u,
+      color: '#6f6f6f',
+      id: 7
+    },
+    {
+      name: 'word',
+      regex: /^[a-zA-ZÜüÄäÖöß]+/u,
+      color: 'transparent',
+      id: 1
+    },
+  ],
 }
 
 const spectrogramColors = [
@@ -174,29 +232,8 @@ export function decreaseVolume(by: number) {
   setPlaybackVolume(settings.playbackVolume - by)
 }
 
-const settings: Settings = {
-  showDrawer: false,
-  drawerWidth: 300,
-  contrast: 1,
-  spectrogramGradient: makeGradient(spectrogramPresets[1].colors),
-  spectrogramColors: spectrogramPresets[1].colors,
-  waveFormColors: [ '#fb7676', '#6699CC' ],
-  lockScroll: false,
-  lockPlayHead: true,
-  playbackSpeed: 1,
-  playbackVolume: 1,
-  darkMode: false,
-  pixelsPerSecond: 150,
-  emulateHorizontalScrolling: platform() === 'windows' || platform() === 'linux',
-  showSegmentBoxes: true,
-  showSpectrograms: false,
-  useMonoWaveForm: false,
-  minimumEventLength: 0.2,
-  moveEventTimeByInterval: 0.2,
-  moveEventTimeByIntervalSmall: 0.01,
-  eventDockingInterval: 0.05,
-  skipInterval: 1,
-  tokenTypes: [
+const tokenTypePresets = {
+  dissDB: [
     {
       name: 'proper-name',
       regex: /\{(.+)\}/u,
@@ -246,7 +283,32 @@ const settings: Settings = {
       id: 1
     },
   ],
-  keyboardShortcuts
+}
+
+const settings: Settings = {
+  contrast: 1,
+  darkMode: false,
+  drawerWidth: 300,
+  emulateHorizontalScrolling: platform() === 'windows' || platform() === 'linux',
+  eventDockingInterval: 0.05,
+  keyboardShortcuts,
+  lockPlayHead: true,
+  lockScroll: false,
+  minimumEventLength: 0.2,
+  moveEventTimeByInterval: 0.2,
+  moveEventTimeByIntervalSmall: 0.01,
+  pixelsPerSecond: 150,
+  playbackSpeed: 1,
+  playbackVolume: 1,
+  showDrawer: false,
+  showSegmentBoxes: true,
+  showSpectrograms: false,
+  skipInterval: 1,
+  spectrogramColors: spectrogramPresets[1].colors,
+  spectrogramGradient: makeGradient(spectrogramPresets[1].colors),
+  tokenTypesPreset: 'dissDB',
+  useMonoWaveForm: false,
+  waveFormColors: [ '#fb7676', '#6699CC' ],
 }
 
 export default settings

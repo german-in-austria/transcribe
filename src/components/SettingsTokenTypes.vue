@@ -4,7 +4,7 @@
       <v-subheader>Token Types</v-subheader>
       <v-divider class="mb-3" />
     </v-layout>
-    <v-layout class="ml-3" row :key="type.name" v-for="(type, i) in settings.tokenTypes">
+    <v-layout class="ml-3" row :key="type.name" v-for="(type, i) in tokenTypesPresets[settings.tokenTypesPreset]">
       <v-flex xs1>
         <v-menu
           class="mt-2"
@@ -41,8 +41,7 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import settings from '../store/settings'
-import { makeGradient } from '../lib/gradient'
+import settings, { tokenTypesPresets } from '../store/settings'
 import { Chrome as ColorPicker } from 'vue-color'
 
 @Component({
@@ -51,7 +50,9 @@ import { Chrome as ColorPicker } from 'vue-color'
   }
 })
 export default class SettingsTokenTypes extends Vue {
+
   settings = settings
+  tokenTypesPresets = tokenTypesPresets
 
   isValidRegEx(e: string) {
     try {
@@ -70,12 +71,6 @@ export default class SettingsTokenTypes extends Vue {
     console.log(args)
   }
 
-  updateGradient(i: number, c: any) {
-    this.settings.spectrogramColors[i].c = [c.rgba.r, c.rgba.g, c.rgba.b, c.rgba.a]
-    console.log(this.settings.spectrogramColors[i].c)
-    const g = makeGradient(this.settings.spectrogramColors)
-    this.settings.spectrogramGradient = g
-  }
 }
 </script>
 <style lang="scss" scoped>

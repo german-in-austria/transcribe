@@ -6,7 +6,7 @@ import {
   clone,
   fileToUint8ArrayAndName
 } from '../util'
-import settings from '../store/settings'
+import settings, { tokenTypesPresets } from '../store/settings'
 import { HistoryEventAction } from './history'
 import eventBus from '../service/event-bus'
 import { collectTokensViaOffsets } from '../service/copy-paste'
@@ -128,7 +128,7 @@ export const eventStore = {
 }
 
 export function tokenTypeFromToken(token: string) {
-  const type = _(settings.tokenTypes).find((tt) => {
+  const type = _(tokenTypesPresets[settings.tokenTypesPreset]).find((tt) => {
     return tt.regex.test(token)
   })
   if (type !== undefined) {

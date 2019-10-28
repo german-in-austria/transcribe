@@ -129,6 +129,7 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
 import SettingsKeyboardShortcuts from './SettingsKeyboardShortcuts.vue'
 import SettingsTokenTypes from './SettingsTokenTypes.vue'
+import { makeGradient } from '../lib/gradient'
 
 @Component({
   components: {
@@ -141,6 +142,14 @@ export default class Settings extends Vue {
   @Prop({ default: false }) show: boolean
   settings = settings
   activeTab = null
+
+  updateGradient(i: number, c: any) {
+    this.settings.spectrogramColors[i].c = [c.rgba.r, c.rgba.g, c.rgba.b, c.rgba.a]
+    console.log(this.settings.spectrogramColors[i].c)
+    const g = makeGradient(this.settings.spectrogramColors)
+    this.settings.spectrogramGradient = g
+  }
+
 }
 </script>
 <style lang="stylus">
