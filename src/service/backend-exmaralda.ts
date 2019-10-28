@@ -67,7 +67,7 @@ interface TierEvent {
   end: string
   startTime: string
   endTime: string
-  text: string
+  text: string|null
 }
 
 interface Tier {
@@ -127,7 +127,7 @@ function getTierToken(
     } else {
       const event = _(tier.events).find(e => e.startTime === tierEvent.startTime)
       // this event does not exist in this token tier.
-      if (event === undefined) {
+      if (event === undefined || event.text === undefined || event.text === null) {
         return null
       } else {
         return tokenize(event.text)[tokenIndex] || null
@@ -193,7 +193,7 @@ export function importableToServerTranscript(
                   event_tiers: {
                     [speakerTier.to_speaker!.pk] : {
                       [tierId]: {
-                        t: e.text,
+                        t: e.text || '',
                         ti: String(tierId)
                       }
                     }
