@@ -218,38 +218,40 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   async pasteTokens(e: ClipboardEvent) {
     // get clipboard data as string
-    const clipboardString = e.clipboardData.getData('text/plain')
-    const s = document.getSelection()
-    try {
-      // TODO: check what is returned here if it’s not a csv
-      const tokensTiers = copyPaste.unserializeTokenTiers(clipboardString)
-      if (tokensTiers.length > 0 && s !== null) {
-        // copy to local variables, because the selection might change.
-        const base = s.baseOffset
-        const extent = s.extentOffset
-        e.preventDefault()
-        // update tokens
-        this.localTokens = copyPaste.mergePastableTokensAt(
-          this.localTokens,
-          tokensTiers,
-          base,
-          extent,
-          this.firstTokenOrder || 0
-        )
-        // update text presentation
-        this.segmentText = this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ')
-        if (e.currentTarget !== null) {
-          await this.$nextTick()
-          console.log('s.baseOffset, s.extentOffset', base, extent)
-          this.setCursorPosition(e.currentTarget as HTMLElement, Math.max(base, extent))
+    if (e.clipboardData !== null) {
+      const clipboardString = e.clipboardData.getData('text/plain')
+      const s = document.getSelection()
+      try {
+        // TODO: check what is returned here if it’s not a csv
+        const tokensTiers = copyPaste.unserializeTokenTiers(clipboardString)
+        if (tokensTiers.length > 0 && s !== null) {
+          // copy to local variables, because the selection might change.
+          const base = s.baseOffset
+          const extent = s.extentOffset
+          e.preventDefault()
+          // update tokens
+          this.localTokens = copyPaste.mergePastableTokensAt(
+            this.localTokens,
+            tokensTiers,
+            base,
+            extent,
+            this.firstTokenOrder || 0
+          )
+          // update text presentation
+          this.segmentText = this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ')
+          if (e.currentTarget !== null) {
+            await this.$nextTick()
+            console.log('s.baseOffset, s.extentOffset', base, extent)
+            this.setCursorPosition(e.currentTarget as HTMLElement, Math.max(base, extent))
+          }
+        } else {
+          // paste as string.
+          document.execCommand('insertHTML', false, clipboardString)
         }
-      } else {
-        // paste as string.
-        document.execCommand('insertHTML', false, clipboardString)
+      } catch (e) {
+        console.error(e)
+        // do nothing (i.e. default OS functionality)
       }
-    } catch (e) {
-      console.error(e)
-      // do nothing (i.e. default OS functionality)
     }
   }
 
