@@ -109,7 +109,9 @@ export interface ServerTranscript {
     [set_id: number]: TokenRange|TokenSet
   }
   aTiers: {
-    [tier_id: string]: string
+    [tier_id: string]: {
+      tier_name: string
+    }
   }
   aTokens: {
     [token_id: string]: ServerToken
@@ -193,7 +195,7 @@ export function getMetadataFromServerTranscript(res: ServerTranscript) {
     tiers: _(res.aTiers).map((t, tid) => {
       return {
         type: 'freeText',
-        name: t,
+        name: t.tier_name,
         show: false,
         id: tid
       }
@@ -451,13 +453,13 @@ export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
           _.each(se.tid, (tokenIds, speakerKey) => {
             m[speakerKey] = {
               speakerEventTiers: _(eG).reduce((ts, e) => {
-                const x = _(e.event_tiers[speakerKey]).mapValues((t, tierId) => {
-                  ts[tierId] = {
+                _(e.event_tiers[speakerKey]).each(t => {
+                  ts[t.ti] = {
                     type: 'freeText',
                     text: t.t
                   }
-                  return ts[tierId]
-                }).value()
+                  return ts[t.ti]
+                })
                 return ts
               }, {} as LocalTranscriptSpeakerEventTiers),
               speakerEventId: se.pk,
