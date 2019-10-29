@@ -13,6 +13,15 @@ export interface TokenTypesPreset {
   }[]
 }
 
+
+// type AnyJson =  boolean | number | string | null | JsonArray | JsonMap
+
+// interface JsonMap { 
+//   [key: string]: AnyJson
+// }
+
+// interface JsonArray extends Array<AnyJson> {}
+
 export interface Settings {
   contrast: number
   darkMode: boolean
