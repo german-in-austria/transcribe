@@ -171,12 +171,14 @@ export function importableToServerTranscript(
             const tierId = makeTierId()
             // create and name aTier
             if (speakerTier.to_tier_type === 'freeText') {
-              tiers[tierId] = speakerTier.to_tier_name || speakerTier.to_tier_type || 'untitled'
+              tiers[tierId] = {
+                tier_name: speakerTier.to_tier_name || speakerTier.to_tier_type || 'untitled'
+              }
             }
             return _(speakerTier.events).map((e): ServerEvent => {
 
               if (!e.text) {
-                console.log('e.text is empty?', {e})
+                console.log('e.text is empty: ', e)
               }
 
               const eventId = makeEventId()
