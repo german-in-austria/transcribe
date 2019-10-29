@@ -1,6 +1,7 @@
 import {
   LocalTranscript,
-  LocalTranscriptToken
+  LocalTranscriptToken,
+  TokenTierType
 } from '../store/transcript'
 
 import {
@@ -54,7 +55,7 @@ function replaceLastOccurrence(token: string, toReplace: string, replaceWith: st
   )
 }
 
-function getTokenTextWithFragments(t: LocalTranscriptToken, speakerId: string, es: LocalTranscript): string {
+function getTokenTextWithFragments(t: LocalTranscriptToken, speakerId: string, es: LocalTranscript, defaultTier: TokenTierType): string {
   const event = es.find((e) => {
     return e.speakerEvents[speakerId] !== undefined &&
     e.speakerEvents[speakerId].tokens[0] !== undefined &&
@@ -62,14 +63,14 @@ function getTokenTextWithFragments(t: LocalTranscriptToken, speakerId: string, e
   })
   if (event !== undefined) {
     const nextToken = event.speakerEvents[speakerId].tokens[0]
-    const newText = replaceLastOccurrence(t.tiers.text.text, '=', nextToken.tiers.text.text)
+    const newText = replaceLastOccurrence(t.tiers[defaultTier].text, '=', nextToken.tiers[defaultTier].text)
     if (tokenHasFragment(newText)) {
-      return t.tiers.text.text.replace('=', '') + getTokenTextWithFragments(nextToken, speakerId, es)
+      return t.tiers[defaultTier].text.replace('=', '') + getTokenTextWithFragments(nextToken, speakerId, es, defaultTier)
     } else {
       return newText
     }
   } else {
-    return t.tiers.text.text
+    return t.tiers[defaultTier].text
   }
 }
 
@@ -138,12 +139,12 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
           to: t.tiers.ortho.text,
           tr: t.order,
           // TODO: this could be null
-          tt: t.tiers.text.type as number,
+          tt: t.tiers[defaultTier].type as number,
           fo: t.fragmentOf || undefined
         }
         // it is the last token and has a fragment marker
         if (i + 1 === tokens.length && tokenHasFragment(token.t)) {
-          token.t = getTokenTextWithFragments(t, speakerId, localTranscript)
+          token.t = getTokenTextWithFragments(t, speakerId, localTranscript, defaultTier)
         }
         m[t.id] = token
       })
