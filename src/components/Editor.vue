@@ -33,7 +33,7 @@
                 :size="16"
                 :rotate="-90"
                 :width="2"
-                :indeterminate="eventStore.transcriptDownloadProgress === 1"
+                :indeterminate="eventStore.transcriptDownloadProgress === 1 || isSaving"
                 :value="eventStore.transcriptDownloadProgress * 100" />
             </template>
           </v-btn>
