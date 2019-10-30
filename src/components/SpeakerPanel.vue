@@ -27,7 +27,7 @@
             :disabled="tier.id === eventStore.metadata.defaultTier"
             @click="tier.show = !tier.show">
             <v-list-tile-avatar>
-              <v-icon v-if="tier.show === true">check</v-icon>
+              <v-icon v-if="tier.show === true || tier.id === eventStore.metadata.defaultTier">check</v-icon>
             </v-list-tile-avatar>
             <v-list-tile-content>
               <v-list-tile-title>{{ tier.name }}</v-list-tile-title>

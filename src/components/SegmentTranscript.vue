@@ -172,11 +172,12 @@ export default class SegmentTranscript extends Vue {
   padding 0 1em
   border-radius 10px
   &:hover
-    background rgba(255,255,255,.1)
+    transition color .2s
+    color #333
   &.error
     color white
   &.viewing
-    background #ccc
+    background #D8DFED
     color #333
 
 .selected .time

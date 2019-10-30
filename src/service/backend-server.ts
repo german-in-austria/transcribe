@@ -186,29 +186,30 @@ export function getAudioUrlFromServerNames(name: string|undefined, path: string|
 }
 
 export function getMetadataFromServerTranscript(res: ServerTranscript) {
+  const defaultTier = res.aTranskript!.default_tier || 'text'
   const v = {
     speakers: res.aInformanten!,
     tokenTypes: res.aTokenTypes!,
     transcriptName: res.aTranskript!.n,
-    defaultTier: res.aTranskript!.default_tier || 'text',
+    defaultTier,
     audioUrl: getAudioUrlFromServerNames(res.aEinzelErhebung!.af, res.aEinzelErhebung!.dp),
     tiers: [
       {
         type: 'basic',
         name: 'variational',
-        show: res.aTranskript!.default_tier === 'text',
+        show: defaultTier === 'text',
         id: 'text'
       },
       {
         type: 'token',
         name: 'ortho',
-        show: res.aTranskript!.default_tier === 'ortho',
+        show: defaultTier === 'ortho',
         id: 'ortho'
       },
       {
         type: 'token',
         name: 'phon',
-        show: res.aTranskript!.default_tier === 'phon',
+        show: defaultTier === 'phon',
         id: 'phon'
       }
     ].concat(_(res.aTiers).map((t, tid) => ({
