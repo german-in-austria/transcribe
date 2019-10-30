@@ -127,6 +127,10 @@ img[lazy=loaded] {
   font-size: 1.2em;
 }
 
+.v-list__tile--disabled .v-list__tile__avatar{
+  opacity: .5
+}
+
 .v-menu__content .v-list__tile__avatar,
 .context-menu .v-list__tile__avatar{
   min-width: 40px;
