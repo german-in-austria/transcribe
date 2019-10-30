@@ -56,7 +56,7 @@ export default class SpeakerPanel extends Vue {
   }
 
   get secondaryVisibleTiers() {
-    return eventStore.metadata.tiers.filter(t => t.name !== 'default' && t.show === true)
+    return eventStore.metadata.tiers.filter((t, k) => t.id !== eventStore.metadata.defaultTier && t.show === true)
   }
 
   get theme() {

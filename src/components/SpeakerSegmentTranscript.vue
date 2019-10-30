@@ -293,7 +293,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   get secondaryTiers() {
-    return eventStore.metadata.tiers.filter(t => t.name !== 'default' && t.show === true)
+    return eventStore.metadata.tiers.filter(t => t.name !== this.defaultTier && t.show === true)
   }
 
   get tokens() {

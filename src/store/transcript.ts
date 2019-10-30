@@ -89,6 +89,7 @@ export interface LocalTranscriptTier {
   type: 'basic'|'token'|'freeText'
   name: string
   show: boolean
+  id: TokenTierType
 }
 
 export type LocalTranscript = LocalTranscriptEvent[]
@@ -450,11 +451,11 @@ export function resizeEvents(...es: LocalTranscriptEvent[]): HistoryEventAction 
   }
 }
 
-export function findEventOverlaps(e: LocalTranscriptEvent): LocalTranscriptEvent[][] {
+export function findEventOverlaps(e: LocalTranscriptEvent, events = eventStore.events): LocalTranscriptEvent[][] {
   const left: LocalTranscriptEvent[] = []
   const middle: LocalTranscriptEvent[] = []
   const right: LocalTranscriptEvent[] = []
-  eventStore.events.forEach(ev => {
+  events.forEach(ev => {
     if (ev.eventId !== e.eventId) {
       // left side overlapped
       if (ev.startTime <= e.startTime && ev.endTime > e.startTime && ev.endTime <= e.endTime) {

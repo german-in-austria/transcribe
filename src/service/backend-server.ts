@@ -192,34 +192,31 @@ export function getMetadataFromServerTranscript(res: ServerTranscript) {
     transcriptName: res.aTranskript!.n,
     defaultTier: res.aTranskript!.default_tier || 'text',
     audioUrl: getAudioUrlFromServerNames(res.aEinzelErhebung!.af, res.aEinzelErhebung!.dp),
-    tiers: _(res.aTiers).map((t, tid) => {
-      return {
-        type: 'freeText',
-        name: t.tier_name,
-        show: false,
-        id: tid
-      }
-    })
-    .concat([
+    tiers: [
       {
         type: 'basic',
-        name: 'default',
-        show: true,
+        name: 'variational',
+        show: res.aTranskript!.default_tier === 'text',
         id: 'text'
       },
       {
         type: 'token',
         name: 'ortho',
-        show: false,
+        show: res.aTranskript!.default_tier === 'ortho',
         id: 'ortho'
       },
       {
         type: 'token',
         name: 'phon',
-        show: false,
+        show: res.aTranskript!.default_tier === 'phon',
         id: 'phon'
       }
-    ]).value() as LocalTranscriptTier[]
+    ].concat(_(res.aTiers).map((t, tid) => ({
+      type: 'freeText',
+      name: t.tier_name,
+      show: false,
+      id:   tid
+    })).value()) as LocalTranscriptTier[]
   }
   return v
 }
