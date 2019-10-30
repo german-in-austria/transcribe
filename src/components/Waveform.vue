@@ -500,7 +500,6 @@ export default class Waveform extends Vue {
     const el = this.$refs.svgContainer
     if (t !== null && el instanceof HTMLElement) {
       const left = settings.pixelsPerSecond * t
-      console.log('scrollToSecond.')
       requestAnimationFrame(() => {
         el.scrollLeft = left
       })
