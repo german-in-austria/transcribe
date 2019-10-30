@@ -98,7 +98,8 @@ import {
   eventStore,
   selectEvent,
   speakerEventHasErrors,
-  toTime
+  toTime,
+  sortEvents
 } from '../store/transcript'
 
 import { history } from '../store/history'
@@ -140,7 +141,7 @@ export default class Sidebar extends Vue {
 
   @Watch('eventStore.events')
   onEventsUpdate(newEvents: LocalTranscriptEvent[]) {
-    this.errors = _(newEvents)
+    this.errors = _(sortEvents(newEvents))
       .filter((e, i) => newEvents[i - 1] !== undefined && e.startTime < newEvents[i - 1].endTime)
       .map((e) => ({...e, error_type: 'time_overlap'} as ErrorEvent))
       .value()
