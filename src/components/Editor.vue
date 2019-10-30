@@ -321,7 +321,7 @@ export default class Editor extends Vue {
 
   async doShowMenu(e: MouseEvent) {
     // this is used for splitting
-    this.layerX = e.layerX
+    this.layerX = e.offsetX
     const ev = findEventAt(((await getScrollLeftAudio()) + e.x) / settings.pixelsPerSecond)
     if (ev !== undefined) {
       if (isCmdOrCtrl(e)) {
@@ -356,7 +356,7 @@ export default class Editor extends Vue {
 
   mounted() {
     startUndoListener()
-    window.onbeforeunload = (e) => {
+    window.onbeforeunload = (e: BeforeUnloadEvent) => {
       if (history.actions.length > 0) {
         e.preventDefault()
         // Chrome requires returnValue to be set

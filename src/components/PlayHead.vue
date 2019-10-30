@@ -127,7 +127,7 @@ export default class PlayHead extends Vue {
 
   endDrag(e: MouseEvent) {
     this.inFront = false
-    this.left = e.layerX
+    this.left = e.offsetX
     document.removeEventListener('mousemove', this.drag)
     document.removeEventListener('mouseup', this.endDrag)
   }
