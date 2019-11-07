@@ -12,7 +12,7 @@
           </v-list-tile-avatar>
           <v-list-tile-content>
             <v-list-tile-title class="sidebar-title" v-if="item.error_type === 'time_overlap'">Time Overlap</v-list-tile-title>
-            <v-list-tile-title class="sidebar-title" v-if="item.error_type === 'unknow_token'">Unknown Token Type</v-list-tile-title>
+            <v-list-tile-title class="sidebar-title" v-if="item.error_type === 'unknown_token'">Unknown Token Type</v-list-tile-title>
             <v-list-tile-sub-title class="subtitle">{{ toTime(item.startTime) }} - {{ toTime(item.endTime) }}</v-list-tile-sub-title>
           </v-list-tile-content>
         </v-list-tile>
