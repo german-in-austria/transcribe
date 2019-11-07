@@ -48,7 +48,68 @@ export interface Settings {
 }
 
 export const tokenTypesPresets: TokenTypesPreset = {
-  dioeDB: [],
+  dioeDB: [
+    {
+      name: 'anonymized',
+      regex: /(\[)([a-zA-ZÜüÄäÖöß]+)(\](N|O|Z|S))/,
+      color: '#880000',
+      id: 4
+    },
+    {
+      name: 'segments-unclear',
+      regex: /(\*)([a-zA-ZÜüÄäÖöß]+)(\*)/,
+      color: '#6B6B6B',
+      id: -2
+    },
+    {
+      name: 'untransferable-lexics',
+      regex: /(_)([a-zA-ZÜüÄäÖöß]+)(_)/,
+      color: '',
+      id: -3
+    },
+    {
+      name: 'quotation',
+      regex: /(„|")([a-zA-ZÜüÄäÖöß]+)(“|")/,
+      color: '',
+      id: -4
+    },
+    {
+      name: 'interrupted',
+      regex: /([a-zA-ZÜüÄäÖöß]+\/)/u,
+      color: '#6699CC',
+      id: 6
+    },
+    {
+      name: 'incomprehensible',
+      regex: /(\()(([a-zA-ZÜüÄäÖöß]+)|(\?))(\))/u,
+      color: '#6f6f6f',
+      id: 7
+    },
+    {
+      name: 'pause',
+      regex: /\(\((([a-zA-ZÜüÄäÖöß]+)|(\d+(,\d)?s|))\)\)/u,
+      color: '#6B6B6B',
+      id: 3
+    },
+    {
+      name: 'other',
+      regex: /\{([a-zA-ZÜüÄäÖöß]+)\}/u,
+      color: '#880000',
+      id: 4
+    },
+    {
+      name: 'delimiter',
+      regex: /^(\?|\.|\,|!)/,
+      color: '#1717FB',
+      id: 2
+    },
+    {
+      name: 'word',
+      regex: /^[a-zA-ZÜüÄäÖöß]+/u,
+      color: 'transparent',
+      id: 1
+    },
+  ],
   dissDB: [
     {
       name: 'proper-name',
@@ -240,59 +301,6 @@ export function decreaseVolume(by: number) {
   setPlaybackVolume(settings.playbackVolume - by)
 }
 
-const tokenTypePresets = {
-  dissDB: [
-    {
-      name: 'proper-name',
-      regex: /\{(.+)\}/u,
-      color: '#880000',
-      id: 4
-    },
-    {
-      name: 'pause',
-      regex: /\[[\s\S]{1,}s\]/u,
-      color: '#6B6B6B',
-      id: 3
-    },
-    {
-      name: 'non-verbal',
-      regex: /\(\((.+)\)\)|\[(.+)\]/u,
-      color: '#008800',
-      id: 5
-    },
-    {
-      name: 'delimiter',
-      regex: /^(\?|\.|\,|!)/,
-      color: '#1717FB',
-      id: 2
-    },
-    {
-      name: 'interrupted',
-      regex: /([a-zA-ZÜüÄäÖöß]+\/)/u,
-      color: '#6699CC',
-      id: 6
-    },
-    {
-      name: 'contraction',
-      regex: /_[a-zA-ZÜüÄäÖöß]+|[a-zA-ZÜüÄäÖöß]+_/,
-      color: '#d47d0f',
-      id: 8
-    },
-    {
-      name: 'incomprehensible',
-      regex: /\((.+)\)/u,
-      color: '#6f6f6f',
-      id: 7
-    },
-    {
-      name: 'word',
-      regex: /^[a-zA-ZÜüÄäÖöß]+/u,
-      color: 'transparent',
-      id: 1
-    },
-  ],
-}
-
 const settings: Settings = {
   contrast: 1,
   darkMode: false,
@@ -314,7 +322,7 @@ const settings: Settings = {
   skipInterval: 1,
   spectrogramColors: spectrogramPresets[1].colors,
   spectrogramGradient: makeGradient(spectrogramPresets[1].colors),
-  tokenTypesPreset: 'dissDB',
+  tokenTypesPreset: 'dioeDB',
   useMonoWaveForm: false,
   waveFormColors: [ '#fb7676', '#6699CC' ],
 }
