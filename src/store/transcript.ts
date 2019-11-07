@@ -103,7 +103,7 @@ export const eventStore = {
   playingEvent: null as LocalTranscriptEvent|null,
   isPaused: true as boolean,
   currentTime: 0,
-  recentlyOpened: JSON.parse(localStorage.getItem('recentlyOpened') || '[]'),
+  recentlyOpened: getRecentlyOpened(localStorage.getItem('backEndUrl') || 'https://dissdb-test.dioe.at'),
   lockedTokens: [] as number[],
   metadata: {
     defaultTier: 'text' as TokenTierType,
@@ -143,6 +143,10 @@ export function tokenTypeFromToken(token: string) {
   }
 }
 
+export function getRecentlyOpened(backEndUrl: string): ServerTranscriptListItem[] {
+  return JSON.parse(localStorage.getItem('recentlyOpened__' + backEndUrl) || '[]')
+}
+
 export function addRecentlyOpened(t: ServerTranscriptListItem): ServerTranscriptListItem[] {
   eventStore.recentlyOpened = _([t])
     .concat(eventStore.recentlyOpened)
@@ -150,7 +154,7 @@ export function addRecentlyOpened(t: ServerTranscriptListItem): ServerTranscript
     .take(3)
     .value()
   localStorage.setItem(
-    'recentlyOpened',
+    'recentlyOpened__' + eventStore.backEndUrl,
     JSON.stringify(eventStore.recentlyOpened)
   )
   return eventStore.recentlyOpened
@@ -348,6 +352,7 @@ function setFirstTokenFragmentOf(
     return false
   } else {
     const event = eventStore.events[eventIndex]
+    console.log('next event', event)
     if (event !== undefined) {
       const speakerEvent = event.speakerEvents[speakerId]
       if (speakerEvent !== undefined) {
@@ -389,7 +394,8 @@ export function updateSpeakerEvent(
   speakerId: number,
   tokens: LocalTranscriptToken[],
 ): HistoryEventAction {
-  const oldEvent = eventStore.events[findEventIndexById(event.eventId)]
+  const eventIndex = findEventIndexById(event.eventId)
+  const oldEvent = eventStore.events[eventIndex]
   const isNew = oldEvent.speakerEvents[speakerId] === undefined
   const deletedSpeakerId = tokens.length === 0 ? speakerId : undefined
   const tokenCountDifference = isNew ? tokens.length : tokens.length - oldEvent.speakerEvents[speakerId].tokens.length
@@ -412,18 +418,18 @@ export function updateSpeakerEvent(
       return m
     }, {} as LocalTranscriptEvent['speakerEvents'])
   const newEvent = clone({...oldEvent, speakerEvents})
-  const index = findEventIndexById(event.eventId)
   // UPDATE EVENT
-  eventStore.events.splice(index, 1, newEvent)
+  eventStore.events.splice(eventIndex, 1, newEvent)
   // if it has a fragment marker ("="),
   // mark the first token in the next
   // speaker event as a fragment_of
   if (hasNextFragmentMarker(newEvent, speakerId, eventStore.metadata.defaultTier)) {
-    setFirstTokenFragmentOf(index + 1, speakerId, getLastEventToken(newEvent, speakerId))
+    console.log('has next fragment marker')
+    setFirstTokenFragmentOf(eventIndex + 1, speakerId, getLastEventToken(newEvent, speakerId))
   }
   // update token order if the length has changed
   if (tokenCountDifference !== 0) {
-    eventStore.events = updateSpeakerTokenOrderStartingAt(speakerId, index, tokenCountDifference)
+    eventStore.events = updateSpeakerTokenOrderStartingAt(speakerId, eventIndex, tokenCountDifference)
   }
   return {
     id: _.uniqueId(),
