@@ -10,7 +10,7 @@ const client = createClient(
     }
 )
 
-interface webdavFile {
+interface WebDavFile {
   filename: string
   basename: string
   lastmod: string
@@ -19,8 +19,8 @@ interface webdavFile {
 
 }
 
-async function getFilesRecursive(path: string, test: (f: webdavFile) => boolean, prev: any[] = []): Promise<webdavFile[]> {
-  const files = await client.getDirectoryContents(path) as webdavFile[]
+async function getFilesRecursive(path: string, test: (f: WebDavFile) => boolean, prev: any[] = []): Promise<WebDavFile[]> {
+  const files = await client.getDirectoryContents(path) as WebDavFile[]
   for (let f of files) {
     if (f.type === 'directory') {
       // console.log(f)
@@ -37,12 +37,12 @@ async function getFilesRecursive(path: string, test: (f: webdavFile) => boolean,
   }
   return prev
 }
- 
+
 (async () => {
   // Get directory contents
-  const transcripts = await getFilesRecursive('/03_Daten', (f: webdavFile) => {
+  const transcripts = await getFilesRecursive('/03_Daten', (f: WebDavFile) => {
     return f.filename.endsWith('.exb') &&
-      !f.filename.includes('/alt/') 
+      !f.filename.includes('/alt/')
       // && !f.filename.includes('Vers')
       // && !f.filename.includes('_alt_')
   })
