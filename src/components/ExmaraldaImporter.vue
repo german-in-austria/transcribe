@@ -40,6 +40,13 @@
                     ref="basicInfoForm"
                     class="pb-5"
                     v-model="basicInfoValid">
+                    <v-text-field 
+                      v-model="transcriptName"
+                      label="Transcript Name"
+                      :rules="[
+                        (transcriptName === null || transcriptName.trim() === '') && 'Please enter a name for the transcript',
+                        !isTranscriptNameUnique(transcriptName) && 'Name already exists.'
+                      ]" />
                     <v-autocomplete
                       :disabled="surveys === null"
                       :loading="surveys === null"
@@ -65,13 +72,6 @@
                         </v-list-tile-action-text>
                       </template>
                     </v-autocomplete>
-                    <v-text-field 
-                      v-model="transcriptName"
-                      label="Transcript Name"
-                      :rules="[
-                        (transcriptName === null || transcriptName.trim() === '') && 'Please enter a name for the transcript',
-                        !isTranscriptNameUnique(transcriptName) && 'Name already exists.'
-                      ]" />
                   </v-form>
                 </v-flex>
               </v-layout>
@@ -520,7 +520,7 @@ export default class ExmaraldaImporter extends Vue {
           disabled: selectedTiersForSpeaker.indexOf('ortho') > -1 || this.globalDefaultTier === 'ortho'
         },
         {
-          text: 'variational',
+          text: 'eye dialect',
           value: 'text',
           description: 'phonetic transcription\n using the latin alphabet',
           disabled: selectedTiersForSpeaker.indexOf('text') > -1 || this.globalDefaultTier === 'text'
