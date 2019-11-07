@@ -5,6 +5,11 @@ import VueRouter from 'vue-router'
 import * as fontLoader from 'webfontloader'
 import Vuetify from 'vuetify'
 import * as VueLazyload from 'vue-lazyload'
+import * as Sentry from '@sentry/browser'
+
+Sentry.init({
+  dsn: 'https://21e0884e7e9744faa9f730caf468bad0@sentry.io/1793743'
+})
 
 Vue.config.devtools = true
 Vue.config.performance = true
