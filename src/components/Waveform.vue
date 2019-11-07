@@ -221,11 +221,11 @@ export default class Waveform extends Vue {
   async cacheOverviewWaveform() {
     await util.requestFrameAsync()
     const el = (this.$el.querySelector('.overview-waveform svg') as HTMLElement)
-    localStorage.setItem(eventStore.metadata.audioUrl + '_overview', el.innerHTML)
+    localStorage.setItem('waveformOverview__' + eventStore.metadata.audioUrl, el.innerHTML)
   }
 
   hasOverviewCache(): boolean {
-    return localStorage.getItem(eventStore.metadata.audioUrl + '_overview') !== null
+    return localStorage.getItem('waveformOverview__' + eventStore.metadata.audioUrl) !== null
   }
 
   get containerStyle() {
@@ -568,7 +568,7 @@ export default class Waveform extends Vue {
   }
 
   initWithCache() {
-    const waveformCache = localStorage.getItem(eventStore.metadata.audioUrl + '_overview')
+    const waveformCache = localStorage.getItem('waveformOverview__' + eventStore.metadata.audioUrl)
     const scrollLeft = localStorage.getItem('scrollPos')
     if (waveformCache !== null) {
       const overviewEl = (this.$el.querySelector('.overview-waveform svg') as HTMLElement);
@@ -622,7 +622,7 @@ export default class Waveform extends Vue {
               this.doMaybeRerender()
             },
             onProgress: async (chunk: AudioBuffer, from: number, to: number) => {
-              if (localStorage.getItem(eventStore.metadata.audioUrl + '_overview') === null) {
+              if (localStorage.getItem('waveformOverview__' + eventStore.metadata.audioUrl) === null) {
                 await this.drawOverviewWaveformPiece(from, to, chunk)
               }
             }

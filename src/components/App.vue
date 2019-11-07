@@ -43,7 +43,7 @@
             ></v-combobox>
           </v-flex>
           <div v-if="loggedIn === false">
-            Please <a :href="`${ eventStore.backEndUrl }/login`" target="_blank">login</a> and <a @click="loadTranscriptList">refresh</a>
+            Please <a :href="`${ eventStore.backEndUrl }/login/`" target="_blank">login</a> and <a @click="loadTranscriptList">refresh</a>
           </div>
           <v-progress-circular
             indeterminate
@@ -305,7 +305,7 @@ export default class App extends Vue {
     overviewSvg: string,
     historyFile: HistoryEventAction[]
   ) {
-    localStorage.setItem(audioUrl + '_overview', overviewSvg)
+    localStorage.setItem('waveformOverview__' + audioUrl, overviewSvg)
     eventStore.events                     = previousEventStore.events
     eventStore.selectedEventIds           = previousEventStore.selectedEventIds
     eventStore.backEndUrl                 = previousEventStore.backEndUrl
