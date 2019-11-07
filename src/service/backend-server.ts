@@ -177,12 +177,24 @@ const textEncoder = new TextEncoder()
 export let serverTranscript: ServerTranscript|null = null
 
 export function getAudioUrlFromServerNames(name: string|undefined, path: string|undefined): string|null {
-  return name !== undefined && path !== undefined
-    ? `${ eventStore.backEndUrl }/private-media`
-      + path.split('\\').join('/')
-      + name
-      + '.ogg'
-    : null
+  if (path === undefined || name === undefined) {
+    return null
+  } else {
+    // windows file paths to urls with normal forward slashes
+    const cleanPath = path.split('\\').join('/')
+    // add slashes left and right conditionally
+    const cleanPathWithSlashes = cleanPath.startsWith('/')
+      ? (cleanPath.endsWith('/')
+        ? cleanPath
+        : cleanPath + '/')
+      : '/' + (cleanPath.endsWith('/')
+        ? cleanPath
+        : cleanPath + '/')
+    console.log({cleanPath, cleanPathWithSlashes})
+    // add .ogg if necessary
+    const cleanName = name.endsWith('.ogg') ? (name) : (name + '.ogg')
+    return `${ eventStore.backEndUrl }/private-media${cleanPathWithSlashes}${cleanName}`
+  }
 }
 
 export function getMetadataFromServerTranscript(res: ServerTranscript) {
