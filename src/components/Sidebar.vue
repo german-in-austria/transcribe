@@ -142,8 +142,18 @@ export default class Sidebar extends Vue {
   @Watch('eventStore.events')
   onEventsUpdate(newEvents: LocalTranscriptEvent[]) {
     this.errors = _(sortEvents(newEvents))
+      // find events with overlaps
       .filter((e, i) => newEvents[i - 1] !== undefined && e.startTime < newEvents[i - 1].endTime)
       .map((e) => ({...e, error_type: 'time_overlap'} as ErrorEvent))
+      // concat events with unknown types
+      .concat(
+        _(newEvents).filter((e) => {
+          return _(e.speakerEvents).some((se) => {
+            return _(se.tokens).some((t) => t.tiers[eventStore.metadata.defaultTier].type === -1)
+          })
+        })
+        .map(e => ({ ...e, error_type: 'unknown_token' } as ErrorEvent))
+        .value())
       .value()
   }
 
