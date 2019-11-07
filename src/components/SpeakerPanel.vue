@@ -33,6 +33,15 @@
               <v-list-tile-title>{{ tier.name }}</v-list-tile-title>
             </v-list-tile-content>
           </v-list-tile>
+          <v-divider />
+          <v-list-tile @click="expandOrCollapse">
+          <v-list-tile-avatar>
+          </v-list-tile-avatar>
+          <v-list-tile-content>
+            <v-list-tile-title v-if="!allExpanded">expand all</v-list-tile-title>
+            <v-list-tile-title v-else>collapse all</v-list-tile-title>
+          </v-list-tile-content>
+          </v-list-tile>
         </v-list>
       </v-menu>
     </div>
@@ -57,6 +66,30 @@ export default class SpeakerPanel extends Vue {
 
   get secondaryVisibleTiers() {
     return eventStore.metadata.tiers.filter((t, k) => t.id !== eventStore.metadata.defaultTier && t.show === true)
+  }
+
+  get allExpanded() {
+    return eventStore.metadata.tiers.every(t => t.id === eventStore.metadata.defaultTier || t.show === true)
+  }
+
+  expandOrCollapse() {
+    if (this.allExpanded) {
+      return this.collapseAll()
+    } else {
+      return this.expandAll()
+    }
+  }
+
+  expandAll() {
+    eventStore.metadata.tiers = eventStore.metadata.tiers.map((t) => {
+      return {...t, show: t.id !== eventStore.metadata.defaultTier}
+    })
+  }
+
+  collapseAll() {
+    eventStore.metadata.tiers = eventStore.metadata.tiers.map((t) => {
+      return {...t, show: t.id === eventStore.metadata.defaultTier}
+    })
   }
 
   get theme() {
