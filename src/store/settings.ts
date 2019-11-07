@@ -5,18 +5,17 @@ import { KeyboardShortcuts, keyboardShortcuts } from '../service/keyboard'
 import { eventStore } from './transcript'
 
 export interface TokenTypesPreset {
-  [ name: string ]: {
+  [ name: string ]: Array<{
     name: string
     regex: RegExp
     color: string
     id: number
-  }[]
+  }>
 }
-
 
 // type AnyJson =  boolean | number | string | null | JsonArray | JsonMap
 
-// interface JsonMap { 
+// interface JsonMap {
 //   [key: string]: AnyJson
 // }
 
