@@ -228,7 +228,8 @@ export default class App extends Vue {
     'https://dissdb-test.dioe.at',
     'https://dissdb.dioe.at',
     'http://localhost:8000',
-    'https://dioedb.dioe.at'
+    'https://dioedb.dioe.at',
+    'https://dioedb.demo.dioe.at'
   ]
 
   searchTerm = ''
