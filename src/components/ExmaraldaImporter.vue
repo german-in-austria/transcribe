@@ -113,8 +113,11 @@
                 <v-flex class="grey--text caption pt-2" xs4>
                   From Exmaralda File
                 </v-flex>
-                <v-flex class="grey--text caption pt-2" xs6>
+                <v-flex class="grey--text caption pt-2" xs4>
                   To Speakers and Tiers
+                </v-flex>
+                <v-flex class="grey--text caption pt-2 offset-xs2" xs1>
+                  Preview
                 </v-flex>
               </v-layout>
               <v-form
