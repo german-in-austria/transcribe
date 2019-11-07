@@ -510,7 +510,8 @@ export default class SpeakerSegmentTranscript extends Vue {
       }
     } else {
       return {
-        color: '#333'
+        color: 'white',
+        caretColor: 'black'
       }
     }
   }
@@ -614,6 +615,16 @@ export default class SpeakerSegmentTranscript extends Vue {
     &:last-child .secondary-token-tier-text
       border-top-right-radius 5px
       border-bottom-right-radius 5px
+
+.theme--light .token-display
+  .token-type-indicator
+    position relative
+    z-index 0
+    &.type-1
+      z-index 1
+      color #333 !important
+
+
 
 .tokens-input
   top 0
