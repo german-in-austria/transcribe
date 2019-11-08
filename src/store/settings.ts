@@ -301,9 +301,19 @@ export function decreaseVolume(by: number) {
   setPlaybackVolume(settings.playbackVolume - by)
 }
 
+export function getIsDarkMode(): boolean {
+  return JSON.parse(localStorage.getItem('darkMode') || 'false')
+}
+
+export function setIsDarkMode(b: boolean) {
+  console.log('darkmode', b)
+  settings.darkMode = b
+  localStorage.setItem('darkMode', JSON.stringify(b))
+}
+
 const settings: Settings = {
   contrast: 1,
-  darkMode: false,
+  darkMode: getIsDarkMode(),
   drawerWidth: 300,
   emulateHorizontalScrolling: platform() === 'windows' || platform() === 'linux',
   eventDockingInterval: 0.05,

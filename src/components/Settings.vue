@@ -38,7 +38,7 @@
                 <v-list-tile>
                   <v-list-tile-title>Dark Theme</v-list-tile-title>
                   <v-list-tile-action>
-                    <v-switch v-model="settings.darkMode" />
+                    <v-switch :input-value="settings.darkMode" @change="setIsDarkMode"/>
                   </v-list-tile-action>
                 </v-list-tile>
                 <v-list-tile>
@@ -126,7 +126,7 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import settings from '../store/settings'
+import settings, { setIsDarkMode } from '../store/settings'
 import SettingsKeyboardShortcuts from './SettingsKeyboardShortcuts.vue'
 import SettingsTokenTypes from './SettingsTokenTypes.vue'
 import { makeGradient } from '../lib/gradient'
@@ -142,6 +142,7 @@ export default class Settings extends Vue {
   @Prop({ default: false }) show: boolean
   settings = settings
   activeTab = null
+  setIsDarkMode = setIsDarkMode
 
   updateGradient(i: number, c: any) {
     this.settings.spectrogramColors[i].c = [c.rgba.r, c.rgba.g, c.rgba.b, c.rgba.a]
