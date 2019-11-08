@@ -86,7 +86,7 @@ export interface LocalTranscriptEditEvent extends LocalTranscriptEvent {
 }
 
 export interface LocalTranscriptTier {
-  type: 'basic'|'token'|'freeText'
+  type: 'token'|'freeText'
   name: string
   show: boolean
   id: TokenTierType

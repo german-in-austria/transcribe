@@ -207,7 +207,7 @@ export function getMetadataFromServerTranscript(res: ServerTranscript) {
     audioUrl: getAudioUrlFromServerNames(res.aEinzelErhebung!.af, res.aEinzelErhebung!.dp),
     tiers: [
       {
-        type: 'basic',
+        type: 'token',
         name: 'variational',
         show: defaultTier === 'text',
         id: 'text'

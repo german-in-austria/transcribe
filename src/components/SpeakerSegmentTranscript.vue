@@ -20,14 +20,14 @@
             eventStore.lockedTokens.indexOf(token.id) > -1 && 'locked-token'
           ]"
           :style="{ backgroundColor: colorFromTokenType(token.tiers[defaultTier].type) }">
-        </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span :class="['secondary-token-tier', settings.darkMode === true && 'theme--dark']" v-for="(tier, tierIndex) in secondaryTiers" :key="tier.name">
+        </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span :class="['secondary-token-tier', settings.darkMode === true && 'theme--dark']" v-for="(tier, tierIndex) in secondaryTiers" :key="tier.id">
           <span
             v-if="tier.type === 'token'"
             :style="{top: (tierIndex + 1) * tierHeight + 'px'}"
             :class="['secondary-token-tier-text', settings.darkMode === true && 'theme--dark']"
-            v-text="token.tiers[tier.name] !== undefined ? token.tiers[tier.name].text : undefined"
+            v-text="token.tiers[tier.id] !== undefined ? token.tiers[tier.id].text : undefined"
             contenteditable="true"
-            @blur="(e) => updateAndCommitLocalTokenTier(e, tier.name, i)"
+            @blur="(e) => updateAndCommitLocalTokenTier(e, tier.id, i)"
             @focus="(e) => $emit('focus', e, event)" />
           <span v-else class="secondary-token-tier-text" />
         </span>
