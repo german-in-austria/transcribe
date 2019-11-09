@@ -249,12 +249,13 @@ export function scrollToAudioEvent(e: LocalTranscriptEvent) {
 }
 
 export function scrollToTranscriptEvent(
-  e: LocalTranscriptEvent, opts?: { animate: boolean, focusSpeaker: number|null }
+  e: LocalTranscriptEvent, opts?: { animate: boolean, focusSpeaker: number|null, focusTier: string|null }
 ) {
   eventStore.userState.viewingTranscriptEvent = e
   eventBus.$emit('scrollToTranscriptEvent', e, {
     animate: true,
     focusSpeaker: null,
+    focusTier: eventStore.metadata.defaultTier,
     ...opts
   })
 }
@@ -325,21 +326,29 @@ function updateSpeakerTokenOrderStartingAt(speakerId: number, startAtIndex = 0, 
   }).value()
 }
 
-function getLastEventToken(event: LocalTranscriptEvent, speakerId: number): LocalTranscriptToken|undefined {
-  const speakerEvent = event.speakerEvents[speakerId]
-  if (speakerEvent !== undefined && speakerEvent.tokens.length > 0) {
-    return _(speakerEvent.tokens).last()
-  } else {
+function getLastEventToken(event: LocalTranscriptEvent|undefined, speakerId: number): LocalTranscriptToken|undefined {
+  if (event === undefined) {
     return undefined
+  } else {
+    const speakerEvent = event.speakerEvents[speakerId]
+    if (speakerEvent !== undefined && speakerEvent.tokens.length > 0) {
+      return _(speakerEvent.tokens).last()
+    } else {
+      return undefined
+    }
   }
 }
 
-function hasNextFragmentMarker(event: LocalTranscriptEvent, speakerId: number, tier: TokenTierType): boolean {
-  const lastToken = getLastEventToken(event, speakerId)
-  if (lastToken !== undefined) {
-    return lastToken.tiers[tier].text.endsWith('=')
-  } else {
+function hasNextFragmentMarker(event: LocalTranscriptEvent|undefined, speakerId: number, tier: TokenTierType): boolean {
+  if (event === undefined) {
     return false
+  } else {
+    const lastToken = getLastEventToken(event, speakerId)
+    if (lastToken !== undefined) {
+      return lastToken.tiers[tier].text.endsWith('=')
+    } else {
+      return false
+    }
   }
 }
 
@@ -347,27 +356,18 @@ function setFirstTokenFragmentOf(
   eventIndex: number,
   speakerId: number,
   lastEventToken?: LocalTranscriptToken
-): boolean {
-  if (lastEventToken === undefined) {
-    return false
-  } else {
-    const event = eventStore.events[eventIndex]
-    console.log('next event', event)
-    if (event !== undefined) {
-      const speakerEvent = event.speakerEvents[speakerId]
-      if (speakerEvent !== undefined) {
-        const firstToken = eventStore.events[eventIndex].speakerEvents[speakerId].tokens[0]
-        if (firstToken !== undefined) {
-          eventStore.events[eventIndex].speakerEvents[speakerId].tokens[0].fragmentOf = lastEventToken.id
-          return true
-        } else {
-          return false
-        }
-      } else {
-        return false
+) {
+  const event = eventStore.events[eventIndex]
+  // console.log('next event', event)
+  if (event !== undefined) {
+    const speakerEvent = event.speakerEvents[speakerId]
+    if (speakerEvent !== undefined) {
+      const firstToken = eventStore.events[eventIndex].speakerEvents[speakerId].tokens[0]
+      if (firstToken !== undefined) {
+        eventStore.events[eventIndex].speakerEvents[speakerId].tokens[0].fragmentOf = lastEventToken
+          ? lastEventToken.id
+          : null
       }
-    } else {
-      return true
     }
   }
 }
@@ -400,33 +400,52 @@ export function updateSpeakerEvent(
   const deletedSpeakerId = tokens.length === 0 ? speakerId : undefined
   const tokenCountDifference = isNew ? tokens.length : tokens.length - oldEvent.speakerEvents[speakerId].tokens.length
   const speakerEvents = _({
-      // merge the new speaker
-      ...oldEvent.speakerEvents,
-      [speakerId] : {
-        speakerEventId: event.eventId,
-        speakerEventTiers: isNew
-          ? {}
-          : oldEvent.speakerEvents[speakerId].speakerEventTiers,
-        tokens
-      }
-    })
-    // remove deleted speaker events
-    .reduce((m, e, k, l) => {
-      if (Number(k) !== Number(deletedSpeakerId)) {
-        m[k] = e
-      }
-      return m
-    }, {} as LocalTranscriptEvent['speakerEvents'])
+    // merge the new speaker
+    ...oldEvent.speakerEvents,
+    [speakerId] : {
+      speakerEventId: event.eventId,
+      speakerEventTiers: isNew
+        ? {}
+        : oldEvent.speakerEvents[speakerId].speakerEventTiers,
+      tokens
+    }
+  })
+  // remove deleted speaker events
+  .reduce((m, e, k, l) => {
+    if (Number(k) !== Number(deletedSpeakerId)) {
+      m[k] = e
+    }
+    return m
+  }, {} as LocalTranscriptEvent['speakerEvents'])
+
+  // create the event
   const newEvent = clone({...oldEvent, speakerEvents})
-  // UPDATE EVENT
-  eventStore.events.splice(eventIndex, 1, newEvent)
+
   // if it has a fragment marker ("="),
   // mark the first token in the next
   // speaker event as a fragment_of
   if (hasNextFragmentMarker(newEvent, speakerId, eventStore.metadata.defaultTier)) {
-    console.log('has next fragment marker')
     setFirstTokenFragmentOf(eventIndex + 1, speakerId, getLastEventToken(newEvent, speakerId))
+  // unset, if it doesn’t
+  } else {
+    setFirstTokenFragmentOf(eventIndex + 1, speakerId, undefined)
   }
+
+  // UPDATE EVENT
+  eventStore.events.splice(eventIndex, 1, newEvent)
+
+  // if the last token in the previous event
+  // has a fragment marker (=), set fragment of here.
+  if (hasNextFragmentMarker(getPreviousEvent(event.eventId), speakerId, eventStore.metadata.defaultTier)) {
+    const t = getLastEventToken(getPreviousEvent(event.eventId), speakerId)
+    if (t !== undefined) {
+      setFirstTokenFragmentOf(eventIndex, speakerId, t)
+    }
+  // unset, if it doesn’t
+  } else {
+    setFirstTokenFragmentOf(eventIndex, speakerId, undefined)
+  }
+
   // update token order if the length has changed
   if (tokenCountDifference !== 0) {
     eventStore.events = updateSpeakerTokenOrderStartingAt(speakerId, eventIndex, tokenCountDifference)
@@ -821,6 +840,12 @@ export function findPreviousSpeakerEvent(speaker: number, eventId: number): numb
   return _(eventStore.events).findLastIndex((e, eventIndex) => eventIndex < i && e.speakerEvents[speaker] !== undefined)
 }
 
+export function getPreviousEvent(id: number): LocalTranscriptEvent|undefined {
+  const sorted = sortEvents(eventStore.events)
+  const index = sorted.findIndex(e => e.eventId === id) - 1
+  return sorted[index]
+}
+
 export function deleteEventById(id: number) {
   const i = findEventIndexById(id)
   return deleteEvent(eventStore.events[i])
@@ -871,7 +896,7 @@ function emitUpdateTimeUntilPaused(t: number, maxT?: number) {
         const e = findEventAt(eventStore.currentTime)
         if (e !== undefined && e.eventId !== currentlyPlayingEventId) {
           currentlyPlayingEventId = e.eventId
-          scrollToTranscriptEvent(e, { animate: false, focusSpeaker: null })
+          scrollToTranscriptEvent(e)
         }
       }
       // continue emitting

@@ -1,6 +1,5 @@
 <template>
   <div
-    :data-speaker-id="speaker"
     :class="[
       'segment-editor',
       isMarkedWithFragment && 'has-next-fragment',
@@ -26,6 +25,7 @@
             :style="{top: (tierIndex + 1) * tierHeight + 'px'}"
             :class="['secondary-token-tier-text', settings.darkMode === true && 'theme--dark']"
             v-text="token.tiers[tier.id] !== undefined ? token.tiers[tier.id].text : undefined"
+            :id="`speaker_event_tier_${speaker}__${tier.id}`"
             contenteditable="true"
             @blur="(e) => updateAndCommitLocalTokenTier(e, tier.id, i)"
             @focus="(e) => $emit('focus', e, event)" />
@@ -40,13 +40,15 @@
       @keydown.tab.shift.exact="focusPreviousFrom($event, defaultTier)"
       @keydown.tab.exact="focusNextFrom($event, defaultTier)"
       @keydown.enter.exact.prevent="viewAndSelectAudioEvent(event)"
+      @keydown.right.exact="handleCursor($event, defaultTier)"
+      @keydown.left.exact="handleCursor($event, defaultTier)"
       @copy.prevent="copyTokens"
       @cut.prevent="cutTokens"
       @paste="pasteTokens"
+      :id="`speaker_event_tier_${speaker}__${defaultTier}`"
       contenteditable="true"
       v-text="segmentText"
       :style="textStyle"
-      :data-speaker-id="speaker"
       :data-event-id="event.eventId"
       class="tokens-input segment-text">
     </div>
@@ -59,6 +61,7 @@
         v-if="localTokens.length && tier.type === 'freeText'"
         v-text="getTierFreeTextText(tier.id)"
         contenteditable="true"
+        :id="`speaker_event_tier_${speaker}__${tier.id}`"
         :class="['secondary-free-text-tier-text', settings.darkMode === true && 'theme--dark']"
         @keydown.tab.shift.exact="focusPreviousFrom(tier.id)"
         @keydown.tab.exact="focusNextFrom(tier.id)"
@@ -139,28 +142,41 @@ export default class SpeakerSegmentTranscript extends Vue {
       .findIndex(s => s.id === String(speakerId)) === _(eventStore.metadata.speakers).toArray().value().length - 1
   }
 
-  focusPreviousFrom(e: KeyboardEvent, tier: string) {
-    console.log('prev', tier, eventStore.metadata.tiers, this.speaker, eventStore.metadata.speakers)
-    if (this.isFirstSpeaker(this.speaker)) {
-      e.preventDefault()
-      const i = findEventIndexById(this.event.eventId)
-      scrollToTranscriptEvent(
-        eventStore.events[i > 0 ? i - 1 : 0],
-        { animate: true, focusSpeaker: this.speaker }
-      )
+  handleCursor(e: KeyboardEvent, tier: TokenTierType) {
+    const s = getSelection()
+    const n = s ? s.focusNode : null
+    if (e.currentTarget instanceof HTMLElement && s !== null && n !== null) {
+      console.log(n.textContent!.length, s.anchorOffset)
+      if (e.key === 'ArrowLeft' && s.anchorOffset === 0) {
+        this.focusPreviousFrom(e, tier)
+      } else if (e.key === 'ArrowRight' && s !== null && s.anchorOffset === n.textContent!.length) {
+        this.focusNextFrom(e, tier)
+      }
     }
   }
 
-  focusNextFrom(e: KeyboardEvent, tier: string) {
+  focusPreviousFrom(e: KeyboardEvent, tier: TokenTierType) {
+    // console.log('prev', tier, eventStore.metadata.tiers, this.speaker, eventStore.metadata.speakers)
+    // if (this.isFirstSpeaker(this.speaker)) {
+    e.preventDefault()
+    const i = findEventIndexById(this.event.eventId)
+    scrollToTranscriptEvent(
+      eventStore.events[i > 0 ? i - 1 : 0],
+      { animate: true, focusSpeaker: this.speaker, focusTier: tier }
+    )
+    // }
+  }
+
+  focusNextFrom(e: KeyboardEvent, tier: TokenTierType) {
     console.log('next', tier, eventStore.metadata.tiers, this.speaker, eventStore.metadata.speakers)
-    if (this.isLastSpeaker(this.speaker)) {
-      e.preventDefault()
-      const i = findEventIndexById(this.event.eventId)
-      scrollToTranscriptEvent(
-        eventStore.events[i > -1 ? i + 1 : 0],
-        { animate: true, focusSpeaker: this.speaker }
-      )
-    }
+    // if (this.isLastSpeaker(this.speaker)) {
+    e.preventDefault()
+    const i = findEventIndexById(this.event.eventId)
+    scrollToTranscriptEvent(
+      eventStore.events[i > -1 ? i + 1 : 0],
+      { animate: true, focusSpeaker: this.speaker, focusTier: tier }
+    )
+    // }
   }
 
   // TODO: redundant?

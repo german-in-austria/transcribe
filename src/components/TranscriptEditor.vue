@@ -72,13 +72,14 @@ export default class TranscriptEditor extends Vue {
   isEventSelected = isEventSelected
   eventWidthCache: {[eventId: string]: number} = {}
 
-  onChangeViewingEvent(e: LocalTranscriptEvent|null, opts: { animate: boolean, focusSpeaker: number|null }) {
+  // tslint:disable-next-line:max-line-length
+  onChangeViewingEvent(e: LocalTranscriptEvent|null, opts: { animate: boolean, focusSpeaker: number|null, focusTier: string|null }) {
     if (e !== null && e !== undefined) {
-      this.doScrollToEvent(e, opts.animate, opts.focusSpeaker)
+      this.doScrollToEvent(e, opts.animate, opts.focusSpeaker, opts.focusTier)
     }
   }
 
-  doScrollToEvent(e: LocalTranscriptEvent, animate = true, focusSpeaker: number|null = null) {
+  doScrollToEvent(e: LocalTranscriptEvent, animate = true, focusSpeaker: number|null = null, focusTier: string|null) {
     // right in the middle
     const i = findEventIndexById(e.eventId) - Math.floor(defaultLimit / 2)
     this.currentIndex = Math.max(0, i)
@@ -99,8 +100,11 @@ export default class TranscriptEditor extends Vue {
           }
           this.innerLeft = el.offsetLeft * -1 + c.clientWidth / 2 - el.clientWidth / 2 - 25;
           if (focusSpeaker !== null) {
-            // (el.querySelector('[data-speaker-id="' + focusSpeaker + '"] [contenteditable]') as any).focus()
-            (el.querySelector('[contenteditable]') as any).focus()
+            // (el.querySelector(`[data-speaker-id="${ focusSpeaker }"] [contenteditable]`) as any).focus()
+            // (el.querySelector(`[contenteditable]`) as any).focus()
+            (el.querySelector(
+              `#speaker_event_tier_${focusSpeaker}__${focusTier || eventStore.metadata.defaultTier}`
+            ) as any).focus()
           }
         }
       })
