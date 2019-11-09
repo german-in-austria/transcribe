@@ -144,7 +144,9 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
         }
         // it is the last token and has a fragment marker
         if (i + 1 === tokens.length && tokenHasFragment(token.t)) {
+          console.log('tokenHasFragment', token)
           token.t = getTokenTextWithFragments(t, speakerId, localTranscript, defaultTier)
+          console.log('tokenTextWithFragments', token.t)
         }
         m[t.id] = token
       })

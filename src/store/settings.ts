@@ -306,7 +306,6 @@ export function getIsDarkMode(): boolean {
 }
 
 export function setIsDarkMode(b: boolean) {
-  console.log('darkmode', b)
   settings.darkMode = b
   localStorage.setItem('darkMode', JSON.stringify(b))
 }

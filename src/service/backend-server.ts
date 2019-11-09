@@ -295,6 +295,7 @@ function reverseString(str: string) {
 }
 
 function replaceLastOccurrence(token: string, toReplace: string, replaceWith: string): string {
+  console.log('replaceLastOccurrence', token, toReplace, replaceWith)
   return reverseString(
     reverseString(token).replace(
       reverseString(toReplace),
