@@ -1145,7 +1145,6 @@ async function performSaveRequest(id: number, t: ServerTranscriptSaveRequest): P
 }
 
 export async function saveChangesToServer() {
-  console.log('save to server', serverTranscript)
   // there’s no transcript or no id => throw
   if ( serverTranscript === null || serverTranscript.aTranskript === undefined ) {
     throw new Error('transcript id is undefined')
@@ -1153,9 +1152,14 @@ export async function saveChangesToServer() {
     // it’s already on the server
     if (serverTranscript.aTranskript.pk > -1) {
       const t = await localTranscriptToServerSaveRequest(serverTranscript, eventStore.events)
+      // console.log({ ServerTranscriptSaveRequest: t })
       const serverChanges = await performSaveRequest(serverTranscript.aTranskript.pk, t)
+      // console.log({ serverChanges })
       logServerResponse(t, serverChanges)
-      eventStore.events = serverTranscriptToLocal(updateServerTranscriptWithChanges(serverChanges))
+      const updatedServerTranscript = updateServerTranscriptWithChanges(serverChanges)
+      const updatedLocalTranscript = serverTranscriptToLocal(updatedServerTranscript)
+      // eventStore.events = updatedLocalTranscript
+      // console.log({ updatedServerTranscript, updatedLocalTranscript })
     // it’s a new transcript
     } else {
       const { transcript_id } = await createEmptyTranscript(
