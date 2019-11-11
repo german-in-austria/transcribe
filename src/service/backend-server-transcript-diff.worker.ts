@@ -55,7 +55,12 @@ function replaceLastOccurrence(token: string, toReplace: string, replaceWith: st
   )
 }
 
-function getTokenTextWithFragments(t: LocalTranscriptToken, speakerId: string, es: LocalTranscript, defaultTier: TokenTierType): string {
+function getTokenTextWithFragments(
+  t: LocalTranscriptToken,
+  speakerId: string,
+  es: LocalTranscript,
+  defaultTier: TokenTierType
+): string {
   const event = es.find((e) => {
     return e.speakerEvents[speakerId] !== undefined &&
     e.speakerEvents[speakerId].tokens[0] !== undefined &&
@@ -65,6 +70,7 @@ function getTokenTextWithFragments(t: LocalTranscriptToken, speakerId: string, e
     const nextToken = event.speakerEvents[speakerId].tokens[0]
     const newText = replaceLastOccurrence(t.tiers[defaultTier].text, '=', nextToken.tiers[defaultTier].text)
     if (tokenHasFragment(newText)) {
+      // tslint:disable-next-line:max-line-length
       return t.tiers[defaultTier].text.replace('=', '') + getTokenTextWithFragments(nextToken, speakerId, es, defaultTier)
     } else {
       return newText
