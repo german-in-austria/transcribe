@@ -295,7 +295,7 @@ function reverseString(str: string) {
 }
 
 function replaceLastOccurrence(token: string, toReplace: string, replaceWith: string): string {
-  console.log('replaceLastOccurrence', token, toReplace, replaceWith)
+  // console.log('replaceLastOccurrence', token, toReplace, replaceWith)
   return reverseString(
     reverseString(token).replace(
       reverseString(toReplace),
@@ -329,7 +329,7 @@ function findNextFragmentOfId(
       // it refers to the current token
       tokens[nextEvent.tid[speakerKey][0]].fo === tokenId
     ) {
-      // return the next event’s id
+      // return the next event’s first token id
       return nextEvent.tid[speakerKey][0]
     } else {
       return undefined
@@ -450,12 +450,14 @@ export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
     }
   })()
   return _(s.aEvents)
+    // sort, so the grouped events are in the correct order.
+    .sortBy(e => timeToSeconds(e.s))
     // group into events by startTime and endTime
     .groupBy((e) => e.s + '-' + e.e)
     // so we can access it as a list
     .toArray()
     // generate unified local events
-    .map((eG, iG, lG) => {
+    .map((eG: ServerEvent[], iG, lG) => {
       return {
         eventId: eG[0].pk,
         startTime: timeToSeconds(eG[0].s),
