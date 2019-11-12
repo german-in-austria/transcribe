@@ -401,7 +401,7 @@ function mergeEventChanges(
       delete keyedEvents[e.pk]
     } else if (e.newStatus === 'inserted') {
       keyedEvents[e.newPk!] = serverEventSaveResponseToServerEvent(e)
-      console.log('inserted event', keyedEvents[e.newPk!], e.newPk)
+      // console.log('inserted event', keyedEvents[e.newPk!], e.newPk)
     } else if (e.newStatus === 'updated') {
       keyedEvents[e.pk] = serverEventSaveResponseToServerEvent(e)
     }
