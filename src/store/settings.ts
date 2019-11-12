@@ -53,26 +53,26 @@ export const tokenTypesPresets: TokenTypesPreset = {
       name: 'anonymized',
       regex: /(\[)([a-zA-ZÜüÄäÖöß]+)(\](N|O|Z|S))/,
       color: '#880000',
-      id: 4
+      id: 10
     },
     {
       name: 'segments-unclear',
       regex: /(\*)([a-zA-ZÜüÄäÖöß]+)(\*)/,
       color: '#6B6B6B',
-      id: -2
+      id: 9
     },
     {
       name: 'untransferable-lexics',
       regex: /(_)([a-zA-ZÜüÄäÖöß]+)(_)/,
       color: '',
-      id: -3
+      id: 8
     },
-    {
-      name: 'quotation',
-      regex: /(„|")([a-zA-ZÜüÄäÖöß]+)(“|")/,
-      color: '',
-      id: -4
-    },
+    // {
+    //   name: 'quotation',
+    //   regex: /(„|")([a-zA-ZÜüÄäÖöß]+)(“|")/,
+    //   color: '',
+    //   id: -4
+    // },
     {
       name: 'interrupted',
       regex: /([a-zA-ZÜüÄäÖöß]+\/)/u,
