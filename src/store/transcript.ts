@@ -1158,7 +1158,7 @@ export async function saveChangesToServer() {
       logServerResponse(t, serverChanges)
       const updatedServerTranscript = updateServerTranscriptWithChanges(serverChanges)
       const updatedLocalTranscript = serverTranscriptToLocal(updatedServerTranscript)
-      // eventStore.events = updatedLocalTranscript
+      eventStore.events = updatedLocalTranscript
       // console.log({ updatedServerTranscript, updatedLocalTranscript })
     // it’s a new transcript
     } else {
@@ -1181,6 +1181,7 @@ export async function saveChangesToServer() {
       const serverChanges = await performSaveRequest(transcript_id, t)
       logServerResponse(t, serverChanges)
       eventStore.events = serverTranscriptToLocal(updateServerTranscriptWithChanges(serverChanges))
+      serverTranscript.aEinzelErhebung!.pk = transcript_id
     }
   }
 }
