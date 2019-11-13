@@ -307,16 +307,16 @@ export default class Editor extends Vue {
   }
 
   async saveToServer() {
-    if (this.history.actions.length > 0) {
-      this.isSaving = true
-      try {
-        await saveChangesToServer()
-      } catch (e) {
-        console.log(e)
-      } finally {
-        this.isSaving = false
-      }
+    // if (this.history.actions.length > 0) {
+    this.isSaving = true
+    try {
+      await saveChangesToServer()
+    } catch (e) {
+      console.log(e)
+    } finally {
+      this.isSaving = false
     }
+    // }
   }
 
   async doShowMenu(e: MouseEvent) {
