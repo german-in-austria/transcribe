@@ -157,7 +157,7 @@ export function importableToServerTranscript(
 
   const events = _(tiersBySpeakers)
     .map(speakerTiers => {
-      console.log({speakerTiers})
+      // console.log({speakerTiers})
       return _(speakerTiers)
         // only the default tier and free text (event_tier) tiers
         .filter(st => st.to_tier_type === 'default' || st.to_tier_type === 'freeText')
@@ -167,14 +167,6 @@ export function importableToServerTranscript(
             console.error('No speaker specified', { speakerTier })
             throw new Error('No speaker specified')
           } else {
-            // generate tier id
-            const tierId = makeTierId()
-            // create and name aTier
-            if (speakerTier.to_tier_type === 'freeText') {
-              tiers[tierId] = {
-                tier_name: speakerTier.to_tier_name || speakerTier.to_tier_type || 'untitled'
-              }
-            }
             return _(speakerTier.events).map((e): ServerEvent => {
 
               if (!e.text) {
@@ -184,8 +176,19 @@ export function importableToServerTranscript(
               const eventId = makeEventId()
               const text = e.text || ''
 
-              // secondary tiers (event tiers)
+              // create event tiers (free text tiers)
               if (speakerTier.to_tier_type === 'freeText') {
+
+                const tierName = speakerTier.to_tier_name || speakerTier.to_tier_type || 'untitled'
+                const existingTier = _(tiers).map((t, k) => ({ ...t, id: k })).find(t => t.tier_name === tierName)
+                const tierId = existingTier !== undefined ? existingTier.id : makeTierId()
+
+                if (existingTier === undefined) {
+                  tiers[tierId] = {
+                    tier_name: tierName
+                  }
+                }
+
                 return {
                   pk: eventId,
                   e: padEnd(timeFromSeconds(Number(e.endTime)), 14, '0'),
