@@ -263,7 +263,10 @@ export default class App extends Vue {
       const res = await getServerTranscripts()
       if (res.transcripts !== undefined) {
         this.loggedIn = true
-        this.transcriptList = res.transcripts
+        // only the ones that are not recently opened
+        this.transcriptList = res.transcripts.filter(t => {
+          return eventStore.recentlyOpened.findIndex(t1 => t1.pk === t.pk) === -1
+        })
       } else if ((res as any).error === 'login') {
         this.loggedIn = false
       }
@@ -331,7 +334,7 @@ export default class App extends Vue {
     this.loadingTranscriptId = null
     mergeServerTranscript(t)
     eventStore.metadata = getMetadataFromServerTranscript(t)
-    eventStore.events = serverTranscriptToLocal(t)
+    eventStore.events = serverTranscriptToLocal(t, eventStore.metadata.defaultTier || 'text')
     if (audioData !== null) {
       const audioElement = await loadAudioFromFile(audioData)
       eventStore.status = 'finished'

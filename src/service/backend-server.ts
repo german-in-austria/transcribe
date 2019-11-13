@@ -208,7 +208,7 @@ export function getMetadataFromServerTranscript(res: ServerTranscript) {
     tiers: [
       {
         type: 'token',
-        name: 'variational',
+        name: 'eye dialect',
         show: defaultTier === 'text',
         id: 'text'
       },
@@ -437,18 +437,18 @@ export function updateServerTranscriptWithChanges(s: ServerTranscriptSaveRespons
   }
 }
 
-export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
-  const defaultTier = (() => {
-    if (
-      s.aTranskript === undefined ||
-      s.aTranskript.default_tier === null ||
-      s.aTranskript.default_tier === undefined
-    ) {
-      return 'text'
-    } else {
-      return s.aTranskript.default_tier
-    }
-  })()
+export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenTierType): LocalTranscript {
+  // const defaultTier = (() => {
+  //   if (
+  //     s.aTranskript === undefined ||
+  //     s.aTranskript.default_tier === null ||
+  //     s.aTranskript.default_tier === undefined
+  //   ) {
+  //     return 'text'
+  //   } else {
+  //     return s.aTranskript.default_tier
+  //   }
+  // })()
   return _(s.aEvents)
     // sort, so the grouped events are in the correct order.
     .sortBy(e => timeToSeconds(e.s))
@@ -611,7 +611,7 @@ export async function getTranscript(
     }
     // convert and concat
     eventStore.lockedTokens = eventStore.lockedTokens.concat(getLockedTokensFromServerTranscript(res))
-    eventStore.events = buffer.concat(serverTranscriptToLocal(res))
+    eventStore.events = buffer.concat(serverTranscriptToLocal(res, eventStore.metadata.defaultTier || 'text'))
     // progress callback with data
     if (onProgress !== undefined) {
       onProgress(res.aNr / (totalSteps || res.aTmNr || 10), eventStore.events, res)

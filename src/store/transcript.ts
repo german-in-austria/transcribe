@@ -1157,7 +1157,10 @@ export async function saveChangesToServer() {
       // console.log({ serverChanges })
       logServerResponse(t, serverChanges)
       const updatedServerTranscript = updateServerTranscriptWithChanges(serverChanges)
-      const updatedLocalTranscript = serverTranscriptToLocal(updatedServerTranscript)
+      const updatedLocalTranscript = serverTranscriptToLocal(
+        updatedServerTranscript,
+        eventStore.metadata.defaultTier || 'text'
+      )
       eventStore.events = updatedLocalTranscript
       // console.log({ updatedServerTranscript, updatedLocalTranscript })
     // it’s a new transcript
@@ -1180,8 +1183,11 @@ export async function saveChangesToServer() {
       const t = await localTranscriptToServerSaveRequest(transcriptWithoutTokensAndEvents, eventStore.events)
       const serverChanges = await performSaveRequest(transcript_id, t)
       logServerResponse(t, serverChanges)
-      eventStore.events = serverTranscriptToLocal(updateServerTranscriptWithChanges(serverChanges))
-      serverTranscript.aEinzelErhebung!.pk = transcript_id
+      eventStore.events = serverTranscriptToLocal(
+        updateServerTranscriptWithChanges(serverChanges),
+        eventStore.metadata.defaultTier || 'text'
+      )
+      serverTranscript.aTranskript!.pk = transcript_id
     }
   }
 }
