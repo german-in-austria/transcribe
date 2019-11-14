@@ -144,7 +144,7 @@ function keyboardEventHasModifier(e: KeyboardEvent, m: KeyboardModifier): boolea
 }
 
 export async function handleGlobalShortcut(e: KeyboardEvent) {
-  console.log(e)
+  // console.log(e)
   _(keyboardShortcuts).forEach(sc => {
     if (
       // the function is not disabled

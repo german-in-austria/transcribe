@@ -248,7 +248,7 @@ export function importableToServerTranscript(
     .flatten()
     .flatten()
     .value()
-  // console.log({ events })
+
   return {
     aTiers: tiers,
     aEinzelErhebung: {
