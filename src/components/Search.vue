@@ -166,7 +166,12 @@ export default class Search extends Vue {
     } else {
       // console.time('search took')
       const search = this.caseSensitive ? term : term.toLowerCase()
-      const regex = new RegExp(search)
+      let regex: RegExp|null = null
+      try {
+        regex = new RegExp(search)
+      } catch (e) {
+        // it failed.
+      }
       requestAnimationFrame(() => {
         const r = _(eventStore.events)
           .filter((v) => {
@@ -175,7 +180,7 @@ export default class Search extends Vue {
               if (!this.caseSensitive) {
                 s = s.toLowerCase()
               }
-              if (this.useRegEx && this.isValidRegex) {
+              if (this.useRegEx && this.isValidRegex && regex !== null) {
                 return regex.test(s)
               } else {
                 return s.indexOf(search) > -1
