@@ -6,9 +6,15 @@
       key-field="eventId"
       :item-size="40">
       <template v-slot="{ item }">
-        <v-list-tile @click="showEventIfExists(item)">
+        <v-list-tile
+          @click="showEventIfExists(item)"
+          :class="[
+            'event-error',
+            selectedError !== null && item.eventId === selectedError.eventId ? 'selected' : ''
+          ]">
           <v-list-tile-avatar>
-            <v-icon>error</v-icon>
+            <v-icon v-if="item.error_type === 'time_overlap'">mdi-checkbox-multiple-blank-outline</v-icon>
+            <v-icon v-if="item.error_type === 'unknown_token'">mdi-help-rhombus-outline</v-icon>
           </v-list-tile-avatar>
           <v-list-tile-content>
             <v-list-tile-title class="sidebar-title" v-if="item.error_type === 'time_overlap'">Time Overlap</v-list-tile-title>
@@ -32,8 +38,10 @@ import {
   findEventIndexById,
   scrollToTranscriptEvent,
   toTime,
-  selectEvent
+  selectEvent,
+  isEventSelected
 } from '../store/transcript'
+
 interface ErrorEvent extends LocalTranscriptEvent {
   error_type: 'time_overlap'|'unknown_token'
 }
@@ -45,11 +53,14 @@ interface ErrorEvent extends LocalTranscriptEvent {
   }
 })
 export default class ErrorList extends Vue {
-  @Prop() errors: ErrorEvent
-  toTime = toTime
 
-  showEventIfExists(e: LocalTranscriptEvent) {
+@Prop() errors: ErrorEvent
+  toTime = toTime
+  selectedError: ErrorEvent|null = null
+
+  showEventIfExists(e: ErrorEvent) {
     const i = findEventIndexById(e.eventId)
+    this.selectedError = e
     if (i > -1) {
       selectEvent(e)
       scrollToAudioEvent(e)
@@ -63,4 +74,15 @@ export default class ErrorList extends Vue {
 
 .scroller
   height 100%
+
+.event-error.selected
+  background #ccc
+  color white
+
+.sidebar-scrollable .subtitle
+  height 18px
+  font-size 11px
+  color inherit !important
+  opacity .7
+
 </style>
