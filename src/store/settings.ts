@@ -64,7 +64,7 @@ export const tokenTypesPresets: TokenTypesPreset = {
     {
       name: 'untransferable-lexics',
       regex: /(_)([a-zA-ZÜüÄäÖöß]+)(_)/,
-      color: '',
+      color: '#FFAF3C',
       id: 8
     },
     // {
