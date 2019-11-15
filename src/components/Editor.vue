@@ -1,69 +1,73 @@
 <template>
   <div class="fill-height">
     <v-toolbar class="elevation-0" fixed app>
-      <div>{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
-      <v-spacer></v-spacer>
-      <div>
-        <search />
-      </div>
-      <div class="pr-4">
-        <v-tooltip transition="none" bottom>
-          <v-btn slot="activator" @click.stop="showSettings = true" icon flat>
-            <v-icon>settings</v-icon>
-          </v-btn>
-          <span>Settings</span>
-        </v-tooltip>
-        <v-menu
-          :disabled="eventStore.status === 'loading' || isSaving"
-          open-on-hover
-          min-width="150"
-          nudge-bottom="10"
-          transition="none"
-          offset-y>
-          <v-btn
-            slot="activator"
-            @click="saveToServer"
-            :loading="eventStore.status === 'loading' || isSaving"
+      <v-flex xs4>
+        <div><v-icon>chevron_left</v-icon></div>
+      </v-flex>
+      <v-flex xs4 class="text-xs-center">
+        <div>{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
+      </v-flex>
+      <v-flex xs4 class="text-xs-right">
+        <search style="display: inline-block" />
+        <div style="display: inline-block" class="pr-4">
+          <v-tooltip transition="none" bottom>
+            <v-btn slot="activator" @click.stop="showSettings = true" icon flat>
+              <v-icon>settings</v-icon>
+            </v-btn>
+            <span>Settings</span>
+          </v-tooltip>
+          <v-menu
             :disabled="eventStore.status === 'loading' || isSaving"
-            icon flat>
-            <v-icon>save_alt</v-icon>
-            <template v-slot:loader>
-              <v-progress-circular
-                :color="settings.darkMode ? '#fff' : '#333'"
-                :size="16"
-                :rotate="-90"
-                :width="2"
-                :indeterminate="eventStore.transcriptDownloadProgress === 1 || isSaving"
-                :value="eventStore.transcriptDownloadProgress * 100" />
-            </template>
-          </v-btn>
-          <v-list dense class="context-menu-list">
-            <v-list-tile @click="exportProject">
-              <v-list-tile-content>
-                <v-list-tile-title>Download Project</v-list-tile-title>
-              </v-list-tile-content>
-            </v-list-tile>
-            <v-divider />
-            <v-list-tile @click="saveToServer">
-              <v-list-tile-content>
-                <v-list-tile-title>Save To Server</v-list-tile-title>
-              </v-list-tile-content>
-            </v-list-tile>
-          </v-list>
-        </v-menu>
-        <v-tooltip transition="none" bottom>
-          <v-btn
-            slot="activator"
-            @click.stop="() => settings.showDrawer = !settings.showDrawer"
-            icon flat>
-            <v-badge color="error" overlap :value="errors.length > 0">
-              <span slot="badge">{{ errors.length }}</span>
-              <v-icon>mdi-tools</v-icon>
-            </v-badge>
-          </v-btn>
-          <span>History & Errors</span>
-        </v-tooltip>
-      </div>
+            open-on-hover
+            min-width="150"
+            nudge-bottom="10"
+            transition="none"
+            offset-y>
+            <v-btn
+              slot="activator"
+              @click="saveToServer"
+              :loading="eventStore.status === 'loading' || isSaving"
+              :disabled="eventStore.status === 'loading' || isSaving"
+              icon flat>
+              <v-icon>save_alt</v-icon>
+              <template v-slot:loader>
+                <v-progress-circular
+                  :color="settings.darkMode ? '#fff' : '#333'"
+                  :size="16"
+                  :rotate="-90"
+                  :width="2"
+                  :indeterminate="eventStore.transcriptDownloadProgress === 1 || isSaving"
+                  :value="eventStore.transcriptDownloadProgress * 100" />
+              </template>
+            </v-btn>
+            <v-list dense class="context-menu-list">
+              <v-list-tile @click="exportProject">
+                <v-list-tile-content>
+                  <v-list-tile-title>Download Project</v-list-tile-title>
+                </v-list-tile-content>
+              </v-list-tile>
+              <v-divider />
+              <v-list-tile @click="saveToServer">
+                <v-list-tile-content>
+                  <v-list-tile-title>Save To Server</v-list-tile-title>
+                </v-list-tile-content>
+              </v-list-tile>
+            </v-list>
+          </v-menu>
+          <v-tooltip transition="none" bottom>
+            <v-btn
+              slot="activator"
+              @click.stop="() => settings.showDrawer = !settings.showDrawer"
+              icon flat>
+              <v-badge color="error" overlap :value="errors.length > 0">
+                <span slot="badge">{{ errors.length }}</span>
+                <v-icon>mdi-tools</v-icon>
+              </v-badge>
+            </v-btn>
+            <span>History & Errors</span>
+          </v-tooltip>
+        </div>
+      </v-flex>
     </v-toolbar>
     <settings-view
       v-if="showSettings" 
