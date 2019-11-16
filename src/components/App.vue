@@ -178,8 +178,10 @@ import {
   speakerEventHasErrors,
   loadAudioFromFile,
   addRecentlyOpened,
-  loadAudioFromUrl
+  loadAudioFromUrl,
 } from '../store/transcript'
+
+import { computeTokenTypesForEvents } from '../service/token-types'
 
 import {
   fileToUint8ArrayAndName,
@@ -264,7 +266,7 @@ export default class App extends Vue {
       const res = await getServerTranscripts()
       if (res.transcripts !== undefined) {
         this.loggedIn = true
-        // only the ones that are not recently opened
+        // only the ones that have not been opened recently opened
         this.transcriptList = res.transcripts.filter(t => {
           return eventStore.recentlyOpened.findIndex(t1 => t1.pk === t.pk) === -1
         })
@@ -335,12 +337,17 @@ export default class App extends Vue {
     this.loadingTranscriptId = null
     mergeServerTranscript(t)
     eventStore.metadata = getMetadataFromServerTranscript(t)
-    eventStore.events = serverTranscriptToLocal(t, eventStore.metadata.defaultTier || 'text')
+    const events = serverTranscriptToLocal(t, eventStore.metadata.defaultTier || 'text')
+    eventStore.events = computeTokenTypesForEvents(
+      events,
+      eventStore.metadata.defaultTier || 'text',
+      _(eventStore.metadata.speakers).map((s, k) => k).value()
+    )
     if (audioData !== null) {
       const audioElement = await loadAudioFromFile(audioData)
       eventStore.status = 'finished'
       return audioElement.src
-    } else if (audioUrl !== undefined){
+    } else if (audioUrl !== undefined) {
       const audioElement = await loadAudioFromUrl(audioUrl)
       eventStore.status = 'finished'
       return audioElement.src

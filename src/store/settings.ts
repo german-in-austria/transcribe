@@ -4,13 +4,24 @@ import { KeyboardShortcuts, keyboardShortcuts } from '../service/keyboard'
 
 import { eventStore } from './transcript'
 
+export interface TokenTypePresetBase {
+  name: string
+  color: string
+  id: number
+}
+
 export interface TokenTypesPreset {
-  [ name: string ]: Array<{
-    name: string
-    regex: RegExp
-    color: string
-    id: number
-  }>
+  [ name: string ]: Array<TokenTypesPresetGroup|TokenTypesPresetSingle>
+}
+
+export interface TokenTypesPresetSingle extends TokenTypePresetBase {
+  type: 'single'
+  regex: RegExp
+}
+
+export interface TokenTypesPresetGroup extends TokenTypePresetBase {
+  type: 'group'
+  bracketSymbols: [ RegExp, RegExp ]
 }
 
 // type AnyJson =  boolean | number | string | null | JsonArray | JsonMap
@@ -50,18 +61,14 @@ export interface Settings {
 export const tokenTypesPresets: TokenTypesPreset = {
   dioeDB: [
     {
-      name: 'anonymized',
-      regex: /(\[)([a-zA-ZÜüÄäÖöß]+)(\](N|O|Z|S))/,
-      color: '#880000',
-      id: 10
-    },
-    {
+      type: 'single',
       name: 'segments-unclear',
       regex: /(\*)([a-zA-ZÜüÄäÖöß]+)(\*)/,
       color: '#6B6B6B',
       id: 9
     },
     {
+      type: 'single',
       name: 'untransferable-lexics',
       regex: /(_)([a-zA-ZÜüÄäÖöß]+)(_)/,
       color: '#FFAF3C',
@@ -74,86 +81,114 @@ export const tokenTypesPresets: TokenTypesPreset = {
     //   id: -4
     // },
     {
+      type: 'single',
       name: 'interrupted',
-      regex: /([a-zA-ZÜüÄäÖöß]+\/)/u,
+      regex: /([a-zA-ZÜüÄäÖöß]+\/$)/u,
       color: '#6699CC',
       id: 6
     },
     {
-      name: 'incomprehensible',
-      regex: /(\()(([a-zA-ZÜüÄäÖöß]+)|(\?))(\))/u,
-      color: '#6f6f6f',
-      id: 7
-    },
-    {
+      type: 'single',
       name: 'pause',
       regex: /\(\((([a-zA-ZÜüÄäÖöß]+)|(\d+(,\d)?s|))\)\)/u,
       color: '#6B6B6B',
       id: 3
     },
     {
+      type: 'group',
+      name: 'incomprehensible',
+      bracketSymbols: [
+        /(\(([a-zA-ZÜüÄäÖöß\?]+))/u,
+        /((.+)\))/u
+      ],
+      color: '#ccc',
+      id: 7
+    },
+    {
+      type: 'group',
+      name: 'anonymized',
+      // regex: /(\[)([a-zA-ZÜüÄäÖöß]+)(\](N|O|Z|S))/,
+      bracketSymbols: [
+        /(\[([a-zA-ZÜüÄäÖöß\?]+))/u,
+        /([a-zA-ZÜüÄäÖöß]+\](N|O|Z|S))/,
+      ],
+      color: '#880000',
+      id: 10
+    },
+    {
+      type: 'single',
       name: 'other',
       regex: /\{([a-zA-ZÜüÄäÖöß]+)\}/u,
       color: '#880000',
       id: 4
     },
     {
+      type: 'single',
       name: 'delimiter',
-      regex: /^(\?|\.|\,|!)/,
+      regex: /^(\?|\.|\,|!)$/,
       color: '#1717FB',
       id: 2
     },
     {
+      type: 'single',
       name: 'word',
-      regex: /^[a-zA-ZÜüÄäÖöß]+/u,
+      regex: /^([a-zA-ZÜüÄäÖöß"]+$)/u,
       color: 'transparent',
       id: 1
     },
   ],
   dissDB: [
     {
+      type: 'single',
       name: 'proper-name',
       regex: /\{(.+)\}/u,
       color: '#880000',
       id: 4
     },
     {
+      type: 'single',
       name: 'pause',
       regex: /\[[\s\S]{1,}s\]/u,
       color: '#6B6B6B',
       id: 3
     },
     {
+      type: 'single',
       name: 'non-verbal',
       regex: /\(\((.+)\)\)|\[(.+)\]/u,
       color: '#008800',
       id: 5
     },
     {
+      type: 'single',
       name: 'delimiter',
       regex: /^(\?|\.|\,|!)/,
       color: '#1717FB',
       id: 2
     },
     {
+      type: 'single',
       name: 'interrupted',
       regex: /([a-zA-ZÜüÄäÖöß]+\/)/u,
       color: '#6699CC',
       id: 6
     },
     {
+      type: 'single',
       name: 'contraction',
       regex: /_[a-zA-ZÜüÄäÖöß]+|[a-zA-ZÜüÄäÖöß]+_/,
       color: '#d47d0f',
       id: 8
     },
     {
+      type: 'single',
       name: 'incomprehensible',
       regex: /\((.+)\)/u,
       color: '#6f6f6f',
       id: 7
     },
     {
+      type: 'single',
       name: 'word',
       regex: /^[a-zA-ZÜüÄäÖöß]+/u,
       color: 'transparent',

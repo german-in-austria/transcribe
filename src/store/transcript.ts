@@ -37,8 +37,9 @@ interface LocalTranscriptTokenTier {
   text: string
   type: number|null
 }
-type LocalTranscriptSpeakers = ServerTranscriptInformants
-type LocalTranscriptTokenTypes = ServerTranscriptTokenTypes
+
+export type LocalTranscriptSpeakers = ServerTranscriptInformants
+export type LocalTranscriptTokenTypes = ServerTranscriptTokenTypes
 
 export type TokenTierType = 'text'|'ortho'|'phon'
 
@@ -126,11 +127,13 @@ export const eventStore = {
   playAllFrom: null as number|null,
   backEndUrl: localStorage.getItem('backEndUrl') || 'https://dissdb-test.dioe.at',
   audioElement: document.createElement('audio')
-}
+};
+
+(window as any).eventStore = eventStore;
 
 export function tokenTypeFromToken(token: string) {
   const type = _(tokenTypesPresets[settings.tokenTypesPreset]).find((tt) => {
-    return tt.regex.test(token)
+    return tt.type === 'single' && tt.regex.test(token)
   })
   if (type !== undefined) {
     return type
@@ -190,6 +193,7 @@ export function loadAudioFromUrl(url: string): Promise<HTMLAudioElement> {
       a.removeEventListener('durationchange', listener)
       audio.store.isLocalFile = false
       eventStore.audioElement = a
+      console.log({aDuration: a.duration})
       eventStore.audioMetadata.length = a.duration
       resolve(a)
     })
@@ -377,7 +381,7 @@ export function updateSpeakerEvents(
   speakerId: number,
   eTokens: LocalTranscriptToken[][]
 ): HistoryEventAction {
-  const updateHistoryActions = es.map((e, i) => updateSpeakerEvent(e, speakerId, eTokens[i]))
+  const updateHistoryActions = es.map((e, i) => updateSpeakerEvent(e, speakerId))
   return {
     id: _.uniqueId(),
     time: new Date(),
@@ -391,9 +395,9 @@ export function updateSpeakerEvents(
 // TODO: this should also update the speakerEventTiers
 export function updateSpeakerEvent(
   event: LocalTranscriptEvent,
-  speakerId: number,
-  tokens: LocalTranscriptToken[],
+  speakerId: number
 ): HistoryEventAction {
+  const tokens = event.speakerEvents[speakerId].tokens
   const eventIndex = findEventIndexById(event.eventId)
   const oldEvent = eventStore.events[eventIndex]
   const isNew = oldEvent.speakerEvents[speakerId] === undefined
@@ -404,9 +408,7 @@ export function updateSpeakerEvent(
     ...oldEvent.speakerEvents,
     [speakerId] : {
       speakerEventId: event.eventId,
-      speakerEventTiers: isNew
-        ? {}
-        : oldEvent.speakerEvents[speakerId].speakerEventTiers,
+      speakerEventTiers: event.speakerEvents[speakerId].speakerEventTiers,
       tokens
     }
   })
@@ -421,6 +423,8 @@ export function updateSpeakerEvent(
   // create the event
   const newEvent = clone({...oldEvent, speakerEvents})
 
+  console.log({newEvent})
+
   // if it has a fragment marker ("="),
   // mark the first token in the next
   // speaker event as a fragment_of
@@ -433,7 +437,6 @@ export function updateSpeakerEvent(
 
   // UPDATE EVENT
   eventStore.events.splice(eventIndex, 1, newEvent)
-
   // if the last token in the previous event
   // has a fragment marker (=), set fragment of here.
   if (hasNextFragmentMarker(getPreviousEvent(event.eventId), speakerId, eventStore.metadata.defaultTier)) {
@@ -450,6 +453,7 @@ export function updateSpeakerEvent(
   if (tokenCountDifference !== 0) {
     eventStore.events = updateSpeakerTokenOrderStartingAt(speakerId, eventIndex, tokenCountDifference)
   }
+  console.log('after update', clone(eventStore.events[eventIndex]), eventStore.events[eventIndex])
   return {
     id: _.uniqueId(),
     time: new Date(),
@@ -835,7 +839,7 @@ export function findEventIndexAt(seconds: number): number {
   return _(eventStore.events).findIndex((e) => e.startTime <= seconds && e.endTime >= seconds)
 }
 
-export function findPreviousSpeakerEvent(speaker: number, eventId: number): number|undefined {
+export function findPreviousSpeakerEvent(speaker: number, eventId: number): number {
   const i = findEventIndexById(eventId)
   return _(eventStore.events).findLastIndex((e, eventIndex) => eventIndex < i && e.speakerEvents[speaker] !== undefined)
 }
