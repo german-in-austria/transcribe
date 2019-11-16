@@ -27,16 +27,16 @@
             v-text="token.tiers[tier.id] !== undefined ? token.tiers[tier.id].text : undefined"
             :id="`speaker_event_tier_${speaker}__${tier.id}`"
             contenteditable="true"
-            @blur="(e) => updateAndCommitLocalTokenTier(e, tier.id, i)"
-            @focus="(e) => $emit('focus', e, event)" />
+            @blur="(e) => { focused = false; debouncedUpdateTokenTier(e.target.textContent, tier.id, i) }"
+            @focus="focused = true" />
           <span v-else class="secondary-token-tier-text" />
         </span>
       </span>
     </div>
     <div
-      @focus="onFocus"
-      @input="updateLocalTokens"
-      @blur="updateAndCommitLocalTokens"
+      @blur="focused = false"
+      @focus="focused = true"
+      @input="(e) => updateDefaultTier(e.target.textContent)"
       @keydown.tab.shift.exact="focusPreviousFrom($event, defaultTier)"
       @keydown.tab.exact="focusNextFrom($event, defaultTier)"
       @keydown.enter.exact.prevent="viewAndSelectAudioEvent(event)"
@@ -64,9 +64,10 @@
         :id="`speaker_event_tier_${speaker}__${tier.id}`"
         :class="['secondary-free-text-tier-text', settings.darkMode === true && 'theme--dark']"
         @keydown.tab.shift.exact="focusPreviousFrom(tier.id)"
-        @keydown.tab.exact="focusNextFrom(tier.id)"
-        @blur="(e) => updateAndCommitLocalEventTier(e, tier.id, tier.type)"
-        @focus="(e) => $emit('focus', e, event)" />
+        @keydown.tab.exact="focusNextFrom($event, tier.id)"
+        @blur="(e) => {debouncedUpdateEventTier(e.target.textContent, tier.id, tier.type); focused = false}"
+        @focus="focused = true"
+        />
     </div>
   </div>
 </template>
@@ -106,15 +107,13 @@ import { undoable } from '../store/history'
 import * as _ from 'lodash'
 import * as jsdiff from 'diff'
 import eventBus from '../service/event-bus'
+import { computeTokenTypesForEvents } from '../service/token-types'
 
 @Component
 export default class SpeakerSegmentTranscript extends Vue {
 
   @Prop() event: LocalTranscriptEvent
-  @Prop() nextEvent: LocalTranscriptEvent|undefined
-  @Prop() previousEvent: LocalTranscriptEvent|undefined
   @Prop() speaker: number
-  @Prop() index: number
 
   tierHeight = 25
   localEvent = clone(this.event)
@@ -130,6 +129,37 @@ export default class SpeakerSegmentTranscript extends Vue {
   playEvent = playEvent
   updateSpeakerEvent = updateSpeakerEvent
 
+  debouncedUpdateTokenTier = _.debounce(this.updateTokenTier, 300)
+  debouncedUpdateEventTier = _.debounce(this.updateEventTier, 300)
+  debouncedCommitEvent = _.debounce(this.commitEvent, 300)
+
+  updateTokenTier(text: string|undefined|null, tierType: TokenTierType, index: number) {
+    const cleanText = text === undefined || text === null ? '' : text
+    this.localTokens[index].tiers[tierType] = { text: cleanText, type: null }
+    this.commitEvent()
+  }
+
+  updateAllTokenTypes(ts: LocalTranscriptToken[]) {
+    eventStore.events = computeTokenTypesForEvents(eventStore.events, this.defaultTier, [ String(this.speaker) ])
+    const thisEvent = eventStore.events[findEventIndexById(this.event.eventId)]
+    this.updateLocalTokenTypes(this.event)
+  }
+
+  updateLocalTokenTypes(e: LocalTranscriptEvent) {
+    this.localTokens = this.localTokens.map((t, i) => {
+      return {
+        ...t,
+        tiers: {
+          ...t.tiers,
+          [this.defaultTier]: {
+            text: t.tiers[this.defaultTier].text,
+            type: e.speakerEvents[this.speaker].tokens[i].tiers[this.defaultTier].type
+          }
+        }
+      }
+    })
+  }
+
   isFirstSpeaker(speakerId: number) {
     return _(eventStore.metadata.speakers)
       .map((s, id) => ({...s, id}))
@@ -140,6 +170,12 @@ export default class SpeakerSegmentTranscript extends Vue {
     return _(eventStore.metadata.speakers)
       .map((s, id) => ({...s, id}))
       .findIndex(s => s.id === String(speakerId)) === _(eventStore.metadata.speakers).toArray().value().length - 1
+  }
+
+  updateDefaultTier(text: string|undefined|null) {
+    const cleanText = text === undefined || text === null ? '' : text
+    const ts = this.updateLocalTokens(cleanText)
+    this.debouncedCommitEvent()
   }
 
   handleCursor(e: KeyboardEvent, tier: TokenTierType) {
@@ -179,14 +215,19 @@ export default class SpeakerSegmentTranscript extends Vue {
     // }
   }
 
-  // TODO: redundant?
-  @Watch('event')
+  @Watch('event', { deep: true })
   onUpdateEvent(newEvent: LocalTranscriptEvent) {
-    this.localEvent = clone(newEvent)
-    this.localTokens = this.localEvent.speakerEvents[this.speaker]
-      ? this.localEvent.speakerEvents[this.speaker].tokens
-      : []
-    this.segmentText = this.localTokens ? this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ') : ''
+    // update if not focused
+    if (this.focused === false) {
+      this.localEvent = clone(newEvent)
+      this.localTokens = this.localEvent.speakerEvents[this.speaker]
+        ? this.localEvent.speakerEvents[this.speaker].tokens
+        : []
+      this.segmentText = this.localTokens ? this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ') : ''
+    // don’t update if focused
+    } else {
+      console.log('update prevented.', newEvent)
+    }
   }
 
   async cutTokens(e: ClipboardEvent) {
@@ -204,11 +245,6 @@ export default class SpeakerSegmentTranscript extends Vue {
     } else {
       // nothing is selected, copy nothing.
     }
-  }
-
-  onFocus(e: FocusEvent) {
-    e.preventDefault()
-    this.$emit('focus', e, this.event)
   }
 
   copyTokens(e: ClipboardEvent) {
@@ -327,7 +363,7 @@ export default class SpeakerSegmentTranscript extends Vue {
       }
     } else {
       const i = findPreviousSpeakerEvent(this.speaker, this.event.eventId)
-      if (i !== undefined) {
+      if (i !== -1) {
         const prevLastToken = _(eventStore.events[i].speakerEvents[this.speaker].tokens).last()
         if (prevLastToken) {
           return prevLastToken.order + 1
@@ -358,28 +394,27 @@ export default class SpeakerSegmentTranscript extends Vue {
     }
   }
 
-  commit() {
-    if (
-      // it’s new and not empty
-      (
-        this.event.speakerEvents[this.speaker] === undefined &&
-        this.localTokens.length !== 0
-      ) ||
-      // it’s old and it has changed
-      (
-        this.event.speakerEvents[this.speaker] !== undefined &&
-        !isEqualDeep(this.localTokens, this.event.speakerEvents[this.speaker].tokens)
-      )
-    ) {
-      // console.log(this.localEvent, this.speaker, this.localTokens)
-      // perform update
-      undoable(updateSpeakerEvent(this.localEvent, this.speaker, this.localTokens))
+  commitEvent() {
+    const oldEvent = findEventIndexById(this.event.eventId)
+    const newEvent: LocalTranscriptEvent = {
+      ...this.localEvent,
+      speakerEvents: {
+        [ this.speaker ]: {
+          ...this.localEvent.speakerEvents[this.speaker],
+          tokens: this.localTokens
+        }
+      }}
+    if (!isEqualDeep(this.localEvent, oldEvent)) {
+      undoable(updateSpeakerEvent(newEvent, this.speaker))
+      this.updateAllTokenTypes(this.localTokens)
     } else {
       // nothing to update
     }
   }
 
-  updateAndCommitLocalEventTier(e: Event, id: string, tierType: string) {
+  updateEventTier(text: string|null|undefined, id: string, tierType: string) {
+    const cleanText = text === null || text === undefined ? '' : text
+    console.log('local event', this.localEvent)
     if (
       this.localEvent.speakerEvents[this.speaker] !== undefined &&
       this.localEvent.speakerEvents[this.speaker].speakerEventTiers !== undefined &&
@@ -388,29 +423,33 @@ export default class SpeakerSegmentTranscript extends Vue {
         (this.localEvent
           .speakerEvents[this.speaker]
           .speakerEventTiers[id] as TierFreeText
-        ).text = (e.target as HTMLElement).textContent as string
+        ).text = cleanText
       }
-      this.commit()
+      this.commitEvent()
     } else {
-      console.log('CREATE!')
-      // does not yet exist
+      this.localEvent = {
+        ...this.localEvent,
+        speakerEvents: {
+          ...this.localEvent.speakerEvents,
+          [ this.speaker ]: {
+            ...this.localEvent.speakerEvents[this.speaker],
+            speakerEventTiers: {
+              ...this.localEvent.speakerEvents[this.speaker].speakerEventTiers,
+              [ id ]: {
+                type: tierType,
+                text: cleanText
+              }
+            }
+          }
+        }
+      }
+      this.commitEvent()
     }
   }
 
-  updateAndCommitLocalTokenTier(e: Event, tierName: TokenTierType, i: number) {
-    const text = (e.target as HTMLElement).textContent as string
-    this.localTokens[i].tiers[tierName] = { text, type: null }
-    this.commit()
-  }
-
-  async updateAndCommitLocalTokens(e: Event) {
-    await this.updateLocalTokens(e)
-    this.commit()
-  }
-
-  async updateLocalTokens(e: Event) {
+  updateLocalTokens(text: string) {
     // await requestFrameAsync()
-    const newTokens = this.tokenizeText((e.target as HTMLDivElement).textContent as string).map((t, i) => {
+    const newTokens = this.tokenizeText(text).map((t, i) => {
       return { text: t, index: i, id: -1 }
     })
     const oldTokens = this.localTokens.map((t, i) => ({
@@ -419,7 +458,7 @@ export default class SpeakerSegmentTranscript extends Vue {
       index: i
     }))
     const hunks = jsdiff.diffArrays(oldTokens, newTokens, { comparator: (l, r) => l.text === r.text })
-    console.log({ hunks })
+    // console.log({ hunks })
     const changes = _(hunks)
       .filter((h) => h.added === true || h.removed === true)
       .map((h) => h.value.map(v => ({
@@ -447,8 +486,6 @@ export default class SpeakerSegmentTranscript extends Vue {
       })
       .flatten()
       .value()
-
-    console.log({changes})
 
     let addedCounter = 0
     _.each(changes, (change, i) => {
@@ -509,14 +546,7 @@ export default class SpeakerSegmentTranscript extends Vue {
     this.localTokens = this.localTokens.map((t, i) => {
       return { ...t, order: (this.firstTokenOrder || 0) + i }
     })
-  }
-
-  updateLabelText(e: Event) {
-    this.focused = false
-    const text = (e.target as HTMLDivElement).textContent
-    if (text !== null && text !== '') {
-      updateSpeakerEvent(this.event, this.speaker, this.tokens)
-    }
+    return this.localTokens
   }
 
   get textStyle() {
@@ -639,8 +669,6 @@ export default class SpeakerSegmentTranscript extends Vue {
     &.type-1
       z-index 1
       color #333 !important
-
-
 
 .tokens-input
   top 0
