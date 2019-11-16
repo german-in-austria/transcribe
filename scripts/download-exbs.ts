@@ -1,3 +1,6 @@
+
+declare var require: any
+
 const { createClient } = require("webdav")
 const fs = require('fs')
 const credentials = require('./credentials')
@@ -21,7 +24,7 @@ interface WebDavFile {
 
 async function getFilesRecursive(path: string, test: (f: WebDavFile) => boolean, prev: any[] = []): Promise<WebDavFile[]> {
   const files = await client.getDirectoryContents(path) as WebDavFile[]
-  for (let f of files) {
+  for (const f of files) {
     if (f.type === 'directory') {
       // console.log(f)
       await getFilesRecursive(f.filename, test, prev)
@@ -29,7 +32,7 @@ async function getFilesRecursive(path: string, test: (f: WebDavFile) => boolean,
       if (test(f) === true) {
         prev.push(f)
         client.getFileContents(f.filename, { format: 'text' }).then((cs: string) => {
-          fs.writeFileSync('./data/exbs/' + f.basename, cs)
+          fs.writeFileSync('../data/exbs/' + f.basename, cs)
         })
         console.log(prev.length)
       }
