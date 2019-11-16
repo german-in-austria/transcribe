@@ -62,10 +62,11 @@
       </div>
     </div>
     <v-layout row style="margin-top: -40px; padding-bottom: 20px;">
-      <v-flex xs12 class="ml-3">
-        <scrollbar  
+      <v-flex xs12 style="position: relative" class="ml-3">
+        <scrollbar
           class="scrollbar"
           update-on="scrollWaveform"
+          :max-time="eventStore.audioElement.duration"
           @scroll="scrollFromScrollbar"
         />
         <div
@@ -829,6 +830,10 @@ select
 
 .waveform-outer
   .scrollbar
+    position absolute
+    z-index 1
+    width 100%
+    height 60px
     transition opacity .25s
     opacity 0
   &:hover

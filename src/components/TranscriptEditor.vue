@@ -7,24 +7,22 @@
         ref="tracks"
         class="tracks"
         v-if="eventStore.events.length">
-        <div :style="{transform: `translate3d(${ innerLeft }px, 0, 0)`}" ref="inner" class="transcript-segments-inner">
+        <div ref="inner" class="transcript-segments-inner">
           <segment-transcript
-            v-for="(event, i) in visibleEvents"
-            :data-event-id="event.eventId"
-            :width="eventWidthCache[event.eventId]"
-            :index="i"
+            v-for="event in visibleEvents"
             :event="event"
-            :previous-event="visibleEvents[i - 1]"
-            :next-event="visibleEvents[i + 1]"
-            :key="event.eventId"
             :is-selected="isEventSelected(event.eventId)"
+            :data-event-id="event.eventId"
+            :key="event.eventId"
             :class="['segment', isEventSelected(event.eventId) && 'segment-selected']"
-            @element-unrender="(width) => handleUnrender(width, i, event.eventId)"
-            @element-render="(width) => handleRender(width, i, event.eventId)"
           />
         </div>
       </div>
-      <scrollbar class="scrollbar" @scroll="scrollToSecond" update-on="scrollTranscript"/>
+      <scrollbar
+        :max-time="lastEventStartTime"
+        class="scrollbar"
+        @scroll="scrollToSecond"
+        update-on="scrollTranscript" />
     </v-flex>
   </v-layout>
 </template>
@@ -47,7 +45,7 @@ import {
   findEventAt,
   findEventIndexAt
 } from '../store/transcript'
-import { requestFrameAsync } from '../util'
+import { requestFrameAsync, clone, getTextWidth } from '../util'
 
 const defaultLimit = 20
 
@@ -61,16 +59,30 @@ const defaultLimit = 20
 export default class TranscriptEditor extends Vue {
 
   eventStore = eventStore
-  userState = eventStore.userState
-  settings = settings
   innerLeft = 0
   currentIndex = 0
   lastScrollLeft = 0
-  visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
-  emitScrollDebouncer: number|null = null
-  throttledRenderer = _.throttle(this.updateList, 60)
+  visibleEvents = this.getEventRange(this.currentIndex, this.currentIndex + defaultLimit)
+  lastEventStartTime = 0
+
+  throttledRenderer = _.throttle(this.updateList, 100)
   isEventSelected = isEventSelected
-  eventWidthCache: {[eventId: string]: number} = {}
+
+  setInnerLeft(l: number) {
+    this.innerLeft = l;
+    requestAnimationFrame(() => (this.$refs.inner as HTMLElement).style.transform = `translate3d(${ l }px, 0, 0)`)
+  }
+
+  getEventRange(start: number, end: number): LocalTranscriptEvent[] {
+    const r = []
+    for (let i = 0; i <= end - start; i++) {
+      if (eventStore.events[start + i] !== undefined) {
+        r[i] = eventStore.events[start + i]
+      }
+    }
+    return r
+    // return eventStore.events.filter((e, i) => i >= start && i <= end)
+  }
 
   // tslint:disable-next-line:max-line-length
   onChangeViewingEvent(e: LocalTranscriptEvent|null, opts: { animate: boolean, focusSpeaker: number|null, focusTier: string|null }) {
@@ -83,7 +95,7 @@ export default class TranscriptEditor extends Vue {
     // right in the middle
     const i = findEventIndexById(e.eventId) - Math.floor(defaultLimit / 2)
     this.currentIndex = Math.max(0, i)
-    this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
+    this.visibleEvents = this.getEventRange(this.currentIndex, this.currentIndex + defaultLimit)
     this.$nextTick(() => {
       requestAnimationFrame(() => {
         const el = this.$el.querySelector(`[data-event-id="${e.eventId}"]`)
@@ -98,7 +110,7 @@ export default class TranscriptEditor extends Vue {
             inner.style.transition = '.2s'
             setTimeout(() => { inner.style.transition = 'none' }, 200)
           }
-          this.innerLeft = el.offsetLeft * -1 + c.clientWidth / 2 - el.clientWidth / 2 - 25;
+          this.setInnerLeft(el.offsetLeft * -1 + c.clientWidth / 2 - el.clientWidth / 2 - 25)
           if (focusSpeaker !== null) {
             // (el.querySelector(`[data-speaker-id="${ focusSpeaker }"] [contenteditable]`) as any).focus()
             // (el.querySelector(`[contenteditable]`) as any).focus()
@@ -113,7 +125,9 @@ export default class TranscriptEditor extends Vue {
 
   @Watch('eventStore.events')
   onUpdateSpeakerEvents() {
-    this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
+    this.visibleEvents = this.getEventRange(this.currentIndex, this.currentIndex + defaultLimit)
+    const lastEvent = _(eventStore.events).last()
+    this.lastEventStartTime = lastEvent ? lastEvent.startTime : 0
   }
 
   mounted() {
@@ -136,7 +150,7 @@ export default class TranscriptEditor extends Vue {
     const i = findEventIndexAt(seconds)
     if (i !== -1) {
       if (i !== this.currentIndex) {
-        this.visibleEvents = this.eventStore.events.slice(i, i + defaultLimit)
+        this.visibleEvents = this.getEventRange(i, i + defaultLimit)
         this.currentIndex = i
         await this.$nextTick()
       }
@@ -144,7 +158,7 @@ export default class TranscriptEditor extends Vue {
       const eventLength = firstVisibleEvent.endTime - firstVisibleEvent.startTime
       const progressFactor = (firstVisibleEvent.startTime - seconds) / eventLength
       const offsetLeft = width * progressFactor
-      this.innerLeft = offsetLeft
+      this.setInnerLeft(offsetLeft)
     }
   }
 
@@ -170,72 +184,70 @@ export default class TranscriptEditor extends Vue {
     EventBus.$emit('scrollTranscript', firstVisibleEvent.startTime + progress)
   }
 
-  handleRender(width: number, index: number, eventId: string) {
-    this.eventWidthCache[eventId] = width
-    if (index === 0) {
-      // console.log('rendered leftmost item', width, segment_id)
-      this.innerLeft = this.innerLeft - width
-    // RIGHT
-    } else if (index === this.visibleEvents.length - 1) {
-      // console.log('rendered rightmost item', width, segment_id)
-      // this.innerLeft = this.innerLeft + width
-    }
+  getLongestSpeakerText(e: LocalTranscriptEvent): string[]|undefined {
+    return _(e.speakerEvents)
+      .map(se => se.tokens.map(t => t.tiers[eventStore.metadata.defaultTier].text))
+      .sortBy(ts => ts.length)
+      .last()
   }
-  handleUnrender(width: number, index: number, eventId: string) {
-    this.eventWidthCache[eventId] = width
-    // LEFTMOST ITEM
-    if (index === 0) {
-      // console.log('unrendered leftmost item', width, segment_id)
-      this.innerLeft = this.innerLeft + width
-    // RIGHT
-    } else if (index === this.visibleEvents.length - 1) {
-      // console.log('unrendered rightmost item', width, segment_id)
-      // console.log('unrendered rightmost item', width)
-      // this.innerLeft = this.innerLeft - width // padding
+
+  getEventWidth(e: LocalTranscriptEvent): number {
+    const totalPadding = 20
+    const longestText = this.getLongestSpeakerText(e)
+    if (longestText !== undefined) {
+      return  Math.max(getTextWidth(longestText.join(' '), 14, 'HKGrotesk') + totalPadding, 146)
+    } else {
+      return 0
     }
   }
 
-  updateList(leftToRight: boolean) {
+  updateList(leftToRight: boolean, timesCalled = 0) {
     if (leftToRight) {
       // SCROLL LEFT TO RIGHT
       if (this.innerLeft <= -1500 && this.currentIndex + defaultLimit + 1 < this.eventStore.events.length) {
+        const removedEvent = eventStore.events[this.currentIndex]
+        const removedEventWidth = this.getEventWidth(removedEvent)
+        this.setInnerLeft(this.innerLeft + removedEventWidth)
         this.currentIndex = this.currentIndex + 1
-        this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
+        this.visibleEvents = this.getEventRange(this.currentIndex, this.currentIndex + defaultLimit)
       } else {
         // NORMAL SCROLL, NO UPDATES
       }
     } else {
       // SCROLL RIGHT TO LEFT
       if (this.innerLeft >= -200 && this.currentIndex > 0) {
+        const addedEvent = eventStore.events[this.currentIndex - 1]
+        const addedEventWidth = this.getEventWidth(addedEvent)
+        this.setInnerLeft(this.innerLeft - addedEventWidth)
         this.currentIndex = this.currentIndex - 1
-        this.visibleEvents = this.eventStore.events.slice(this.currentIndex, this.currentIndex + defaultLimit)
+        this.visibleEvents = this.getEventRange(this.currentIndex, this.currentIndex + defaultLimit)
       } else {
         // NORMAL SCROLL, NO UPDATES
       }
     }
-    // WAIT FOR THE ELEMENT TO RENDER,
-    // AND RENDER THE NEXT IF NECESSARY.
     // RECURSION
-    this.$nextTick(() => {
-      requestAnimationFrame(() => {
-        if (
-          (this.innerLeft <= -1500 || this.innerLeft >= -200) &&
-          (this.currentIndex > 0 && this.currentIndex + defaultLimit + 1 < this.eventStore.events.length)
-        ) {
-          this.debouncedEmitScroll()
-          this.updateList(leftToRight)
-        }
-      })
-    })
+
+    if (
+      (timesCalled <= defaultLimit) &&
+      (this.innerLeft <= -1500 || this.innerLeft >= -200) &&
+      (this.currentIndex > 0 && this.currentIndex + defaultLimit + 1 < this.eventStore.events.length)
+    ) {
+      this.debouncedEmitScroll()
+      this.updateList(leftToRight, timesCalled + 1)
+    }
   }
 
   handleMousewheel(e: MouseWheelEvent) {
     e.preventDefault()
-    this.lastScrollLeft = this.innerLeft
-    this.innerLeft = this.innerLeft - (e.deltaX || e.deltaY) / (e.shiftKey === true ? 10 : 1)
-    this.throttledRenderer(this.innerLeft <= this.lastScrollLeft)
-    this.debouncedEmitScroll()
-    this.lastScrollLeft = this.innerLeft
+    if (this.currentIndex === 0 && this.innerLeft >= 0 && (e.deltaX || e.deltaY) < 0) {
+      // don’t scroll
+    } else {
+      this.lastScrollLeft = this.innerLeft
+      this.setInnerLeft(this.innerLeft - (e.deltaX || e.deltaY) / (e.shiftKey === true ? 10 : 1))
+      this.throttledRenderer(this.innerLeft <= this.lastScrollLeft)
+      this.debouncedEmitScroll()
+      this.lastScrollLeft = this.innerLeft
+    }
   }
 }
 </script>
