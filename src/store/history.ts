@@ -37,7 +37,7 @@ async function undoRedoHandler(e: KeyboardEvent) {
     const action = undo()
     if (action !== undefined) {
       selectEvents(action.before)
-      if (!await isWaveformEventVisible(action.before[0])) {
+      if (action.before[0] !== undefined && !await isWaveformEventVisible(action.before[0])) {
         scrollToAudioEvent(action.before[0])
         scrollToTranscriptEvent(action.before[0])
       }
@@ -48,7 +48,7 @@ async function undoRedoHandler(e: KeyboardEvent) {
     const action = redo()
     if (action !== undefined) {
       selectEvents(action.after)
-      if (!await isWaveformEventVisible(action.after[0])) {
+      if (action.before[0] !== undefined && !await isWaveformEventVisible(action.after[0])) {
         scrollToAudioEvent(action.after[0])
         scrollToTranscriptEvent(action.after[0])
       }
