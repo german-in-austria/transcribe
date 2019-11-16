@@ -82,7 +82,7 @@ export default class SpeakerPanel extends Vue {
 
   expandAll() {
     eventStore.metadata.tiers = eventStore.metadata.tiers.map((t) => {
-      return {...t, show: t.id !== eventStore.metadata.defaultTier}
+      return {...t, show: true}
     })
   }
 
