@@ -153,7 +153,9 @@ export default class Sidebar extends Vue {
           })
         })
         .map(e => ({ ...e, error_type: 'unknown_token' } as ErrorEvent))
-        .value())
+        .value()
+      )
+      .sortBy(e => e.startTime)
       .value()
   }
 
