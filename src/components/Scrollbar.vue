@@ -10,7 +10,7 @@
       tabindex="-1"
       class="text-xs-center scrollbar-thumb" />
     <div
-      class="overview-time"
+      :class="['overview-time', settings.darkMode && 'theme--dark']"
       ref="overviewTime"
       :style="{ width: overviewTimeWidth + 'px' }"
     />
@@ -21,6 +21,7 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import { eventStore, toTime } from '../store/transcript'
 import EventBus, { BusEvent } from '../service/event-bus'
+import settings from '../store/settings'
 import _ from 'lodash'
 
 @Component
@@ -28,6 +29,9 @@ export default class Scrollbar extends Vue {
 
   // global events to listen to
   @Prop() updateOn: BusEvent
+  @Prop() maxTime: number
+
+  settings = settings
 
   overviewTimeWidth = 70 // width of the time preview tooltip above the overview waveform
   isDragging = false
@@ -43,11 +47,10 @@ export default class Scrollbar extends Vue {
   getOffsets(x: number) {
     const thumb = this.$refs.scrollbarThumb
     const track = this.$refs.scrollbarTrack
-    const maxTime = eventStore.audioElement.duration
     if (track instanceof HTMLElement && thumb instanceof HTMLElement) {
       const scrollbarWidth = track.offsetWidth - thumb.offsetWidth
-      const offset = x - track.offsetLeft
-      const time = Math.max(0, Math.min(offset / scrollbarWidth * maxTime, maxTime))
+      const offset = x - track.getBoundingClientRect().left
+      const time = Math.max(0, Math.min(offset / scrollbarWidth * this.maxTime, this.maxTime))
       const limitedOffset = Math.max(0, Math.min(offset, scrollbarWidth))
       return { time, limitedOffset }
     } else {
@@ -60,7 +63,7 @@ export default class Scrollbar extends Vue {
     const track = this.$refs.scrollbarTrack
     if (track instanceof HTMLElement && thumb instanceof HTMLElement) {
       const scrollbarWidth = track.offsetWidth - thumb.offsetWidth
-      const offset = t / eventStore.audioElement.duration * scrollbarWidth
+      const offset = t / this.maxTime * scrollbarWidth
       const limitedOffset = Math.max(0, Math.min(offset, scrollbarWidth))
       requestAnimationFrame(() => {
         thumb.style.transform = `translate3d(${ limitedOffset }px, 0, 0)`
@@ -79,7 +82,7 @@ export default class Scrollbar extends Vue {
     this.updateOverviewTime(ev)
     const thumb = this.$refs.scrollbarThumb
     const track = this.$refs.scrollbarTrack
-    const { time, limitedOffset } = this.getOffsets(ev.x)
+    const { time, limitedOffset } = this.getOffsets(ev.clientX)
     this.$emit('scroll', time)
     requestAnimationFrame(() => {
       (thumb as HTMLElement).style.transform = `translate3d(${ limitedOffset }px, 0, 0)`
@@ -111,19 +114,22 @@ export default class Scrollbar extends Vue {
 </script>
 <style lang="stylus" scoped>
 .overview-time
-  top -200%
+  top -20px
   will-change transfrom
   pointer-events none
   transition .25s opacity 
   opacity 0
   position absolute
-  color #ccc
+  color #333
   z-index 2
   font-size 80%
   text-align center
-  background rgba(0,0,0,.2)
+  background rgba(255,255,255,.8)
   border-radius 10px
   line-height 20px
+  &.theme--dark
+    background rgba(0,0,0,.2)
+    color #ccc
 
 .scrollbar-thumb
   border-radius 6px
