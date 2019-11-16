@@ -2,10 +2,10 @@
   <div class="fill-height">
     <v-toolbar class="elevation-0" fixed app>
       <v-flex xs4>
-        <div><v-icon>chevron_left</v-icon></div>
+        <v-btn icon @click="reload"><v-icon>chevron_left</v-icon></v-btn>
       </v-flex>
       <v-flex xs4 class="text-xs-center">
-        <div>{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
+        <div style="opacity: .7; font-size: small">{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
       </v-flex>
       <v-flex xs4 class="text-xs-right">
         <search style="display: inline-block" />
@@ -284,6 +284,10 @@ export default class Editor extends Vue {
   menuX = 0
   menuY = 0
   layerX = 0 // this is used for splitting
+
+  reload() {
+    window.location.reload()
+  }
 
   async exportJSON() {
     if (serverTranscript !== null) {
