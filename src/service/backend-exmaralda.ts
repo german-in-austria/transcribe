@@ -135,6 +135,12 @@ function getTierToken(
     }
 }
 
+function autoFixExmaraldaText(text: string): string {
+  return text
+    // remove the space before canceled expressions
+    .split(' /').join('/')
+}
+
 export function importableToServerTranscript(
   importable: ParsedExmaraldaXML,
   name: string,
@@ -205,7 +211,8 @@ export function importableToServerTranscript(
                   }
                 }
               } else {
-                const eventTokenIds = _(tokenize(text))
+                const cleanText = autoFixExmaraldaText(text)
+                const eventTokenIds = _(tokenize(cleanText))
                   .filter(t => t !== '')
                   .map((t, tokenIndex): number => {
                     const tokenId = makeTokenId()
