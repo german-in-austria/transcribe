@@ -194,7 +194,6 @@ import search from './Search.vue'
 import searchResults from './SearchResults.vue'
 import transcriptEditor from './TranscriptEditor.vue'
 import playHead from './PlayHead.vue'
-import scrollbar from './Scrollbar.vue'
 import dropFile from './DropFile.vue'
 
 import {
@@ -253,7 +252,6 @@ import { generateProjectFile } from '../service/backend-files'
     playHead,
     search,
     searchResults,
-    scrollbar,
     dropFile,
     playerBar
   }
@@ -407,17 +405,6 @@ export default class Editor extends Vue {
     background-clip content-box
   // &::-webkit-scrollbar-corner
   // &::-webkit-resizer
-
-.transcript-scrollbar
-  top -15px
-  position relative
-  height 20px
-
-.jump-to
-  opacity 0
-  positon absolute
-  top 5px
-  right 5px
 
 .context-menu-list a
   cursor default !important
