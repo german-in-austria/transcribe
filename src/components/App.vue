@@ -242,6 +242,7 @@ export default class App extends Vue {
 
   updateBackEndUrl(url: string) {
     localStorage.setItem('backEndUrl', url)
+    eventStore.backEndUrl = url
     this.loadTranscriptList()
   }
 
