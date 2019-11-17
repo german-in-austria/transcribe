@@ -10,8 +10,10 @@ export interface TokenTypePresetBase {
   id: number
 }
 
-export interface TokenTypesPreset {
-  [ name: string ]: Array<TokenTypesPresetGroup|TokenTypesPresetSingle>
+type TokenTypePresetName = 'dioeDB'|'dissDB'
+
+export type TokenTypesPreset = {
+  [name in TokenTypePresetName]: Array<TokenTypesPresetGroup | TokenTypesPresetSingle>;
 }
 
 export interface TokenTypesPresetSingle extends TokenTypePresetBase {
@@ -107,7 +109,6 @@ export const tokenTypesPresets: TokenTypesPreset = {
     {
       type: 'group',
       name: 'anonymized',
-      // regex: /(\[)([a-zA-ZÜüÄäÖöß]+)(\](N|O|Z|S))/,
       bracketSymbols: [
         /(\[([a-zA-ZÜüÄäÖöß\?]+))/u,
         /([a-zA-ZÜüÄäÖöß]+\](N|O|Z|S))/,
@@ -140,22 +141,18 @@ export const tokenTypesPresets: TokenTypesPreset = {
   dissDB: [
     {
       type: 'single',
-      name: 'proper-name',
-      regex: /\{(.+)\}/u,
-      color: '#880000',
-      id: 4
-    },
-    {
-      type: 'single',
       name: 'pause',
       regex: /\[[\s\S]{1,}s\]/u,
       color: '#6B6B6B',
       id: 3
     },
     {
-      type: 'single',
+      type: 'group',
       name: 'non-verbal',
-      regex: /\(\((.+)\)\)|\[(.+)\]/u,
+      bracketSymbols: [
+        /\(\((.+)|\[(.+)/u,
+        /(.+)\)\)|(.+)\]/u
+      ],
       color: '#008800',
       id: 5
     },
@@ -181,9 +178,25 @@ export const tokenTypesPresets: TokenTypesPreset = {
       id: 8
     },
     {
-      type: 'single',
+      type: 'group',
+      name: 'proper-name',
+      bracketSymbols: [
+        /(\{(.+))/u,
+        /(\{?(.+)\})/u
+      ],
+      color: '#880000',
+      id: 4
+    },
+    {
+      type: 'group',
       name: 'incomprehensible',
-      regex: /\((.+)\)/u,
+      // regex: /\((.+)\)/u,
+      bracketSymbols: [
+        /\((.+)/u,
+        /\(?(.+)\)/u
+        // /(\(([a-zA-ZÜüÄäÖöß\?]+))/u,
+        // /(\(?[a-zA-ZÜüÄäÖöß]+\))/u
+      ],
       color: '#6f6f6f',
       id: 7
     },

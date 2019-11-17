@@ -119,26 +119,38 @@ function getTierToken(
     tierType: TokenTierType,
     tierEvent: TierEvent,
     tokenIndex: number,
-  ): string|null {
-    const tier = _(speakerTiers).find(t => t.select_for_import === true && t.token_tier_type === tierType)
-    // this speaker does not have this type of token tier
-    if (tier === undefined) {
-      return null
+  ): string {
+  const tier = _(speakerTiers).find(t => t.select_for_import === true && t.token_tier_type === tierType)
+  // this speaker does not have this type of token tier
+  if (tier === undefined) {
+    return ''
+  } else {
+    const event = _(tier.events).find(e => e.startTime === tierEvent.startTime)
+    // this event does not exist in this token tier.
+    if (event === undefined || event.text === undefined || event.text === null) {
+      return ''
     } else {
-      const event = _(tier.events).find(e => e.startTime === tierEvent.startTime)
-      // this event does not exist in this token tier.
-      if (event === undefined || event.text === undefined || event.text === null) {
-        return null
-      } else {
-        return tokenize(event.text)[tokenIndex] || null
-      }
+      return tokenize(event.text)[tokenIndex] || ''
     }
+  }
 }
 
 function autoFixExmaraldaText(text: string): string {
   return text
     // remove the space before canceled expressions
     .split(' /').join('/')
+}
+
+function isFragmentedEventStart(text: string|null): boolean {
+  return text !== null &&
+    text !== '' &&
+    !text.endsWith(')') &&
+    !text.endsWith(']') &&
+    !text.endsWith(' ') &&
+    !text.endsWith('.') &&
+    !text.endsWith('!') &&
+    !text.endsWith(',') &&
+    !text.endsWith('?')
 }
 
 export function importableToServerTranscript(
@@ -173,12 +185,12 @@ export function importableToServerTranscript(
             console.error('No speaker specified', { speakerTier })
             throw new Error('No speaker specified')
           } else {
-            return _(speakerTier.events).map((e): ServerEvent => {
+            let fragmentStartTokenId: number|undefined;
+            return _(speakerTier.events).map((e, eventIndex): ServerEvent => {
 
               if (!e.text) {
                 console.log('e.text is empty: ', e)
               }
-
               const eventId = makeEventId()
               const text = e.text || ''
 
@@ -215,28 +227,42 @@ export function importableToServerTranscript(
                 const eventTokenIds = _(tokenize(cleanText))
                   .filter(t => t !== '')
                   .map((t, tokenIndex): number => {
+                    const fragmentOf = tokenIndex === 0 ? fragmentStartTokenId : undefined
                     const tokenId = makeTokenId()
-                    const token = {
+                    const token: ServerToken = {
                       t: speakerTier.token_tier_type === 'text'
                         ? t
-                        : (getTierToken(speakerTiers, 'text', e, tokenIndex) || ''),
+                        : getTierToken(speakerTiers, 'text', e, tokenIndex),
                       o: speakerTier.token_tier_type === 'ortho'
                         ? t
-                        : (getTierToken(speakerTiers, 'ortho', e, tokenIndex) || ''),
+                        : getTierToken(speakerTiers, 'ortho', e, tokenIndex),
                       p: speakerTier.token_tier_type === 'phon'
                         ? t
-                        : (getTierToken(speakerTiers, 'phon', e, tokenIndex) || ''),
+                        : getTierToken(speakerTiers, 'phon', e, tokenIndex),
                       to: '',
                       tr: tokenOrder++,
                       e: eventId,
                       i: speakerTier.to_speaker!.pk,
                       s: 0,
                       sr: 0,
+                      fo: fragmentOf,
                       tt: getTokenTypeId(t)
+                    }
+                    // if it’s a fragment, add it to the fragment starting token.
+                    if (fragmentOf !== undefined) {
+                      tokens[fragmentOf].o = tokens[fragmentOf].o
+                      + getTierToken(speakerTiers, defaultTier, e, 0)
                     }
                     tokens[tokenId] = token
                     return tokenId
                   }).value()
+
+                if (isFragmentedEventStart(text)) {
+                  fragmentStartTokenId = _(eventTokenIds).last()
+                } else {
+                  fragmentStartTokenId = undefined
+                }
+
                 return {
                   pk: eventId,
                   e: padEnd(timeFromSeconds(Number(e.endTime)), 14, '0'),

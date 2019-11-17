@@ -54,6 +54,7 @@ export interface LocalTranscriptToken {
 }
 
 export interface TierFreeText {
+  id: string
   type: 'freeText'
   text: string
 }
@@ -133,7 +134,7 @@ export const eventStore = {
 
 export function tokenTypeFromToken(token: string) {
   const type = _(tokenTypesPresets[settings.tokenTypesPreset]).find((tt) => {
-    return tt.type === 'single' && tt.regex.test(token)
+    return tt.type === 'single' && tt.regex.test(token.replace('=', ''))
   })
   if (type !== undefined) {
     return type
@@ -273,6 +274,10 @@ export function makeTokenId() {
 }
 
 export function makeTierId() {
+  return Number(_.uniqueId()) * -1
+}
+
+export function makeTierEventId() {
   return Number(_.uniqueId()) * -1
 }
 

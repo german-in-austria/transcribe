@@ -99,7 +99,8 @@ import {
   tokenTypeFromToken,
   findEventIndexById,
   scrollToAudioEvent,
-  scrollToTranscriptEvent
+  scrollToTranscriptEvent,
+  makeTierEventId
 } from '../store/transcript'
 
 import * as copyPaste from '../service/copy-paste'
@@ -433,6 +434,7 @@ export default class SpeakerSegmentTranscript extends Vue {
             speakerEventTiers: {
               ...this.localEvent.speakerEvents[this.speaker].speakerEventTiers,
               [ id ]: {
+                id: makeTierEventId(),
                 type: tierType,
                 text: cleanText
               }

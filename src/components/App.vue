@@ -245,6 +245,7 @@ export default class App extends Vue {
   updateBackEndUrl(url: string) {
     localStorage.setItem('backEndUrl', url)
     eventStore.backEndUrl = url
+    this.updateTokenTypePreset()
     this.loadTranscriptList()
   }
 
@@ -256,7 +257,17 @@ export default class App extends Vue {
     }
   }
 
+  // FIXME: this is insanely hacky.
+  updateTokenTypePreset() {
+    if (eventStore.backEndUrl.includes('dioedb')) {
+      settings.tokenTypesPreset = 'dioeDB'
+    } else if (eventStore.backEndUrl.includes('dissdb')) {
+      settings.tokenTypesPreset = 'dissDB'
+    }
+  }
+
   async mounted() {
+    this.updateTokenTypePreset()
     this.loadTranscriptList()
   }
 

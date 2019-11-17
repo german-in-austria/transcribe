@@ -438,6 +438,16 @@ export function updateServerTranscriptWithChanges(st: ServerTranscript, ss: Serv
   }
 }
 
+function maybeAddFragments(base: string, next?: string) {
+  if (next !== undefined && next !== '') {
+    const res = replaceLastOccurrence(base, next, '=')
+    console.log('added fragment', base, next, res)
+    return res
+  } else {
+    return base
+  }
+}
+
 export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenTierType): LocalTranscript {
   return _(s.aEvents)
     .uniqBy(e => e.pk)
@@ -457,8 +467,9 @@ export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenT
           _.each(se.tid, (tokenIds, speakerKey) => {
             m[speakerKey] = {
               speakerEventTiers: _(eG).reduce((ts, e) => {
-                _(e.event_tiers[speakerKey]).each(t => {
+                _(e.event_tiers[speakerKey]).each((t, tierContentKey) => {
                   ts[t.ti] = {
+                    id: tierContentKey,
                     type: 'freeText',
                     text: t.t
                   }
@@ -471,6 +482,7 @@ export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenT
                 if (s.aTokens[tokenId] === undefined) {
                   console.log('not found', tokenId, se)
                 }
+                const nextFragmentOfId = findNextFragmentOfId(tokenId, speakerKey, lG, iG, s.aTokens)
                 return {
                   id: tokenId,
                   fragmentOf: s.aTokens[tokenId].fo || null,
@@ -478,20 +490,17 @@ export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenT
                   order: s.aTokens[tokenId].tr,
                   tiers: {
                     text: {
-                      // replace fragment in current token,
-                      // if next token has a "fragment_of" marker
-                      text: (() => {
-                        const nextFragmentOfId = findNextFragmentOfId(tokenId, speakerKey, lG, iG, s.aTokens)
-                        if (nextFragmentOfId !== undefined) {
-                          return replaceLastOccurrence(s.aTokens[tokenId].t, s.aTokens[nextFragmentOfId].t, '=')
-                        } else {
-                          return s.aTokens[tokenId].t
-                        }
-                      })(),
+                      text: maybeAddFragments(
+                        s.aTokens[tokenId].t,
+                        nextFragmentOfId !== undefined ? s.aTokens[nextFragmentOfId].t : ''
+                      ),
                       type: defaultTier === 'text' ? s.aTokens[tokenId].tt : null
                     },
                     ortho: {
-                      text: s.aTokens[tokenId].o || '',
+                      text: maybeAddFragments(
+                        s.aTokens[tokenId].o || '',
+                        nextFragmentOfId !== undefined ? s.aTokens[nextFragmentOfId].o : ''
+                      ),
                       type: defaultTier === 'ortho' ? s.aTokens[tokenId].tt : null
                     },
                     phon: {

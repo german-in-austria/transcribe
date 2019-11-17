@@ -28,19 +28,20 @@ export function computeTokenTypesForEvents(
 ): LocalTranscriptEvent[] {
   let currentBracketGroup: TokenTypesPresetGroup|null = null
   const newEs = iterateTokensBySpeakers(es, speakerIds, (t) => {
+    const cleanText = t.tiers[defaultTier].text.replace('=', '')
     if (currentBracketGroup !== null) {
       t.tiers[defaultTier].type = currentBracketGroup.id
-      if (currentBracketGroup.bracketSymbols[1].test(t.tiers[defaultTier].text)) {
+      if (currentBracketGroup.bracketSymbols[1].test(cleanText)) {
         currentBracketGroup = null
       }
     } else {
       const type = _(tokenTypesPresets[settings.tokenTypesPreset]).find((tt) => {
         if (tt.type === 'single') {
-          return tt.regex.test(t.tiers[defaultTier].text)
+          return tt.regex.test(cleanText)
         } else {
-          if (tt.bracketSymbols[0].test(t.tiers[defaultTier].text)) {
+          if (tt.bracketSymbols[0].test(cleanText)) {
             currentBracketGroup = tt
-            if (tt.bracketSymbols[1].test(t.tiers[defaultTier].text)) {
+            if (tt.bracketSymbols[1].test(cleanText)) {
               currentBracketGroup = null
             }
             return true
