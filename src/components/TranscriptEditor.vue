@@ -63,7 +63,6 @@ export default class TranscriptEditor extends Vue {
   currentIndex = 0
   lastScrollLeft = 0
   visibleEvents = this.getEventRange(this.currentIndex, this.currentIndex + defaultLimit)
-  lastEventStartTime = 0
 
   throttledRenderer = _.throttle(this.updateList, 100)
   isEventSelected = isEventSelected
@@ -126,8 +125,11 @@ export default class TranscriptEditor extends Vue {
   @Watch('eventStore.events')
   onUpdateSpeakerEvents() {
     this.visibleEvents = this.getEventRange(this.currentIndex, this.currentIndex + defaultLimit)
+  }
+
+  get lastEventStartTime() {
     const lastEvent = _(eventStore.events).last()
-    this.lastEventStartTime = lastEvent ? lastEvent.startTime : 0
+    return lastEvent ? lastEvent.startTime : 0
   }
 
   mounted() {
