@@ -392,7 +392,6 @@ export function updateSpeakerEvents(
   }
 }
 
-// TODO: this should also update the speakerEventTiers
 export function updateSpeakerEvent(
   event: LocalTranscriptEvent,
   speakerId: number
@@ -1160,7 +1159,7 @@ export async function saveChangesToServer() {
       const serverChanges = await performSaveRequest(serverTranscript.aTranskript.pk, t)
       // console.log({ serverChanges })
       logServerResponse(t, serverChanges)
-      const updatedServerTranscript = updateServerTranscriptWithChanges(serverChanges)
+      const updatedServerTranscript = updateServerTranscriptWithChanges(serverTranscript, serverChanges)
       const updatedLocalTranscript = serverTranscriptToLocal(
         updatedServerTranscript,
         eventStore.metadata.defaultTier || 'text'
@@ -1169,6 +1168,7 @@ export async function saveChangesToServer() {
       // console.log({ updatedServerTranscript, updatedLocalTranscript })
     // it’s a new transcript
     } else {
+      console.log({ serverTranscript })
       const { transcript_id } = await createEmptyTranscript(
         serverTranscript.aEinzelErhebung!.pk,
         serverTranscript.aTranskript.n,
@@ -1187,10 +1187,14 @@ export async function saveChangesToServer() {
       const t = await localTranscriptToServerSaveRequest(transcriptWithoutTokensAndEvents, eventStore.events)
       const serverChanges = await performSaveRequest(transcript_id, t)
       logServerResponse(t, serverChanges)
-      eventStore.events = serverTranscriptToLocal(
-        updateServerTranscriptWithChanges(serverChanges),
+      const updatedServerTranscript = updateServerTranscriptWithChanges(transcriptWithoutTokensAndEvents, serverChanges)
+      console.log({ updatedServerTranscript })
+      const updatedLocalTranscript = serverTranscriptToLocal(
+        updatedServerTranscript,
         eventStore.metadata.defaultTier || 'text'
       )
+      console.log({ updatedLocalTranscript })
+      eventStore.events = updatedLocalTranscript
       serverTranscript.aTranskript!.pk = transcript_id
     }
   }

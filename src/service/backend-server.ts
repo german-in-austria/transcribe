@@ -258,10 +258,10 @@ export function mergeServerTranscript(s: ServerTranscript) {
       ...oldSt.aTokens,
       ...s.aTokens
     },
-    aEvents: [
+    aEvents: _.uniqBy([
       ...oldSt.aEvents,
       ...s.aEvents
-    ]
+    ], (e) => e.pk)
   }
   // console.log({tokens: _(s.aTokens).toArray().sortBy(t => t.tr).value()})
 }
@@ -375,18 +375,18 @@ function mergeTokenChanges(
   tcs: _.Dictionary<SaveResponse<ServerToken>>,
   es: Array<SaveResponse<ServerEvent>>
 ): _.Dictionary<ServerToken> {
-    const tokens = clone(ts)
-    const keyedEvents = _(es).keyBy('pk').value()
-    _(tcs).each((t, id) => {
-      if (t.newStatus === 'deleted') {
-        delete tokens[id]
-      } else if (t.newStatus === 'inserted') {
-        tokens[t.newPk!] = serverTokenSaveResponseToServerToken(t, keyedEvents)
-      } else if (t.newStatus === 'updated') {
-        tokens[id] = serverTokenSaveResponseToServerToken(t, keyedEvents)
-      }
-    })
-    return tokens
+  const tokens = clone(ts)
+  const keyedEvents = _(es).keyBy('pk').value()
+  _(tcs).each((t, id) => {
+    if (t.newStatus === 'deleted') {
+      delete tokens[id]
+    } else if (t.newStatus === 'inserted') {
+      tokens[t.newPk!] = serverTokenSaveResponseToServerToken(t, keyedEvents)
+    } else if (t.newStatus === 'updated') {
+      tokens[id] = serverTokenSaveResponseToServerToken(t, keyedEvents)
+    }
+  })
+  return tokens
 }
 
 function mergeEventChanges(
@@ -421,12 +421,13 @@ function mergeEventChanges(
   return _.toArray(keyedEvents)
 }
 
-export function updateServerTranscriptWithChanges(s: ServerTranscriptSaveResponse): ServerTranscript {
+// tslint:disable-next-line:max-line-length
+export function updateServerTranscriptWithChanges(st: ServerTranscript, ss: ServerTranscriptSaveResponse): ServerTranscript {
   if (serverTranscript !== null) {
-    const newTokens = mergeTokenChanges(serverTranscript.aTokens, s.aTokens, s.aEvents)
-    const newEvents = mergeEventChanges(serverTranscript.aEvents, s.aEvents, newTokens)
+    const newTokens = mergeTokenChanges(st.aTokens, ss.aTokens, ss.aEvents)
+    const newEvents = mergeEventChanges(st.aEvents, ss.aEvents, newTokens)
     const x = {
-      ...s,
+      ...ss,
       aTokens: newTokens,
       aEvents: newEvents
     }
@@ -438,18 +439,8 @@ export function updateServerTranscriptWithChanges(s: ServerTranscriptSaveRespons
 }
 
 export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenTierType): LocalTranscript {
-  // const defaultTier = (() => {
-  //   if (
-  //     s.aTranskript === undefined ||
-  //     s.aTranskript.default_tier === null ||
-  //     s.aTranskript.default_tier === undefined
-  //   ) {
-  //     return 'text'
-  //   } else {
-  //     return s.aTranskript.default_tier
-  //   }
-  // })()
   return _(s.aEvents)
+    .uniqBy(e => e.pk)
     // sort, so the grouped events are in the correct order.
     .sortBy(e => timeToSeconds(e.s))
     // group into events by startTime and endTime
@@ -611,7 +602,10 @@ export async function getTranscript(
     }
     // convert and concat
     eventStore.lockedTokens = eventStore.lockedTokens.concat(getLockedTokensFromServerTranscript(res))
-    eventStore.events = buffer.concat(serverTranscriptToLocal(res, eventStore.metadata.defaultTier || 'text'))
+    eventStore.events = _.uniqBy(
+      buffer.concat(serverTranscriptToLocal(res, eventStore.metadata.defaultTier || 'text')),
+      (e) => e.eventId
+    )
     // progress callback with data
     if (onProgress !== undefined) {
       onProgress(res.aNr / (totalSteps || res.aTmNr || 10), eventStore.events, res)
