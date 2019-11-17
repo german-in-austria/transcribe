@@ -139,10 +139,10 @@ export default class SpeakerSegmentTranscript extends Vue {
     this.commitEvent()
   }
 
-  updateAllTokenTypes(ts: LocalTranscriptToken[]) {
+  updateAllTokenTypes(event: LocalTranscriptEvent) {
     eventStore.events = computeTokenTypesForEvents(eventStore.events, this.defaultTier, [ String(this.speaker) ])
     const thisEvent = eventStore.events[findEventIndexById(this.event.eventId)]
-    this.updateLocalTokenTypes(this.event)
+    this.updateLocalTokenTypes(thisEvent)
   }
 
   updateLocalTokenTypes(e: LocalTranscriptEvent) {
@@ -192,15 +192,12 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   focusPreviousFrom(e: KeyboardEvent, tier: TokenTierType) {
-    // console.log('prev', tier, eventStore.metadata.tiers, this.speaker, eventStore.metadata.speakers)
-    // if (this.isFirstSpeaker(this.speaker)) {
     e.preventDefault()
     const i = findEventIndexById(this.event.eventId)
     scrollToTranscriptEvent(
       eventStore.events[i > 0 ? i - 1 : 0],
       { animate: true, focusSpeaker: this.speaker, focusTier: tier }
     )
-    // }
   }
 
   focusNextFrom(e: KeyboardEvent, tier: TokenTierType) {
@@ -406,7 +403,7 @@ export default class SpeakerSegmentTranscript extends Vue {
       }}
     if (!isEqualDeep(this.localEvent, oldEvent)) {
       undoable(updateSpeakerEvent(newEvent, this.speaker))
-      this.updateAllTokenTypes(this.localTokens)
+      this.updateAllTokenTypes(newEvent)
     } else {
       // nothing to update
     }
