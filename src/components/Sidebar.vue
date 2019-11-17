@@ -143,7 +143,8 @@ export default class Sidebar extends Vue {
   onEventsUpdate(newEvents: LocalTranscriptEvent[]) {
     this.errors = _(sortEvents(newEvents))
       // find events with overlaps
-      .filter((e, i) => newEvents[i - 1] !== undefined && e.startTime < newEvents[i - 1].endTime)
+      // tslint:disable-next-line:max-line-length
+      .filter((e, i) => newEvents[i - 1] !== undefined && +e.startTime.toFixed(2) < +newEvents[i - 1].endTime.toFixed(2))
       .map((e) => ({...e, error_type: 'time_overlap'} as ErrorEvent))
       // concat events with unknown types
       .concat(
