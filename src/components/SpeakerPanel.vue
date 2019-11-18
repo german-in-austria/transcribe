@@ -1,7 +1,7 @@
 <template>
-  <v-flex :style="theme" class="pt-4 speaker-panel" xs1>
+  <v-flex :style="theme" class="pt-4 speaker-panel">
     <div
-      :style="{height: speakerHeight}"
+      :style="{height: speakerHeight + 1}"
       :key="i" v-for="(speaker, i) in eventStore.metadata.speakers"
       class="speaker">
       <v-menu
@@ -15,8 +15,8 @@
           <span class="speaker-triangle">▶</span> {{ speaker.k }}
           <div
             class="secondary-tiers"
-            :style="{ lineHeight: tierHeight + 'px' }"
-            v-for="tier in secondaryVisibleTiers" :key="tier.name">
+            :style="{ lineHeight: tierHeight + 1 + 'px' }"
+            v-for="tier in secondaryVisibleTiers" :key="tier.id">
             {{ tier.name }}
           </div>
         </div>
