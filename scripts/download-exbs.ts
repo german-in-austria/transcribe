@@ -50,6 +50,13 @@ async function getFilesRecursive(path: string, test: (f: WebDavFile) => boolean,
       // && !f.filename.includes('_alt_')
   })
   console.log(transcripts)
+  const csv =  'File Name;\n' + transcripts.reduce((m, e, i, l) => {
+    m = m + e.basename + '\n';
+    return m
+  }, '')
+
+  fs.writeFileSync('../data/exbs.csv', csv)
+
   // Outputs a structure like:
   // [{
   //     filename: "/my-file.txt",
