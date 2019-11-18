@@ -111,7 +111,7 @@ export const tokenTypesPresets: TokenTypesPreset = {
       name: 'anonymized',
       bracketSymbols: [
         /(\[([a-zA-ZÜüÄäÖöß\?]+))/u,
-        /([a-zA-ZÜüÄäÖöß]+\](N|O|Z|S))/,
+        /(.+\](N|O|Z|S))/,
       ],
       color: '#880000',
       id: 10
@@ -126,7 +126,7 @@ export const tokenTypesPresets: TokenTypesPreset = {
     {
       type: 'single',
       name: 'delimiter',
-      regex: /^(\?|\.|\,|!)$/,
+      regex: /^(\?|\.|\,|!)"?$/,
       color: '#1717FB',
       id: 2
     },
@@ -159,7 +159,7 @@ export const tokenTypesPresets: TokenTypesPreset = {
     {
       type: 'single',
       name: 'delimiter',
-      regex: /^(\?|\.|\,|!)/,
+      regex: /^(\?|\.|\,|!)"?/,
       color: '#1717FB',
       id: 2
     },
