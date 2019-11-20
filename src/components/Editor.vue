@@ -209,7 +209,6 @@ import {
   joinEvents,
   loadAudioFromFile,
   playEvent,
-  saveChangesToServer,
   scrollToAudioEvent,
   scrollToTranscriptEvent,
   selectEventRange,
@@ -219,6 +218,7 @@ import {
   splitEvent,
 } from '../store/transcript'
 
+import { saveChangesToServer } from '../service/backend-server'
 import { handleGlobalShortcut } from '../service/keyboard'
 
 import {
@@ -316,7 +316,7 @@ export default class Editor extends Vue {
     // if (this.history.actions.length > 0) {
     this.isSaving = true
     try {
-      await saveChangesToServer()
+      eventStore.events = await saveChangesToServer(eventStore.events)
     } catch (e) {
       console.log(e)
     } finally {

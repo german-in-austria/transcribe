@@ -28,10 +28,10 @@ import {
   moveEventStartTime,
   moveEventEndTime,
   shiftCharsLeft,
-  shiftCharsRight,
-  selectEvent,
-  saveChangesToServer
+  shiftCharsRight
 } from '../store/transcript'
+
+import { saveChangesToServer } from '../service/backend-server'
 
 import eventBus from '../service/event-bus'
 import settings from '../store/settings';
@@ -471,6 +471,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     description: 'Save the Transcript to the Server',
     disabled: () => history.actions.length === 0,
     icon: 'save_alt',
-    action: saveChangesToServer
+    action: async () => {
+      eventStore.events = await saveChangesToServer(eventStore.events)
+    }
   }
 }

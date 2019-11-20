@@ -593,6 +593,98 @@ export async function getServerTranscripts(): Promise<{transcripts: ServerTransc
   return res
 }
 
+async function performSaveRequest(id: number, t: ServerTranscriptSaveRequest): Promise<ServerTranscriptSaveResponse> {
+  return await (
+    await fetch(`${ eventStore.backEndUrl }/routes/transcript/save/${ id }`, {
+    credentials: 'include',
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(t),
+  })).json() as ServerTranscriptSaveResponse
+}
+
+export async function convertToServerTranscript(es: LocalTranscriptEvent[]): Promise<ServerTranscript|null> {
+  if (serverTranscript !== null) {
+    return localTranscriptToServerTranscript(serverTranscript, es)
+  } else {
+    return null
+  }
+}
+
+function logServerResponse(req: ServerTranscriptSaveRequest, res: ServerTranscriptSaveResponse) {
+  console.log({
+    localChanges: _(req.aTokens).toArray().value(),
+    localDeletionsAndInserts: _(req.aTokens).toArray().filter((token) => {
+      return token.status === 'delete' || token.status === 'insert'
+    }).value(),
+    serverDeletionsAndErrorsAndInserts: _(res.aTokens).toArray().filter((token) => {
+      return token.newStatus === 'deleted' || token.newStatus === 'inserted' || token.newStatus === 'error'
+    }).value(),
+    groupedErrors: _(res.aTokens)
+      .toArray()
+      .filter(token => token.error !== undefined)
+      .groupBy(token => token.error)
+      .value()
+  })
+}
+export async function saveChangesToServer(es: LocalTranscriptEvent[]): Promise<LocalTranscriptEvent[]> {
+  // there’s no transcript or no id => throw
+  if ( serverTranscript === null || serverTranscript.aTranskript === undefined ) {
+    throw new Error('transcript id is undefined')
+  } else {
+    // it’s already on the server
+    if (serverTranscript.aTranskript.pk > -1) {
+      const t = await localTranscriptToServerSaveRequest(serverTranscript, es)
+      // console.log({ ServerTranscriptSaveRequest: t })
+      const serverChanges = await performSaveRequest(serverTranscript.aTranskript.pk, t)
+      // console.log({ serverChanges })
+      logServerResponse(t, serverChanges)
+      const updatedServerTranscript = updateServerTranscriptWithChanges(serverTranscript, serverChanges)
+      const updatedLocalTranscript = serverTranscriptToLocal(
+        updatedServerTranscript,
+        eventStore.metadata.defaultTier || 'text'
+      )
+      // eventStore.events = updatedLocalTranscript
+      return updatedLocalTranscript
+      // console.log({ updatedServerTranscript, updatedLocalTranscript })
+    // it’s a new transcript
+    } else {
+      console.log({ serverTranscript })
+      const { transcript_id } = await createEmptyTranscript(
+        serverTranscript.aEinzelErhebung!.pk,
+        serverTranscript.aTranskript.n,
+        serverTranscript.aTranskript.default_tier!
+      )
+      console.log('created transcript with id', transcript_id)
+      const transcriptWithoutTokensAndEvents = {
+        ...serverTranscript,
+        aTranscript: {
+          ...serverTranscript.aTranskript,
+          pk: transcript_id
+        },
+        aTokens: {},
+        aEvents: []
+      }
+      const t = await localTranscriptToServerSaveRequest(transcriptWithoutTokensAndEvents, eventStore.events)
+      const serverChanges = await performSaveRequest(transcript_id, t)
+      logServerResponse(t, serverChanges)
+      const updatedServerTranscript = updateServerTranscriptWithChanges(transcriptWithoutTokensAndEvents, serverChanges)
+      console.log({ updatedServerTranscript })
+      const updatedLocalTranscript = serverTranscriptToLocal(
+        updatedServerTranscript,
+        eventStore.metadata.defaultTier || 'text'
+      )
+      console.log({ updatedLocalTranscript })
+      serverTranscript.aTranskript!.pk = transcript_id
+      // eventStore.events = updatedLocalTranscript
+      return updatedLocalTranscript
+    }
+  }
+}
+
 export async function getTranscript(
   id: number,
   onProgress: (v: number, es: LocalTranscriptEvent[], res: ServerTranscript) => any,
