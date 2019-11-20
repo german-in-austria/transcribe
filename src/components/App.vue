@@ -35,6 +35,7 @@
             <v-combobox
               style="width: 300px; margin: 20px auto 0 auto"
               @change="updateBackEndUrl"
+              :loading="isLoadingBackendUrl"
               :error-messages="this.errorMessage !==  null ? [ this.errorMessage ] : []"
               auto-select-first
               v-model="eventStore.backEndUrl"
@@ -241,12 +242,14 @@ export default class App extends Vue {
   loggedIn: boolean = true
   importableExmaraldaFile: ParsedExmaraldaXML|null = null
   errorMessage: string|null = null
-
-  updateBackEndUrl(url: string) {
+  isLoadingBackendUrl = false
+  async updateBackEndUrl(url: string) {
+    this.isLoadingBackendUrl = true
     localStorage.setItem('backEndUrl', url)
     eventStore.backEndUrl = url
     this.updateTokenTypePreset()
-    this.loadTranscriptList()
+    await this.loadTranscriptList()
+    this.isLoadingBackendUrl = false
   }
 
   onDropFile(e: DragEvent) {
