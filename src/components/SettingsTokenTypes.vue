@@ -1,10 +1,16 @@
 <template>
   <v-list subheader>
     <v-layout class="settings-header">
-      <v-subheader>Token Types</v-subheader>
-      <v-divider class="mb-3" />
+      <v-flex xs12>
+        <v-subheader>Token Types</v-subheader>
+        <v-divider />
+      </v-flex>
     </v-layout>
-    <v-layout class="ml-3" row :key="type.name" v-for="(type, i) in tokenTypesPresets[settings.tokenTypesPreset]">
+    <v-layout
+      v-for="(type, i) in tokenTypesPresets[settings.tokenTypesPreset]"
+      :key="type.name"
+      class="ml-3 pt-3"
+      row>
       <v-flex xs1>
         <v-menu
           class="mt-2"
@@ -25,15 +31,31 @@
       <v-flex xs5>
         <v-text-field label="Name" :value="type.name" />
       </v-flex>
-      <v-flex xs5>
+      <v-flex xs5 v-if="type.type === 'single'">
         <v-text-field
-          :rules="[
-            !isValidRegEx(type.regex.toString()) && 'Invalid Regular Expression'
-          ]"
+          :rules="[ !isValidRegEx(type.regex.toString()) && 'Invalid Regular Expression' ]"
           @input="(e) => updateRegEx(i, e)"
           label="Regular Expression"
           :value="type.regex.toString()"
         />
+      </v-flex>
+      <v-flex xs5 v-if="type.type === 'group'">
+        <div>
+          <v-text-field
+            :rules="[ !isValidRegEx(type.bracketSymbols[0].toString()) && 'Invalid Regular Expression' ]"
+            @input="(e) => updateBracket(i, e, 0)"
+            label="Left Bracket"
+            :value="type.bracketSymbols[0].toString()"
+          />
+        </div>
+        <div>
+          <v-text-field
+            :rules="[ !isValidRegEx(type.bracketSymbols[1].toString()) && 'Invalid Regular Expression' ]"
+            @input="(e) => updateBracket(i, e, 1)"
+            label="Right Bracket"
+            :value="type.bracketSymbols[1].toString()"
+          />
+        </div>
       </v-flex>
     </v-layout>
   </v-list>
