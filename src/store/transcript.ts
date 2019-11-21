@@ -790,9 +790,9 @@ export function splitEventAtChar(
       const leftEvent: LocalTranscriptEvent = {
         ...e,
         speakerEvents: {
-          ..._(e.speakerEvents).mapValues(se => ({
+          ..._(e.speakerEvents).mapValues((se, sid) => ({
             ...se,
-            tokens: collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, 0, left)
+            tokens: collectTokensViaOffsets(e.speakerEvents[sid].tokens, 0, left)
           })).value()
         },
         endTime: e.startTime + splitTime
@@ -802,9 +802,9 @@ export function splitEventAtChar(
         endTime: e.endTime,
         eventId: makeEventId(),
         speakerEvents: {
-          ..._(e.speakerEvents).mapValues(se => ({
-              ...se,
-              tokens: collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, left, segmentCharacters)
+          ..._(e.speakerEvents).mapValues((se, sid) => ({
+            ...se,
+            tokens: collectTokensViaOffsets(e.speakerEvents[sid].tokens, left, segmentCharacters)
           })).value()
         },
       }
