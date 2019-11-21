@@ -457,7 +457,7 @@ export function updateSpeakerEvent(
   if (tokenCountDifference !== 0) {
     eventStore.events = updateSpeakerTokenOrderStartingAt(speakerId, eventIndex, tokenCountDifference)
   }
-  console.log('after update', clone(eventStore.events[eventIndex]), eventStore.events[eventIndex])
+  // console.log('after update', clone(eventStore.events[eventIndex]), eventStore.events[eventIndex])
   return {
     id: _.uniqueId(),
     time: new Date(),
