@@ -33,7 +33,26 @@
         </span>
       </span>
     </div>
-    <div
+    <contenteditable
+      @blur="focused = false"
+      @focus="focused = true"
+      @input="(e) => updateDefaultTier(e.target.textContent)"
+      @keydown.tab.shift.exact="focusPreviousFrom($event, defaultTier)"
+      @keydown.tab.exact="focusNextFrom($event, defaultTier)"
+      @keydown.enter.exact.prevent="viewAndSelectAudioEvent(event)"
+      @keydown.right.exact="handleCursor($event, defaultTier)"
+      @keydown.left.exact="handleCursor($event, defaultTier)"
+      @copy.prevent="copyTokens"
+      @cut.prevent="cutTokens"
+      @paste="pasteTokens"
+      :id="`speaker_event_tier_${speaker}__${defaultTier}`"
+      :value="segmentText"
+      :style="textStyle"
+      :data-event-id="event.eventId"
+      :data-speaker-id="speaker"
+      class="tokens-input segment-text"
+    />
+    <!-- <div
       @blur="focused = false"
       @focus="focused = true"
       @input="(e) => updateDefaultTier(e.target.textContent)"
@@ -52,7 +71,7 @@
       :data-event-id="event.eventId"
       :data-speaker-id="speaker"
       class="tokens-input segment-text">
-    </div>
+    </div> -->
     <div
       v-for="(tier, i) in secondaryTiers"
       :key="i"
@@ -104,6 +123,7 @@ import {
   makeTierEventId
 } from '../store/transcript'
 
+import contenteditable from './helper/Contenteditable.vue'
 import * as copyPaste from '../service/copy-paste'
 import { undoable } from '../store/history'
 import * as _ from 'lodash'
@@ -111,7 +131,11 @@ import * as jsdiff from 'diff'
 import eventBus from '../service/event-bus'
 import { computeTokenTypesForEvents } from '../service/token-types'
 
-@Component
+@Component({
+  components: {
+    contenteditable
+  }
+})
 export default class SpeakerSegmentTranscript extends Vue {
 
   @Prop() event: LocalTranscriptEvent
@@ -217,17 +241,13 @@ export default class SpeakerSegmentTranscript extends Vue {
   @Watch('event', { deep: true })
   onUpdateEvent(newEvent: LocalTranscriptEvent) {
     // update if not focused
-    if (this.focused === false) {
-      // console.log('watcher', window.getSelection())
-      this.localEvent = clone(newEvent)
-      this.localTokens = this.localEvent.speakerEvents[this.speaker]
-        ? this.localEvent.speakerEvents[this.speaker].tokens
-        : []
-      this.segmentText = this.localTokens ? this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ') : ''
-      // don’t update if focused
-    } else {
-      console.log('update prevented.', newEvent)
-    }
+    // console.log('watcher', window.getSelection())
+    this.localEvent = clone(newEvent)
+    this.localTokens = this.localEvent.speakerEvents[this.speaker]
+      ? this.localEvent.speakerEvents[this.speaker].tokens
+      : []
+    this.segmentText = this.localTokens ? this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ') : ''
+    // don’t update if focused
   }
 
   async cutTokens(e: ClipboardEvent) {
@@ -377,7 +397,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   tokenizeText(text: string) {
-    return text.trim().split(' ').filter((t) => t !== '')
+    return text.split(' ').filter((t) => t !== '')
   }
 
   viewAndSelectAudioEvent(e: LocalTranscriptEvent) {
