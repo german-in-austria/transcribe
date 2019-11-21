@@ -50,6 +50,7 @@
       v-text="segmentText"
       :style="textStyle"
       :data-event-id="event.eventId"
+      :data-speaker-id="speaker"
       class="tokens-input segment-text">
     </div>
     <div
@@ -217,12 +218,13 @@ export default class SpeakerSegmentTranscript extends Vue {
   onUpdateEvent(newEvent: LocalTranscriptEvent) {
     // update if not focused
     if (this.focused === false) {
+      // console.log('watcher', window.getSelection())
       this.localEvent = clone(newEvent)
       this.localTokens = this.localEvent.speakerEvents[this.speaker]
         ? this.localEvent.speakerEvents[this.speaker].tokens
         : []
       this.segmentText = this.localTokens ? this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ') : ''
-    // don’t update if focused
+      // don’t update if focused
     } else {
       console.log('update prevented.', newEvent)
     }
