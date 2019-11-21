@@ -148,7 +148,7 @@ export async function handleGlobalShortcut(e: KeyboardEvent) {
   _(keyboardShortcuts).forEach(sc => {
     if (
       // the function is not disabled
-      (sc.disabled !== undefined && sc.disabled() === false) &&
+      (sc.disabled === undefined || sc.disabled() === false) &&
       // the shortcut is allowed in text fields OR we’re not in a text field.
       (sc.ignoreInTextField === false || !isInputElement(e.target)) &&
       // the required key was pressed
@@ -212,10 +212,12 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     action: async (ev) => {
       const s = document.getSelection()
       const e = ev.target
+      console.log({ ev, s, e })
       if (s !== null && e instanceof HTMLElement) {
         const speakerId = e.getAttribute('data-speaker-id')
         const eventId = e.getAttribute('data-event-id')
         if (speakerId !== null && eventId !== null) {
+          console.log({ speakerId, eventId })
           undoable(splitEventAtChar(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
         }
       }
