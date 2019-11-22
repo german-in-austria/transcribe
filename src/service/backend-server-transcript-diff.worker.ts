@@ -7,6 +7,8 @@ import {
 import {
   ServerEvent,
   ServerToken,
+  ServerEventTiers,
+  ServerSpeakerEventTiers,
   ServerTranscript,
   ServerTranscriptSaveRequest,
   SaveRequest
@@ -18,6 +20,7 @@ const textDecoder = new TextDecoder('utf-8')
 import reduce from 'lodash/reduce'
 import keyBy from 'lodash/keyBy'
 import mapValues from 'lodash/mapValues'
+import mergeWith from 'lodash/mergeWith'
 
 function padEnd(string: string, targetLength: number, padString: string) {
   // tslint:disable-next-line:no-bitwise
@@ -93,11 +96,30 @@ function hasTokenChanged(l: ServerToken, r: ServerToken): boolean {
 }
 
 function hasEventChanged(l: ServerEvent, r: ServerEvent): boolean {
+  if (JSON.stringify(l.event_tiers) !== JSON.stringify(r.event_tiers)) {
+    console.log(JSON.stringify(l.event_tiers), JSON.stringify(r.event_tiers))
+  }
   return (
     l.e !== r.e ||
     l.s !== r.s ||
+    // hasEventTierChanged(l.event_tiers, r.event_tiers)
     JSON.stringify(l.event_tiers) !== JSON.stringify(r.event_tiers)
   )
+}
+
+function markEventTierUpdateStatus(newEvent: ServerEvent, oldEvent: ServerEvent): ServerEvent {
+  // tslint:disable-next-line:max-line-length
+  const oldEs = mapValues(oldEvent.event_tiers, (ets, speaker) => mapValues(ets, (et) => ({...et, status: 'delete' }) ))
+  const newEs = mapValues(newEvent.event_tiers, (ets, speaker) => mapValues(ets, (et) => ({...et, status: 'upsert' }) ))
+  const m = mergeWith(oldEs, newEs, (oldE, newE) => {
+    if (oldE !== undefined && oldE.ti !== undefined) {
+      return newE
+    }
+  })
+  return {
+    ...newEvent,
+    event_tiers: m
+  }
 }
 
 // tslint:disable-next-line:max-line-length
@@ -110,6 +132,7 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
   const newServerEvents: ServerEvent[] = []
   const newServerTokens = reduce(localTranscript, (m, event) => {
     mapValues(event.speakerEvents, (speakerEvent, speakerId) => {
+      // events
       newServerEvents.push({
         pk: speakerEvent.speakerEventId,
         s: padEnd(timeFromSeconds(event.startTime), 14, '0'),
@@ -118,20 +141,21 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
         tid: {
           [speakerId]: speakerEvent.tokens.map((t) => t.id)
         },
-        event_tiers: mapValues(event.speakerEvents, (e) => {
-          return reduce(e.speakerEventTiers, (memo, et, tierId) => {
-            if (et.type === 'freeText') {
-              memo[et.id] = {
-                t: et.text,
-                ti: tierId
-              }
-            } else {
-              // it’s an annotation thing.
+        event_tiers: reduce(event.speakerEvents, (serverSpeakerEventTiers, se, sId) => {
+          const tiers = reduce(se.speakerEventTiers, (serverEventTiers, et, tierId) => {
+            serverEventTiers[et.id] = {
+              ti: Number(tierId),
+              t: et.text,
             }
-            return memo
-          }, {} as _.Dictionary<{t: string, ti: string}>)
-        })
+            return serverEventTiers
+          }, {} as ServerEventTiers)
+          if (Object.keys(tiers).length !== 0) {
+            serverSpeakerEventTiers[sId] = tiers
+          }
+          return serverSpeakerEventTiers
+        }, {} as ServerSpeakerEventTiers)
       })
+      // tokens
       return speakerEvent.tokens.map((t, i, tokens) => {
         const token = {
           e : speakerEvent.speakerEventId,
@@ -204,7 +228,7 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
       hasEventChanged(e, oldIndexedEvents[e.pk])
     ) {
       m.push({
-        ...e,
+        ...markEventTierUpdateStatus(e, oldIndexedEvents[e.pk]),
         status: 'update'
       })
     }

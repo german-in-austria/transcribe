@@ -218,7 +218,7 @@ export function importableToServerTranscript(
                     [speakerTier.to_speaker!.pk] : {
                       [makeEventTierId()]: {
                         t: e.text || '',
-                        ti: String(tierId)
+                        ti: Number(tierId)
                       }
                     }
                   }

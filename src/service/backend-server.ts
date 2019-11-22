@@ -152,21 +152,27 @@ export interface ServerToken {
   fo?: number // fragment of
 }
 
+export interface ServerEventTiers {
+  [event_tier_id: string]: {
+    // event tier string
+    t: string
+    // tier id
+    ti: number
+    // if it’s a save response
+    newPk?: number
+  }
+}
+
+export interface ServerSpeakerEventTiers {
+  [speaker_id: string]: ServerEventTiers
+}
+
 export interface ServerEvent {
   pk: number
   tid: {
     [speaker_id: string]: number[]
   }
-  event_tiers: {
-    [speaker_id: string]: {
-      [event_tier_id: string]: {
-        // event tier string
-        t: string
-        // tier id
-        ti: string
-      }
-    }
-  }
+  event_tiers: ServerSpeakerEventTiers
   e: string // end
   s: string // start
   l: 0
@@ -340,6 +346,21 @@ function findNextFragmentOfId(
   }
 }
 
+// tslint:disable-next-line:max-line-length
+function serverEventTiersSaveResponseToServerEventTiers(speakerEventTiers: ServerSpeakerEventTiers): ServerSpeakerEventTiers {
+  return _(speakerEventTiers).mapValues((speakerEventTier, speakerId) => {
+    return _(speakerEventTier).reduce((m, e, k) => {
+      if ((e as any).newStatus !== 'deleted') {
+        m[e.newPk || k] = {
+          ti: e.ti,
+          t: e.t
+        }
+      }
+      return m
+    }, {} as ServerEventTiers)
+  }).value()
+}
+
 export function serverEventSaveResponseToServerEvent(e: SaveResponse<ServerEvent>): ServerEvent {
   return {
     e: e.e,
@@ -347,7 +368,7 @@ export function serverEventSaveResponseToServerEvent(e: SaveResponse<ServerEvent
     pk: e.newPk || e.pk,
     s: e.s,
     tid: e.tid,
-    event_tiers: e.event_tiers
+    event_tiers: serverEventTiersSaveResponseToServerEventTiers(e.event_tiers)
   }
 }
 
