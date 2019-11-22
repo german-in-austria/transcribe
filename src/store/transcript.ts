@@ -50,12 +50,7 @@ export interface TierFreeText {
   text: string
 }
 
-export interface TierAnnotation {
-  type: 'annotation',
-  tags: number[]
-}
-
-export type LocalTranscriptSpeakerEventTier = TierFreeText|TierAnnotation
+export type LocalTranscriptSpeakerEventTier = TierFreeText
 
 export interface LocalTranscriptSpeakerEventTiers {
   [tierId: string]: LocalTranscriptSpeakerEventTier
@@ -297,33 +292,28 @@ export function speakerEventHasErrors(event: LocalTranscriptEvent): boolean {
 }
 
 function updateSpeakerTokenOrderStartingAt(speakerId: number, startAtIndex = 0, add: number) {
-  eachFrom(eventStore.events, startAtIndex, (e, eventIndex) => {
-  // return eventStore.events.map((e, eventIndex) => {
-    // if (eventIndex > startAtIndex) {
-      if (e.speakerEvents[speakerId] !== undefined) {
-        const tokens = e.speakerEvents[speakerId].tokens
-        if (tokens.length > 0) {
-          return {
-            ...e,
-            speakerEvents: {
-              ...e.speakerEvents,
-              [speakerId]: {
-                ...e.speakerEvents[speakerId],
-                tokens: tokens.map((t) => {
-                  return { ...t, order: t.order + add }
-                })
-              }
+  eachFrom(eventStore.events, startAtIndex, (e) => {
+    if (e.speakerEvents[speakerId] !== undefined) {
+      const tokens = e.speakerEvents[speakerId].tokens
+      if (tokens.length > 0) {
+        return {
+          ...e,
+          speakerEvents: {
+            ...e.speakerEvents,
+            [speakerId]: {
+              ...e.speakerEvents[speakerId],
+              tokens: tokens.map(t => {
+                return { ...t, order: t.order + add }
+              })
             }
           }
-        } else {
-          return e
         }
       } else {
         return e
       }
-    // } else {
-    //   return e
-    // }
+    } else {
+      return e
+    }
   })
 }
 

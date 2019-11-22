@@ -85,7 +85,7 @@
         :class="['secondary-free-text-tier-text', settings.darkMode === true && 'theme--dark']"
         @keydown.tab.shift.exact="focusPreviousFrom(tier.id)"
         @keydown.tab.exact="focusNextFrom($event, tier.id)"
-        @blur="(e) => {debouncedUpdateEventTier(e.target.textContent, tier.id, tier.type); focused = false}"
+        @blur="(e) => {debouncedUpdateEventTier(e.target.textContent, tier.id); focused = false}"
         @focus="focused = true"
         />
     </div>
@@ -432,38 +432,65 @@ export default class SpeakerSegmentTranscript extends Vue {
     }
   }
 
-  updateEventTier(text: string|null|undefined, tierId: string, tierType: string) {
-    const cleanText = text === null || text === undefined ? '' : text
-    console.log('local event', this.localEvent)
-    if (
-      this.localEvent.speakerEvents[this.speaker] !== undefined &&
+  isValidTierEventText(text: string): boolean {
+    return text.trim() !== ''
+  }
+
+  hasEventTierChanged(text: string, tierId: string): boolean {
+    return this.localEvent.speakerEvents[this.speaker].speakerEventTiers[tierId].text !== text
+  }
+
+  eventTierExists(tierId: string): boolean {
+    return this.localEvent.speakerEvents[this.speaker] !== undefined &&
       this.localEvent.speakerEvents[this.speaker].speakerEventTiers !== undefined &&
-      this.localEvent.speakerEvents[this.speaker].speakerEventTiers[tierId] !== undefined) {
-      if (tierType === 'freeText') {
-        (this.localEvent
-          .speakerEvents[this.speaker]
-          .speakerEventTiers[tierId] as TierFreeText
-        ).text = cleanText
-      }
-      this.commitEvent()
-    } else {
-      this.localEvent = {
-        ...this.localEvent,
-        speakerEvents: {
-          ...this.localEvent.speakerEvents,
-          [ this.speaker ]: {
-            ...this.localEvent.speakerEvents[this.speaker],
-            speakerEventTiers: {
-              ...this.localEvent.speakerEvents[this.speaker].speakerEventTiers,
-              [ tierId ]: {
-                id: makeEventTierId(),
-                type: tierType,
-                text: cleanText
-              }
+      this.localEvent.speakerEvents[this.speaker].speakerEventTiers[tierId] !== undefined
+  }
+
+  createEventTier(text: string, tierId: string) {
+    this.localEvent = {
+      ...this.localEvent,
+      speakerEvents: {
+        ...this.localEvent.speakerEvents,
+        [ this.speaker ]: {
+          ...this.localEvent.speakerEvents[this.speaker],
+          speakerEventTiers: {
+            ...this.localEvent.speakerEvents[this.speaker].speakerEventTiers,
+            [ tierId ]: {
+              id: makeEventTierId(),
+              type: 'freeText',
+              text
             }
           }
         }
       }
+    }
+  }
+
+  deleteEventTier(tierId: string) {
+    const e = this.localEvent
+    delete e.speakerEvents[this.speaker].speakerEventTiers[tierId]
+    this.localEvent = e
+  }
+
+  updateEventTierText(text: string, tierId: string) {
+    this.localEvent.speakerEvents[this.speaker].speakerEventTiers[tierId].text = text
+  }
+
+  updateEventTier(text: string|null|undefined, tierId: string) {
+    const cleanText = text === null || text === undefined ? '' : text
+    if (this.eventTierExists(tierId) && this.hasEventTierChanged(cleanText, tierId)) {
+      if (this.isValidTierEventText(cleanText)) {
+        // update
+        this.updateEventTierText(cleanText, tierId)
+        this.commitEvent()
+      } else {
+        // delete
+        this.deleteEventTier(tierId)
+        this.commitEvent()
+      }
+    } else if (this.isValidTierEventText(cleanText)) {
+      // create
+      this.createEventTier(cleanText, tierId)
       this.commitEvent()
     }
   }
