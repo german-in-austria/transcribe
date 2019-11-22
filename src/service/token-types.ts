@@ -10,8 +10,8 @@ function iterateTokensBySpeakers(
   f: (t: LocalTranscriptToken) => LocalTranscriptToken
 ): LocalTranscriptEvent[] {
   // const es = clone(esOriginal)
-  _(speakerIds).forEach((s) => {
-    _(es).forEach(e => {
+  speakerIds.forEach((s) => {
+    es.forEach(e => {
       if (e.speakerEvents[s] !== undefined) {
         e.speakerEvents[s].tokens = e.speakerEvents[s].tokens.map(f)
       }
@@ -35,7 +35,7 @@ export function computeTokenTypesForEvents(
         currentBracketGroup = null
       }
     } else {
-      const type = _(tokenTypesPresets[settings.tokenTypesPreset]).find((tt) => {
+      const type = tokenTypesPresets[settings.tokenTypesPreset].find((tt) => {
         if (tt.type === 'single') {
           return tt.regex.test(cleanText)
         } else {
