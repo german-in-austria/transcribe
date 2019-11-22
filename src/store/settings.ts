@@ -35,6 +35,7 @@ export interface TokenTypesPresetGroup extends TokenTypePresetBase {
 // interface JsonArray extends Array<AnyJson> {}
 
 export interface Settings {
+  showSettings: boolean
   contrast: number
   darkMode: boolean
   drawerWidth: number
@@ -359,6 +360,7 @@ export function setIsDarkMode(b: boolean) {
 }
 
 const settings: Settings = {
+  showSettings: false,
   contrast: 1,
   darkMode: getIsDarkMode(),
   drawerWidth: 350,

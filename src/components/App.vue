@@ -6,6 +6,7 @@
     :dark="settings.darkMode"
     >
     <v-navigation-drawer
+      v-if="eventStore.status !== 'empty'"
       stateless
       style="padding: 0"
       :value="true"
@@ -13,8 +14,7 @@
       right
       disable-resize-watcher
       app>
-      <sidebar :active="settings.showDrawer"
-      />
+      <sidebar :active="settings.showDrawer" />
     </v-navigation-drawer>
     <v-content class="main-content">
       <v-container fluid fill-height class="pa-0">

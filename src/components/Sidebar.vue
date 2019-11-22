@@ -46,20 +46,30 @@
       </v-window>
     </v-flex>
     <v-flex class="sidebar-picker text-xs-center pt-2">
-      <v-btn icon @click="clickTab(0)" class="mb-2">
-        <v-icon :color="activeTab === 0 ? 'blue' : ''">edit</v-icon>
-      </v-btn>
-      <v-btn icon @click="clickTab(1)" class="mb-2">
-        <v-icon :color="activeTab === 1 ? 'blue' : ''">history</v-icon>
-      </v-btn>
-      <v-btn icon @click="clickTab(2)" class="mb-2">
-        <v-badge :value="errors.length > 0" color="grey">
-          <v-icon :color="activeTab === 2 ? 'blue' : ''">error_outline</v-icon> <span slot="badge">{{ errors.length }}</span>
-        </v-badge>
-      </v-btn>
-      <v-btn icon @click="clickTab(3)" class="mb-2">
-        <v-icon :color="activeTab === 3 ? 'blue' : ''">bookmark_border</v-icon>
-      </v-btn>
+      <v-layout column fill-height justify-space-between>
+        <v-flex>
+          <v-btn icon @click="clickTab(0)" class="mb-2">
+            <v-icon :color="activeTab === 0 ? 'blue' : ''">edit</v-icon>
+          </v-btn>
+          <v-btn icon @click="clickTab(1)" class="mb-2">
+            <v-icon :color="activeTab === 1 ? 'blue' : ''">history</v-icon>
+          </v-btn>
+          <v-btn icon @click="clickTab(2)" class="mb-2">
+            <v-badge :value="errors.length > 0" color="grey">
+              <v-icon :color="activeTab === 2 ? 'blue' : ''">error_outline</v-icon> <span slot="badge">{{ errors.length }}</span>
+            </v-badge>
+          </v-btn>
+          <v-btn icon @click="clickTab(3)" class="mb-2">
+            <v-icon :color="activeTab === 3 ? 'blue' : ''">bookmark_border</v-icon>
+          </v-btn>
+        </v-flex>
+        <v-flex xs1>
+          <v-spacer />
+          <v-btn @click.stop="settings.showSettings = true" icon flat>
+            <v-icon>settings</v-icon>
+          </v-btn>
+        </v-flex>
+      </v-layout>
     </v-flex>
   </v-layout>
   <!-- <v-tabs v-if="active" hide-slider class="sidebar layout fill-height column" height="64" grow v-model="activeTab">
@@ -111,6 +121,7 @@ export default class Sidebar extends Vue {
 
   @Prop() active: boolean
 
+  settings = settings
   errors: ErrorEvent[] = []
   history = history
   activeTab = 0

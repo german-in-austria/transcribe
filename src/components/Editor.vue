@@ -11,9 +11,6 @@
         <search style="display: inline-block" />
         <div style="display: inline-block">
           <v-tooltip transition="none" bottom>
-            <v-btn slot="activator" @click.stop="showSettings = true" icon flat>
-              <v-icon>settings</v-icon>
-            </v-btn>
             <span>Settings</span>
           </v-tooltip>
           <v-menu
@@ -70,9 +67,9 @@
       </v-flex>
     </v-toolbar>
     <settings-view
-      v-if="showSettings" 
-      @close="showSettings = false"
-      :show="showSettings" />
+      v-if="settings.showSettings" 
+      @close="settings.showSettings = false"
+      :show="settings.showSettings" />
     <spectrogram
       v-if="isSpectrogramVisible"
       @close="isSpectrogramVisible = false"
@@ -275,7 +272,6 @@ export default class Editor extends Vue {
 
   scrollToTranscriptEvent = scrollToTranscriptEvent
   settings = settings
-  showSettings = false
   showSearch = false
   showMenu = false
   isSaving = false
