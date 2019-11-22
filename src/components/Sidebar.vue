@@ -151,23 +151,21 @@ export default class Sidebar extends Vue {
   async getErrors() {
     await this.$nextTick()
     window.requestIdleCallback(() => {
-      this.errors = _(sortEvents(eventStore.events))
+      const errors = sortEvents(eventStore.events)
         // find events with overlaps
         // tslint:disable-next-line:max-line-length
         .filter((e, i) => eventStore.events[i - 1] !== undefined && +e.startTime.toFixed(2) < +eventStore.events[i - 1].endTime.toFixed(2))
-        .map((e) => ({...e, error_type: 'time_overlap'} as ErrorEvent))
+        .map(e => ({...e, error_type: 'time_overlap'} as ErrorEvent))
         // concat events with unknown types
         .concat(
-          _(eventStore.events).filter((e) => {
+          eventStore.events.filter((e) => {
             return _(e.speakerEvents).some((se) => {
               return _(se.tokens).some((t) => t.tiers[eventStore.metadata.defaultTier].type === -1)
             })
           })
           .map(e => ({ ...e, error_type: 'unknown_token' } as ErrorEvent))
-          .value()
         )
-        .sortBy(e => e.startTime)
-        .value()
+      this.errors = sortEvents(errors) as ErrorEvent[]
     })
   }
 
