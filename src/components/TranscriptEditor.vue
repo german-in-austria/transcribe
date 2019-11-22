@@ -154,36 +154,39 @@ export default class TranscriptEditor extends Vue {
       if (i !== this.currentIndex) {
         this.visibleEvents = this.getEventRange(i, i + defaultLimit)
         this.currentIndex = i
-        await this.$nextTick()
+        // await this.$nextTick()
       }
-      const [ firstVisibleEvent, innerOffset, width ] = await this.findFirstVisibleEventAndDimensions()
-      const eventLength = firstVisibleEvent.endTime - firstVisibleEvent.startTime
-      const progressFactor = (firstVisibleEvent.startTime - seconds) / eventLength
-      const offsetLeft = width * progressFactor
-      this.setInnerLeft(offsetLeft)
+      const [ firstVisibleEvent, innerOffset, width ] = this.findFirstVisibleEventAndDimensions()
+      if (firstVisibleEvent) {
+        const eventLength = firstVisibleEvent.endTime - firstVisibleEvent.startTime
+        const progressFactor = (firstVisibleEvent.startTime - seconds) / eventLength
+        const offsetLeft = width * progressFactor
+        this.setInnerLeft(offsetLeft)
+      }
     }
   }
 
-  async findFirstVisibleEventAndDimensions(): Promise<[LocalTranscriptEvent, number, number]> {
-    let innerOffset = 0
+  findFirstVisibleEventAndDimensions(): [LocalTranscriptEvent|null, number, number] {
     let width = 0
-    await requestFrameAsync()
-    const nodeList = Array.from(this.$el.querySelectorAll('.segment') as NodeListOf<HTMLElement>)
-    const firstVisibleIndex = nodeList.findIndex((v, i) => {
-      innerOffset = this.innerLeft * -1 - v.offsetLeft
-      width = v.clientWidth
-      return v.offsetLeft + v.offsetWidth > this.innerLeft * -1
+    let totalLeft = 0
+    let obscuredHalfWidth = 0
+    const first = this.visibleEvents.find((e, i) => {
+      width = this.getEventWidth(e)
+      obscuredHalfWidth = (totalLeft + this.innerLeft) * -1
+      totalLeft = totalLeft + width
+      return totalLeft >= this.innerLeft * -1
     })
-    const firstVisibleEvent = firstVisibleIndex === -1 ? this.visibleEvents[0] : this.visibleEvents[firstVisibleIndex]
-    return [ firstVisibleEvent, innerOffset, width ]
+    return [ first || null, obscuredHalfWidth, width ]
   }
 
   async debouncedEmitScroll() {
     const [firstVisibleEvent, innerOffset, width] = await this.findFirstVisibleEventAndDimensions()
-    const eventLength = firstVisibleEvent.endTime - firstVisibleEvent.startTime
-    const progressFactor = innerOffset / width
-    const progress = progressFactor * eventLength
-    EventBus.$emit('scrollTranscript', firstVisibleEvent.startTime + progress)
+    if (firstVisibleEvent) {
+      const eventLength = firstVisibleEvent.endTime - firstVisibleEvent.startTime
+      const progressFactor = innerOffset / width
+      const progress = progressFactor * eventLength
+      EventBus.$emit('scrollTranscript', firstVisibleEvent.startTime + progress)
+    }
   }
 
   getLongestSpeakerText(e: LocalTranscriptEvent): string[]|undefined {
