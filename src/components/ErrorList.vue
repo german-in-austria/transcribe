@@ -1,5 +1,8 @@
 <template>
   <v-list v-if="errors.length > 0" dense>
+    <v-subheader>
+      <small>Errors</small>
+    </v-subheader>
     <RecycleScroller
       class="scroller"
       :items="errors"
@@ -73,7 +76,7 @@ export default class ErrorList extends Vue {
 @import '../../node_modules/vue-virtual-scroller/dist/vue-virtual-scroller.css';
 
 .scroller
-  height 100%
+  height calc(100% - 40px)
 
 .event-error.selected
   background #ccc

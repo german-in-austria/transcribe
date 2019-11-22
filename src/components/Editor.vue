@@ -9,7 +9,7 @@
       </v-flex>
       <v-flex xs4 class="text-xs-right">
         <search style="display: inline-block" />
-        <div style="display: inline-block" class="pr-4">
+        <div style="display: inline-block">
           <v-tooltip transition="none" bottom>
             <v-btn slot="activator" @click.stop="showSettings = true" icon flat>
               <v-icon>settings</v-icon>
@@ -54,7 +54,7 @@
               </v-list-tile>
             </v-list>
           </v-menu>
-          <v-tooltip transition="none" bottom>
+          <!-- <v-tooltip transition="none" bottom>
             <v-btn
               slot="activator"
               @click.stop="() => settings.showDrawer = !settings.showDrawer"
@@ -65,7 +65,7 @@
               </v-badge>
             </v-btn>
             <span>History & Errors</span>
-          </v-tooltip>
+          </v-tooltip> -->
         </div>
       </v-flex>
     </v-toolbar>

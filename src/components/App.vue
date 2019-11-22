@@ -8,11 +8,13 @@
     <v-navigation-drawer
       stateless
       style="padding: 0"
-      v-model="settings.showDrawer"
-      :width="settings.drawerWidth"
+      :value="true"
+      :width="settings.showDrawer ? settings.drawerWidth : 70"
       right
+      disable-resize-watcher
       app>
-      <sidebar disable-resize-watcher :active="settings.showDrawer"/>
+      <sidebar :active="settings.showDrawer"
+      />
     </v-navigation-drawer>
     <v-content class="main-content">
       <v-container fluid fill-height class="pa-0">

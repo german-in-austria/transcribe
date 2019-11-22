@@ -361,7 +361,7 @@ export function setIsDarkMode(b: boolean) {
 const settings: Settings = {
   contrast: 1,
   darkMode: getIsDarkMode(),
-  drawerWidth: 300,
+  drawerWidth: 350,
   emulateHorizontalScrolling: platform() === 'windows' || platform() === 'linux',
   eventDockingInterval: 0.05,
   keyboardShortcuts,

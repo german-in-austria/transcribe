@@ -80,6 +80,22 @@ img[lazy=loaded] {
   background: white;
   z-index: 2;
 }
+.v-navigation-drawer[data-booted=true] {
+  transition: none !important;
+  transition-property: none !important;
+}
+
+main.v-content[data-booted=true]{
+  transition: none !important;
+}
+
+nav.v-toolbar[data-booted=true]{
+  transition: none !important;
+}
+
+.theme--light.v-toolbar{
+  background-color: #e8e8e8;
+}
 .theme--dark .settings-header{
   background: #282828;
 }

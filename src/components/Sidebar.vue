@@ -1,89 +1,80 @@
 <template>
-  <v-tabs v-if="active" hide-slider class="sidebar layout fill-height column" height="64" grow v-model="activeTab">
-    <v-tab>
-      <v-icon>edit</v-icon>
-    </v-tab>
-    <v-tab>
-      <v-icon>history</v-icon>
-    </v-tab>
-    <v-tab>
-      <v-badge :value="errors.length > 0" color="grey">
-        <v-icon>error_outline</v-icon> <span slot="badge">{{ errors.length }}</span>
-      </v-badge>
-    </v-tab>
-    <v-tab>
-      <v-icon>bookmark_border</v-icon>
-    </v-tab>
-    <v-tabs-items class="sidebar-scrollable">
+  <v-layout>
+    <v-flex v-if="active" :style="{ borderRight: active ? '1px solid rgba(255,255,255,.3)' : '0' }">
+      <v-window class="window" v-model="activeTab" vertical>
+        <v-window-item class="sidebar-scrollable">
+          <v-subheader>
+            <small>Actions</small>
+          </v-subheader>
+          <v-list dense>
+            <v-list-tile
+              v-for="(sc, k) in keyboardShortcuts"
+              @click="sc.action($event)"
+              :disabled="sc.disabled ? sc.disabled() : false"
+              :key="k">
+              <v-list-tile-avatar>
+                <v-icon>{{ sc.icon }}</v-icon>
+              </v-list-tile-avatar>
+              <v-list-tile-content>
+                <v-list-tile-title>
+                  {{ sc.name }}
+                </v-list-tile-title>
+              </v-list-tile-content>
+              <v-list-tile-action>
+                {{ displayKeyboardAction(sc) }}
+              </v-list-tile-action>
+            </v-list-tile>
+          </v-list>
+        </v-window-item>
+        <v-window-item class="sidebar-scrollable">
+          <edit-history v-if="history.actions.length > 0" />
+          <div v-else class="text-xs-center grey--text mt-4">
+            <small>Edits will appear here.</small>
+          </div>
+        </v-window-item>
+        <v-window-item class="sidebar-scrollable">
+          <error-list :errors="errors" v-if="errors.length > 0" />
+          <div v-else class="text-xs-center grey--text mt-4">
+            <small>Errors will appear here.</small>
+          </div>
+        </v-window-item>
+        <v-window-item class="sidebar-scrollable">
+          <div class="text-xs-center grey--text mt-4">
+            <small>Bookmarks will appear here</small>
+          </div>
+        </v-window-item>
+      </v-window>
+    </v-flex>
+    <v-flex class="sidebar-picker text-xs-center pt-2">
+      <v-btn icon @click="clickTab(0)" class="mb-2">
+        <v-icon :color="activeTab === 0 ? 'blue' : ''">edit</v-icon>
+      </v-btn>
+      <v-btn icon @click="clickTab(1)" class="mb-2">
+        <v-icon :color="activeTab === 1 ? 'blue' : ''">history</v-icon>
+      </v-btn>
+      <v-btn icon @click="clickTab(2)" class="mb-2">
+        <v-badge :value="errors.length > 0" color="grey">
+          <v-icon :color="activeTab === 2 ? 'blue' : ''">error_outline</v-icon> <span slot="badge">{{ errors.length }}</span>
+        </v-badge>
+      </v-btn>
+      <v-btn icon @click="clickTab(3)" class="mb-2">
+        <v-icon :color="activeTab === 3 ? 'blue' : ''">bookmark_border</v-icon>
+      </v-btn>
+    </v-flex>
+  </v-layout>
+  <!-- <v-tabs v-if="active" hide-slider class="sidebar layout fill-height column" height="64" grow v-model="activeTab">
+    <v-tabs-items>
       <v-tab-item>
-        <v-subheader>
-          <small>Actions</small>
-        </v-subheader>
-        <v-list dense>
-          <v-list-tile
-            v-for="(sc, k) in keyboardShortcuts"
-            @click="sc.action($event)"
-            :disabled="sc.disabled ? sc.disabled() : false"
-            :key="k">
-            <v-list-tile-avatar>
-              <v-icon>{{ sc.icon }}</v-icon>
-            </v-list-tile-avatar>
-            <v-list-tile-content>
-              <v-list-tile-title>
-                {{ sc.name }}
-              </v-list-tile-title>
-            </v-list-tile-content>
-            <v-list-tile-action>
-              {{ displayKeyboardAction(sc) }}
-            </v-list-tile-action>
-          </v-list-tile>
-          <!-- <v-list-tile :disabled="eventStore.selectedEventIds.length === 0">
-            <v-list-tile-avatar>
-              <v-icon>delete</v-icon>
-            </v-list-tile-avatar>
-            <v-list-tile-content>
-              <v-list-tile-title>
-                delete
-              </v-list-tile-title>
-            </v-list-tile-content>
-            <v-list-tile-action>
-              {{ displayKeyboardAction(keyboardShortcuts.deleteEvents) }}
-            </v-list-tile-action>
-          </v-list-tile>
-          <v-list-tile :disabled="eventStore.selectedEventIds.length < 2">
-            <v-list-tile-avatar>
-              <v-icon>merge_type</v-icon>
-            </v-list-tile-avatar>
-            <v-list-tile-content>
-              <v-list-tile-title>
-                join
-              </v-list-tile-title>
-            </v-list-tile-content>
-            <v-list-tile-action>
-              {{ displayKeyboardAction(keyboardShortcuts.joinEvents) }}
-            </v-list-tile-action>
-          </v-list-tile> -->
-        </v-list>
       </v-tab-item>
       <v-tab-item>
-        <edit-history v-if="history.actions.length > 0" />
-        <div v-else class="text-xs-center grey--text mt-4">
-          <small>Edits will appear here.</small>
-        </div>
       </v-tab-item>
       <v-tab-item>
-        <error-list :errors="errors" v-if="errors.length > 0" />
-        <div v-else class="text-xs-center grey--text mt-4">
-          <small>Errors will appear here.</small>
-        </div>
       </v-tab-item>
       <v-tab-item>
-        <div class="text-xs-center grey--text mt-4">
-          <small>Bookmarks will appear here</small>
-        </div>
+        
       </v-tab-item>
     </v-tabs-items>
-  </v-tabs>
+  </v-tabs> -->
 </template>
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
@@ -104,6 +95,7 @@ import {
 
 import { history } from '../store/history'
 import { keyboardShortcuts, displayKeyboardAction } from '../service/keyboard'
+import settings from '../store/settings'
 
 interface ErrorEvent extends LocalTranscriptEvent {
   error_type: 'time_overlap'|'unknown_token'
@@ -127,6 +119,18 @@ export default class Sidebar extends Vue {
   toTime = toTime
   keyboardShortcuts = keyboardShortcuts
   displayKeyboardAction = displayKeyboardAction
+  debouncedGetErrors = _.debounce(this.getErrors, 500)
+
+  clickTab(i: number) {
+    if (i === this.activeTab && settings.showDrawer === true) {
+      settings.showDrawer = false
+    } else {
+      this.activeTab = i
+      if (settings.showDrawer === false) {
+        settings.showDrawer = true
+      }
+    }
+  }
 
   beforeUpdate() {
     if (this.$el && this.$el.querySelector) {
@@ -140,24 +144,31 @@ export default class Sidebar extends Vue {
   }
 
   @Watch('eventStore.events')
-  onEventsUpdate(newEvents: LocalTranscriptEvent[]) {
-    this.errors = _(sortEvents(newEvents))
-      // find events with overlaps
-      // tslint:disable-next-line:max-line-length
-      .filter((e, i) => newEvents[i - 1] !== undefined && +e.startTime.toFixed(2) < +newEvents[i - 1].endTime.toFixed(2))
-      .map((e) => ({...e, error_type: 'time_overlap'} as ErrorEvent))
-      // concat events with unknown types
-      .concat(
-        _(newEvents).filter((e) => {
-          return _(e.speakerEvents).some((se) => {
-            return _(se.tokens).some((t) => t.tiers[eventStore.metadata.defaultTier].type === -1)
+  async onEventsUpdate(newEvents: LocalTranscriptEvent[]) {
+    this.debouncedGetErrors()
+  }
+
+  async getErrors() {
+    await this.$nextTick()
+    window.requestIdleCallback(() => {
+      this.errors = _(sortEvents(eventStore.events))
+        // find events with overlaps
+        // tslint:disable-next-line:max-line-length
+        .filter((e, i) => eventStore.events[i - 1] !== undefined && +e.startTime.toFixed(2) < +eventStore.events[i - 1].endTime.toFixed(2))
+        .map((e) => ({...e, error_type: 'time_overlap'} as ErrorEvent))
+        // concat events with unknown types
+        .concat(
+          _(eventStore.events).filter((e) => {
+            return _(e.speakerEvents).some((se) => {
+              return _(se.tokens).some((t) => t.tiers[eventStore.metadata.defaultTier].type === -1)
+            })
           })
-        })
-        .map(e => ({ ...e, error_type: 'unknown_token' } as ErrorEvent))
+          .map(e => ({ ...e, error_type: 'unknown_token' } as ErrorEvent))
+          .value()
+        )
+        .sortBy(e => e.startTime)
         .value()
-      )
-      .sortBy(e => e.startTime)
-      .value()
+    })
   }
 
   updated() {
@@ -175,8 +186,11 @@ export default class Sidebar extends Vue {
 }
 </script>
 <style lang="stylus">
+.window
+  width 280px
+  height 100vh
 .sidebar-scrollable
-  height calc(100% - 70px)
+  height 100vh
   .v-window__container
   .v-window-item
   .v-list
@@ -193,4 +207,8 @@ export default class Sidebar extends Vue {
 
   .tile:hover .undo-btn
     opacity 1
+
+.sidebar-picker
+  height 100vh
+  background rgba(255,255,255,.1)
 </style>
