@@ -277,7 +277,7 @@ export function makeTierId() {
   return Number(_.uniqueId()) * -1
 }
 
-export function makeTierEventId() {
+export function makeEventTierId() {
   return Number(_.uniqueId()) * -1
 }
 

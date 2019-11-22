@@ -37,8 +37,8 @@
       @blur="focused = false"
       @focus="focused = true"
       @input="(e) => updateDefaultTier(e.target.textContent)"
-      @keydown.tab.shift.exact="focusPreviousFrom($event, defaultTier)"
-      @keydown.tab.exact="focusNextFrom($event, defaultTier)"
+      @keydown.tab.shift.exact="(e) => focusPreviousFrom(e, defaultTier)"
+      @keydown.tab.exact="(e) => focusNextFrom(e, defaultTier)"
       @keydown.enter.exact.prevent="viewAndSelectAudioEvent(event)"
       @keydown.right.exact="handleCursor($event, defaultTier)"
       @keydown.left.exact="handleCursor($event, defaultTier)"
@@ -120,7 +120,7 @@ import {
   findEventIndexById,
   scrollToAudioEvent,
   scrollToTranscriptEvent,
-  makeTierEventId
+  makeEventTierId
 } from '../store/transcript'
 
 import contenteditable from './helper/Contenteditable.vue'
@@ -432,17 +432,17 @@ export default class SpeakerSegmentTranscript extends Vue {
     }
   }
 
-  updateEventTier(text: string|null|undefined, id: string, tierType: string) {
+  updateEventTier(text: string|null|undefined, tierId: string, tierType: string) {
     const cleanText = text === null || text === undefined ? '' : text
     console.log('local event', this.localEvent)
     if (
       this.localEvent.speakerEvents[this.speaker] !== undefined &&
       this.localEvent.speakerEvents[this.speaker].speakerEventTiers !== undefined &&
-      this.localEvent.speakerEvents[this.speaker].speakerEventTiers[id] !== undefined) {
+      this.localEvent.speakerEvents[this.speaker].speakerEventTiers[tierId] !== undefined) {
       if (tierType === 'freeText') {
         (this.localEvent
           .speakerEvents[this.speaker]
-          .speakerEventTiers[id] as TierFreeText
+          .speakerEventTiers[tierId] as TierFreeText
         ).text = cleanText
       }
       this.commitEvent()
@@ -455,8 +455,8 @@ export default class SpeakerSegmentTranscript extends Vue {
             ...this.localEvent.speakerEvents[this.speaker],
             speakerEventTiers: {
               ...this.localEvent.speakerEvents[this.speaker].speakerEventTiers,
-              [ id ]: {
-                id: makeTierEventId(),
+              [ tierId ]: {
+                id: makeEventTierId(),
                 type: tierType,
                 text: cleanText
               }

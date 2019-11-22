@@ -15,7 +15,8 @@ import {
   timeFromSeconds,
   tokenize,
   TokenTierType,
-  tokenTypeFromToken
+  tokenTypeFromToken,
+  makeEventTierId
 } from '../store/transcript'
 
 import * as parseXML from '@rgrove/parse-xml'
@@ -215,7 +216,7 @@ export function importableToServerTranscript(
                   tid: {},
                   event_tiers: {
                     [speakerTier.to_speaker!.pk] : {
-                      [tierId]: {
+                      [makeEventTierId()]: {
                         t: e.text || '',
                         ti: String(tierId)
                       }

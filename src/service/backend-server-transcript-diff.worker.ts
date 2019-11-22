@@ -95,7 +95,8 @@ function hasTokenChanged(l: ServerToken, r: ServerToken): boolean {
 function hasEventChanged(l: ServerEvent, r: ServerEvent): boolean {
   return (
     l.e !== r.e ||
-    l.s !== r.s
+    l.s !== r.s ||
+    JSON.stringify(l.event_tiers) !== JSON.stringify(r.event_tiers)
   )
 }
 
@@ -120,7 +121,7 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
         event_tiers: mapValues(event.speakerEvents, (e) => {
           return reduce(e.speakerEventTiers, (memo, et, tierId) => {
             if (et.type === 'freeText') {
-              memo[tierId] = {
+              memo[et.id] = {
                 t: et.text,
                 ti: tierId
               }

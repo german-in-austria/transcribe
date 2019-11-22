@@ -162,6 +162,7 @@ export interface ServerEvent {
       [event_tier_id: string]: {
         // event tier string
         t: string
+        // tier id
         ti: string
       }
     }
@@ -467,9 +468,9 @@ export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenT
           _.each(se.tid, (tokenIds, speakerKey) => {
             m[speakerKey] = {
               speakerEventTiers: _(eG).reduce((ts, e) => {
-                _(e.event_tiers[speakerKey]).each((t, tierContentKey) => {
+                _(e.event_tiers[speakerKey]).each((t, tierEventId) => {
                   ts[t.ti] = {
-                    id: tierContentKey,
+                    id: tierEventId,
                     type: 'freeText',
                     text: t.t
                   }
