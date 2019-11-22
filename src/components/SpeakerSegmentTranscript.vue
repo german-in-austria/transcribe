@@ -186,18 +186,6 @@ export default class SpeakerSegmentTranscript extends Vue {
     })
   }
 
-  isFirstSpeaker(speakerId: number) {
-    return _(eventStore.metadata.speakers)
-      .map((s, id) => ({...s, id}))
-      .findIndex(s => s.id === String(speakerId)) === 0
-  }
-
-  isLastSpeaker(speakerId: number) {
-    return _(eventStore.metadata.speakers)
-      .map((s, id) => ({...s, id}))
-      .findIndex(s => s.id === String(speakerId)) === _(eventStore.metadata.speakers).toArray().value().length - 1
-  }
-
   updateDefaultTier(text: string|undefined|null) {
     const cleanText = text === undefined || text === null ? '' : text
     const ts = this.updateLocalTokens(cleanText)
@@ -228,7 +216,6 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   focusNextFrom(e: KeyboardEvent, tier: TokenTierType) {
     console.log('next', tier, eventStore.metadata.tiers, this.speaker, eventStore.metadata.speakers)
-    // if (this.isLastSpeaker(this.speaker)) {
     e.preventDefault()
     const i = findEventIndexById(this.event.eventId)
     scrollToTranscriptEvent(
