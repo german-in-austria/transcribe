@@ -59,16 +59,18 @@ export default class Scrollbar extends Vue {
   }
 
   moveThumbToTime(t: number) {
-    const thumb = this.$refs.scrollbarThumb
-    const track = this.$refs.scrollbarTrack
-    if (track instanceof HTMLElement && thumb instanceof HTMLElement) {
-      const scrollbarWidth = track.offsetWidth - thumb.offsetWidth
-      const offset = t / this.maxTime * scrollbarWidth
-      const limitedOffset = Math.max(0, Math.min(offset, scrollbarWidth))
-      requestAnimationFrame(() => {
-        thumb.style.transform = `translate3d(${ limitedOffset }px, 0, 0)`
-      })
-    }
+    requestAnimationFrame(() => {
+      const thumb = this.$refs.scrollbarThumb
+      const track = this.$refs.scrollbarTrack
+      if (track instanceof HTMLElement && thumb instanceof HTMLElement) {
+        const scrollbarWidth = track.offsetWidth - thumb.offsetWidth
+        const offset = t / this.maxTime * scrollbarWidth
+        const limitedOffset = Math.max(0, Math.min(offset, scrollbarWidth))
+        requestAnimationFrame(() => {
+          thumb.style.transform = `translate3d(${ limitedOffset }px, 0, 0)`
+        })
+      }
+    })
   }
 
   startDrag(e: MouseEvent) {
