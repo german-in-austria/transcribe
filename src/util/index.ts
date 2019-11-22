@@ -114,6 +114,14 @@ export function fileToUint8ArrayAndName(f: File): Promise<{ b: Uint8Array, n: st
   })
 }
 
+export function eachFrom<T>(list: T[], startIndex: number, callback: (e: T, i: number) => T): T[] {
+  const len = list.length
+  for (let i = startIndex; i < len; i++ ) {
+    list[i] = callback(list[i], i)
+  }
+  return list
+}
+
 export function groupConsecutiveBy<T>(list: T[], callback: (e: T, i: number) => string): T[][] {
   const c: T[][] = [[]]
   let latestKey = ''

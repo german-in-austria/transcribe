@@ -10,20 +10,11 @@ import settings, { tokenTypesPresets } from '../store/settings'
 import { HistoryEventAction } from './history'
 import eventBus from '../service/event-bus'
 import { collectTokensViaOffsets } from '../service/copy-paste'
-
+import { eachFrom } from '../util'
 import {
-  localTranscriptToServerTranscript,
-  localTranscriptToServerSaveRequest,
-  serverTranscript,
-  serverTranscriptToLocal,
-  updateServerTranscriptWithChanges,
-  ServerTranscriptSaveResponse,
   ServerTranscriptListItem,
   ServerTranscriptInformants,
   ServerTranscriptTokenTypes,
-  ServerTranscript,
-  createEmptyTranscript,
-  ServerTranscriptSaveRequest
 } from '../service/backend-server'
 
 declare global {
@@ -306,8 +297,9 @@ export function speakerEventHasErrors(event: LocalTranscriptEvent): boolean {
 }
 
 function updateSpeakerTokenOrderStartingAt(speakerId: number, startAtIndex = 0, add: number) {
-  return _(eventStore.events).map((e, eventIndex) => {
-    if (eventIndex > startAtIndex) {
+  eachFrom(eventStore.events, startAtIndex, (e, eventIndex) => {
+  // return eventStore.events.map((e, eventIndex) => {
+    // if (eventIndex > startAtIndex) {
       if (e.speakerEvents[speakerId] !== undefined) {
         const tokens = e.speakerEvents[speakerId].tokens
         if (tokens.length > 0) {
@@ -329,10 +321,10 @@ function updateSpeakerTokenOrderStartingAt(speakerId: number, startAtIndex = 0, 
       } else {
         return e
       }
-    } else {
-      return e
-    }
-  }).value()
+    // } else {
+    //   return e
+    // }
+  })
 }
 
 function getLastEventToken(event: LocalTranscriptEvent|undefined, speakerId: number): LocalTranscriptToken|undefined {
@@ -455,7 +447,7 @@ export function updateSpeakerEvent(
 
   // update token order if the length has changed
   if (tokenCountDifference !== 0) {
-    eventStore.events = updateSpeakerTokenOrderStartingAt(speakerId, eventIndex, tokenCountDifference)
+    updateSpeakerTokenOrderStartingAt(speakerId, eventIndex, tokenCountDifference)
   }
   // console.log('after update', clone(eventStore.events[eventIndex]), eventStore.events[eventIndex])
   return {
