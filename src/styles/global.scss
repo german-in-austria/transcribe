@@ -80,10 +80,6 @@ img[lazy=loaded] {
   background: white;
   z-index: 2;
 }
-.v-navigation-drawer[data-booted=true] {
-  transition: none !important;
-  transition-property: none !important;
-}
 
 main.v-content[data-booted=true]{
   transition: none !important;
@@ -152,6 +148,12 @@ nav.v-toolbar[data-booted=true]{
   min-width: 40px;
   margin-left: -10px;
 }
+
+.v-navigation-drawer[data-booted=true] {
+  transition: none !important;
+  transition-property: none !important;
+}
+
 .v-navigation-drawer{
   background: rgba(20,20,20,.95) !important;
   border-left: 1px solid rgba(255,255,255,.075);
@@ -160,7 +162,7 @@ nav.v-toolbar[data-booted=true]{
   background: rgba(228, 228, 228, 0.95) !important;
   border-left: 1px solid rgba(255,255,255,.3)
 }
-@supports (backdrop-filter: blur(20px)) {
+/* @supports (backdrop-filter: blur(20px)) {
   .v-navigation-drawer{
     background: rgba(20,20,20,.6) !important;
     backdrop-filter: blur(20px);
@@ -168,8 +170,7 @@ nav.v-toolbar[data-booted=true]{
   .v-navigation-drawer.theme--light{
     background: rgba(200,200,200,.4) !important;
   }
-}
-
+}*/
 .v-navigation-drawer__border{
   display: none;
 }
