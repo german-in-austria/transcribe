@@ -164,7 +164,6 @@ export default class Search extends Vue {
     if (eventStore.searchTerm === '') {
       this.eventStore.searchResults = []
     } else {
-      // console.time('search took')
       const search = this.caseSensitive ? term : term.toLowerCase()
       let regex: RegExp|null = null
       try {
@@ -173,20 +172,22 @@ export default class Search extends Vue {
         // it failed.
       }
       requestAnimationFrame(() => {
-        const r = _(eventStore.events)
-          .filter((v) => {
-            return _(v.speakerEvents).filter((se) => {
-              let s = _(se.tokens).map(this.getDefaultOrAllTokenText).value().join(' ')
-              if (!this.caseSensitive) {
-                s = s.toLowerCase()
-              }
-              if (this.useRegEx && this.isValidRegex && regex !== null) {
-                return regex.test(s)
-              } else {
-                return s.indexOf(search) > -1
-              }
-            }).value().length > 0
-          }).value()
+        const r = eventStore.events.filter((v) => {
+          return _(v.speakerEvents).filter((se) => {
+            let s =
+              se.tokens.map(this.getDefaultOrAllTokenText).join(' ')
+              + '|||'
+              + _(se.speakerEventTiers).map(t => t.text).join(' ')
+            if (!this.caseSensitive) {
+              s = s.toLowerCase()
+            }
+            if (this.useRegEx && this.isValidRegex && regex !== null) {
+              return regex.test(s)
+            } else {
+              return s.indexOf(search) > -1
+            }
+          }).value().length > 0
+        })
         this.eventStore.searchResults = r
       })
     }
