@@ -152,8 +152,10 @@ export default class Scrollbar extends Vue {
   border-radius 6px
   background rgba(255,255,255,0)
   transition .25s background
-  &:hover, &.scrolling
+  &:hover
+  &.scrolling
     background rgba(255,255,255,.1)
+    opacity 1 !important
     .overview-time
       opacity 1
     .scrollbar-handle
