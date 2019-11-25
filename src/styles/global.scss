@@ -180,6 +180,11 @@ nav.v-toolbar[data-booted=true]{
 .v-list__tile__sub-title, .v-list__tile__title{
   transition: none !important;
 }
+
+.v-badge__badge{
+  font-size: 11px;
+}
+
 .v-menu__content .v-list--dense:not(.list--two-line) a,
 .context-menu .v-list--dense:not(.v-list--two-line) a,
 .v-menu__content .v-list--dense .v-list__tile:not(.v-list__tile--avatar),
