@@ -170,8 +170,6 @@ export interface ServerEventTierContent {
   t: string
   // tier id
   ti: number
-  // if it’s a save response
-  // newPk?: number
 }
 
 export interface ServerEventTiers {
