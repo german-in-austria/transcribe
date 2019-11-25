@@ -107,6 +107,13 @@ function hasEventChanged(l: ServerEvent, r: ServerEvent): boolean {
   )
 }
 
+function markEventTiersInsertStatus(e: ServerEvent): ServerEvent {
+  e.event_tiers = mapValues(e.event_tiers, (speakerEventTiers) => mapValues(speakerEventTiers, (t) => {
+    return {...t, status: 'upsert'}
+  }))
+  return e
+}
+
 function markEventTierUpdateStatus(newEvent: ServerEvent, oldEvent: ServerEvent): ServerEvent {
   // tslint:disable-next-line:max-line-length
   const oldEs = mapValues(oldEvent.event_tiers, (ets, speaker) => mapValues(ets, (et) => ({...et, status: 'delete' }) ))
@@ -220,7 +227,7 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
   const eventUpdatesAndInserts = reduce(newIndexedEvents, (m, e) => {
     if (e.pk < 0) {
       m.push({
-        ...e,
+        ...markEventTiersInsertStatus(e),
         status: 'insert'
       })
     } else if (
