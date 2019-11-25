@@ -23,6 +23,7 @@ import { eventStore, toTime } from '../store/transcript'
 import EventBus, { BusEvent } from '../service/event-bus'
 import settings from '../store/settings'
 import _ from 'lodash'
+import { requestFrameAsync } from '../util'
 
 @Component
 export default class Scrollbar extends Vue {
@@ -44,10 +45,11 @@ export default class Scrollbar extends Vue {
     EventBus.$off(this.updateOn, this.moveThumbToTime)
   }
 
-  getOffsets(x: number) {
+  async getOffsets(x: number) {
     const thumb = this.$refs.scrollbarThumb
     const track = this.$refs.scrollbarTrack
     if (track instanceof HTMLElement && thumb instanceof HTMLElement) {
+      await requestFrameAsync()
       const scrollbarWidth = track.offsetWidth - thumb.offsetWidth
       const offset = x - track.getBoundingClientRect().left
       const time = Math.max(0, Math.min(offset / scrollbarWidth * this.maxTime, this.maxTime))
@@ -80,29 +82,29 @@ export default class Scrollbar extends Vue {
     document.addEventListener('mouseup', this.endDrag)
   }
 
-  handleDrag(ev: MouseEvent) {
+  async handleDrag(ev: MouseEvent) {
     this.updateOverviewTime(ev)
     const thumb = this.$refs.scrollbarThumb
     const track = this.$refs.scrollbarTrack
-    const { time, limitedOffset } = this.getOffsets(ev.clientX)
+    const { time, limitedOffset } = await this.getOffsets(ev.clientX)
     this.$emit('scroll', time)
     requestAnimationFrame(() => {
       (thumb as HTMLElement).style.transform = `translate3d(${ limitedOffset }px, 0, 0)`
     })
   }
 
-  endDrag(ev: MouseEvent) {
+  async endDrag(ev: MouseEvent) {
     this.isDragging = false
     document.removeEventListener('mousemove', this.handleDrag)
     document.removeEventListener('mouseup', this.endDrag)
-    const { time } = this.getOffsets(ev.x)
+    const { time } = await this.getOffsets(ev.x)
     this.$emit('scrollend', time)
   }
 
-  updateOverviewTime(e: MouseEvent) {
+  async updateOverviewTime(e: MouseEvent) {
     const timer = this.$refs.overviewTime
     if (timer instanceof HTMLElement) {
-      const { time, limitedOffset } = this.getOffsets(e.x)
+      const { time, limitedOffset } = await this.getOffsets(e.x)
       if (!_.isNaN(time)) {
         requestAnimationFrame(() => {
           timer.innerHTML = toTime(time)
