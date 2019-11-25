@@ -180,6 +180,10 @@ export default class Sidebar extends Vue {
     })
   }
 
+  mounted() {
+    this.getErrors()
+  }
+
   updated() {
     if (this.$el && this.$el.querySelector) {
       const el = this.$el.querySelector('.sidebar-scrollable')
