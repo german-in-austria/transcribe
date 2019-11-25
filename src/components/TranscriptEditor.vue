@@ -237,7 +237,6 @@ export default class TranscriptEditor extends Vue {
       (this.innerLeft <= -1500 || this.innerLeft >= -200) &&
       (this.currentIndex > 0 && this.currentIndex + defaultLimit + 1 < this.eventStore.events.length)
     ) {
-      this.debouncedEmitScroll()
       this.updateList(leftToRight, timesCalled + 1)
     }
   }
@@ -249,8 +248,8 @@ export default class TranscriptEditor extends Vue {
     } else {
       this.lastScrollLeft = this.innerLeft
       this.setInnerLeft(this.innerLeft - (e.deltaX || e.deltaY) / (e.shiftKey === true ? 10 : 1))
-      this.throttledRenderer(this.innerLeft <= this.lastScrollLeft)
       this.debouncedEmitScroll()
+      this.throttledRenderer(this.innerLeft <= this.lastScrollLeft)
       this.lastScrollLeft = this.innerLeft
     }
   }
