@@ -16,6 +16,7 @@
     "einzelerhebungen",
     "insertable",
     "undoable",
+    "upsert",
     "wasm",
     "weiblich"
   ],

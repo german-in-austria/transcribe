@@ -368,7 +368,16 @@ export function updateSpeakerEvents(
   speakerId: number,
   eTokens: LocalTranscriptToken[][]
 ): HistoryEventAction {
-  const updateHistoryActions = es.map((e, i) => updateSpeakerEvent(e, speakerId))
+  const newEs = es.map((e, i) => ({
+    ...e,
+    speakerEvents: {
+      [speakerId]: {
+        ...e.speakerEvents[speakerId],
+        tokens: eTokens[i]
+      }
+    }
+  }))
+  const updateHistoryActions = newEs.map((e, i) => updateSpeakerEvent(e, speakerId))
   return {
     id: _.uniqueId(),
     time: new Date(),
@@ -686,6 +695,7 @@ export function shiftCharsAcrossEvents(
   if (e !== undefined && targetE !== undefined) {
     const ts = e.speakerEvents[speakerId].tokens
     const text = getTextFromTokens(ts, eventStore.metadata.defaultTier)
+    // console.log({ ts, text, e, targetE })
     return updateSpeakerEvents([ e, targetE ], speakerId, [
       // changed source event
       collectTokensViaOffsets(
