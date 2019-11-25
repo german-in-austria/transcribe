@@ -31,11 +31,22 @@ export type SaveResponse<T> = SaveRequest<T> & {
   newPk?: number
 }
 
+export interface ServerEventSaveResponse extends SaveResponse<ServerEvent> {
+  event_tiers: {
+    [speakerKey: string]: {
+      [eventTierId: string]: SaveResponse<ServerEventTierContent>
+    }
+  }
+}
+
 export interface ServerTranscriptSaveResponse extends ServerTranscript {
   aTokens: {
     [token_id: string]: SaveResponse<ServerToken>
   }
-  aEvents: Array<SaveResponse<ServerEvent>>
+  aEvents: ServerEventSaveResponse[]
+  aTiers: {
+    [tier_id: string]: SaveResponse<ServerTier>
+  }
 }
 
 export interface ServerTranscriptSaveRequest extends ServerTranscript {
@@ -101,6 +112,10 @@ export interface TokenSet {
   t: number[] // token ids
 }
 
+export interface ServerTier {
+  tier_name: string
+}
+
 export interface ServerTranscript {
   aAntworten?: {
     [answer_id: string]: ServerAnswer|ServerAnswerSet
@@ -109,9 +124,7 @@ export interface ServerTranscript {
     [set_id: number]: TokenRange|TokenSet
   }
   aTiers: {
-    [tier_id: string]: {
-      tier_name: string
-    }
+    [tier_id: string]: ServerTier
   }
   aTokens: {
     [token_id: string]: ServerToken
@@ -152,19 +165,27 @@ export interface ServerToken {
   fo?: number // fragment of
 }
 
+export interface ServerEventTierContent {
+  // event tier string
+  t: string
+  // tier id
+  ti: number
+  // if it’s a save response
+  // newPk?: number
+}
+
 export interface ServerEventTiers {
-  [event_tier_id: string]: {
-    // event tier string
-    t: string
-    // tier id
-    ti: number
-    // if it’s a save response
-    newPk?: number
-  }
+  [event_tier_id: string]: ServerEventTierContent
 }
 
 export interface ServerSpeakerEventTiers {
   [speaker_id: string]: ServerEventTiers
+}
+
+export interface ServerSpeakerEventTiersSaveResponse {
+  [speaker_id: string]: {
+    [event_tier_id: string]: SaveResponse<ServerEventTierContent>
+  }
 }
 
 export interface ServerEvent {
@@ -347,7 +368,7 @@ function findNextFragmentOfId(
 }
 
 // tslint:disable-next-line:max-line-length
-function serverEventTiersSaveResponseToServerEventTiers(speakerEventTiers: ServerSpeakerEventTiers): ServerSpeakerEventTiers {
+function serverEventTiersSaveResponseToServerEventTiers(speakerEventTiers: ServerSpeakerEventTiersSaveResponse): ServerSpeakerEventTiers {
   return _(speakerEventTiers).mapValues((speakerEventTier, speakerId) => {
     return _(speakerEventTier).reduce((m, e, k) => {
       if ((e as any).newStatus !== 'deleted') {
@@ -361,7 +382,7 @@ function serverEventTiersSaveResponseToServerEventTiers(speakerEventTiers: Serve
   }).value()
 }
 
-export function serverEventSaveResponseToServerEvent(e: SaveResponse<ServerEvent>): ServerEvent {
+export function serverEventSaveResponseToServerEvent(e: ServerEventSaveResponse): ServerEvent {
   return {
     e: e.e,
     l: e.l,
@@ -411,9 +432,23 @@ function mergeTokenChanges(
   return tokens
 }
 
+function mergeTierChanges(
+  tiers: _.Dictionary<ServerTier>,
+  tiersUpdates: _.Dictionary<SaveResponse<ServerTier>>
+): _.Dictionary<ServerTier> {
+  return _(tiersUpdates).reduce((m, e, k, l) => {
+    if (e.newStatus !== 'deleted' && e.newStatus !== 'error') {
+      m[e.newPk || k] = {
+        tier_name: e.tier_name
+      }
+    }
+    return m
+  }, {} as _.Dictionary<ServerTier>)
+}
+
 function mergeEventChanges(
   es: ServerEvent[],
-  ecs: Array<SaveResponse<ServerEvent>>,
+  ecs: ServerEventSaveResponse[],
   ts: _.Dictionary<ServerToken>
 ): ServerEvent[] {
   const keyedEvents = _(clone(es)).keyBy('pk').value()
@@ -448,8 +483,10 @@ export function updateServerTranscriptWithChanges(st: ServerTranscript, ss: Serv
   if (serverTranscript !== null) {
     const newTokens = mergeTokenChanges(st.aTokens, ss.aTokens, ss.aEvents)
     const newEvents = mergeEventChanges(st.aEvents, ss.aEvents, newTokens)
+    const newTiers = mergeTierChanges(st.aTiers, ss.aTiers)
     const x = {
       ...ss,
+      aTiers: newTiers,
       aTokens: newTokens,
       aEvents: newEvents
     }
@@ -652,6 +689,8 @@ function logServerResponse(req: ServerTranscriptSaveRequest, res: ServerTranscri
       .value()
   })
 }
+
+// also changes metadata: tiers.
 export async function saveChangesToServer(es: LocalTranscriptEvent[]): Promise<LocalTranscriptEvent[]> {
   // there’s no transcript or no id => throw
   if ( serverTranscript === null || serverTranscript.aTranskript === undefined ) {
@@ -683,7 +722,7 @@ export async function saveChangesToServer(es: LocalTranscriptEvent[]): Promise<L
       console.log('created transcript with id', transcript_id)
       const transcriptWithoutTokensAndEvents = {
         ...serverTranscript,
-        aTranscript: {
+        aTranskript: {
           ...serverTranscript.aTranskript,
           pk: transcript_id
         },
@@ -700,6 +739,8 @@ export async function saveChangesToServer(es: LocalTranscriptEvent[]): Promise<L
         eventStore.metadata.defaultTier || 'text'
       )
       console.log({ updatedLocalTranscript })
+      const { tiers } = getMetadataFromServerTranscript(serverTranscript)
+      eventStore.metadata.tiers = tiers
       serverTranscript.aTranskript!.pk = transcript_id
       // eventStore.events = updatedLocalTranscript
       return updatedLocalTranscript
