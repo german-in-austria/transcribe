@@ -107,7 +107,7 @@ export const specialKeys: KeyDescriber[] = [
   },
   {
     name: 'plus',
-    jsName: '±',
+    jsName: '+',
     displayName: '＋'
   }
 ]
@@ -267,15 +267,18 @@ export const keyboardShortcuts: KeyboardShortcuts = {
   appendEvent: {
     ignoreInTextField: false,
     modifier: [ 'alt' ],
-    key: '±',
+    key: '+',
     description: 'Append an event after the currently selected event.',
     disabled: () => eventStore.selectedEventIds.length === 0,
     icon: 'mdi-card-plus-outline',
     name: 'Append Event',
     action: () => {
+      console.log('append event')
       if (eventStore.selectedEventIds.length > 0) {
         const es = undoable(appendEmptyEventAfter(eventStore.selectedEventIds))
-        selectEvents(es)
+        if (es.length > 0) {
+          selectEvents(es)
+        }
       }
     },
   },
