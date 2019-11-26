@@ -12,6 +12,7 @@
         "target": "es5",
         "experimentalDecorators": true,
         "baseUrl": "src",
+        "allowJs": true,
         "types": [
           "webrtc"
         ],

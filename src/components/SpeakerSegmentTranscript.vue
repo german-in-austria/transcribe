@@ -21,6 +21,7 @@
           :style="{ backgroundColor: colorFromTokenType(token.tiers[defaultTier].type) }">
         </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span :class="['secondary-token-tier', settings.darkMode === true && 'theme--dark']" v-for="(tier, tierIndex) in secondaryTiers" :key="tier.id">
           <span
+            v-rt-ipa="tier.id === 'phon'"
             v-if="tier.type === 'token'"
             :style="{top: (tierIndex + 1) * tierHeight + 'px'}"
             :class="['secondary-token-tier-text', settings.darkMode === true && 'theme--dark']"

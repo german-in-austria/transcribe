@@ -6,6 +6,7 @@ import * as fontLoader from 'webfontloader'
 import Vuetify from 'vuetify'
 import * as VueLazyload from 'vue-lazyload'
 import * as Sentry from '@sentry/browser'
+const ipaDirectives = require('./directives/Ipa').default
 
 if (process.env.NODE_ENV === 'production') {
   Sentry.init({
@@ -17,8 +18,9 @@ Vue.config.devtools = true
 Vue.config.performance = true
 Vue.config.productionTip = true
 
-Vue.use(VueRouter)
+Vue.directive('rt-ipa', ipaDirectives)
 
+Vue.use(VueRouter)
 Vue.use(Vuetify)
 Vue.use(VueLazyload, {
   lazyComponent : true
