@@ -91,6 +91,7 @@ function hasTokenChanged(l: ServerToken, r: ServerToken): boolean {
     l.i  !== r.i ||
     l.e  !== r.e ||
     l.o  !== r.o ||
+    l.p  !== r.p ||
     l.fo !== r.fo
   )
 }
@@ -172,7 +173,7 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
           s : oldTranscript.aTokens[t.id] ? oldTranscript.aTokens[t.id].s : -1,
           sr: oldTranscript.aTokens[t.id] ? oldTranscript.aTokens[t.id].sr : -1,
           t : t.tiers.text.text,
-          p : t.tiers.phon.text,
+          p : t.tiers.phon.text || undefined,
           // Text in ortho is basically useless, so we populate it with "text".
           to: t.tiers.ortho.text,
           tr: t.order,
