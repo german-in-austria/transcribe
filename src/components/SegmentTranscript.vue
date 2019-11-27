@@ -2,6 +2,7 @@
   <div :class="{
     selected: isSelected,
     segment: true,
+    'theme--dark': settings.darkMode,
     'fragment-of': hasFragmentOfInAnyFirstToken
   }">
     <div
@@ -64,6 +65,7 @@ export default class SegmentTranscript extends Vue {
   selectOrDeselectEvent = selectOrDeselectEvent
   playEvent = playEvent
   toTime = toTime
+  settings = settings
 
   get speakerHeight() {
     return eventStore.metadata.tiers.filter(t => t.show === true).length * 25 + 'px'
@@ -109,10 +111,12 @@ export default class SegmentTranscript extends Vue {
   display inline-block
   vertical-align top
   border-left 1px solid
-  border-color rgba(255,255,255,.2)
   transition border-color .25s
   padding 0 6px
   color #444
+  border-color rgba(0,0,0,.15)
+  &.theme--dark
+    border-color rgba(255,255,255,.2)
 
 .segment.fragment-of
   border-color rgba(255,255,255,0)
@@ -142,8 +146,12 @@ export default class SegmentTranscript extends Vue {
   color white
 
 .speaker-segment
-  border-bottom 1px solid rgba(255,255,255,.1)
+  border-bottom 1px solid rgba(0,0,0,.15)
   height 25px
+
+.theme--dark
+  .speaker-segment
+    border-bottom 1px solid rgba(255,255,255,.1)
 
 .speaker-segment:last-child
   border-bottom 0

@@ -1,5 +1,5 @@
 <template>
-  <v-flex :style="theme" class="pt-4 speaker-panel">
+  <v-flex :style="theme" class="speaker-panel">
     <div
       :style="{height: speakerHeight + 1}"
       :key="i" v-for="(speaker, i) in eventStore.metadata.speakers"
@@ -104,6 +104,7 @@ export default class SpeakerPanel extends Vue {
 <style lang="stylus" scoped>
 .speaker-panel
   z-index 1
+  padding-top 27px
 
 .secondary-tiers
   text-align right
@@ -111,7 +112,7 @@ export default class SpeakerPanel extends Vue {
 
 .speaker
   cursor default
-  padding .2em 1em
+  padding 0 1em
   border-radius 1px
   border-bottom 1px solid rgba(255,255,255,.1)
   font-weight 300
