@@ -127,14 +127,14 @@ export const tokenTypesPresets: TokenTypesPreset = {
     {
       type: 'single',
       name: 'delimiter',
-      regex: /^(\?|\.|\,|!)"?$/,
+      regex: /^(\/)?(\?|\.|\,|!)"?$/,
       color: '#1717FB',
       id: 2
     },
     {
       type: 'single',
       name: 'word',
-      regex: /^([a-zA-ZÜüÄäÖöß"]+$)/u,
+      regex: /^([a-zA-ZÜüÄäÖöß"\-]+$)/u,
       color: 'transparent',
       id: 1
     },
