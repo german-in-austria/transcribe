@@ -6,7 +6,7 @@ import * as fontLoader from 'webfontloader'
 import Vuetify from 'vuetify'
 import * as VueLazyload from 'vue-lazyload'
 import * as Sentry from '@sentry/browser'
-const ipaDirectives = require('./directives/Ipa').default
+import ipaDirectives from './directives/Ipa'
 
 if (process.env.NODE_ENV === 'production') {
   Sentry.init({
