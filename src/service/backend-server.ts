@@ -402,6 +402,7 @@ export function serverTokenSaveResponseToServerToken(
     fo: t.fo,
     i: t.i,
     o: t.o,
+    p: t.p,
     s: t.s,
     sr: t.sr,
     t: t.t,
@@ -561,7 +562,7 @@ export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenT
                       type: defaultTier === 'ortho' ? s.aTokens[tokenId].tt : null
                     },
                     phon: {
-                      text: (s.aTokens[tokenId] as any).p || '',
+                      text: s.aTokens[tokenId].p !== undefined ? s.aTokens[tokenId].p as string : '',
                       type: defaultTier === 'phon' ? s.aTokens[tokenId].tt : null
                     }
                   }
@@ -702,6 +703,7 @@ export async function saveChangesToServer(es: LocalTranscriptEvent[]): Promise<L
       // console.log({ serverChanges })
       logServerResponse(t, serverChanges)
       const updatedServerTranscript = updateServerTranscriptWithChanges(serverTranscript, serverChanges)
+      console.log({updatedServerTranscript})
       const updatedLocalTranscript = serverTranscriptToLocal(
         updatedServerTranscript,
         eventStore.metadata.defaultTier || 'text'
