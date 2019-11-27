@@ -20,15 +20,15 @@
           ]"
           :style="{ backgroundColor: colorFromTokenType(token.tiers[defaultTier].type) }">
         </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span :class="['secondary-token-tier', settings.darkMode === true && 'theme--dark']" v-for="(tier, tierIndex) in secondaryTiers" :key="tier.id">
-          <span
+          <contenteditable
             v-rt-ipa="tier.id === 'phon'"
             v-if="tier.type === 'token'"
             :style="{top: (tierIndex + 1) * tierHeight + 'px'}"
             :class="['secondary-token-tier-text', settings.darkMode === true && 'theme--dark']"
-            v-text="token.tiers[tier.id] !== undefined ? token.tiers[tier.id].text : undefined"
+            :value="token.tiers[tier.id] !== undefined ? token.tiers[tier.id].text : undefined"
             :id="`speaker_event_tier_${speaker}__${tier.id}`"
-            contenteditable="true"
-            @blur="(e) => { focused = false; debouncedUpdateTokenTier(e.target.textContent, tier.id, i) }"
+            @input="(e) => { debouncedUpdateTokenTier(e.target.textContent, tier.id, i) }"
+            @blur="focused = false"
             @focus="focused = true" />
           <span v-else class="secondary-token-tier-text" />
         </span>
@@ -86,7 +86,8 @@
         :class="['secondary-free-text-tier-text', settings.darkMode === true && 'theme--dark']"
         @keydown.tab.shift.exact="focusPreviousFrom(tier.id)"
         @keydown.tab.exact="focusNextFrom($event, tier.id)"
-        @blur="(e) => {debouncedUpdateEventTier(e.target.textContent, tier.id); focused = false}"
+        @input="(e) => {debouncedUpdateEventTier(e.target.textContent, tier.id)}"
+        @blur="focused = false"
         @focus="focused = true"
         />
     </div>

@@ -273,7 +273,6 @@ export default class TranscriptEditor extends Vue {
   will-change transform
 
 .tracks-outer
-  overflow hidden
   white-space nowrap
 
 .tracks

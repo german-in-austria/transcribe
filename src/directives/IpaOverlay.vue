@@ -1,13 +1,14 @@
 <template>
-  <div class="ipa-outer" v-if="ready && aKeys.length > 0">
+  <div class="ipa-overlay" v-if="ready && aKeys.length > 0">
     <div
       style="white-space: nowrap;"
       v-for="aKey in aKeys"
       :key="aKey.k">
       <!-- <span style="display: inline-block; width: 31px; text-align: center;">{{ aKey.k }}</span> -->
       <button
-        @click="setKey(aKey.k, pKey)"
+        @click.stop.prevent="(e) => setKey(e, aKey.k, pKey)"
         @keyup.esc="unsetKeys()"
+        @keydown.enter.stop.prevent="(e) => setKey(e, aKey.k, pKey)"
         @blur="blur"
         ref="aBtns"
         class="ipa-btn"
@@ -79,6 +80,7 @@ export default class  extends Vue {
   aElement: HTMLElement|null = null
   ready = false
   lastPosition: number|null = null
+  log = console.log
 
   @Watch('aElement')
   onChangeElement(nVal: HTMLElement|null, oVal: HTMLElement|null) {
@@ -119,7 +121,7 @@ export default class  extends Vue {
     }
   }
 
-  setKey(aKey: any, nKey: any) {
+  setKey(e: MouseEvent, aKey: any, nKey: any) {
     if (this.aElement !== null) {
       this.aElement.innerText = this.aElement
         .innerText
@@ -179,7 +181,7 @@ export default class  extends Vue {
 }
 </script>
 <style lang="stylus" scoped>
-.ipa-outer
+.ipa-overlay
   position absolute
   box-shadow 0 5px 5px -3px rgba(0,0,0,.2), 0 8px 10px 1px rgba(0,0,0,.14), 0 3px 14px 2px rgba(0,0,0,.12);
   z-index 2
