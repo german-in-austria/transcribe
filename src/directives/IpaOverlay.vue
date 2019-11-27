@@ -128,6 +128,7 @@ export default class  extends Vue {
         .substring(0, (this.lastPosition || 0) - aKey.length)
         + nKey
         + this.aElement.innerText.substring(this.lastPosition || 0, this.aElement.innerText.length)
+      this.aElement.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }))
       this.lastPosition = (this.lastPosition || 0) - aKey.length + nKey.length
       this.unsetKeys()
     }
