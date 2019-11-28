@@ -24,7 +24,7 @@ or
 
 `docker build -t transcribe . && docker run transcribe -p 8080:80`
 
-## Spin-Offs (planned)
+## Spin-Offs (Work-In-Progress)
 
 ### JavaScript Ogg Bitstream Parser
 
@@ -37,3 +37,11 @@ A fast and flexible waveform renderer.
 ### Threaded Spectrogram Renderer
 
 A spectrogram renderer for js, conveniently wrapped in a WebWorker.
+
+### V-Contenteditable
+
+A ready-made `<v-contenteditable>` Vue component, that works just like regular `contenteditable` elements, but remembers the caret position between updates
+
+### V-Phonetic
+
+A Vue component that helps type IPA Symbols (International Phonetic Alphabet). Supports `<textarea>`, `<input>` and `contenteditable` elements.
