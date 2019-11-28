@@ -86,8 +86,7 @@
         :class="['secondary-free-text-tier-text', settings.darkMode === true && 'theme--dark']"
         @keydown.tab.shift.exact="focusPreviousFrom(tier.id)"
         @keydown.tab.exact="focusNextFrom($event, tier.id)"
-        @input="(e) => {debouncedUpdateEventTier(e.target.textContent, tier.id)}"
-        @blur="focused = false"
+        @blur="(e) => { updateEventTier(e.target.textContent, tier.id); focused = false }"
         @focus="focused = true"
         />
     </div>
