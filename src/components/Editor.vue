@@ -8,7 +8,7 @@
         <div style="opacity: .7; font-size: small">{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
       </v-flex>
       <v-flex xs4 class="text-xs-right">
-        <search style="display: inline-block" />
+        <search-simple style="display: inline-block" />
         <div style="display: inline-block">
           <v-tooltip transition="none" bottom>
             <span>Settings</span>
@@ -167,7 +167,7 @@
             :style="{ left: `${ error.startTime / eventStore.audioElement.duration * 100}%` }" />
         </div>
         <div class="search-overview-container">
-          <search-results />
+          <search-results-inline />
         </div>
       </div>
     </wave-form>
@@ -187,8 +187,8 @@ import playerBar from './PlayerBar.vue'
 import waveForm from './Waveform.vue'
 import settingsView from './Settings.vue'
 import spectrogram from './Spectrogram.vue'
-import search from './Search.vue'
-import searchResults from './SearchResults.vue'
+import searchSimple from './SearchSimple.vue'
+import searchResultsInline from './SearchResultsInline.vue'
 import transcriptEditor from './TranscriptEditor.vue'
 import playHead from './PlayHead.vue'
 import dropFile from './DropFile.vue'
@@ -247,8 +247,8 @@ import { generateProjectFile } from '../service/backend-files'
     settingsView,
     spectrogram,
     playHead,
-    search,
-    searchResults,
+    searchSimple,
+    searchResultsInline,
     dropFile,
     playerBar
   }

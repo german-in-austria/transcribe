@@ -43,6 +43,9 @@
             <small>Bookmarks will appear here</small>
           </div>
         </v-window-item>
+        <!-- <v-window-item class="sidebar-scrollable">
+          <search />
+        </v-window-item> -->
       </v-window>
     </v-flex>
     <v-flex class="sidebar-picker text-xs-center pt-2">
@@ -62,6 +65,9 @@
           <v-btn icon @click="clickTab(3)" class="mb-2">
             <v-icon :color="activeTab === 3 ? 'blue' : ''">bookmark_border</v-icon>
           </v-btn>
+          <!-- <v-btn icon @click="clickTab(4)" class="mb-2">
+            <v-icon :color="activeTab === 4 ? 'blue' : ''">mdi-magnify</v-icon>
+          </v-btn> -->
         </v-flex>
         <v-flex xs1>
           <v-spacer />
@@ -106,7 +112,7 @@ import {
 import { history } from '../store/history'
 import { keyboardShortcuts, displayKeyboardAction } from '../service/keyboard'
 import settings from '../store/settings'
-
+// import search from './Search.vue'
 interface ErrorEvent extends LocalTranscriptEvent {
   error_type: 'time_overlap'|'unknown_token'
 }
@@ -114,7 +120,8 @@ interface ErrorEvent extends LocalTranscriptEvent {
 @Component({
   components: {
     editHistory,
-    errorList
+    errorList,
+    // search
   }
 })
 export default class Sidebar extends Vue {
