@@ -2,6 +2,7 @@
   <div
     @click.exact.stop="selectEvent(event)"
     @mousedown.meta="selectOrDeselectEvent(event)"
+    @mousedown.ctrl="selectOrDeselectEvent(event)"
     @mousedown.shift="selectEventRange(event)"
     @dblclick="playEvent(event)"
     tabindex="-1"

@@ -14,6 +14,8 @@
       }"
       @dblclick="playEvent(event)"
       @mousedown.meta.stop="selectOrDeselectEvent(event)"
+      @mousedown.ctrl.stop="selectOrDeselectEvent(event)"
+      @mousedown.shift="selectEventRange(event)"
       @mousedown.exact="selectAndScrollToEvent(event)">
       {{ toTime(event.startTime) }} - {{ toTime(event.endTime) }}
     </div>
@@ -40,6 +42,7 @@ import {
   deleteSelectedEvents,
   LocalTranscriptEvent,
   selectEvent,
+  selectEventRange,
   selectOrDeselectEvent,
   playEvent,
   scrollToAudioEvent,
