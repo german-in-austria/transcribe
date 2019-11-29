@@ -601,8 +601,8 @@ export function appendEmptyEventAfter(eIds: number[]): HistoryEventAction|undefi
     // there is one after it.
     if (next !== undefined) {
       if (isEventDockedToEvent(e, next)) {
-        // it’s docked, so we just select the next one
-        selectEvent(next)
+        // it’s docked, so there’s nothing to do
+        return undefined
       } else {
         // there is room, so we add one
         return addEvent(e.endTime, Math.min(1, next.startTime - e.endTime))

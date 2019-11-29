@@ -28,7 +28,8 @@ import {
   moveEventStartTime,
   moveEventEndTime,
   shiftCharsLeft,
-  shiftCharsRight
+  shiftCharsRight,
+  selectEvent
 } from '../store/transcript'
 
 import { saveChangesToServer } from '../service/backend-server'
@@ -275,11 +276,12 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     action: () => {
       console.log('append event')
       if (eventStore.selectedEventIds.length > 0) {
-        const es = undoable(appendEmptyEventAfter(eventStore.selectedEventIds))
-        if (es.length > 0) {
-          selectEvents(es)
-          scrollToAudioEvent(es[0])
+        const newEs = undoable(appendEmptyEventAfter(eventStore.selectedEventIds))
+        const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent() ])
+        if (es.length > 0 && es[0] !== undefined) {
           scrollToTranscriptEvent(es[0])
+          scrollToAudioEvent(es[0])
+          selectEvent(es[0])
           if (settings.playEventOnAppend) {
             playEvents(es)
           }
