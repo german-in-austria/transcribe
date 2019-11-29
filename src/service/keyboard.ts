@@ -278,6 +278,11 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         const es = undoable(appendEmptyEventAfter(eventStore.selectedEventIds))
         if (es.length > 0) {
           selectEvents(es)
+          scrollToAudioEvent(es[0])
+          scrollToTranscriptEvent(es[0])
+          if (settings.playEventOnAppend) {
+            playEvents(es)
+          }
         }
       }
     },

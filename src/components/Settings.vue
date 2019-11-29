@@ -36,6 +36,12 @@
                   </v-list-tile-action>
                 </v-list-tile>
                 <v-list-tile>
+                  <v-list-tile-title>Play Event after Appending</v-list-tile-title>
+                  <v-list-tile-action>
+                    <v-switch v-model="settings.playEventOnAppend" />
+                  </v-list-tile-action>
+                </v-list-tile>
+                <v-list-tile>
                   <v-list-tile-title>Dark Theme</v-list-tile-title>
                   <v-list-tile-action>
                     <v-switch :input-value="settings.darkMode" @change="setIsDarkMode"/>
@@ -130,11 +136,13 @@ import settings, { setIsDarkMode } from '../store/settings'
 import SettingsKeyboardShortcuts from './SettingsKeyboardShortcuts.vue'
 import SettingsTokenTypes from './SettingsTokenTypes.vue'
 import { makeGradient } from '../lib/gradient'
+import { Chrome as ColorPicker } from 'vue-color'
 
 @Component({
   components: {
     SettingsKeyboardShortcuts,
-    SettingsTokenTypes
+    SettingsTokenTypes,
+    ColorPicker
   }
 })
 export default class Settings extends Vue {

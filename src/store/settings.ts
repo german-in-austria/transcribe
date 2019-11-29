@@ -59,6 +59,7 @@ export interface Settings {
   tokenTypesPreset: keyof TokenTypesPreset
   useMonoWaveForm: boolean
   waveFormColors: string[]
+  playEventOnAppend: boolean
 }
 
 export const tokenTypesPresets: TokenTypesPreset = {
@@ -384,6 +385,7 @@ const settings: Settings = {
   tokenTypesPreset: 'dioeDB',
   useMonoWaveForm: false,
   waveFormColors: [ '#fb7676', '#6699CC' ],
+  playEventOnAppend: true
 }
 
 export default settings
