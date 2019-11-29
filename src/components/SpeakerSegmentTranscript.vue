@@ -45,7 +45,7 @@
       @keydown.left.exact="handleCursor($event, defaultTier)"
       @copy.prevent="copyTokens"
       @cut.prevent="cutTokens"
-      @paste="pasteTokens"
+      @paste.prevent="pasteTokens"
       :id="`speaker_event_tier_${speaker}__${defaultTier}`"
       :value="segmentText"
       :style="textStyle"
@@ -197,7 +197,6 @@ export default class SpeakerSegmentTranscript extends Vue {
     const s = getSelection()
     const n = s ? s.focusNode : null
     if (e.currentTarget instanceof HTMLElement && s !== null && n !== null) {
-      console.log(n.textContent!.length, s.anchorOffset)
       if (e.key === 'ArrowLeft' && s.anchorOffset === 0) {
         this.focusPreviousFrom(e, tier)
       } else if (e.key === 'ArrowRight' && s !== null && s.anchorOffset === n.textContent!.length) {
