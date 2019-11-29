@@ -304,8 +304,6 @@ export default class Waveform extends Vue {
     }
     scrollTimer = window.requestAnimationFrame(async () => {
       await util.requestFrameAsync()
-      this.$emit('scroll')
-      await util.requestFrameAsync()
       this.updateSecondsMarkers()
       await util.requestFrameAsync()
       window.requestIdleCallback(this.doMaybeRerender)

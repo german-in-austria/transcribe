@@ -80,7 +80,6 @@
       v-if="eventStore.audioElement.src"
       tabindex="-1"
       class="no-outline"
-      @scroll="handleScroll"
       @show-menu="doShowMenu"
       :height="300">
       <play-head />
@@ -239,6 +238,7 @@ import settings from '../store/settings'
 import audio from '../service/audio'
 import { serverTranscript } from '../service/backend-server'
 import { generateProjectFile } from '../service/backend-files'
+import eventBus from '../service/event-bus'
 
 @Component({
   components: {
@@ -365,6 +365,7 @@ export default class Editor extends Vue {
         e.returnValue = ''
       }
     }
+    eventBus.$on('scrollWaveform', this.hideMenu)
     document.addEventListener('keydown', handleGlobalShortcut)
   }
 
@@ -372,7 +373,7 @@ export default class Editor extends Vue {
     document.removeEventListener('keydown', handleGlobalShortcut)
   }
 
-  handleScroll() {
+  hideMenu() {
     if (this.showMenu === true) {
       this.showMenu = false
     }
