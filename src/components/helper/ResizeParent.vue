@@ -29,7 +29,6 @@ export default class ResizeParent extends Vue {
 
   startX = 0
   startY = 0
-  startCursor: string|null = null
   parentStartGeometry: ElementGeometry|null = null
   previousStartGeometry: ElementGeometry|null = null
   nextStartGeometry: ElementGeometry|null = null
@@ -38,7 +37,6 @@ export default class ResizeParent extends Vue {
   resetState() {
     this.startX = 0
     this.startY = 0
-    this.startCursor = null
     this.parentStartGeometry = null
     this.previousStartGeometry = null
     this.nextStartGeometry = null
@@ -106,14 +104,16 @@ export default class ResizeParent extends Vue {
             // it’s within the boundaries
             if (this.parent.offsetLeft + newWidth < this.rightMax) {
               this.parent.style.width = newWidth + 'px'
-              // move away next element
               const overlap = this.getOverlapX(this.parent, this.next)
-              if (overlap > 0) {
+              // move the next element start and width, if the shift key is pressed
+              // or if thers’s an overlap
+              if (
+                e.shiftKey ||
+                overlap > 0 ||
+                this.next.offsetLeft > (this.nextStartGeometry as ElementGeometry).offsetX
+              ) {
                 this.next.style.width = this.next.offsetWidth - overlap + 'px'
                 this.next.style.left = this.next.offsetLeft + overlap + 'px'
-              } else if (this.next.offsetLeft > (this.nextStartGeometry as ElementGeometry).offsetX) {
-                this.next.style.left = this.next.offsetLeft + overlap + 'px'
-                this.next.style.width = this.next.offsetWidth - overlap + 'px'
               }
             // it’s not: maximize and stop
             } else {
@@ -132,11 +132,14 @@ export default class ResizeParent extends Vue {
             if (newLeft > this.leftMin) {
               this.parent.style.width = newWidth + 'px'
               this.parent.style.left = newLeft + 'px'
-              // move away prev element
               const overlap = this.getOverlapX(this.previous, this.parent)
-              if (overlap > 0) {
-                this.previous.style.width = this.previous.offsetWidth - overlap + 'px'
-              } else if (this.previous.offsetWidth < this.previousStartGeometry.width) {
+              // move the previous element width, if the shift key is pressed
+              // or if thers’s an overlap
+              if (
+                e.shiftKey ||
+                overlap > 0 ||
+                this.previous.offsetWidth < this.previousStartGeometry.width
+              ) {
                 this.previous.style.width = this.previous.offsetWidth - overlap + 'px'
               }
             } else {
@@ -154,7 +157,7 @@ export default class ResizeParent extends Vue {
     document.removeEventListener('mousemove', this.drag)
     document.removeEventListener('mouseup', this.endDrag)
     document.removeEventListener('keyup', this.cancelDrag)
-    document.body.style.cursor = this.startCursor
+    document.body.style.cursor = 'auto'
     if (this.next instanceof HTMLElement) {
       this.next.classList.remove(this.resizingClass)
     }
@@ -230,7 +233,6 @@ export default class ResizeParent extends Vue {
     }
   }
   startDrag(e: MouseEvent) {
-    this.startCursor = document.body.style.cursor
     this.startX = e.pageX,
     this.startY = e.pageY,
     this.parentStartGeometry = this.getGeometry(this.parent)
