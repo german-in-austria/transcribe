@@ -19,7 +19,7 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { eventStore, toTime } from '../store/transcript'
+import { eventStore, toTime, LocalTranscriptEvent } from '../store/transcript'
 import EventBus, { BusEvent } from '../service/event-bus'
 import settings from '../store/settings'
 import _ from 'lodash'
@@ -29,7 +29,7 @@ import { requestFrameAsync } from '../util'
 export default class Scrollbar extends Vue {
 
   // global events to listen to
-  @Prop() updateOn: BusEvent
+  @Prop() updateOn: BusEvent|BusEvent[]
   @Prop() maxTime: number
 
   settings = settings
@@ -38,11 +38,19 @@ export default class Scrollbar extends Vue {
   isDragging = false
 
   mounted() {
-    EventBus.$on(this.updateOn, this.moveThumbToTime)
+    if (Array.isArray(this.updateOn)) {
+      this.updateOn.forEach((e) => EventBus.$on(e, this.moveThumbToTime))
+    } else {
+      EventBus.$on(this.updateOn, this.moveThumbToTime)
+    }
   }
 
   beforeDestroy() {
-    EventBus.$off(this.updateOn, this.moveThumbToTime)
+    if (Array.isArray(this.updateOn)) {
+      this.updateOn.forEach((e) => EventBus.$off(e, this.moveThumbToTime))
+    } else {
+      EventBus.$off(this.updateOn, this.moveThumbToTime)
+    }
   }
 
   async getOffsets(x: number) {
@@ -60,13 +68,14 @@ export default class Scrollbar extends Vue {
     }
   }
 
-  moveThumbToTime(t: number) {
+  moveThumbToTime(t: number|LocalTranscriptEvent) {
+    const time = typeof t === 'number' ? t : t.startTime
     requestAnimationFrame(() => {
       const thumb = this.$refs.scrollbarThumb
       const track = this.$refs.scrollbarTrack
       if (track instanceof HTMLElement && thumb instanceof HTMLElement) {
         const scrollbarWidth = track.offsetWidth - thumb.offsetWidth
-        const offset = t / this.maxTime * scrollbarWidth
+        const offset = time / this.maxTime * scrollbarWidth
         const limitedOffset = Math.max(0, Math.min(offset, scrollbarWidth))
         requestAnimationFrame(() => {
           thumb.style.transform = `translate3d(${ limitedOffset }px, 0, 0)`

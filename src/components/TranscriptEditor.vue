@@ -22,7 +22,7 @@
         :max-time="lastEventStartTime"
         class="scrollbar"
         @scroll="scrollToSecond"
-        update-on="scrollTranscript" />
+        :update-on="['scrollTranscript', 'scrollToTranscriptEvent']" />
     </v-flex>
   </v-layout>
 </template>
@@ -261,18 +261,14 @@ export default class TranscriptEditor extends Vue {
 .transcript-editor-outer
   padding-top 10px
   .scrollbar
-    opacity 0
-    margin-top 10px
-    transition opacity .25s
-  &:hover
-    .scrollbar
-      opacity 1
-
+    margin-top 10px 10px 0 10px
+    background rgba(0, 0, 0, .05)
 
 .transcript-segments-inner
   will-change transform
 
 .tracks-outer
+  overflow hidden
   white-space nowrap
 
 .tracks
