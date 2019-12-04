@@ -87,6 +87,7 @@
     "webfontloader": "^1.6.28"
   },
   "devDependencies": {
+    "@sentry/webpack-plugin": "^1.9.3",
     "@types/diff": "^3.5.2",
     "@types/jszip": "^3.1.5",
     "@types/lodash-es": "^4.17.3",
