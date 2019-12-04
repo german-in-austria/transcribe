@@ -605,10 +605,10 @@ export function appendEmptyEventAfter(eIds: number[]): HistoryEventAction|undefi
         return undefined
       } else {
         // there is room, so we add one
-        return addEvent(e.endTime, Math.min(1, next.startTime - e.endTime))
+        return addEvent(e.endTime, Math.min(2, next.startTime - e.endTime))
       }
     } else {
-      return addEvent(e.endTime, 1)
+      return addEvent(e.endTime, 2)
     }
   }
 }
