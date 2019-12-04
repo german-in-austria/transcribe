@@ -125,7 +125,7 @@ export function eachFrom<T>(list: T[], startIndex: number, callback: (e: T, i: n
 export function groupConsecutiveBy<T>(list: T[], callback: (e: T, i: number) => string): T[][] {
   const c: T[][] = [[]]
   let latestKey = ''
-  _(list).forEach((e, i) => {
+  list.forEach((e, i) => {
     const newKey = callback(e, i)
     if (newKey === latestKey || i === 0) {
       c[c.length - 1].push(e)
