@@ -105,6 +105,7 @@ export default class SpeakerPanel extends Vue {
 .speaker-panel
   z-index 1
   padding-top 27px
+  flex-grow 0
 
 .secondary-tiers
   text-align right
