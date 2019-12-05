@@ -39,9 +39,7 @@
           </div>
         </v-window-item>
         <v-window-item class="sidebar-scrollable">
-          <div class="text-xs-center grey--text mt-4">
-            <small>Bookmarks will appear here</small>
-          </div>
+          <bookmarks />
         </v-window-item>
         <!-- <v-window-item class="sidebar-scrollable">
           <search />
@@ -97,6 +95,8 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import editHistory from './EditHistory.vue'
 import errorList from './ErrorList.vue'
 import * as _ from 'lodash'
+import bookmarks from './Bookmarks.vue'
+
 import {
   LocalTranscriptEvent,
   scrollToAudioEvent,
@@ -121,6 +121,7 @@ interface ErrorEvent extends LocalTranscriptEvent {
   components: {
     editHistory,
     errorList,
+    bookmarks
     // search
   }
 })

@@ -983,6 +983,17 @@ export function replaceEvents(oldEvents: LocalTranscriptEvent[], newEvents: Loca
   newEvents.forEach(insertEvent)
 }
 
+// tslint:disable-next-line:max-line-length
+export function findEventGaps(es: LocalTranscriptEvent[], maxGap = .1): Array<{ duration: number, start: number, end: number }> {
+  return es.reduce((m, e, i, l) => {
+    const gap = l[i + 1] !== undefined ? l[i + 1].startTime - e.endTime : 0
+    if (gap > maxGap) {
+      m.push({duration: gap, start: e.endTime, end: l[i + 1].startTime})
+    }
+    return m
+  }, [] as Array<{ duration: number, start: number, end: number }>)
+}
+
 export function joinEvents(eventIds: number[]): HistoryEventAction {
   const events = getEventsByIds(eventIds)
   const speakerIds = getSpeakersFromEvents(events)
