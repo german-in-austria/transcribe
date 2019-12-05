@@ -731,6 +731,7 @@ export function splitEvent(event: LocalTranscriptEvent, splitTime: number): Hist
   const before = clone(eventStore.events[i])
   const eventLength = event.endTime - event.startTime
   const cutAtProgressFactor = splitTime / eventLength
+  const newEventId = makeEventId()
   const leftEvent: LocalTranscriptEvent = {
     ...event,
     speakerEvents: {
@@ -743,10 +744,14 @@ export function splitEvent(event: LocalTranscriptEvent, splitTime: number): Hist
   const rightEvent: LocalTranscriptEvent = {
     startTime: event.startTime + splitTime,
     endTime: event.endTime,
-    eventId: makeEventId(),
+    eventId: newEventId,
     speakerEvents: {
       ..._(event.speakerEvents).mapValues(se => {
-        return { ...se, tokens: splitTokensAtFactor(se.tokens, cutAtProgressFactor)[1] }
+        return {
+          ...se,
+          speakerEventId: newEventId,
+          tokens: splitTokensAtFactor(se.tokens, cutAtProgressFactor)[1]
+        }
       }).value()
     },
   }
@@ -779,6 +784,7 @@ export function splitEventAtChar(
       const segmentCharacters = getTextFromTokens(tokens, eventStore.metadata.defaultTier).length
       const splitFactor = left / segmentCharacters
       const splitTime = splitFactor * (e.endTime - e.startTime)
+      const newEventId = makeEventId()
       const leftEvent: LocalTranscriptEvent = {
         ...e,
         speakerEvents: {
@@ -792,10 +798,11 @@ export function splitEventAtChar(
       const rightEvent: LocalTranscriptEvent = {
         startTime: e.startTime + splitTime,
         endTime: e.endTime,
-        eventId: makeEventId(),
+        eventId: newEventId,
         speakerEvents: {
           ..._(e.speakerEvents).mapValues((se, sid) => ({
             ...se,
+            speakerEventId: newEventId,
             tokens: collectTokensViaOffsets(e.speakerEvents[sid].tokens, left, segmentCharacters)
           })).value()
         },
