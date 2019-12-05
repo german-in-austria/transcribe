@@ -1,7 +1,7 @@
 <template>
   <v-layout class="transcript-editor-outer" style="height: auto">
     <speaker-panel />
-    <v-flex ref="outer" class="tracks-outer pt-2">
+    <v-flex ref="outer" @scroll="handleNativeScroll" class="tracks-outer pt-2">
       <div
         @wheel="handleMousewheel"
         ref="tracks"
@@ -231,7 +231,6 @@ export default class TranscriptEditor extends Vue {
       }
     }
     // RECURSION
-
     if (
       (timesCalled <= defaultLimit) &&
       (this.innerLeft <= -1500 || this.innerLeft >= -200) &&
@@ -246,12 +245,24 @@ export default class TranscriptEditor extends Vue {
     if (this.currentIndex === 0 && this.innerLeft >= 0 && (e.deltaX || e.deltaY) < 0) {
       // don’t scroll
     } else {
-      this.lastScrollLeft = this.innerLeft
-      this.setInnerLeft(this.innerLeft - (e.deltaX || e.deltaY) / (e.shiftKey === true ? 10 : 1))
-      this.debouncedEmitScroll()
-      this.throttledRenderer(this.innerLeft <= this.lastScrollLeft)
-      this.lastScrollLeft = this.innerLeft
+      this.scrollTranscriptBy(e.deltaX || e.deltaY, e.shiftKey)
     }
+  }
+
+  scrollTranscriptBy(pixels: number, slow = false) {
+    this.lastScrollLeft = this.innerLeft
+    this.setInnerLeft(this.innerLeft - pixels / (slow === true ? 10 : 1))
+    this.debouncedEmitScroll()
+    this.throttledRenderer(this.innerLeft <= this.lastScrollLeft)
+    this.lastScrollLeft = this.innerLeft
+  }
+
+  handleNativeScroll(e: UIEvent) {
+    const el = (e.target as HTMLElement)
+    const distance = el.scrollLeft
+    el.scrollLeft = 0
+    // this.scrollTranscriptBy(distance)
+    this.setInnerLeft(this.innerLeft - distance)
   }
 }
 </script>
