@@ -575,6 +575,7 @@ export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenT
       }
     })
     .orderBy(e => e.startTime)
+    .uniqBy(e => e.eventId)
     .value()
 }
 
@@ -748,6 +749,36 @@ export async function saveChangesToServer(es: LocalTranscriptEvent[]): Promise<L
   }
 }
 
+function appendTranscriptEventChunk(a: LocalTranscriptEvent[], b: LocalTranscriptEvent[]): LocalTranscriptEvent[] {
+  const lastOfPrevious = _(a).last()
+  const firstOfNext = _(b).first()
+  if (lastOfPrevious !== undefined && firstOfNext !== undefined) {
+    if (
+      // it’s at exactly the same time
+      lastOfPrevious.startTime === firstOfNext.startTime &&
+      lastOfPrevious.endTime === firstOfNext.endTime
+    ) {
+      // merge
+      const mergedEvent: LocalTranscriptEvent = {
+        ...lastOfPrevious,
+        speakerEvents: {
+          ...lastOfPrevious.speakerEvents,
+          ...firstOfNext.speakerEvents
+        }
+      }
+      console.log('do the merge', lastOfPrevious, firstOfNext, mergedEvent)
+      // replace the lastOfPrevious & firstOfNext with the merged event
+      return _.initial(a).concat(mergedEvent).concat(_.tail(b))
+    } else {
+      // normal concatenation
+      return a.concat(b)
+    }
+  } else {
+    // normal concatenation
+    return a.concat(b)
+  }
+}
+
 export async function getTranscript(
   id: number,
   onProgress: (v: number, es: LocalTranscriptEvent[], res: ServerTranscript) => any,
@@ -760,16 +791,21 @@ export async function getTranscript(
     const res = await (await fetch(`${ eventStore.backEndUrl }/routes/transcript/${ id }/${ chunk }`, {
       credentials: 'include'
     })).json() as ServerTranscript
-    // when it’s the first page
+
+    // merge the chunk
+    mergeServerTranscript(res)
+
+    // when it’s the first page, get it’s metadata
     if (res.aNr === 0) {
       eventStore.metadata = getMetadataFromServerTranscript(res)
     }
-    // convert and concat
+
+    // get and concat the locked tokens
     eventStore.lockedTokens = eventStore.lockedTokens.concat(getLockedTokensFromServerTranscript(res))
-    eventStore.events = _.uniqBy(
-      buffer.concat(serverTranscriptToLocal(res, eventStore.metadata.defaultTier || 'text')),
-      (e) => e.eventId
-    )
+
+    const eventChunk = serverTranscriptToLocal(res, eventStore.metadata.defaultTier || 'text')
+    // update the store
+    eventStore.events = appendTranscriptEventChunk(eventStore.events, eventChunk)
     // progress callback with data
     if (onProgress !== undefined) {
       onProgress(res.aNr / (totalSteps || res.aTmNr || 10), eventStore.events, res)

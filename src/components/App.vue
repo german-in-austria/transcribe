@@ -419,9 +419,8 @@ export default class App extends Vue {
     // TODO: ugly
     this.loadingTranscriptId = t.pk
     const y = document.createElement('audio')
-    getTranscript(t.pk, (progress, events, serverTranscript) => {
+    getTranscript(t.pk, (progress, events) => {
       eventStore.transcriptDownloadProgress = progress
-      mergeServerTranscript(serverTranscript)
       if (eventStore.metadata.audioUrl !== null) {
         y.src = eventStore.metadata.audioUrl
         y.addEventListener('durationchange', (e) => {
