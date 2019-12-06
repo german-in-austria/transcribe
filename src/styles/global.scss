@@ -1,4 +1,8 @@
 
+.small{
+  font-size: 80%;
+}
+
 .absolute{
   position: absolute;
 }
@@ -177,7 +181,9 @@ nav.v-toolbar[data-booted=true]{
 .v-navigation-drawer .v-tabs__bar.theme--dark{
   background-color: transparent
 }
-.v-list__tile__sub-title, .v-list__tile__title{
+.v-list__tile,
+.v-list__tile__sub-title,
+.v-list__tile__title {
   transition: none !important;
 }
 

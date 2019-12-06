@@ -1,0 +1,20 @@
+<template>
+  <label style="display: block; margin-bottom: .5em">
+    <input
+      @change="$emit('input', !value)"
+      :checked="value" type="checkbox" />
+    <span style="user-select: none;" v-if="label !== undefined">{{ label }}</span>
+    <slot v-else />
+  </label>
+</template>
+<script lang="ts">
+import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+
+@Component
+export default class Checkbox extends Vue {
+  @Prop() label?: string
+  @Prop() value: boolean
+}
+</script>
+<style lang="scss" scoped>
+</style>

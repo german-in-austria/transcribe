@@ -47,6 +47,7 @@ export interface Settings {
   minimumEventLength: number
   moveEventTimeByInterval: number
   moveEventTimeByIntervalSmall: number
+  maxEventGap: number
   pixelsPerSecond: number
   playbackSpeed: number,
   playbackVolume: number,
@@ -60,6 +61,11 @@ export interface Settings {
   useMonoWaveForm: boolean
   waveFormColors: string[]
   playEventOnAppend: boolean
+  showErrors: {
+    eventGaps: boolean
+    unknownTokenTypes: boolean
+    eventOverlaps: boolean
+  }
 }
 
 export const tokenTypesPresets: TokenTypesPreset = {
@@ -365,6 +371,7 @@ const settings: Settings = {
   lockPlayHead: true,
   lockScroll: false,
   minimumEventLength: 0.2,
+  maxEventGap: 1,
   moveEventTimeByInterval: 0.2,
   moveEventTimeByIntervalSmall: 0.01,
   pixelsPerSecond: 150,
@@ -379,7 +386,12 @@ const settings: Settings = {
   tokenTypesPreset: 'dioeDB',
   useMonoWaveForm: false,
   waveFormColors: [ '#fb7676', '#6699CC' ],
-  playEventOnAppend: true
+  playEventOnAppend: true,
+  showErrors: {
+    eventGaps: true,
+    unknownTokenTypes: true,
+    eventOverlaps: true
+  }
 }
 
 export default settings

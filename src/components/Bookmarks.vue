@@ -1,6 +1,6 @@
 <template>
   <v-layout column>
-    <v-flex shrink>
+    <!-- <v-flex shrink>
       <v-subheader>
         <small>Bookmarks and Gaps ({{ gaps.length }})</small>
       </v-subheader>
@@ -30,12 +30,13 @@
     </v-flex>
     <v-flex class="pl-2 pr-2" shrink>
       <v-slider hide-details label="Gap Size" :step=".1" thumb-label v-model="gapSize" :min=".1" :max="10" />
-    </v-flex>
+    </v-flex> -->
   </v-layout>
 </template>
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+// tslint:disable-next-line:max-line-length
 import { findEventGaps, eventStore, LocalTranscriptEvent, toTime, findEventAt, scrollToAudioEvent } from '../store/transcript'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import _ from 'lodash'
@@ -73,16 +74,16 @@ export default class Bookmarks extends Vue {
     this.debouncedGetGaps(eventStore.events)
   }
 
-  @Watch('gapSize')
-  onGapSizeUpdate() {
-    console.log('gapSize', this.gapSize)
-    this.debouncedGetGaps(eventStore.events)
-  }
+  // @Watch('gapSize')
+  // onGapSizeUpdate() {
+  //   console.log('gapSize', this.gapSize)
+  //   this.debouncedGetGaps(eventStore.events)
+  // }
 
-  @Watch('eventStore.events')
-  onEventsUpdate(newEvents: LocalTranscriptEvent[]) {
-    this.debouncedGetGaps(newEvents)
-  }
+  // @Watch('eventStore.events')
+  // onEventsUpdate(newEvents: LocalTranscriptEvent[]) {
+  //   this.debouncedGetGaps(newEvents)
+  // }
 }
 </script>
 <style lang="stylus" scoped>
