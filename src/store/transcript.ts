@@ -500,9 +500,9 @@ export function isEventDockedToEvent(...es: LocalTranscriptEvent[]): boolean {
   return sortEvents(es).every((e, i, l) => {
     // true if it’s either the first event
     // or the distance to the previous one is smaller than the settings dock interval
-    if (i !== 0) {
-      console.log('distance', e.startTime, e.endTime, e.startTime - l[ i - 1].endTime)
-    }
+    // if (i !== 0) {
+    //   console.log('distance', e.startTime, e.endTime, e.startTime - l[ i - 1].endTime)
+    // }
     return i === 0 || e.startTime - l[ i - 1].endTime <= settings.eventDockingInterval
   })
 }

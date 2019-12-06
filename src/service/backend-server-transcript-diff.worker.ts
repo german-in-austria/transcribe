@@ -120,14 +120,12 @@ function markEventTierUpdateStatus(newEvent: ServerEvent, oldEvent: ServerEvent)
   const oldEs = mapValues(oldEvent.event_tiers, (ets, speaker) => mapValues(ets, (et) => ({...et, status: 'delete' }) ))
   const newEs = mapValues(newEvent.event_tiers, (ets, speaker) => mapValues(ets, (et) => ({...et, status: 'upsert' }) ))
   const m = mergeWith(oldEs, newEs, (oldE, newE) => {
+    // if there’s an old event, use the new event ("upsert" status)
     if (oldE !== undefined && oldE.ti !== undefined) {
       return newE
     }
   })
-  return {
-    ...newEvent,
-    event_tiers: m
-  }
+  return { ...newEvent, event_tiers: m }
 }
 
 // tslint:disable-next-line:max-line-length
