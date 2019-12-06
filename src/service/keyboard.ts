@@ -271,10 +271,9 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     key: '+',
     description: 'Append an event after the currently selected event.',
     disabled: () => eventStore.selectedEventIds.length === 0,
-    icon: 'mdi-card-plus-outline',
+    icon: 'message',
     name: 'Append Event',
     action: () => {
-      console.log('append event')
       if (eventStore.selectedEventIds.length > 0) {
         const newEs = undoable(appendEmptyEventAfter(eventStore.selectedEventIds))
         const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent() ])
