@@ -89,6 +89,10 @@ export default class SettingsTokenTypes extends Vue {
     console.log(args)
   }
 
+  updateBracket(listIndex: number, regex: string, bracketIndex: number) {
+    console.log(listIndex, regex, bracketIndex)
+  }
+
   updateWaveFormColor(...args: any[]) {
     console.log(args)
   }

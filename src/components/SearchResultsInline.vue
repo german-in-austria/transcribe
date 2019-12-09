@@ -1,5 +1,5 @@
 <template>
-  <div :class="['search-results-container', settings.darkTheme === true && 'theme--dark']">
+  <div :class="['search-results-container', settings.darkMode === true && 'theme--dark']">
     <div
       @mouseover="handleResultMouseOver"
       @mouseout="handleResultMouseOut"

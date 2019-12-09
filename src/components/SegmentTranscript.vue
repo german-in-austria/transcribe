@@ -69,6 +69,7 @@ export default class SegmentTranscript extends Vue {
   playEvent = playEvent
   toTime = toTime
   settings = settings
+  selectEventRange = selectEventRange
 
   get speakerHeight() {
     return eventStore.metadata.tiers.filter(t => t.show === true).length * 25 + 'px'

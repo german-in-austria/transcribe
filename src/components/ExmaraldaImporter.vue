@@ -9,7 +9,7 @@
         v-for="(speakerTier, i) in speakersWithMissingDefaultTier"
         :key="i"
         v-model="showMissingDefaultTierError">
-        Default Tier missing for speaker {{ speakerTier.to_speaker.Kuerzel }}
+        Default Tier missing for speaker {{ speakerTier.to_speaker !== null ? speakerTier.to_speaker.Kuerzel : '' }}
       </v-snackbar>
     </div>
     <v-dialog
@@ -408,7 +408,7 @@ export default class ExmaraldaImporter extends Vue {
     this.surveys = await getSurveys()
   }
 
-  isTranscriptNameUnique(n: string): boolean {
+  isTranscriptNameUnique(n: string|null): boolean {
     return this.transcripts.findIndex(t => t.n === n) === -1
   }
 
@@ -504,6 +504,7 @@ export default class ExmaraldaImporter extends Vue {
     this.updateIsEverythingSelected()
   }
 
+  // FIXME: to_speaker can be null
   tokenTiersAvailable(to_speaker: ServerInformant) {
 
     const selectedTiersForSpeaker = this.importable.speakerTiers

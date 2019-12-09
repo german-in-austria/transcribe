@@ -81,7 +81,7 @@ import {
 })
 export default class ErrorList extends Vue {
 
-  @Prop() errors: ErrorEvent
+  @Prop() errors: ErrorEvent[]
   toTime = toTime
   selectedError: ErrorEvent|null = null
   settings = settings

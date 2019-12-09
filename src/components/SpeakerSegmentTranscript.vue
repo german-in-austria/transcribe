@@ -38,8 +38,8 @@
       @blur="focused = false"
       @focus="focused = true"
       @input="(e) => updateDefaultTier(e.target.textContent)"
-      @keydown.tab.shift.exact="(e) => focusPreviousFrom(e, defaultTier)"
-      @keydown.tab.exact="(e) => focusNextFrom(e, defaultTier)"
+      @keydown.tab.shift.exact="focusPreviousFrom($event, defaultTier)"
+      @keydown.tab.exact="focusNextFrom($event, defaultTier)"
       @keydown.enter.exact.prevent="viewAndSelectAudioEvent(event)"
       @keydown.right.exact="handleCursor($event, defaultTier)"
       @keydown.left.exact="handleCursor($event, defaultTier)"
@@ -84,7 +84,7 @@
         contenteditable="true"
         :id="`speaker_event_tier_${speaker}__${tier.id}`"
         :class="['secondary-free-text-tier-text', settings.darkMode === true && 'theme--dark']"
-        @keydown.tab.shift.exact="focusPreviousFrom(tier.id)"
+        @keydown.tab.shift.exact="focusPreviousFrom($event, tier.id)"
         @keydown.tab.exact="focusNextFrom($event, tier.id)"
         @blur="(e) => { updateEventTier(e.target.textContent, tier.id); focused = false }"
         @focus="focused = true"
@@ -98,7 +98,6 @@
 import contenteditableDirective from 'vue-contenteditable-directive'
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings, { tokenTypesPresets } from '../store/settings'
-import parseCsv from 'tiny-csv'
 
 import {
   clone,
