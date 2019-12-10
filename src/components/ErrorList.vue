@@ -126,7 +126,7 @@ export default class ErrorList extends Vue {
 
 .event-error
   cursor default
-  .selected
+  &.selected
     background #ccc
     color white
 
