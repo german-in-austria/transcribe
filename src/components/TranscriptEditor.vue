@@ -84,13 +84,19 @@ export default class TranscriptEditor extends Vue {
   }
 
   // tslint:disable-next-line:max-line-length
-  onChangeViewingEvent(e: LocalTranscriptEvent|null, opts: { animate: boolean, focusSpeaker: number|null, focusTier: string|null }) {
+  onChangeViewingEvent(e: LocalTranscriptEvent|null, opts: {
+    animate: boolean,
+    focusSpeaker: number|null,
+    focusTier: string|null,
+    focusRight: boolean
+  }) {
     if (e !== null && e !== undefined) {
-      this.doScrollToEvent(e, opts.animate, opts.focusSpeaker, opts.focusTier)
+      this.doScrollToEvent(e, opts.animate, opts.focusSpeaker, opts.focusTier, opts.focusRight)
     }
   }
 
-  doScrollToEvent(e: LocalTranscriptEvent, animate = true, focusSpeaker: number|null = null, focusTier: string|null) {
+  // tslint:disable-next-line:max-line-length
+  doScrollToEvent(e: LocalTranscriptEvent, animate = true, focusSpeaker: number|null = null, focusTier: string|null, focusRight: boolean) {
     // right in the middle
     const i = findEventIndexById(e.eventId) - Math.floor(defaultLimit / 2)
     this.currentIndex = Math.max(0, i)
@@ -111,11 +117,19 @@ export default class TranscriptEditor extends Vue {
           }
           this.setInnerLeft(el.offsetLeft * -1 + c.clientWidth / 2 - el.clientWidth / 2 - 25)
           if (focusSpeaker !== null) {
-            // (el.querySelector(`[data-speaker-id="${ focusSpeaker }"] [contenteditable]`) as any).focus()
-            // (el.querySelector(`[contenteditable]`) as any).focus()
-            (el.querySelector(
-              `#speaker_event_tier_${focusSpeaker}__${focusTier || eventStore.metadata.defaultTier}`
-            ) as any).focus()
+            // tslint:disable-next-line:max-line-length
+            const speakerEvent = el.querySelector(`#speaker_event_tier_${focusSpeaker}__${focusTier || eventStore.metadata.defaultTier}`) as HTMLElement
+            speakerEvent.focus()
+            if (focusRight === true) {
+              const range = document.createRange()
+              range.selectNodeContents(speakerEvent)
+              range.collapse(false)
+              const sel = window.getSelection()
+              if (sel !== null) {
+                sel.removeAllRanges()
+                sel.addRange(range)
+              }
+            }
           }
         }
       })

@@ -198,7 +198,7 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   handleCursor(e: KeyboardEvent, tier: TokenTierType) {
     const s = getSelection()
-    const n = s ? s.focusNode : null
+    const n = s !== null ? s.focusNode : null
     if (e.currentTarget instanceof HTMLElement && s !== null && n !== null) {
       if (e.key === 'ArrowLeft' && s.anchorOffset === 0) {
         this.focusPreviousFrom(e, tier)
@@ -213,7 +213,12 @@ export default class SpeakerSegmentTranscript extends Vue {
     const i = findEventIndexById(this.event.eventId)
     scrollToTranscriptEvent(
       eventStore.events[i > 0 ? i - 1 : 0],
-      { animate: true, focusSpeaker: this.speaker, focusTier: tier }
+      {
+        animate: true,
+        focusSpeaker: this.speaker,
+        focusTier: tier,
+        focusRight: true
+      }
     )
   }
 
@@ -223,7 +228,7 @@ export default class SpeakerSegmentTranscript extends Vue {
     const i = findEventIndexById(this.event.eventId)
     scrollToTranscriptEvent(
       eventStore.events[i > -1 ? i + 1 : 0],
-      { animate: true, focusSpeaker: this.speaker, focusTier: tier }
+      { animate: true, focusSpeaker: this.speaker, focusTier: tier, focusRight: false }
     )
     // }
   }

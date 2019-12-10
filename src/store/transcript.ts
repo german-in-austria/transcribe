@@ -242,13 +242,19 @@ export function scrollToAudioEvent(e: LocalTranscriptEvent) {
 }
 
 export function scrollToTranscriptEvent(
-  e: LocalTranscriptEvent, opts?: { animate: boolean, focusSpeaker: number|null, focusTier: string|null }
+  e: LocalTranscriptEvent, opts?: {
+    animate: boolean,
+    focusSpeaker: number|null,
+    focusTier: string|null,
+    focusRight: boolean
+  }
 ) {
   eventStore.userState.viewingTranscriptEvent = e
   eventBus.$emit('scrollToTranscriptEvent', e, {
     animate: true,
     focusSpeaker: null,
     focusTier: eventStore.metadata.defaultTier,
+    focusRight: false,
     ...opts
   })
 }

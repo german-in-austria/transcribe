@@ -303,7 +303,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
           scrollToTranscriptEvent(es[0], {
             focusSpeaker: speaker !== null ? Number(speaker) : null,
             animate: false,
-            focusTier: null
+            focusTier: null,
+            focusRight: false
           })
           scrollToAudioEvent(es[0])
           selectEvent(es[0])
@@ -332,7 +333,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
           scrollToTranscriptEvent(es[0], {
             focusSpeaker: speaker !== null ? Number(speaker) : null,
             animate: false,
-            focusTier: null
+            focusTier: null,
+            focusRight: false
           })
           scrollToAudioEvent(es[0])
           selectEvent(es[0])
