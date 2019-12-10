@@ -56,16 +56,18 @@ export interface LocalTranscriptSpeakerEventTiers {
   [tierId: string]: LocalTranscriptSpeakerEventTier
 }
 
+export interface LocalTranscriptSpeakerEvent {
+  speakerEventId: number
+  tokens: LocalTranscriptToken[]
+  speakerEventTiers: LocalTranscriptSpeakerEventTiers
+}
+
 export interface LocalTranscriptEvent {
   eventId: number
   startTime: number
   endTime: number,
   speakerEvents: {
-    [speakerId: string]: {
-      speakerEventId: number
-      tokens: LocalTranscriptToken[]
-      speakerEventTiers: LocalTranscriptSpeakerEventTiers
-    }
+    [speakerId: string]: LocalTranscriptSpeakerEvent
   }
 }
 
@@ -388,6 +390,15 @@ export function updateSpeakerEvents(
   }
 }
 
+export function hasEventTiers(se: LocalTranscriptSpeakerEvent): boolean {
+  // tslint:disable-next-line:max-line-length
+  return !_.isEmpty(se.speakerEventTiers) && _.some(se.speakerEventTiers, (set) => set.text !== undefined && set.text.trim() !== '' )
+}
+
+export function hasTokens(se: LocalTranscriptSpeakerEvent): boolean {
+  return se.tokens.length > 0 && se.tokens[0].tiers[eventStore.metadata.defaultTier].text.trim() !== ''
+}
+
 export function updateSpeakerEvent(
   event: LocalTranscriptEvent,
   speakerId: number
@@ -396,7 +407,8 @@ export function updateSpeakerEvent(
   const eventIndex = findEventIndexById(event.eventId)
   const oldEvent = eventStore.events[eventIndex]
   const isNew = oldEvent.speakerEvents[speakerId] === undefined
-  const deletedSpeakerId = tokens.length === 0 ? speakerId : undefined
+  // tslint:disable-next-line:max-line-length
+  const deletedSpeakerId = !hasTokens(event.speakerEvents[speakerId]) && !hasEventTiers(event.speakerEvents[speakerId]) ? speakerId : undefined
   const tokenCountDifference = isNew ? tokens.length : tokens.length - oldEvent.speakerEvents[speakerId].tokens.length
   const speakerEvents = _({
     // merge the new speaker
@@ -593,8 +605,7 @@ export function insertEvent(e: LocalTranscriptEvent): HistoryEventAction {
   }
 }
 
-export function appendEmptyEventAfter(eIds: number[]): HistoryEventAction|undefined {
-  const e = _(sortEvents(getEventsByIds(eIds))).last()
+export function appendEmptyEventAfter(e: LocalTranscriptEvent|undefined): HistoryEventAction|undefined {
   // an event is selected
   if (e !== undefined) {
     const next = findNextEventAt(e.endTime)
@@ -609,6 +620,23 @@ export function appendEmptyEventAfter(eIds: number[]): HistoryEventAction|undefi
       }
     } else {
       return addEvent(e.endTime, 2)
+    }
+  }
+}
+
+// see above
+export function prependEmptyEventBefore(e: LocalTranscriptEvent|undefined): HistoryEventAction|undefined {
+  if (e !== undefined) {
+    const prev = findPreviousEventAt(e.endTime)
+    console.log({ prev })
+    if (prev !== undefined) {
+      if (isEventDockedToEvent(prev, e)) {
+        return undefined
+      } else {
+        return addEvent(Math.max(prev.endTime, e.startTime - 2), Math.min(2, e.startTime - prev.endTime))
+      }
+    } else {
+      return addEvent(Math.max(0, e.startTime - 2), Math.min(e.startTime, 2))
     }
   }
 }
@@ -778,10 +806,11 @@ export function splitEventAtChar(
   if (i !== -1) {
     const e = eventStore.events[i]
     const before = clone(e)
-    // selection is collapsed: split into two
-    if (left === right && left !== 0) {
-      const tokens = e.speakerEvents[speakerId].tokens
-      const segmentCharacters = getTextFromTokens(tokens, eventStore.metadata.defaultTier).length
+    const tokens = e.speakerEvents[speakerId] !== undefined ? e.speakerEvents[speakerId].tokens : []
+    const segmentCharacters = getTextFromTokens(tokens, eventStore.metadata.defaultTier).length
+    // selection is collapsed and not at beginning or end: split into two
+    console.log({right, segmentCharacters})
+    if (left === right && left !== 0 && right !== segmentCharacters) {
       const splitFactor = left / segmentCharacters
       const splitTime = splitFactor * (e.endTime - e.startTime)
       const newEventId = makeEventId()
@@ -1041,9 +1070,10 @@ export function isMostRecentSelection(id: number) {
   return _.last(eventStore.selectedEventIds) === id
 }
 
-export function selectNextEvent(increase: 1|-1 = 1): LocalTranscriptEvent|undefined {
-  if (eventStore.selectedEventIds.length > 0) {
-    const i = findEventIndexById(eventStore.selectedEventIds[0])
+export function selectNextEvent(increase: 1|-1 = 1, event?: LocalTranscriptEvent): LocalTranscriptEvent|undefined {
+  const id = event ? event.eventId : eventStore.selectedEventIds[0]
+  if (id !== undefined) {
+    const i = findEventIndexById(id)
     const e = eventStore.events[i + increase]
     return selectEvent(e)[0]
   } else {

@@ -27,6 +27,8 @@
             :class="['secondary-token-tier-text', settings.darkMode === true && 'theme--dark']"
             :value="token.tiers[tier.id] !== undefined ? token.tiers[tier.id].text : undefined"
             :id="`speaker_event_tier_${speaker}__${tier.id}`"
+            :data-speaker-id="speaker"
+            :data-event-id="event.eventId"
             @input="(e) => { debouncedUpdateTokenTier(e.target.textContent, tier.id, i) }"
             @blur="focused = false"
             @focus="focused = true" />
@@ -49,8 +51,8 @@
       :id="`speaker_event_tier_${speaker}__${defaultTier}`"
       :value="segmentText"
       :style="textStyle"
-      :data-event-id="event.eventId"
       :data-speaker-id="speaker"
+      :data-event-id="event.eventId"
       class="tokens-input segment-text"
     />
     <!-- <div
@@ -84,6 +86,8 @@
         contenteditable="true"
         :id="`speaker_event_tier_${speaker}__${tier.id}`"
         :class="['secondary-free-text-tier-text', settings.darkMode === true && 'theme--dark']"
+        :data-speaker-id="speaker"
+        :data-event-id="event.eventId"
         @keydown.tab.shift.exact="focusPreviousFrom($event, tier.id)"
         @keydown.tab.exact="focusNextFrom($event, tier.id)"
         @blur="(e) => { updateEventTier(e.target.textContent, tier.id); focused = false }"

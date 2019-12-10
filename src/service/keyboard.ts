@@ -1,11 +1,14 @@
 
 import _ from 'lodash'
 
-import { undoable, history } from '../store/history'
+import { undoable, history, undo } from '../store/history'
 import { platform } from '../util'
 import {
-  focusSelectedEventElement, isWaveformEventVisible
-} from '../service/events-dom'
+  focusSelectedEventElement,
+  isWaveformEventVisible,
+  getFocusedEvent,
+  getFocusedSpeaker
+} from './dom-methods'
 
 import {
   eventStore,
@@ -14,6 +17,7 @@ import {
   findEventAt,
   addEvent,
   appendEmptyEventAfter,
+  prependEmptyEventBefore,
   deleteSelectedEvents,
   selectEvents,
   deselectEvents,
@@ -29,7 +33,9 @@ import {
   moveEventEndTime,
   shiftCharsLeft,
   shiftCharsRight,
-  selectEvent
+  selectEvent,
+  LocalTranscriptEvent,
+  findNextEventAt
 } from '../store/transcript'
 
 import { saveChangesToServer } from '../service/backend-server'
@@ -44,7 +50,7 @@ export interface KeyboardAction {
   modifier: KeyboardModifier[]
   // some shortcuts can’t work in text fields
   ignoreInTextField: boolean
-  disabled?: () => boolean
+  disabled: () => boolean
   key: KeyboardEvent['key']
   name: string
   description: string
@@ -133,6 +139,17 @@ function isInputElement(t: EventTarget|null): boolean {
   )
 }
 
+function normalizeKey(key: string) {
+  // it’s a mac thing
+  if (key === '±') {
+    return '+'
+  } else if (key === '–') {
+    return '-'
+  } else {
+    return key
+  }
+}
+
 function keyboardEventHasModifier(e: KeyboardEvent, m: KeyboardModifier): boolean {
   return (
     (
@@ -153,7 +170,7 @@ export async function handleGlobalShortcut(e: KeyboardEvent) {
       // the shortcut is allowed in text fields OR we’re not in a text field.
       (sc.ignoreInTextField === false || !isInputElement(e.target)) &&
       // the required key was pressed
-      (e.key.toLowerCase() === sc.key.toLowerCase()) &&
+      (normalizeKey(e.key.toLowerCase()) === sc.key.toLowerCase()) &&
       // check modifiers:
       (
         // no modifiers are required and none are present
@@ -210,6 +227,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Split Event At Character',
     description: 'Split an Event at the Text Cursor position',
     icon: 'mdi-arrow-split-vertical',
+    disabled: () => false,
     action: async (ev) => {
       const s = document.getSelection()
       const e = ev.target
@@ -231,6 +249,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Shift Characters Right',
     description: 'Shift characters to the next event',
     icon: 'mdi-format-letter-starts-with',
+    disabled: () => false,
     action: async (ev) => {
       ev.preventDefault()
       const s = document.getSelection()
@@ -251,6 +270,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Shift Characters Left',
     description: 'Shift characters to the previous event',
     icon: 'mdi-format-letter-ends-with',
+    disabled: () => false,
     action: (ev) => {
       ev.preventDefault()
       const s = document.getSelection()
@@ -270,15 +290,21 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     modifier: [ 'alt' ],
     key: '+',
     description: 'Append an event after the currently selected event.',
-    disabled: () => eventStore.selectedEventIds.length === 0,
     icon: 'message',
     name: 'Append Event',
-    action: () => {
-      if (eventStore.selectedEventIds.length > 0) {
-        const newEs = undoable(appendEmptyEventAfter(eventStore.selectedEventIds))
-        const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent() ])
+    disabled: () => false,
+    action: async () => {
+      const event = getFocusedEvent() || getSelectedEvent()
+      const speaker = getFocusedSpeaker()
+      if (event !== undefined) {
+        const newEs = undoable(appendEmptyEventAfter(event))
+        const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent(1, event) ])
         if (es.length > 0 && es[0] !== undefined) {
-          scrollToTranscriptEvent(es[0])
+          scrollToTranscriptEvent(es[0], {
+            focusSpeaker: speaker !== null ? Number(speaker) : null,
+            animate: false,
+            focusTier: null
+          })
           scrollToAudioEvent(es[0])
           selectEvent(es[0])
           if (settings.playEventOnAppend) {
@@ -286,7 +312,36 @@ export const keyboardShortcuts: KeyboardShortcuts = {
           }
         }
       }
-    },
+    }
+  },
+  prependEvent: {
+    ignoreInTextField: false,
+    modifier: [ 'alt' ],
+    key: '-',
+    description: 'Prepend an event before the currently selected event.',
+    icon: '',
+    name: 'Prepend Event',
+    disabled: () => false,
+    action: async () => {
+      const event = getFocusedEvent() || getSelectedEvent()
+      const speaker = getFocusedSpeaker()
+      if (event !== undefined) {
+        const newEs = undoable(prependEmptyEventBefore(event))
+        const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent(-1, event) ])
+        if (es.length > 0 && es[0] !== undefined) {
+          scrollToTranscriptEvent(es[0], {
+            focusSpeaker: speaker !== null ? Number(speaker) : null,
+            animate: false,
+            focusTier: null
+          })
+          scrollToAudioEvent(es[0])
+          selectEvent(es[0])
+          if (settings.playEventOnAppend) {
+            playEvents(es)
+          }
+        }
+      }
+    }
   },
   deleteEvents: {
     ignoreInTextField: true,
@@ -386,6 +441,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Search',
     description: 'Focus the Search Field',
     icon: 'mdi-magnify',
+    disabled: () => false,
     action: () => {
       eventBus.$emit('focusSearch')
     }
@@ -401,7 +457,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     action: async () => {
       const e = selectPreviousEvent()
       if (e !== undefined) {
-        focusSelectedEventElement(e)
+        focusSelectedEventElement()
       }
     }
   },
@@ -416,7 +472,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     action: async () => {
       const e = selectNextEvent()
       if (e !== undefined) {
-        focusSelectedEventElement(e)
+        focusSelectedEventElement()
       }
     }
   },
@@ -458,6 +514,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Select All',
     description: 'Selects all Events',
     icon: null,
+    disabled: () => false,
     action: () => {
       eventStore.selectedEventIds = eventStore.events.map(e => e.eventId)
     }

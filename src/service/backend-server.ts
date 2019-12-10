@@ -766,7 +766,6 @@ function appendTranscriptEventChunk(a: LocalTranscriptEvent[], b: LocalTranscrip
           ...firstOfNext.speakerEvents
         }
       }
-      console.log('do the merge', lastOfPrevious, firstOfNext, mergedEvent)
       // replace the lastOfPrevious & firstOfNext with the merged event
       return _.initial(a).concat(mergedEvent).concat(_.tail(b))
     } else {

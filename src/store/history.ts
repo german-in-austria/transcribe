@@ -14,7 +14,7 @@ import {
 
 import {
   isWaveformEventVisible
-} from '../service/events-dom'
+} from '../service/dom-methods'
 
 export interface HistoryEventAction {
   id: string
