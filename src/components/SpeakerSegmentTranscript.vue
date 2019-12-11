@@ -29,6 +29,7 @@
             :id="`speaker_event_tier_${speaker}__${tier.id}`"
             :data-speaker-id="speaker"
             :data-event-id="event.eventId"
+            @keydown.enter.exact.prevent="viewAndSelectAudioEvent(event)"
             @input="(e) => { debouncedUpdateTokenTier(e.target.textContent, tier.id, i) }"
             @blur="focused = false"
             @focus="focused = true" />
@@ -89,6 +90,7 @@
         :data-speaker-id="speaker"
         :data-event-id="event.eventId"
         @keydown.tab.shift.exact="focusPreviousFrom($event, tier.id)"
+        @keydown.enter.exact.prevent="viewAndSelectAudioEvent(event)"
         @keydown.tab.exact="focusNextFrom($event, tier.id)"
         @blur="(e) => { updateEventTier(e.target.textContent, tier.id); focused = false }"
         @focus="focused = true"

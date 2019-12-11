@@ -37,6 +37,7 @@ import settings from '../store/settings'
 import * as _ from 'lodash'
 import EventBus from '../service/event-bus'
 // tslint:disable-next-line:max-line-length
+
 import {
   eventStore,
   LocalTranscriptEvent,
@@ -275,7 +276,6 @@ export default class TranscriptEditor extends Vue {
     const el = (e.target as HTMLElement)
     const distance = el.scrollLeft
     el.scrollLeft = 0
-    // this.scrollTranscriptBy(distance)
     this.setInnerLeft(this.innerLeft - distance)
   }
 }
