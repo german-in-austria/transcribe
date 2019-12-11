@@ -8,7 +8,7 @@
         <div style="opacity: .7; font-size: small">{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
       </v-flex>
       <v-flex xs4 class="text-xs-right">
-        <search-simple style="display: inline-block" />
+        <!-- <search-simple style="display: inline-block" /> -->
         <div style="display: inline-block">
           <v-tooltip transition="none" bottom>
             <span>Settings</span>
