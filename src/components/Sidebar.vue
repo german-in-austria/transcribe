@@ -36,11 +36,11 @@
           <error-list :errors="errors"/>
         </v-window-item>
         <v-window-item class="sidebar-scrollable">
+          <search />
+        </v-window-item>
+        <v-window-item class="sidebar-scrollable">
           <bookmarks />
         </v-window-item>
-        <!-- <v-window-item class="sidebar-scrollable">
-          <search />
-        </v-window-item> -->
       </v-window>
     </v-flex>
     <v-flex class="sidebar-picker text-xs-center pt-2">
@@ -60,11 +60,11 @@
             </v-badge>
           </v-btn>
           <v-btn icon @click="clickTab(3)" class="mb-2">
-            <v-icon :color="activeTab === 3 ? 'blue' : ''">bookmark_border</v-icon>
+            <v-icon :color="activeTab === 3 ? 'blue' : ''">mdi-magnify</v-icon>
           </v-btn>
-          <!-- <v-btn icon @click="clickTab(4)" class="mb-2">
-            <v-icon :color="activeTab === 4 ? 'blue' : ''">mdi-magnify</v-icon>
-          </v-btn> -->
+          <v-btn icon @click="clickTab(4)" class="mb-2">
+            <v-icon :color="activeTab === 4 ? 'blue' : ''">bookmark_border</v-icon>
+          </v-btn>
         </v-flex>
         <v-flex xs1>
           <v-spacer />
@@ -113,14 +113,14 @@ import { getErrors, ErrorEvent } from '../service/errors'
 import { history } from '../store/history'
 import { keyboardShortcuts, displayKeyboardAction } from '../service/keyboard'
 import settings from '../store/settings'
-// import search from './Search.vue'
+import search from './Search.vue'
 
 @Component({
   components: {
     editHistory,
     errorList,
-    bookmarks
-    // search
+    bookmarks,
+    search
   }
 })
 export default class Sidebar extends Vue {

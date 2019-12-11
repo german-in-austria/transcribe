@@ -1,9 +1,9 @@
 <template>
-  <v-list>
-    <v-subheader>
-      <small>Search & Replace</small>
-    </v-subheader>
-    <v-list-tile>
+  <v-layout fill-height column>
+    <v-flex shrink class="pl-3 pr-3">
+      <v-subheader class="pa-0">
+        <small>Search & Replace</small>
+      </v-subheader>
       <input
         v-rt-ipa="true"
         type="text"
@@ -17,76 +17,38 @@
         @input="(e) => handleSearch(e.target.value)"
         @focus="onFocus"
         @blur="onBlur"
-        placeholder="Search…"
-      />
-    </v-list-tile>
-    <RecycleScroller
-      class="scroller"
-      :items="searchResults"
-      key-field="eventId"
-      :item-size="40">
-      <template v-slot="{ item }">
-        <v-list-tile @click="showEventIfExists(item.event)">
-          <!-- <v-list-tile-avatar>
-            <v-icon v-if="item.error_type === 'time_overlap'">mdi-checkbox-multiple-blank-outline</v-icon>
-            <v-icon v-if="item.error_type === 'unknown_token'">mdi-help-rhombus-outline</v-icon>
-          </v-list-tile-avatar> -->
-          <v-list-tile-content>
-            <div class="inner" :key="i" v-for="(se, i) in item.event.speakerEvents">
-              {{ i }}: {{ se.tokens.map(t => t.tiers[defaultTier].text).join(' ') }}
-            </div>
-            <v-list-tile-sub-title class="subtitle">{{ toTime(item.event.startTime) }} - {{ toTime(item.event.endTime) }}</v-list-tile-sub-title>
-          </v-list-tile-content>
-        </v-list-tile>
-      </template>
-    </RecycleScroller>
-    <!-- <v-card tabindex="-1" class="context-menu blur-background">
-      <v-list class="context-menu-list" dense>
-        <v-list-tile v-if="useRegEx && !isValidRegex" disabled>
-          <v-list-tile-avatar>
-            <v-icon>warning</v-icon>
-          </v-list-tile-avatar>
-          <v-list-tile-title>
-            Invalid Expression
-          </v-list-tile-title>
-        </v-list-tile>
-        <v-list-tile v-else disabled>
-          <v-list-tile-avatar />
-          <v-list-tile-title v-if="selectedResultIndex !== null">
-            {{ selectedResultIndex }} of {{ eventStore.searchResults.length }} result(s)
-          </v-list-tile-title>
-          <v-list-tile-title v-else>
-            {{ eventStore.searchResults.length }} result(s)
-          </v-list-tile-title>
-        </v-list-tile>
-        <v-divider />
-        <v-list-tile @click.prevent.stop="useRegEx = !useRegEx">
-          <v-list-tile-avatar>
-            <v-icon v-if="useRegEx">check</v-icon>
-          </v-list-tile-avatar>
-          <v-list-tile-title>
-            Use RegEx
-          </v-list-tile-title>
-        </v-list-tile>
-        <v-list-tile @click.prevent.stop="caseSensitive = !caseSensitive">
-          <v-list-tile-avatar>
-            <v-icon v-if="caseSensitive">check</v-icon>
-          </v-list-tile-avatar>
-          <v-list-tile-title>
-            Case-Sensitive
-          </v-list-tile-title>
-        </v-list-tile>
-        <v-list-tile @click.prevent.stop="defaultTierOnly = !defaultTierOnly">
-          <v-list-tile-avatar>
-            <v-icon v-if="defaultTierOnly">check</v-icon>
-          </v-list-tile-avatar>
-          <v-list-tile-title>
-            Default Tier Only
-          </v-list-tile-title>
-        </v-list-tile>
-      </v-list>
-    </v-card> -->
-  </v-list>
+        placeholder="Search…"/>
+      <div style="line-height: 1.8em;" :class="['small pt-3 pl-1 pr-1 grey--text', !settings.darkMode && 'text--darken-2']">
+        <checkbox v-model="caseSensitive" label="Case Sensitive" />
+        <checkbox v-model="useRegEx" label="Use Regular Expression" />
+        <v-divider class="mt-3" />
+      </div>
+    </v-flex>
+    <v-list class="flex pb-0" style="flex: 1 0;" dense>
+      <RecycleScroller
+        class="scroller"
+        :items="searchResults"
+        key-field="resultId"
+        :item-size="40">
+        <template v-slot="{ item }">
+          <v-list-tile @click="showEventIfExists(item.event)">
+            <v-list-tile-content>
+              <v-list-tile-sub-title class="subtitle">{{ toTime(item.event.startTime) }} - {{ toTime(item.event.endTime) }}</v-list-tile-sub-title>
+              <highlight-range :text="item.text" :start="item.offset" :end="item.offsetEnd" :truncate="42" />
+            </v-list-tile-content>
+          </v-list-tile>
+        </template>
+      </RecycleScroller>
+    </v-list>
+    <v-flex class="pl-3 pr-3" shrink>
+      <v-divider />
+      <div :class="['small grey--text text-xs-center mb-3 mt-3', !settings.darkMode && 'text--darken-2' ]">
+        <span>
+          {{ searchResults.length }} results in {{ searchResultEventCounter }} events
+        </span>
+      </div>
+    </v-flex>
+  </v-layout>
 </template>
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
@@ -94,6 +56,8 @@ import * as _ from 'lodash'
 import eventBus from '../service/event-bus'
 import settings from '../store/settings'
 import { RecycleScroller } from 'vue-virtual-scroller'
+import HighlightRange from './helper/HighlightRange.vue'
+import Checkbox from './helper/Checkbox.vue'
 
 import {
   findNextEventAt,
@@ -106,11 +70,16 @@ import {
   selectEvent,
   toTime,
   LocalTranscriptToken,
-  selectSearchResult
+  selectSearchResult,
+  TokenTierType,
+  LocalTranscriptTier
 } from '../store/transcript'
 
 interface SearchResult {
-  index: number
+  resultId: number
+  offset: number
+  offsetEnd: number
+  text: string
   speakerId: string
   tierId: string
   event: LocalTranscriptEvent
@@ -120,7 +89,9 @@ import * as history from '../store/history'
 
 @Component({
   components: {
-    RecycleScroller
+    RecycleScroller,
+    HighlightRange,
+    Checkbox
   }
 })
 export default class Search extends Vue {
@@ -135,6 +106,7 @@ export default class Search extends Vue {
   useRegEx = false
   defaultTierOnly = false
   searchTerm = ''
+  searchResultEventCounter = 0
   searchResults: SearchResult[] = []
 
   mounted() {
@@ -200,65 +172,92 @@ export default class Search extends Vue {
 
   searchEvents(
     term: string,
-    es: LocalTranscriptEvent,
+    es: LocalTranscriptEvent[],
     speakerIds: string[],
-    tierIds: number[]
+    tiers: LocalTranscriptTier[]
   ): SearchResult[] {
-    const r = eventStore.events.reduce((res, e, i) => {
-      let index: number|null = null
-      let speakers: string[] = []
+    this.searchResultEventCounter = 0
+    const termLength = term.length
+    let resultId = 0
+    let regex: RegExp|null = null
+    try {
+      regex = new RegExp(term)
+    } catch (e) {
+      // it failed.
+      return []
+    }
+    const r = es.reduce((res, e, i) => {
+      let index = -1
+      let offsetEnd = -1
       // tslint:disable-next-line:forin
-      for (const speakerId in e.speakerEvents) {
-        // const allTierTexts = e.speakerEvents[speakerId].tokens.map(t => t.)
-        // tslint:disable-next-line:forin
-        for (const tier of eventStore.metadata.tiers) {
-          if (tier.type === 'token') {
-            const s = e.speakerEvents[speakerId].tokens.map(t => t.tiers[tier.id].text).join(' ')
-            index = s.indexOf(term)
-            if (index > -1) {
-              speakers.push(speakerId)
-            }
-          } else if (tier.type === 'freeText') {
-            const s = (e.speakerEvents[speakerId].speakerEventTiers[tier.id] || { text: '' }).text
-            index = s.indexOf(term)
-            if (index > -1) {
-              speakers.push(speakerId)
+      for (const speakerId of speakerIds) {
+        if (e.speakerEvents[speakerId] !== undefined) {
+          for (const tier of tiers) {
+            // search event tiers
+            if (e.speakerEvents[speakerId].speakerEventTiers[tier.id] !== undefined) {
+              const s = (e.speakerEvents[speakerId].speakerEventTiers[tier.id] || { text: '' }).text
+              if (this.useRegEx && this.isValidRegex && regex !== null) {
+                const match = regex.exec(s)
+                if (match !== null) {
+                  index = match.index
+                  offsetEnd = index + match[0].length
+                }
+              } else {
+                index = s.indexOf(term)
+                offsetEnd = index + termLength
+              }
+              if (index > -1) {
+                resultId = resultId + 1
+                res.push({
+                  resultId,
+                  offset: index,
+                  offsetEnd,
+                  text: s,
+                  speakerId,
+                  tierId: tier.id,
+                  event: e
+                })
+              }
+            } else if (tier.type === 'token') {
+              const s = e.speakerEvents[speakerId].tokens.map(t => t.tiers[tier.id].text).join(' ')
+              if (this.useRegEx && this.isValidRegex && regex !== null) {
+                const match = regex.exec(s)
+                if (match !== null) {
+                  index = match.index
+                  offsetEnd = index + match[0].length
+                }
+              } else {
+                index = s.indexOf(term)
+                offsetEnd = index + termLength
+              }
+              resultId = resultId + 1
+              if (index > -1) {
+                res.push({
+                  resultId,
+                  offset: index,
+                  offsetEnd,
+                  text: s,
+                  speakerId,
+                  tierId: tier.id,
+                  event: e
+                })
+              }
             }
           }
         }
       }
-      if (index > -1) {
-        res.push({
-          index,
-          speakerId: speakers[0]
-        })
-      }
-      const ses = _(e.speakerEvents).filter((se, speakerId) => {
-        let s =
-          se.tokens.map(this.getDefaultOrAllTokenText).join(' ')
-          + '|||'
-          + _(se.speakerEventTiers).map(t => t.text).join(' ')
-        if (!this.caseSensitive) {
-          s = s.toLowerCase()
-        }
-        if (this.useRegEx && this.isValidRegex && regex !== null) {
-          return regex.test(s)
-        } else {
-          index = s.indexOf(search)
-          return index > -1
-        }
-      }).value()
-      if (index !== null) {
-        res.push({
-          index,
-          speakerId: 1,
-          tierId: '',
-          event: e
-        })
+      if (index !== -1) {
+        this.searchResultEventCounter = this.searchResultEventCounter + 1
       }
       return res
     }, [] as SearchResult[])
+    console.log({r})
     return r
+  }
+
+  @Watch('eventStore.events')
+  onUpdateEvents(newEvents: LocalTranscriptEvent[]) {
+    this.handleSearch(this.searchTerm)
   }
 
   handleSearch(term: string) {
@@ -273,49 +272,13 @@ export default class Search extends Vue {
       } catch (e) {
         // it failed.
       }
-      requestAnimationFrame(() => {
-        const r = eventStore.events.reduce((res, e, i) => {
-          let index: number|null = null
-          // tslint:disable-next-line:forin
-          for (const speakerId in e.speakerEvents) {
-            // const allTierTexts = e.speakerEvents[speakerId].tokens.map(t => t.)
-            // tslint:disable-next-line:forin
-            for (const tier of eventStore.metadata.tiers) {
-              if (tier.type === 'token') {
-                const s = e.speakerEvents[speakerId].tokens.map(t => t.tiers[tier.id].text).join(' ')
-                index = s.indexOf(search)
-              } else if (tier.type === 'freeText') {
-                const s = (e.speakerEvents[speakerId].speakerEventTiers[tier.id] || { text: '' }).text
-                index = s.indexOf(search)
-              }
-            }
-          }
-          const ses = _(e.speakerEvents).filter((se, speakerId) => {
-            let s =
-              se.tokens.map(this.getDefaultOrAllTokenText).join(' ')
-              + '|||'
-              + _(se.speakerEventTiers).map(t => t.text).join(' ')
-            if (!this.caseSensitive) {
-              s = s.toLowerCase()
-            }
-            if (this.useRegEx && this.isValidRegex && regex !== null) {
-              return regex.test(s)
-            } else {
-              index = s.indexOf(search)
-              return index > -1
-            }
-          }).value()
-          if (index !== null) {
-            res.push({
-              index,
-              speakerId: 1,
-              tierId: '',
-              event: e
-            })
-          }
-          return res
-        }, [] as SearchResult[])
-        this.searchResults = r
+      window.requestIdleCallback(() => {
+        this.searchResults = this.searchEvents(
+          term,
+          eventStore.events,
+          _(eventStore.metadata.speakers).map((s, k) => k).value(),
+          eventStore.metadata.tiers
+        )
       })
     }
   }
@@ -367,7 +330,7 @@ export default class Search extends Vue {
 @import '../../node_modules/vue-virtual-scroller/dist/vue-virtual-scroller.css';
 
 .scroller
-  height calc(100% - 40px)
+  height 100%
 
 .outer
   position relative
@@ -383,6 +346,9 @@ input
   outline 0
   &.theme--dark
     background rgba(255,255,255,.1)
+
+.subtitle
+  height 13px
 
 .context-menu
   top 100%
