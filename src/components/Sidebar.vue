@@ -1,7 +1,7 @@
 <template>
   <v-layout>
     <v-flex v-if="active" :style="{ borderRight: active ? '1px solid rgba(255,255,255,.3)' : '0' }">
-      <v-window class="window" v-model="activeTab" vertical>
+      <v-window class="window" v-model="settings.activeSidebarItem" vertical>
         <v-window-item class="sidebar-scrollable">
           <v-subheader>
             <small>Actions</small>
@@ -47,23 +47,23 @@
       <v-layout column fill-height justify-space-between>
         <v-flex>
           <v-btn icon @click="clickTab(0)" class="mb-2">
-            <v-icon :color="activeTab === 0 ? 'blue' : ''">edit</v-icon>
+            <v-icon :color="settings.activeSidebarItem === 0 ? 'blue' : ''">edit</v-icon>
           </v-btn>
           <v-btn icon @click="clickTab(1)" class="mb-2">
-            <v-icon :color="activeTab === 1 ? 'blue' : ''">history</v-icon>
+            <v-icon :color="settings.activeSidebarItem === 1 ? 'blue' : ''">history</v-icon>
           </v-btn>
           <v-btn icon @click="clickTab(2)" class="mb-2">
-            <v-badge :value="errors.length > 0" :color="activeTab === 2 ? 'blue' : 'grey'">
-              <v-icon :color="activeTab === 2 ? 'blue' : ''">error_outline</v-icon><span slot="badge">
+            <v-badge :value="errors.length > 0" :color="settings.activeSidebarItem === 2 ? 'blue' : 'grey'">
+              <v-icon :color="settings.activeSidebarItem === 2 ? 'blue' : ''">error_outline</v-icon><span slot="badge">
                 {{ errors.length < 100 ? errors.length : '99+' }}
               </span>
             </v-badge>
           </v-btn>
           <v-btn icon @click="clickTab(3)" class="mb-2">
-            <v-icon :color="activeTab === 3 ? 'blue' : ''">mdi-magnify</v-icon>
+            <v-icon :color="settings.activeSidebarItem === 3 ? 'blue' : ''">mdi-magnify</v-icon>
           </v-btn>
           <v-btn icon @click="clickTab(4)" class="mb-2">
-            <v-icon :color="activeTab === 4 ? 'blue' : ''">bookmark_border</v-icon>
+            <v-icon :color="settings.activeSidebarItem === 4 ? 'blue' : ''">bookmark_border</v-icon>
           </v-btn>
         </v-flex>
         <v-flex xs1>
@@ -75,19 +75,6 @@
       </v-layout>
     </v-flex>
   </v-layout>
-  <!-- <v-tabs v-if="active" hide-slider class="sidebar layout fill-height column" height="64" grow v-model="activeTab">
-    <v-tabs-items>
-      <v-tab-item>
-      </v-tab-item>
-      <v-tab-item>
-      </v-tab-item>
-      <v-tab-item>
-      </v-tab-item>
-      <v-tab-item>
-        
-      </v-tab-item>
-    </v-tabs-items>
-  </v-tabs> -->
 </template>
 <script lang="ts">
 
@@ -130,7 +117,6 @@ export default class Sidebar extends Vue {
   settings = settings
   errors: ErrorEvent[] = []
   history = history
-  activeTab = 0
   eventStore = eventStore
   stuckAtBottom = false
   toTime = toTime
@@ -139,10 +125,10 @@ export default class Sidebar extends Vue {
   debouncedGetErrors = _.debounce(this.getErrors, 500)
 
   clickTab(i: number) {
-    if (i === this.activeTab && settings.showDrawer === true) {
+    if (i === settings.activeSidebarItem && settings.showDrawer === true) {
       settings.showDrawer = false
     } else {
-      this.activeTab = i
+      settings.activeSidebarItem = i
       if (settings.showDrawer === false) {
         settings.showDrawer = true
       }

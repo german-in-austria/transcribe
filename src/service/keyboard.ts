@@ -3,6 +3,7 @@ import _ from 'lodash'
 
 import { undoable, history, undo } from '../store/history'
 import { platform } from '../util'
+import Vue from 'vue'
 import {
   focusSelectedEventElement,
   isWaveformEventVisible,
@@ -444,7 +445,10 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     description: 'Focus the Search Field',
     icon: 'mdi-magnify',
     disabled: () => false,
-    action: () => {
+    action: async () => {
+      settings.showDrawer = true
+      settings.activeSidebarItem = 3
+      await Vue.nextTick()
       eventBus.$emit('focusSearch')
     }
   },

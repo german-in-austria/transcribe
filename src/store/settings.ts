@@ -35,6 +35,7 @@ export interface TokenTypesPresetGroup extends TokenTypePresetBase {
 // interface JsonArray extends Array<AnyJson> {}
 
 export interface Settings {
+  activeSidebarItem: number
   showSettings: boolean
   contrast: number
   darkMode: boolean
@@ -361,6 +362,7 @@ export function setIsDarkMode(b: boolean) {
 }
 
 const settings: Settings = {
+  activeSidebarItem: 0,
   showSettings: false,
   contrast: 1,
   darkMode: getIsDarkMode(),
