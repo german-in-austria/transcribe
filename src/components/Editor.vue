@@ -165,9 +165,9 @@
             class="error-overview"
             :style="{ left: `${ error.startTime / eventStore.audioElement.duration * 100}%` }" />
         </div>
-        <div class="search-overview-container">
+        <!-- <div class="search-overview-container">
           <search-results-inline />
-        </div>
+        </div> -->
       </div>
     </wave-form>
     <drop-file @update="loadAudioFromFile" class="fill-height" v-else>
@@ -186,8 +186,8 @@ import playerBar from './PlayerBar.vue'
 import waveForm from './Waveform.vue'
 import settingsView from './Settings.vue'
 import spectrogram from './Spectrogram.vue'
-import searchSimple from './SearchSimple.vue'
-import searchResultsInline from './SearchResultsInline.vue'
+// import searchSimple from './SearchSimple.vue'
+// import searchResultsInline from './SearchResultsInline.vue'
 import transcriptEditor from './TranscriptEditor.vue'
 import playHead from './PlayHead.vue'
 import dropFile from './DropFile.vue'
@@ -247,12 +247,13 @@ import eventBus from '../service/event-bus'
     settingsView,
     spectrogram,
     playHead,
-    searchSimple,
-    searchResultsInline,
+    // searchSimple,
+    // searchResultsInline,
     dropFile,
     playerBar
   }
 })
+
 export default class Editor extends Vue {
 
   errors: LocalTranscriptEvent[] = []

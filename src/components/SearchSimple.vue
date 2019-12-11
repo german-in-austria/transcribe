@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="outer">
+    <!-- <div class="outer">
       <input
         type="text"
         ref="input"
@@ -61,7 +61,7 @@
           </v-list-tile>
         </v-list>
       </v-card>
-    </div>
+    </div> -->
   </div>
 </template>
 <script lang="ts">
@@ -88,151 +88,147 @@ import * as history from '../store/history';
 @Component
 export default class Search extends Vue {
 
-  defaultTier = eventStore.metadata.defaultTier
-  settings = settings
-  focused = false
-  eventStore = eventStore
-  toTime = toTime
-  isMenuShown = false
-  caseSensitive = false
-  useRegEx = false
-  defaultTierOnly = false
+  // defaultTier = eventStore.metadata.defaultTier
+  // settings = settings
+  // focused = false
+  // eventStore = eventStore
+  // toTime = toTime
+  // isMenuShown = false
+  // caseSensitive = false
+  // useRegEx = false
+  // defaultTierOnly = false
 
-  mounted() {
-    eventBus.$on('focusSearch', () => {
-      (this.$refs.input as HTMLInputElement).focus();
-      (this.$refs.input as HTMLInputElement).select();
-    })
-  }
+  // mounted() {
+  // }
 
-  onFocus() {
-    this.focused = true
-    history.stopListening()
-  }
+  // onFocus() {
+  //   this.focused = true
+  //   history.stopListening()
+  // }
 
-  onBlur() {
-    this.focused = false
-    history.startListening()
-  }
+  // onBlur() {
+  //   this.focused = false
+  //   history.startListening()
+  // }
 
-  get searchSettings() {
-    return {
-      caseSensitive: this.caseSensitive,
-      useRegEx: this.useRegEx,
-      defaultTierOnly: this.defaultTierOnly
-    }
-  }
+  // get searchSettings() {
+  //   return {
+  //     caseSensitive: this.caseSensitive,
+  //     useRegEx: this.useRegEx,
+  //     defaultTierOnly: this.defaultTierOnly
+  //   }
+  // }
 
-  @Watch('searchSettings')
-  onUpdateSearchSettings() {
-    this.handleSearch(eventStore.searchTerm)
-  }
+  // @Watch('searchSettings')
+  // onUpdateSearchSettings() {
+  //   this.handleSearch(eventStore.searchTerm)
+  // }
 
-  get selectedResultIndex(): number|null {
-    if (eventStore.selectedEventIds.length !== 1) {
-      return null
-    } else {
-      const eId = eventStore.selectedEventIds[0]
-      const i = _(eventStore.searchResults).findIndex((e) => e.eventId === eId)
-      if (i > -1) {
-        return i + 1
-      } else {
-        return null
-      }
-    }
-  }
+  // get selectedResultIndex(): number|null {
+  //   if (eventStore.selectedEventIds.length !== 1) {
+  //     return null
+  //   } else {
+  //     const eId = eventStore.selectedEventIds[0]
+  //     const i = _(eventStore.searchResults).findIndex((e) => e.event.eventId === eId)
+  //     if (i > -1) {
+  //       return i + 1
+  //     } else {
+  //       return null
+  //     }
+  //   }
+  // }
 
-  showMenu() {
-    if (this.focused) {
-      this.isMenuShown = true
-    }
-  }
-  hideMenu() {
-    this.isMenuShown = false
-  }
+  // showMenu() {
+  //   if (this.focused) {
+  //     this.isMenuShown = true
+  //   }
+  // }
+  // hideMenu() {
+  //   this.isMenuShown = false
+  // }
 
-  getDefaultOrAllTokenText(t: LocalTranscriptToken) {
-    if (this.defaultTierOnly) {
-      return t.tiers[this.defaultTier].text
-    } else {
-      return _(t.tiers).map(tier => tier.text).value().join(' ')
-    }
-  }
+  // getDefaultOrAllTokenText(t: LocalTranscriptToken) {
+  //   if (this.defaultTierOnly) {
+  //     return t.tiers[this.defaultTier].text
+  //   } else {
+  //     return _(t.tiers).map(tier => tier.text).value().join(' ')
+  //   }
+  // }
 
-  handleSearch(term: string) {
-    eventStore.searchTerm = term
-    if (eventStore.searchTerm === '') {
-      this.eventStore.searchResults = []
-    } else {
-      const search = this.caseSensitive ? term : term.toLowerCase()
-      let regex: RegExp|null = null
-      try {
-        regex = new RegExp(search)
-      } catch (e) {
-        // it failed.
-      }
-      requestAnimationFrame(() => {
-        const r = eventStore.events.filter((v) => {
-          return _(v.speakerEvents).filter((se) => {
-            let s =
-              se.tokens.map(this.getDefaultOrAllTokenText).join(' ')
-              + '|||'
-              + _(se.speakerEventTiers).map(t => t.text).join(' ')
-            if (!this.caseSensitive) {
-              s = s.toLowerCase()
-            }
-            if (this.useRegEx && this.isValidRegex && regex !== null) {
-              return regex.test(s)
-            } else {
-              return s.indexOf(search) > -1
-            }
-          }).value().length > 0
-        })
-        this.eventStore.searchResults = r
-      })
-    }
-  }
+  // handleSearch(term: string) {
+  //   eventStore.searchTerm = term
+  //   if (eventStore.searchTerm === '') {
+  //     this.eventStore.searchResults = []
+  //   } else {
+  //     const search = this.caseSensitive ? term : term.toLowerCase()
+  //     let regex: RegExp|null = null
+  //     try {
+  //       regex = new RegExp(search)
+  //     } catch (e) {
+  //       // it failed.
+  //     }
+  //     requestAnimationFrame(() => {
+  //       const r = eventStore.events.filter((v) => {
+  //         return _(v.speakerEvents).filter((se) => {
+  //           let s =
+  //             se.tokens.map(this.getDefaultOrAllTokenText).join(' ')
+  //             + '|||'
+  //             + _(se.speakerEventTiers).map(t => t.text).join(' ')
+  //           if (!this.caseSensitive) {
+  //             s = s.toLowerCase()
+  //           }
+  //           if (this.useRegEx && this.isValidRegex && regex !== null) {
+  //             return regex.test(s)
+  //           } else {
+  //             return s.indexOf(search) > -1
+  //           }
+  //         }).value().length > 0
+  //       })
+  //       this.eventStore.searchResults = r
+  //     })
+  //   }
+  // }
 
-  get isValidRegex() {
-    try {
-      const y = new RegExp(eventStore.searchTerm)
-      return true
-    } catch (e) {
-      return false
-    }
-  }
+  // get isValidRegex() {
+  //   try {
+  //     const y = new RegExp(eventStore.searchTerm)
+  //     return true
+  //   } catch (e) {
+  //     return false
+  //   }
+  // }
 
-  handleEsc() {
-    if (eventStore.searchTerm !== '') {
-      eventStore.searchTerm = ''
-      eventStore.searchResults = []
-    } else {
-      (this.$refs.input as any).blur()
-    }
-  }
-  goToResult(e: LocalTranscriptEvent|undefined) {
-    if (e !== undefined) {
-      selectSearchResult(e)
-    }
-  }
-  findNext() {
-    const selectedEvent = eventStore.events[findEventIndexById(eventStore.selectedEventIds[0])]
-    const e = findNextEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults)
-    if (e !== undefined) {
-      this.goToResult(e)
-    } else {
-      this.goToResult(_(eventStore.searchResults).first())
-    }
-  }
-  findPrevious() {
-    const selectedEvent = eventStore.events[findEventIndexById(eventStore.selectedEventIds[0])]
-    const e = findPreviousEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults)
-    if (e !== undefined) {
-      this.goToResult(e)
-    } else {
-      this.goToResult(_(eventStore.searchResults).last())
-    }
-  }
+  // handleEsc() {
+  //   if (eventStore.searchTerm !== '') {
+  //     eventStore.searchTerm = ''
+  //     eventStore.searchResults = []
+  //   } else {
+  //     (this.$refs.input as any).blur()
+  //   }
+  // }
+  // goToResult(e: LocalTranscriptEvent|undefined) {
+  //   if (e !== undefined) {
+  //     selectSearchResult(e)
+  //   }
+  // }
+  // findNext() {
+  //   const selectedEvent = eventStore.events[findEventIndexById(eventStore.selectedEventIds[0])]
+  //   const e = findNextEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults)
+  //   if (e !== undefined) {
+  //     this.goToResult(e)
+  //   } else {
+  //     this.goToResult(_(eventStore.searchResults).first())
+  //   }
+  // }
+  // findPrevious() {
+  //   const selectedEvent = eventStore.events[findEventIndexById(eventStore.selectedEventIds[0])]
+  //   const e = findPreviousEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults)
+  //   if (e !== undefined) {
+  //     this.goToResult(e)
+  //   } else {
+  //     this.goToResult(_(eventStore.searchResults).last())
+  //   }
+  // }
 }
 </script>
 <style lang="stylus" scoped>

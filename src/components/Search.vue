@@ -9,7 +9,7 @@
         type="text"
         ref="input"
         :class="[settings.darkMode && 'theme--dark']"
-        :value="searchTerm"
+        :value="eventStore.searchTerm"
         :style="{ color: useRegEx && !isValidRegex ? 'red' : undefined }"
         @keydown.esc.exact="handleEsc"
         @keydown.enter.exact.stop="findNext"
@@ -19,19 +19,23 @@
         @blur="onBlur"
         placeholder="Search…"/>
       <div style="line-height: 1.8em;" :class="['small pt-3 pl-1 pr-1 grey--text', !settings.darkMode && 'text--darken-2']">
-        <checkbox v-model="caseSensitive" label="Case Sensitive" />
+        <checkbox :disabled="useRegEx" :value="caseSensitive || useRegEx" @input="caseSensitive = $event" label="Case Sensitive" />
         <checkbox v-model="useRegEx" label="Use Regular Expression" />
         <v-divider class="mt-3" />
       </div>
     </v-flex>
-    <v-list class="flex pb-0" style="flex: 1 0;" dense>
+    <v-list class="flex pb-0" style="flex: 1 0; overflow: hidden;" dense>
       <RecycleScroller
         class="scroller"
-        :items="searchResults"
+        :items="eventStore.searchResults"
         key-field="resultId"
         :item-size="40">
         <template v-slot="{ item }">
-          <v-list-tile @click="showEventIfExists(item.event)">
+          <v-list-tile
+            @click="showEventIfExists(item.event)"
+            @dblclick="playEvent(item.event)"
+            :class="isEventSelected(item.event.eventId) && 'selected'"
+            >
             <v-list-tile-content>
               <v-list-tile-sub-title class="subtitle">{{ toTime(item.event.startTime) }} - {{ toTime(item.event.endTime) }}</v-list-tile-sub-title>
               <highlight-range :text="item.text" :start="item.offset" :end="item.offsetEnd" :truncate="42" />
@@ -44,7 +48,7 @@
       <v-divider />
       <div :class="['small grey--text text-xs-center mb-3 mt-3', !settings.darkMode && 'text--darken-2' ]">
         <span>
-          {{ searchResults.length }} results in {{ searchResultEventCounter }} events
+          {{ eventStore.searchResults.length }} results in {{ searchResultEventCounter }} events
         </span>
       </div>
     </v-flex>
@@ -63,6 +67,8 @@ import {
   findNextEventAt,
   findPreviousEventAt,
   findEventIndexById,
+  isEventSelected,
+  playEvent,
   eventStore,
   LocalTranscriptEvent,
   scrollToAudioEvent,
@@ -72,18 +78,10 @@ import {
   LocalTranscriptToken,
   selectSearchResult,
   TokenTierType,
-  LocalTranscriptTier
+  LocalTranscriptTier,
+  SearchResult,
+  getSelectedEvent
 } from '../store/transcript'
-
-interface SearchResult {
-  resultId: number
-  offset: number
-  offsetEnd: number
-  text: string
-  speakerId: string
-  tierId: string
-  event: LocalTranscriptEvent
-}
 
 import * as history from '../store/history'
 
@@ -105,9 +103,9 @@ export default class Search extends Vue {
   caseSensitive = false
   useRegEx = false
   defaultTierOnly = false
-  searchTerm = ''
   searchResultEventCounter = 0
-  searchResults: SearchResult[] = []
+  isEventSelected = isEventSelected
+  playEvent = playEvent
 
   mounted() {
     eventBus.$on('focusSearch', () => {
@@ -136,7 +134,7 @@ export default class Search extends Vue {
 
   @Watch('searchSettings')
   onUpdateSearchSettings() {
-    this.handleSearch(this.searchTerm)
+    this.handleSearch(eventStore.searchTerm)
   }
 
   showEventIfExists(e: LocalTranscriptEvent) {
@@ -153,7 +151,7 @@ export default class Search extends Vue {
       return null
     } else {
       const eId = eventStore.selectedEventIds[0]
-      const i = _(eventStore.searchResults).findIndex((e) => e.eventId === eId)
+      const i = _(eventStore.searchResults).findIndex((e) => e.event.eventId === eId)
       if (i > -1) {
         return i + 1
       } else {
@@ -192,16 +190,23 @@ export default class Search extends Vue {
       // tslint:disable-next-line:forin
       for (const speakerId of speakerIds) {
         if (e.speakerEvents[speakerId] !== undefined) {
+          // TODO: findMatch()
           for (const tier of tiers) {
             // search event tiers
             if (e.speakerEvents[speakerId].speakerEventTiers[tier.id] !== undefined) {
               const s = (e.speakerEvents[speakerId].speakerEventTiers[tier.id] || { text: '' }).text
+              // regex
               if (this.useRegEx && this.isValidRegex && regex !== null) {
                 const match = regex.exec(s)
                 if (match !== null) {
                   index = match.index
                   offsetEnd = index + match[0].length
                 }
+              // case insensitive
+              } else if (this.caseSensitive === false) {
+                index = s.toLocaleLowerCase().indexOf(term.toLocaleLowerCase())
+                offsetEnd = index + termLength
+              // normal
               } else {
                 index = s.indexOf(term)
                 offsetEnd = index + termLength
@@ -217,15 +222,23 @@ export default class Search extends Vue {
                   tierId: tier.id,
                   event: e
                 })
+                index = -1
               }
+            // search token tiers
             } else if (tier.type === 'token') {
               const s = e.speakerEvents[speakerId].tokens.map(t => t.tiers[tier.id].text).join(' ')
+              // regex
               if (this.useRegEx && this.isValidRegex && regex !== null) {
                 const match = regex.exec(s)
                 if (match !== null) {
                   index = match.index
                   offsetEnd = index + match[0].length
                 }
+              // case insensitive
+              } else if (this.caseSensitive === false) {
+                index = s.toLocaleLowerCase().indexOf(term.toLocaleLowerCase())
+                offsetEnd = index + termLength
+              // normal
               } else {
                 index = s.indexOf(term)
                 offsetEnd = index + termLength
@@ -241,6 +254,7 @@ export default class Search extends Vue {
                   tierId: tier.id,
                   event: e
                 })
+                index = -1
               }
             }
           }
@@ -257,13 +271,13 @@ export default class Search extends Vue {
 
   @Watch('eventStore.events')
   onUpdateEvents(newEvents: LocalTranscriptEvent[]) {
-    this.handleSearch(this.searchTerm)
+    this.handleSearch(eventStore.searchTerm)
   }
 
   handleSearch(term: string) {
-    this.searchTerm = term
-    if (this.searchTerm === '') {
-      this.searchResults = []
+    eventStore.searchTerm = term
+    if (eventStore.searchTerm === '') {
+      eventStore.searchResults = []
     } else {
       const search = this.caseSensitive ? term : term.toLowerCase()
       let regex: RegExp|null = null
@@ -273,7 +287,7 @@ export default class Search extends Vue {
         // it failed.
       }
       window.requestIdleCallback(() => {
-        this.searchResults = this.searchEvents(
+        eventStore.searchResults = this.searchEvents(
           term,
           eventStore.events,
           _(eventStore.metadata.speakers).map((s, k) => k).value(),
@@ -285,7 +299,7 @@ export default class Search extends Vue {
 
   get isValidRegex() {
     try {
-      const y = new RegExp(this.searchTerm)
+      const y = new RegExp(eventStore.searchTerm)
       return true
     } catch (e) {
       return false
@@ -293,34 +307,38 @@ export default class Search extends Vue {
   }
 
   handleEsc() {
-    if (this.searchTerm !== '') {
-      this.searchTerm = ''
-      this.searchResults = []
+    if (eventStore.searchTerm !== '') {
+      eventStore.searchTerm = ''
+      eventStore.searchResults = []
     } else {
       (this.$refs.input as any).blur()
     }
   }
-  goToResult(e: LocalTranscriptEvent|undefined) {
+  goToResult(e: LocalTranscriptEvent) {
     if (e !== undefined) {
-      selectSearchResult(e)
+      scrollToTranscriptEvent(e)
+      scrollToAudioEvent(e)
+      selectEvent(e)
     }
   }
   findNext() {
-    const selectedEvent = eventStore.events[findEventIndexById(eventStore.selectedEventIds[0])]
-    const e = findNextEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults)
+    // TODO:
+    const selectedEvent = getSelectedEvent()
+    const e = findNextEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults.map(r => r.event))
     if (e !== undefined) {
       this.goToResult(e)
-    } else {
-      this.goToResult(_(eventStore.searchResults).first())
+    } else if (eventStore.searchResults.length > 0) {
+      this.goToResult(eventStore.searchResults[0].event)
     }
   }
   findPrevious() {
-    const selectedEvent = eventStore.events[findEventIndexById(eventStore.selectedEventIds[0])]
-    const e = findPreviousEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults)
+    // TODO:
+    const selectedEvent = getSelectedEvent()
+    const e = findPreviousEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults.map(r => r.event))
     if (e !== undefined) {
       this.goToResult(e)
-    } else {
-      this.goToResult(_(eventStore.searchResults).last())
+    } else if (eventStore.searchResults.length > 0) {
+      this.goToResult(_(eventStore.searchResults).last()!.event)
     }
   }
 }
@@ -349,6 +367,9 @@ input
 
 .subtitle
   height 13px
+
+.selected
+  background rgba(0,0,0,.05)
 
 .context-menu
   top 100%

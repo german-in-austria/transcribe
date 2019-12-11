@@ -75,6 +75,16 @@ export interface LocalTranscriptEditEvent extends LocalTranscriptEvent {
   editType: 'UPDATE'|'DELETE'|'ADD'
 }
 
+export interface SearchResult {
+  resultId: number
+  offset: number
+  offsetEnd: number
+  text: string
+  speakerId: string
+  tierId: string
+  event: LocalTranscriptEvent
+}
+
 export interface LocalTranscriptTier {
   type: 'token'|'freeText'
   name: string
@@ -87,8 +97,8 @@ export type LocalTranscript = LocalTranscriptEvent[]
 export const eventStore = {
   events: [] as LocalTranscriptEvent[],
   selectedEventIds: [] as number[],
-  selectedSearchResult: null as LocalTranscriptEvent|null,
-  searchResults: [] as LocalTranscriptEvent[],
+  selectedSearchResult: null as SearchResult|null,
+  searchResults: [] as SearchResult[],
   searchTerm: '',
   playingEvent: null as LocalTranscriptEvent|null,
   isPaused: true as boolean,
@@ -229,11 +239,11 @@ export function getTextFromTokens(ts: LocalTranscriptToken[], defaultTier: Token
   return ts.map(t => t.tiers[defaultTier].text).join(' ')
 }
 
-export function selectSearchResult(e: LocalTranscriptEvent) {
-  eventStore.selectedSearchResult  = e
-  scrollToAudioEvent(e)
-  scrollToTranscriptEvent(e)
-  selectEvent(e)
+export function selectSearchResult(r: SearchResult) {
+  eventStore.selectedSearchResult  = r
+  scrollToAudioEvent(r.event)
+  scrollToTranscriptEvent(r.event)
+  selectEvent(r.event)
 }
 
 export function scrollToAudioEvent(e: LocalTranscriptEvent) {
