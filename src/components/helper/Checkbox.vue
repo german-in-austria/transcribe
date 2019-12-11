@@ -1,6 +1,7 @@
 <template>
   <label style="display: block; margin-bottom: .5em">
     <input
+      class="mr-2"
       @change="$emit('input', !value)"
       :checked="value" type="checkbox" />
     <span style="user-select: none;" v-if="label !== undefined">{{ label }}</span>

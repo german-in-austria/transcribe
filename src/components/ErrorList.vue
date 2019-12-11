@@ -38,7 +38,7 @@
         </template>
       </RecycleScroller>
     </v-list>
-    <v-flex style="color: rgba(0,0,0,.54); line-height: 1.8em;" class="pl-4 pr-4 pb-3 small" shrink>
+    <v-flex style="line-height: 1.8em;" :class="['pl-4 pr-4 pb-3 small grey--text', !settings.darkMode && 'text--darken-2']" shrink>
       <v-divider class="mb-2" />
       <checkbox v-model="settings.showErrors.eventGaps">
         Event Gaps longer than <dropdown v-model="settings.maxEventGap" :items="eventGapOptions" :stringify="(e) => e + ' sec'" />
