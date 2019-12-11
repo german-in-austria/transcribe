@@ -15,7 +15,6 @@ function applyElIpa(el: HTMLElement) {
     return
   }
   (overlayInstance as any).aElement = el
-  console.log('applyElIpa')
   if (el.parentNode !== null) {
     insertAfter(el.parentNode, overlayInstance.$el, el)
   }
