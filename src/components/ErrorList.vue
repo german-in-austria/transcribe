@@ -8,7 +8,7 @@
     <div v-if="errors.length === 0" class="text-xs-center grey--text mt-4 flex grow">
       <small>Warnings will appear here.</small>
     </div>
-    <v-list class="flex pb-0" style="flex: 1 0;" v-if="errors.length > 0" dense>
+    <v-list class="flex pb-0" style="flex: 1 0; overflow: hidden;" v-if="errors.length > 0" dense>
       <RecycleScroller
         class="scroller"
         :items="errors"
