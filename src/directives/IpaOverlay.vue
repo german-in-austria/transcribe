@@ -1,6 +1,7 @@
 <template>
   <div
     v-if="ready && aKeys.length > 0"
+    :style="{ top: top + 'px', left: left + 'px' }"
     class="ipa-overlay">
     <div
       style="white-space: nowrap;"
@@ -81,21 +82,31 @@ export default class  extends Vue {
   ready = false
   lastPosition: number|null = null
   log = console.log
-  bottom = 0
+
+  top = 0
   left = 0
+
   @Watch('aElement')
   onChangeElement(nVal: HTMLElement|null, oVal: HTMLElement|null) {
     if (oVal) {
       oVal.removeEventListener('keyup', this.keyUp)
       oVal.removeEventListener('blur', this.blur)
+      oVal.removeEventListener('keydown', this.keyDown)
     }
     if (nVal) {
-      const rect = nVal.getBoundingClientRect()
-      this.bottom = rect.top
-      this.left = rect.left
+      this.updatePosition(nVal)
       this.ready = true
+      nVal.addEventListener('keydown', this.keyDown)
       nVal.addEventListener('keyup', this.keyUp)
       nVal.addEventListener('blur', this.blur)
+    }
+  }
+
+  updatePosition(el = this.aElement) {
+    if (el !== null) {
+      const rect = el.getBoundingClientRect()
+      this.top = rect.top
+      this.left = rect.left
     }
   }
 
@@ -138,7 +149,22 @@ export default class  extends Vue {
     }
   }
 
+  keyDown(e: KeyboardEvent) {
+    this.updatePosition()
+    if (e.key === 'Tab') {
+      if (this.$refs.aBtns) {
+        const currentFocus = (this.$refs.aBtns as Element[]).findIndex(el => el === document.activeElement);
+        if ((this.$refs.aBtns as HTMLElement[])[currentFocus + 1] !== undefined) {
+          e.preventDefault();
+          e.stopPropagation();
+          (this.$refs.aBtns as HTMLElement[])[currentFocus + 1].focus()
+        }
+      }
+    }
+  }
+
   keyUp(e: KeyboardEvent) {
+    // this.updatePosition()
     if (e.key !== 'Tab' && e.key !== 'Shift' && this.aElement !== null) {
       this.aKeys = []
       const aSel = document.getSelection()
@@ -180,6 +206,7 @@ export default class  extends Vue {
     if (this.aElement) {
       this.aElement.removeEventListener('keyup', this.keyUp)
       this.aElement.removeEventListener('blur', this.blur)
+      this.aElement.removeEventListener('keydown', this.keyDown)
     }
   }
 
@@ -190,8 +217,6 @@ export default class  extends Vue {
   position absolute
   box-shadow 0 5px 5px -3px rgba(0,0,0,.2), 0 8px 10px 1px rgba(0,0,0,.14), 0 3px 14px 2px rgba(0,0,0,.12);
   z-index 2
-  bottom 0
-  left 0
   max-height 150px
   overflow-y auto
   background rgba(240,240,240,.5)
@@ -199,6 +224,8 @@ export default class  extends Vue {
   color #333
   border-radius 4px
   backdrop-filter blur(20px)
+  transform translateY(-100%)
+  font-family sans-serif
 
 .ipa-btn
   display: inline-block
