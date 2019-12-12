@@ -446,10 +446,14 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     icon: 'mdi-magnify',
     disabled: () => false,
     action: async () => {
-      settings.showDrawer = true
-      settings.activeSidebarItem = 3
-      await Vue.nextTick()
-      eventBus.$emit('focusSearch')
+      if (settings.showDrawer === true && settings.activeSidebarItem === 3) {
+        settings.showDrawer = false
+      } else {
+        settings.showDrawer = true
+        settings.activeSidebarItem = 3
+        await Vue.nextTick()
+        eventBus.$emit('focusSearch')
+      }
     }
   },
   selectPreviousEvent: {
