@@ -85,10 +85,12 @@ export interface ServerTranscriptTokenTypes {
 }
 
 export interface ServerTranscriptInformants {
-  [speaker_id: number]: {
-    ka: string // abbrev anonymized
-    k: string // abbrev
-  }
+  [speaker_id: number]: ServerTranscriptInformant
+}
+
+export interface ServerTranscriptInformant {
+  ka: string // abbrev anonymized
+  k: string // abbrev
 }
 
 export interface ServerAnswer {
@@ -226,31 +228,35 @@ export function getAudioUrlFromServerNames(name: string|undefined, path: string|
 export function getMetadataFromServerTranscript(res: ServerTranscript) {
   const defaultTier = res.aTranskript!.default_tier || 'text'
   const v = {
-    speakers: res.aInformanten!,
+    speakers: _.mapValues(res.aInformanten!, inf => ({ ...inf, searchInSpeaker: true })),
     tokenTypes: res.aTokenTypes!,
     transcriptName: res.aTranskript!.n,
     defaultTier,
     audioUrl: getAudioUrlFromServerNames(res.aEinzelErhebung!.af, res.aEinzelErhebung!.dp),
     tiers: [
       {
+        searchInTier: true,
         type: 'token',
         name: 'eye dialect',
         show: defaultTier === 'text',
         id: 'text'
       },
       {
+        searchInTier: true,
         type: 'token',
         name: 'ortho',
         show: defaultTier === 'ortho',
         id: 'ortho'
       },
       {
+        searchInTier: true,
         type: 'token',
         name: 'phon',
         show: defaultTier === 'phon',
         id: 'phon'
       }
     ].concat(_(res.aTiers).map((t, tid) => ({
+      searchInTier: true,
       type: 'freeText',
       name: t.tier_name,
       show: false,

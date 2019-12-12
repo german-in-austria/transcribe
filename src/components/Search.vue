@@ -5,7 +5,7 @@
         <small>Search & Replace</small>
       </v-subheader>
       <input
-        v-rt-ipa="true"
+        v-rt-ipa="false"
         type="text"
         ref="input"
         :class="[settings.darkMode && 'theme--dark']"
@@ -21,6 +21,58 @@
       <div style="line-height: 1.8em;" :class="['small pt-3 pl-1 pr-1 grey--text', !settings.darkMode && 'text--darken-2']">
         <checkbox :disabled="useRegEx" :value="caseSensitive || useRegEx" @input="caseSensitive = $event" label="Case Sensitive" />
         <checkbox v-model="useRegEx" label="Regular Expression" />
+        <v-menu
+          close-delay="500"
+          transition="fade-transition"
+          :close-on-content-click="false"
+          bottom
+          offset-y
+          nudge-bottom="5">
+          <div slot="activator" class="tier-and-speaker-selector mt-1">
+            <!-- TODO: make nicer -->
+            ▾ {{
+              areAllSpeakersSelected()
+                ? 'all speakers'
+                : Object.values(eventStore.metadata.speakers).filter(s => s.searchInSpeaker === true).length + ' speaker(s)'
+            }},
+            {{
+              areAllTiersSelected()
+                ? 'all tiers'
+                : eventStore.metadata.tiers.filter(s => s.searchInTier === true).length + ' tier(s)'
+            }}
+          </div>
+          <v-list class="context-menu-list" dense>
+            <v-subheader>
+              Tiers
+            </v-subheader>
+            <v-list-tile
+              v-for="(tier, i) in eventStore.metadata.tiers"
+              :key="i"
+              @click="tier.searchInTier = !tier.searchInTier">
+              <v-list-tile-avatar>
+                <v-icon v-if="tier.searchInTier === true">check</v-icon>
+              </v-list-tile-avatar>
+              <v-list-tile-content>
+                <v-list-tile-title>{{ tier.name }}</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+            <v-divider />
+            <v-subheader>
+              Speakers
+            </v-subheader>
+            <v-list-tile
+              v-for="(speaker, speakerKey) in eventStore.metadata.speakers"
+              :key="speakerKey"
+              @click="speaker.searchInSpeaker = !speaker.searchInSpeaker">
+              <v-list-tile-avatar>
+                <v-icon v-if="speaker.searchInSpeaker === true">check</v-icon>
+              </v-list-tile-avatar>
+              <v-list-tile-content>
+                <v-list-tile-title>{{ speaker.ka }}</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+          </v-list>
+        </v-menu>
         <v-divider class="mt-3" />
       </div>
     </v-flex>
@@ -34,8 +86,7 @@
           <v-list-tile
             @click="showEventIfExists(item.event)"
             @dblclick="playEvent(item.event)"
-            :class="isEventSelected(item.event.eventId) && 'selected'"
-            >
+            :class="isEventSelected(item.event.eventId) && 'selected'">
             <v-list-tile-content>
               <v-list-tile-sub-title class="subtitle">{{ toTime(item.event.startTime) }} - {{ toTime(item.event.endTime) }}</v-list-tile-sub-title>
               <highlight-range :text="item.text" :start="item.offset" :end="item.offsetEnd" :truncate="42" />
@@ -80,7 +131,8 @@ import {
   TokenTierType,
   LocalTranscriptTier,
   SearchResult,
-  getSelectedEvent
+  getSelectedEvent,
+  LocalTranscriptSpeakers
 } from '../store/transcript'
 
 import * as history from '../store/history'
@@ -124,15 +176,25 @@ export default class Search extends Vue {
     history.startListening()
   }
 
+  areAllTiersSelected(): boolean {
+    return eventStore.metadata.tiers.every(t => t.searchInTier === true)
+  }
+
+  areAllSpeakersSelected(): boolean {
+    return _.every(eventStore.metadata.speakers, s => s.searchInSpeaker === true)
+  }
+
   get searchSettings() {
     return {
       caseSensitive: this.caseSensitive,
       useRegEx: this.useRegEx,
-      defaultTierOnly: this.defaultTierOnly
+      defaultTierOnly: this.defaultTierOnly,
+      searchInSpeakers: eventStore.metadata.speakers,
+      searchInTiers: eventStore.metadata.tiers
     }
   }
 
-  @Watch('searchSettings')
+  @Watch('searchSettings', { deep: true })
   onUpdateSearchSettings() {
     this.handleSearch(eventStore.searchTerm)
   }
@@ -174,6 +236,7 @@ export default class Search extends Vue {
     speakerIds: string[],
     tiers: LocalTranscriptTier[]
   ): SearchResult[] {
+    console.log({ speakerIds, tiers })
     this.searchResultEventCounter = 0
     const termLength = term.length
     let resultId = 0
@@ -290,8 +353,10 @@ export default class Search extends Vue {
         eventStore.searchResults = this.searchEvents(
           term,
           eventStore.events,
-          _(eventStore.metadata.speakers).map((s, k) => k).value(),
-          eventStore.metadata.tiers
+          _(eventStore.metadata.speakers)
+            .pickBy(s => s.searchInSpeaker === true)
+            .map((s, k) => String(k)).value(),
+          eventStore.metadata.tiers.filter(t => t.searchInTier === true)
         )
       })
     }
@@ -322,7 +387,6 @@ export default class Search extends Vue {
     }
   }
   findNext() {
-    // TODO:
     const selectedEvent = getSelectedEvent()
     const e = findNextEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults.map(r => r.event))
     if (e !== undefined) {
@@ -332,7 +396,6 @@ export default class Search extends Vue {
     }
   }
   findPrevious() {
-    // TODO:
     const selectedEvent = getSelectedEvent()
     const e = findPreviousEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults.map(r => r.event))
     if (e !== undefined) {
@@ -346,6 +409,11 @@ export default class Search extends Vue {
 <style lang="stylus" scoped>
 
 @import '../../node_modules/vue-virtual-scroller/dist/vue-virtual-scroller.css';
+
+.tier-and-speaker-selector
+  background rgba(255, 255, 255, .7)
+  border-radius 4px
+  padding 0 1em
 
 .scroller
   height 100%
@@ -371,13 +439,5 @@ input
 .selected
   background rgba(0,0,0,.05)
 
-.context-menu
-  top 100%
-  margin-top 3px
-  position absolute
-  display none
-  width 100%
-  outline 0
-  z-index 1
 </style>
 

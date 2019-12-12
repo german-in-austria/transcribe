@@ -13,7 +13,7 @@ import { collectTokensViaOffsets } from '../service/copy-paste'
 import { eachFrom } from '../util'
 import {
   ServerTranscriptListItem,
-  ServerTranscriptInformants,
+  ServerTranscriptInformant,
   ServerTranscriptTokenTypes,
 } from '../service/backend-server'
 
@@ -29,7 +29,14 @@ interface LocalTranscriptTokenTier {
   type: number|null
 }
 
-export type LocalTranscriptSpeakers = ServerTranscriptInformants
+export interface LocalTranscriptSpeaker extends ServerTranscriptInformant {
+  searchInSpeaker: boolean
+}
+
+export interface LocalTranscriptSpeakers {
+  [speakerId: number]: LocalTranscriptSpeaker
+}
+
 export type LocalTranscriptTokenTypes = ServerTranscriptTokenTypes
 
 export type TokenTierType = 'text'|'ortho'|'phon'
@@ -86,6 +93,7 @@ export interface SearchResult {
 }
 
 export interface LocalTranscriptTier {
+  searchInTier: boolean
   type: 'token'|'freeText'
   name: string
   show: boolean
@@ -97,9 +105,11 @@ export type LocalTranscript = LocalTranscriptEvent[]
 export const eventStore = {
   events: [] as LocalTranscriptEvent[],
   selectedEventIds: [] as number[],
+
   selectedSearchResult: null as SearchResult|null,
   searchResults: [] as SearchResult[],
   searchTerm: '',
+
   playingEvent: null as LocalTranscriptEvent|null,
   isPaused: true as boolean,
   currentTime: 0,
