@@ -20,7 +20,7 @@
         placeholder="Search…"/>
       <div style="line-height: 1.8em;" :class="['small pt-3 pl-1 pr-1 grey--text', !settings.darkMode && 'text--darken-2']">
         <checkbox :disabled="useRegEx" :value="caseSensitive || useRegEx" @input="caseSensitive = $event" label="Case Sensitive" />
-        <checkbox v-model="useRegEx" label="Use Regular Expression" />
+        <checkbox v-model="useRegEx" label="Regular Expression" />
         <v-divider class="mt-3" />
       </div>
     </v-flex>
