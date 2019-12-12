@@ -2,7 +2,8 @@
   <v-flex :style="theme" class="speaker-panel">
     <div
       :style="{height: speakerHeight + 1}"
-      :key="i" v-for="(speaker, i) in eventStore.metadata.speakers"
+      :key="i"
+      v-for="(speaker, i) in eventStore.metadata.speakers"
       class="speaker">
       <v-menu
         close-delay="500"
