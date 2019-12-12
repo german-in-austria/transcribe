@@ -78,7 +78,7 @@ export default class  extends Vue {
     '?': ['?', 'ʔ']
   }
   aKeys: Array<{k: string, a: string[]}> = []
-  aElement: HTMLElement|null = null
+  aElement: HTMLElement|HTMLInputElement|null = null
   ready = false
   lastPosition: number|null = null
   log = console.log
@@ -87,11 +87,11 @@ export default class  extends Vue {
   left = 0
 
   @Watch('aElement')
-  onChangeElement(nVal: HTMLElement|null, oVal: HTMLElement|null) {
+  onChangeElement(nVal: HTMLElement|HTMLInputElement|null, oVal: HTMLElement|HTMLInputElement|null) {
     if (oVal) {
+      oVal.removeEventListener('keydown', this.keyDown)
       oVal.removeEventListener('keyup', this.keyUp)
       oVal.removeEventListener('blur', this.blur)
-      oVal.removeEventListener('keydown', this.keyDown)
     }
     if (nVal) {
       this.updatePosition(nVal)
@@ -110,10 +110,10 @@ export default class  extends Vue {
     }
   }
 
-  blur(e: FocusEvent) {
+  blur(e: Event) {
     this.$nextTick(() => {
       if (this.aKeys.length > 0) {
-        const aEl = e.relatedTarget || document.activeElement
+        const aEl = (e as any).relatedTarget || document.activeElement
         if (aEl !== this.aElement && (this.$refs.aBtns as any).indexOf(aEl) === -1) {
           this.aKeys = []
         }
@@ -138,20 +138,28 @@ export default class  extends Vue {
 
   setKey(e: MouseEvent, aKey: any, nKey: any) {
     if (this.aElement !== null) {
-      this.aElement.innerText = this.aElement
-        .innerText
-        .substring(0, (this.lastPosition || 0) - aKey.length)
-        + nKey
-        + this.aElement.innerText.substring(this.lastPosition || 0, this.aElement.innerText.length)
+      if (this.aElement instanceof HTMLElement && this.aElement.innerText) {
+        this.aElement.innerText = this.aElement
+          .innerText
+          .substring(0, (this.lastPosition || 0) - aKey.length)
+          + nKey
+          + this.aElement.innerText.substring(this.lastPosition || 0, this.aElement.innerText.length)
+      } else if (this.aElement instanceof HTMLInputElement && this.aElement.value) {
+        this.aElement.value = this.aElement
+          .value
+          .substring(0, (this.lastPosition || 0) - aKey.length)
+          + nKey
+          + this.aElement.value.substring(this.lastPosition || 0, this.aElement.value.length)
+      }
       this.aElement.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }))
       this.lastPosition = (this.lastPosition || 0) - aKey.length + nKey.length
       this.unsetKeys()
     }
   }
 
-  keyDown(e: KeyboardEvent) {
+  keyDown(e: Event) {
     this.updatePosition()
-    if (e.key === 'Tab') {
+    if ((e as KeyboardEvent).key === 'Tab') {
       if (this.$refs.aBtns) {
         const currentFocus = (this.$refs.aBtns as Element[]).findIndex(el => el === document.activeElement);
         if ((this.$refs.aBtns as HTMLElement[])[currentFocus + 1] !== undefined) {
@@ -163,15 +171,17 @@ export default class  extends Vue {
     }
   }
 
-  keyUp(e: KeyboardEvent) {
-    // this.updatePosition()
-    if (e.key !== 'Tab' && e.key !== 'Shift' && this.aElement !== null) {
+  keyUp(e: Event) {
+    console.log(e, this.aElement)
+    const k = (e as KeyboardEvent).key
+    if (k !== 'Tab' && k !== 'Shift' && this.aElement !== null) {
       this.aKeys = []
       const aSel = document.getSelection()
+      console.log({ aSel })
       if (aSel !== null) {
         this.lastPosition = aSel.focusOffset
-        if (e.key.length === 1 && aSel.focusOffset === (aSel as any).baseOffset) {
-          if (e.key === '!') {
+        if (k.length === 1 && aSel.focusOffset === (aSel as any).baseOffset) {
+          if (k === '!') {
             for (const key in this.ipaKeys) {
               if (!this.ipaKeys.hasOwnProperty(key)) {
                 continue
@@ -180,19 +190,20 @@ export default class  extends Vue {
             }
           } else {
             let alKey = ''
+            const v = this.aElement.innerText || (this.aElement as HTMLInputElement).value
             if (aSel.focusOffset > 2) {
-              alKey = this.aElement.innerText.substring(aSel.focusOffset - 3, aSel.focusOffset)
+              alKey = v.substring(aSel.focusOffset - 3, aSel.focusOffset)
               if (this.ipaKeys[alKey]) {
                 this.aKeys.push({ k: alKey, a: this.ipaKeys[alKey] })
               }
             }
             if (aSel.focusOffset > 1) {
-              alKey = this.aElement.innerText.substring(aSel.focusOffset - 2, aSel.focusOffset)
+              alKey = v.substring(aSel.focusOffset - 2, aSel.focusOffset)
               if (this.ipaKeys[alKey]) {
                 this.aKeys.push({ k: alKey, a: this.ipaKeys[alKey] })
               }
             }
-            const aKey = this.aElement.innerText.substring(aSel.focusOffset - 1, aSel.focusOffset)
+            const aKey = v.substring(aSel.focusOffset - 1, aSel.focusOffset)
             if (aKey && this.ipaKeys[aKey]) {
               this.aKeys.push({ k: aKey, a: this.ipaKeys[aKey] })
             }
