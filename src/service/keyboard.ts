@@ -35,8 +35,8 @@ import {
   shiftCharsLeft,
   shiftCharsRight,
   selectEvent,
-  LocalTranscriptEvent,
-  findNextEventAt
+  playAllFrom,
+  pause
 } from '../store/transcript'
 
 import { saveChangesToServer } from '../service/backend-server'
@@ -493,11 +493,17 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Play/Pause',
     description: 'Play or Pause the currently selected Event',
     icon: 'mdi-play-pause',
-    disabled: () => eventStore.selectedEventIds.length === 0,
+    disabled: () => false,
     action: () => {
-      const es = getSelectedEvents()
-      if (es.length > 0) {
-        playEvents(es)
+      if (eventStore.isPaused === true) {
+        const es = getSelectedEvents()
+        if (es.length > 0) {
+          playEvents(es)
+        } else {
+          playAllFrom(eventStore.currentTime)
+        }
+      } else {
+        pause()
       }
     }
   },
