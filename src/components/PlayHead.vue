@@ -20,7 +20,7 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { eventStore, scrubAudio } from '../store/transcript'
+import { eventStore, scrubAudio, deselectEvents } from '../store/transcript'
 import audio from '../service/audio'
 import { easeInOutQuad, requestFrameAsync } from '../util'
 import settings from '../store/settings'
@@ -115,6 +115,7 @@ export default class PlayHead extends Vue {
   }
 
   startDrag(e: MouseEvent) {
+    deselectEvents()
     this.inFront = true
     scrubAudio(e.offsetX / settings.pixelsPerSecond)
     document.addEventListener('mousemove', this.drag)
