@@ -259,6 +259,7 @@ export default class SpeakerSegmentTranscript extends Vue {
       this.segmentText = this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ')
       await this.$nextTick()
       this.setCursorPosition(e.currentTarget as HTMLElement, Math.min(base, extent))
+      this.debouncedCommitEvent()
     } else {
       // nothing is selected, copy nothing.
     }
@@ -310,13 +311,13 @@ export default class SpeakerSegmentTranscript extends Vue {
           this.segmentText = this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ')
           if (e.currentTarget !== null) {
             await this.$nextTick()
-            console.log('s.baseOffset, s.extentOffset', base, extent)
             this.setCursorPosition(e.currentTarget as HTMLElement, Math.max(base, extent))
           }
         } else {
           // paste as string.
           document.execCommand('insertHTML', false, clipboardString)
         }
+        this.debouncedCommitEvent()
       } catch (e) {
         console.error(e)
         // do nothing (i.e. default OS functionality)
