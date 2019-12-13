@@ -949,8 +949,12 @@ function emitUpdateTimeUntilPaused(t: number, maxT?: number) {
       eventBus.$emit('updateTime', eventStore.currentTime)
     }
     // paused or over max t.
-    if (eventStore.isPaused === true || (maxT !== undefined && eventStore.currentTime >= maxT)) {
+    if (
+      (maxT !== undefined && eventStore.currentTime >= maxT) ||
+      eventStore.isPaused === true
+    ) {
       // stop emitting.
+      eventStore.isPaused = true
       return false
     } else {
       // sync scroll if locked.
