@@ -36,7 +36,9 @@ import {
   shiftCharsRight,
   selectEvent,
   playAllFrom,
-  pause
+  pause,
+  playEventsStart,
+  playEventsEnd
 } from '../store/transcript'
 
 import { saveChangesToServer } from '../service/backend-server'
@@ -162,6 +164,15 @@ function keyboardEventHasModifier(e: KeyboardEvent, m: KeyboardModifier): boolea
   )
 }
 
+function doModifiersMatch(ms: KeyboardModifier[], e: KeyboardEvent): boolean {
+  return ([ 'alt', 'shift', 'ctrlOrCmd' ] as KeyboardModifier[]).every(mod => {
+    return (
+      (ms.indexOf(mod) > -1 && keyboardEventHasModifier(e, mod))
+      || (ms.indexOf(mod) === -1 && !keyboardEventHasModifier(e, mod))
+    )
+  })
+}
+
 export async function handleGlobalShortcut(e: KeyboardEvent) {
   // console.log(e)
   _(keyboardShortcuts).forEach(sc => {
@@ -177,7 +188,7 @@ export async function handleGlobalShortcut(e: KeyboardEvent) {
         // no modifiers are required and none are present
         (sc.modifier.length === 0 && !e.ctrlKey && !e.shiftKey && !e.metaKey && !e.altKey) ||
         // some modifiers are required and every modifier is present in the event
-        sc.modifier.length !== 0 && sc.modifier.every(m => keyboardEventHasModifier(e, m))
+        (sc.modifier.length !== 0 && doModifiersMatch(sc.modifier, e))
       )
     ) {
       e.preventDefault()
@@ -501,6 +512,44 @@ export const keyboardShortcuts: KeyboardShortcuts = {
           playEvents(es)
         } else {
           playAllFrom(eventStore.currentTime)
+        }
+      } else {
+        pause()
+      }
+    }
+  },
+  playFirstSecondOfEvent: {
+    ignoreInTextField: false,
+    modifier: [ 'ctrlOrCmd', 'alt' ],
+    key: 'Enter',
+    name: 'Play start of Event',
+    description: 'Play the first second of an Event',
+    icon: 'mdi-contain-start',
+    disabled: () => eventStore.selectedEventIds.length === 0,
+    action: () => {
+      if (eventStore.isPaused === true) {
+        const es = getSelectedEvents()
+        if (es.length > 0) {
+          playEventsStart(es, 1)
+        }
+      } else {
+        pause()
+      }
+    }
+  },
+  playLastSecondOfEvent: {
+    ignoreInTextField: false,
+    modifier: [ 'ctrlOrCmd', 'shift' ],
+    key: 'Enter',
+    name: 'Play end of Event',
+    description: 'Play the last second of an Event',
+    icon: 'mdi-contain-end',
+    disabled: () => eventStore.selectedEventIds.length === 0,
+    action: () => {
+      if (eventStore.isPaused === true) {
+        const es = getSelectedEvents()
+        if (es.length > 0) {
+          playEventsEnd(es, 1)
         }
       } else {
         pause()

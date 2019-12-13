@@ -2,10 +2,10 @@
   <div :style="{minHeight: height}" :class="['playerbar', settings.darkMode && 'theme--dark']">
     <v-layout row>
       <v-flex xs4 text-xs-right>
-        <player-bar-button :size="height">
+        <player-bar-button @click="playStart" :size="height">
           <v-icon>mdi-contain-start</v-icon>
         </player-bar-button>
-        <player-bar-button :size="height">
+        <player-bar-button @click="playEnd" :size="height">
           <v-icon>mdi-contain-end</v-icon>
         </player-bar-button>
       </v-flex>
@@ -109,7 +109,9 @@ import {
   playAllFrom,
   pause,
   getSelectedEvents,
-  playEvents
+  playEvents,
+  playEventsStart,
+  playEventsEnd
 } from '../store/transcript'
 import { requestFrameAsync, isCmdOrCtrl } from '../util/index'
 
@@ -158,6 +160,28 @@ export default class PlayerBar extends Vue {
         playEvents(es)
       } else {
         playAllFrom(eventStore.currentTime)
+      }
+    } else {
+      pause()
+    }
+  }
+
+  playStart() {
+    if (eventStore.isPaused === true) {
+      const es = getSelectedEvents()
+      if (es.length > 0) {
+        playEventsStart(es, 1)
+      }
+    } else {
+      pause()
+    }
+  }
+
+  playEnd() {
+    if (eventStore.isPaused === true) {
+      const es = getSelectedEvents()
+      if (es.length > 0) {
+        playEventsEnd(es, 1)
       }
     } else {
       pause()

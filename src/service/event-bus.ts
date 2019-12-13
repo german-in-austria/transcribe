@@ -8,7 +8,6 @@ export type BusEvent =
   'scrollToAudioEvent'|
   'playAudio'|
   'pauseAudio'|
-  'playEvents'|
   'scrubAudio'|
   'updateTime'|
   'focusSearch'

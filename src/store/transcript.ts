@@ -110,7 +110,6 @@ export const eventStore = {
   searchResults: [] as SearchResult[],
   searchTerm: '',
 
-  playingEvent: null as LocalTranscriptEvent|null,
   isPaused: true as boolean,
   currentTime: 0,
   recentlyOpened: getRecentlyOpened(localStorage.getItem('backEndUrl') || 'https://dissdb-test.dioe.at'),
@@ -928,7 +927,6 @@ export function timeFromSeconds(seconds: number) {
 
 export function pause() {
   eventStore.playAllFrom = null
-  eventStore.playingEvent = null
   eventBus.$emit('pauseAudio', eventStore.currentTime)
   eventStore.audioElement.pause()
   audio.pauseCurrentBuffer()
@@ -987,6 +985,56 @@ export function scrubAudio(t: number) {
   eventBus.$emit('scrubAudio', t)
 }
 
+export async function playEventsStart(events: LocalTranscriptEvent[], duration: number) {
+  const sortedEvents = sortEvents(events)
+  const firstEvent = sortedEvents[0]
+  const synEvent = {
+    ...firstEvent,
+    endTime: Math.min(firstEvent.startTime + duration, firstEvent.endTime)
+  }
+  if (audio.store.uint8Buffer.byteLength > 0) {
+    const buffer = await audio.decodeBufferTimeSlice(
+      synEvent.startTime,
+      synEvent.endTime,
+      audio.store.uint8Buffer.buffer
+    )
+    if (buffer !== undefined) {
+      requestAnimationFrame(() => {
+        eventStore.isPaused = false
+        audio
+          .playBuffer(buffer, settings.playbackSpeed)
+          .addEventListener('ended', () => pause)
+        emitUpdateTimeUntilPaused(synEvent.startTime, synEvent.endTime)
+      })
+    }
+  }
+}
+
+export async function playEventsEnd(events: LocalTranscriptEvent[], duration: number) {
+  const sortedEvents = sortEvents(events)
+  const lastEvent = _.last(sortedEvents) as LocalTranscriptEvent
+  const synEvent = {
+    ...lastEvent,
+    startTime: Math.max(lastEvent.endTime - duration, lastEvent.startTime)
+  }
+  if (audio.store.uint8Buffer.byteLength > 0) {
+    const buffer = await audio.decodeBufferTimeSlice(
+      synEvent.startTime,
+      synEvent.endTime,
+      audio.store.uint8Buffer.buffer
+    )
+    if (buffer !== undefined) {
+      requestAnimationFrame(() => {
+        eventStore.isPaused = false
+        audio
+          .playBuffer(buffer, settings.playbackSpeed)
+          .addEventListener('ended', () => pause)
+        emitUpdateTimeUntilPaused(synEvent.startTime, synEvent.endTime)
+      })
+    }
+  }
+}
+
 export async function playEvents(events: LocalTranscriptEvent[]) {
   pause()
   const sortedEvents = sortEvents(events)
@@ -1005,9 +1053,7 @@ export async function playEvents(events: LocalTranscriptEvent[]) {
     )
     if (buffer !== undefined) {
       requestAnimationFrame(() => {
-        eventStore.playingEvent = synEvent
         eventStore.isPaused = false
-        eventBus.$emit('playEvents', events)
         audio
           .playBuffer(buffer, settings.playbackSpeed)
           .addEventListener('ended', () => pause)
