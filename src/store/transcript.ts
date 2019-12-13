@@ -995,8 +995,11 @@ export async function playEvents(events: LocalTranscriptEvent[]) {
     endTime: (_(sortedEvents).last() as LocalTranscriptEvent).endTime
   }
   if (audio.store.uint8Buffer.byteLength > 0) {
+    const startTime = eventStore.currentTime > synEvent.startTime && eventStore.currentTime < synEvent.endTime
+      ? eventStore.currentTime
+      : synEvent.startTime
     const buffer = await audio.decodeBufferTimeSlice(
-      synEvent.startTime,
+      startTime,
       synEvent.endTime,
       audio.store.uint8Buffer.buffer
     )
@@ -1008,7 +1011,7 @@ export async function playEvents(events: LocalTranscriptEvent[]) {
         audio
           .playBuffer(buffer, settings.playbackSpeed)
           .addEventListener('ended', () => pause)
-        emitUpdateTimeUntilPaused(synEvent.startTime, synEvent.endTime)
+        emitUpdateTimeUntilPaused(startTime, synEvent.endTime)
       })
     }
   }

@@ -107,7 +107,9 @@ import {
   eventStore,
   toTime,
   playAllFrom,
-  pause
+  pause,
+  getSelectedEvents,
+  playEvents
 } from '../store/transcript'
 import { requestFrameAsync, isCmdOrCtrl } from '../util/index'
 
@@ -150,8 +152,13 @@ export default class PlayerBar extends Vue {
   }
 
   playPause(e: Event) {
-    if (eventStore.isPaused) {
-      playAllFrom(eventStore.currentTime)
+    if (eventStore.isPaused === true) {
+      const es = getSelectedEvents()
+      if (es.length > 0) {
+        playEvents(es)
+      } else {
+        playAllFrom(eventStore.currentTime)
+      }
     } else {
       pause()
     }
