@@ -2,7 +2,7 @@
   <v-layout fill-height column>
     <v-flex shrink class="pl-3 pr-3">
       <v-subheader class="pa-0">
-        <small>Search & Replace</small>
+        <small>Search</small>
       </v-subheader>
       <input
         v-rt-ipa="false"
