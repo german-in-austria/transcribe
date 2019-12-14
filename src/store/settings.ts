@@ -1,8 +1,9 @@
 import { makeGradient, Color } from '../lib/gradient'
-import { setNumberInBounds, platform } from '../util'
+import { setNumberInBounds, platform, clone } from '../util'
 import { KeyboardShortcuts, keyboardShortcuts } from '../service/keyboard'
-
+import localForage from 'localforage'
 import { eventStore } from './transcript'
+import _ from 'lodash'
 
 export interface TokenTypePresetBase {
   name: string
@@ -26,19 +27,10 @@ export interface TokenTypesPresetGroup extends TokenTypePresetBase {
   bracketSymbols: [ RegExp, RegExp ]
 }
 
-// type AnyJson =  boolean | number | string | null | JsonArray | JsonMap
-
-// interface JsonMap {
-//   [key: string]: AnyJson
-// }
-
-// interface JsonArray extends Array<AnyJson> {}
-
 export type SidebarItem = null|'edit'|'history'|'warnings'|'search'|'bookmarks'
 
 export interface Settings {
   activeSidebarItem: SidebarItem
-  showSettings: boolean
   contrast: number
   darkMode: boolean
   drawerWidth: number
@@ -354,20 +346,37 @@ export function decreaseVolume(by: number) {
   setPlaybackVolume(settings.playbackVolume - by)
 }
 
-export function getIsDarkMode(): boolean {
-  return JSON.parse(localStorage.getItem('darkMode') || 'false')
+export async function saveSettings(s: Settings): Promise<Settings> {
+  console.log('saving new setting…', s)
+  await localForage.setItem('settings', JSON.stringify(s))
+  console.log('saved.')
+  return s
 }
 
-export function setIsDarkMode(b: boolean) {
-  settings.darkMode = b
-  localStorage.setItem('darkMode', JSON.stringify(b))
+export async function loadSettings(): Promise<Settings> {
+  const r = await localForage.getItem('settings') as string
+  return JSON.parse(r) as Settings
+}
+
+function mergeSettings(oldSettings: Settings) {
+  const mergedSettings = _.mergeWith(settings, oldSettings, (newV, oldV, key) => {
+    console.log(newV, typeof newV)
+    if (typeof newV === 'function') {
+      return newV
+    }
+  })
+  console.log({ mergedSettings })
+  _.forEach(settings, (s, k) => {
+    if (k in mergedSettings) {
+      (settings[k as keyof Settings] as any) = mergedSettings[k as keyof Settings]
+    }
+  })
 }
 
 const settings: Settings = {
   activeSidebarItem: 'edit',
-  showSettings: false,
   contrast: 1,
-  darkMode: getIsDarkMode(),
+  darkMode: false,
   drawerWidth: 350,
   emulateHorizontalScrolling: platform() === 'windows' || platform() === 'linux',
   eventDockingInterval: 0.05,
@@ -396,6 +405,14 @@ const settings: Settings = {
     unknownTokenTypes: true,
     eventOverlaps: true
   }
-}
+};
+
+(window as any)._settings = settings;
+
+(async () => {
+  const oldSettings = clone(await loadSettings())
+  mergeSettings(oldSettings)
+  console.log({ oldSettings, settings })
+})()
 
 export default settings

@@ -6,6 +6,8 @@ const worker = new Worker('')
 const promiseWorker = new PromiseWorker(worker)
 import _ from 'lodash'
 
+export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>
+
 export interface UndoRedo {
   undo: boolean
   redo: boolean

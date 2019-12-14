@@ -16,6 +16,7 @@
     "einzelerhebung",
     "einzelerhebungen",
     "insertable",
+    "localforage",
     "undoable",
     "upsert",
     "wasm",

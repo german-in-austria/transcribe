@@ -67,9 +67,9 @@
       </v-flex>
     </v-toolbar>
     <settings-view
-      v-if="settings.showSettings" 
-      @close="settings.showSettings = false"
-      :show="settings.showSettings" />
+      v-if="ui.showSettings" 
+      @close="ui.showSettings = false"
+      :show="ui.showSettings" />
     <spectrogram
       v-if="isSpectrogramVisible"
       @close="isSpectrogramVisible = false"
@@ -213,6 +213,7 @@ import {
   selectPreviousEvent,
   splitEvent,
 } from '../store/transcript'
+import ui from '../store/ui'
 
 import { saveChangesToServer } from '../service/backend-server'
 import { handleGlobalShortcut } from '../service/keyboard'
@@ -264,6 +265,7 @@ export default class Editor extends Vue {
   history = history
   loadAudioFromFile = loadAudioFromFile
   exportEventAudio = exportEventAudio
+  ui = ui
 
   scrollTranscriptIndex: number = 0
   scrollTranscriptTime: number = 0

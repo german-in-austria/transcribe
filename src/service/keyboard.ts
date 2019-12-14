@@ -179,7 +179,7 @@ function doModifiersMatch(ms: KeyboardModifier[], e: KeyboardEvent): boolean {
 }
 
 export async function handleGlobalShortcut(e: KeyboardEvent) {
-  _(keyboardShortcuts).forEach(sc => {
+  _(settings.keyboardShortcuts).forEach(sc => {
     if (
       // the function is not disabled
       (sc.disabled === undefined || sc.disabled() === false) &&
@@ -197,6 +197,7 @@ export async function handleGlobalShortcut(e: KeyboardEvent) {
         (sc.modifier.length !== 0 && doModifiersMatch(sc.modifier, e))
       )
     ) {
+      console.log({ sc, e })
       e.preventDefault()
       sc.action(e)
       // break the loop when it was found.

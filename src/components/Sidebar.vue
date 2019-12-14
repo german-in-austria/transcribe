@@ -73,7 +73,7 @@
         </v-flex>
         <v-flex xs1>
           <v-spacer />
-          <v-btn @click.stop="settings.showSettings = true" icon flat>
+          <v-btn @click.stop="ui.showSettings = true" icon flat>
             <v-icon>settings</v-icon>
           </v-btn>
         </v-flex>
@@ -86,6 +86,7 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
 
+import ui from '../store/ui'
 import {
   LocalTranscriptEvent,
   scrollToAudioEvent,
@@ -130,6 +131,7 @@ export default class Sidebar extends Vue {
   keyboardShortcuts = keyboardShortcuts
   displayKeyboardAction = displayKeyboardAction
   debouncedGetErrors = _.debounce(this.getErrors, 500)
+  ui = ui
 
   clickTab(e: SidebarItem) {
     if (e === settings.activeSidebarItem && settings.showDrawer === true) {
