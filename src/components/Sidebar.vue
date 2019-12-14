@@ -2,43 +2,22 @@
   <v-layout>
     <v-flex v-if="active" :style="{ borderRight: active ? '1px solid rgba(255,255,255,.3)' : '0' }">
       <v-window class="window" v-model="settings.activeSidebarItem" vertical>
-        <v-window-item class="sidebar-scrollable">
-          <v-subheader>
-            <small>Actions</small>
-          </v-subheader>
-          <v-list dense>
-            <v-list-tile
-              v-for="(sc, k) in keyboardShortcuts"
-              @click="sc.action($event)"
-              :disabled="sc.disabled ? sc.disabled() : false"
-              :key="k">
-              <v-list-tile-avatar>
-                <v-icon>{{ sc.icon }}</v-icon>
-              </v-list-tile-avatar>
-              <v-list-tile-content>
-                <v-list-tile-title>
-                  {{ sc.name }}
-                </v-list-tile-title>
-              </v-list-tile-content>
-              <v-list-tile-action>
-                {{ displayKeyboardAction(sc) }}
-              </v-list-tile-action>
-            </v-list-tile>
-          </v-list>
+        <v-window-item value="edit" class="sidebar-scrollable">
+          <tools />
         </v-window-item>
-        <v-window-item class="sidebar-scrollable">
+        <v-window-item value="history" class="sidebar-scrollable">
           <edit-history v-if="history.actions.length > 0" />
           <div v-else class="text-xs-center grey--text mt-4">
             <small>Edits will appear here.</small>
           </div>
         </v-window-item>
-        <v-window-item class="sidebar-scrollable">
+        <v-window-item value="warnings" class="sidebar-scrollable">
           <error-list :errors="errors"/>
         </v-window-item>
-        <v-window-item class="sidebar-scrollable">
+        <v-window-item value="search" class="sidebar-scrollable">
           <search />
         </v-window-item>
-        <v-window-item class="sidebar-scrollable">
+        <v-window-item value="bookmarks" class="sidebar-scrollable">
           <bookmarks />
         </v-window-item>
       </v-window>
@@ -46,24 +25,50 @@
     <v-flex class="sidebar-picker text-xs-center pt-2">
       <v-layout column fill-height justify-space-between>
         <v-flex>
-          <v-btn icon @click="clickTab(0)" class="mb-2">
-            <v-icon :color="settings.activeSidebarItem === 0 ? 'blue' : ''">edit</v-icon>
+          <v-btn
+            :title="'Editing (' + displayKeyboardAction(keyboardShortcuts.showEditMenu) + ')'"
+            icon
+            @click="clickTab('edit')"
+            class="mb-2">
+            <v-icon :color="settings.activeSidebarItem === 'edit' ? 'blue' : ''">edit</v-icon>
           </v-btn>
-          <v-btn icon @click="clickTab(1)" class="mb-2">
-            <v-icon :color="settings.activeSidebarItem === 1 ? 'blue' : ''">history</v-icon>
+          <v-btn 
+            :title="'History (' + displayKeyboardAction(keyboardShortcuts.showHistory) + ')'"
+            icon
+            @click="clickTab('history')"
+            class="mb-2">
+            <v-icon :color="settings.activeSidebarItem === 'history' ? 'blue' : ''">history</v-icon>
           </v-btn>
-          <v-btn icon @click="clickTab(2)" class="mb-2">
-            <v-badge :value="errors.length > 0" :color="settings.activeSidebarItem === 2 ? 'blue' : 'grey'">
-              <v-icon :color="settings.activeSidebarItem === 2 ? 'blue' : ''">error_outline</v-icon><span slot="badge">
+          <v-btn
+            :title="'Warnings (' + displayKeyboardAction(keyboardShortcuts.showWarnings) + ')'"
+            icon
+            @click="clickTab('warnings')"
+            class="mb-2">
+            <v-badge
+              :value="errors.length > 0"
+              :color="settings.activeSidebarItem === 2 ? 'blue' : 'grey'">
+              <v-icon
+                :color="settings.activeSidebarItem === 'warnings' ? 'blue' : ''">
+                error_outline
+              </v-icon>
+              <span slot="badge">
                 {{ errors.length < 100 ? errors.length : '99+' }}
               </span>
             </v-badge>
           </v-btn>
-          <v-btn icon @click="clickTab(3)" class="mb-2">
-            <v-icon :color="settings.activeSidebarItem === 3 ? 'blue' : ''">mdi-magnify</v-icon>
+          <v-btn
+            :title="'Search (' + displayKeyboardAction(keyboardShortcuts.showSearch) + ')'"
+            icon
+            @click="clickTab('search')"
+            class="mb-2">
+            <v-icon :color="settings.activeSidebarItem === 'search' ? 'blue' : ''">mdi-magnify</v-icon>
           </v-btn>
-          <v-btn icon @click="clickTab(4)" class="mb-2">
-            <v-icon :color="settings.activeSidebarItem === 4 ? 'blue' : ''">bookmark_border</v-icon>
+          <v-btn
+            :title="'Bookmarks (' + displayKeyboardAction(keyboardShortcuts.showBookmarks) + ')'"
+            icon
+            @click="clickTab('bookmarks')"
+            class="mb-2">
+            <v-icon :color="settings.activeSidebarItem === 'bookmarks' ? 'blue' : ''">bookmark_border</v-icon>
           </v-btn>
         </v-flex>
         <v-flex xs1>
@@ -79,10 +84,7 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import editHistory from './EditHistory.vue'
-import errorList from './ErrorList.vue'
 import * as _ from 'lodash'
-import bookmarks from './Bookmarks.vue'
 
 import {
   LocalTranscriptEvent,
@@ -94,20 +96,25 @@ import {
   toTime,
   sortEvents
 } from '../store/transcript'
+import { history } from '../store/history'
+import settings, { SidebarItem } from '../store/settings'
 
 import { getErrors, ErrorEvent } from '../service/errors'
-
-import { history } from '../store/history'
 import { keyboardShortcuts, displayKeyboardAction } from '../service/keyboard'
-import settings from '../store/settings'
+
+import editHistory from './EditHistory.vue'
+import errorList from './ErrorList.vue'
+import bookmarks from './Bookmarks.vue'
 import search from './Search.vue'
+import tools from './Tools.vue'
 
 @Component({
   components: {
     editHistory,
     errorList,
     bookmarks,
-    search
+    search,
+    tools
   }
 })
 export default class Sidebar extends Vue {
@@ -124,11 +131,11 @@ export default class Sidebar extends Vue {
   displayKeyboardAction = displayKeyboardAction
   debouncedGetErrors = _.debounce(this.getErrors, 500)
 
-  clickTab(i: number) {
-    if (i === settings.activeSidebarItem && settings.showDrawer === true) {
+  clickTab(e: SidebarItem) {
+    if (e === settings.activeSidebarItem && settings.showDrawer === true) {
       settings.showDrawer = false
     } else {
-      settings.activeSidebarItem = i
+      settings.activeSidebarItem = e
       if (settings.showDrawer === false) {
         settings.showDrawer = true
       }
