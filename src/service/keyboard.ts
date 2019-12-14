@@ -59,6 +59,11 @@ export interface KeyboardAction {
   description: string
   icon: string|null
   action: (e: KeyboardEvent|MouseEvent) => any
+  showInMenu: boolean
+  // defines whether it captures inputs that have
+  // more modifier keys than specified.
+  // (useful for modifiable shortcuts, e.g. shift for jumps)
+  greedy: boolean
 }
 
 export interface KeyboardShortcuts {
@@ -174,7 +179,6 @@ function doModifiersMatch(ms: KeyboardModifier[], e: KeyboardEvent): boolean {
 }
 
 export async function handleGlobalShortcut(e: KeyboardEvent) {
-  // console.log(e)
   _(keyboardShortcuts).forEach(sc => {
     if (
       // the function is not disabled
@@ -187,7 +191,9 @@ export async function handleGlobalShortcut(e: KeyboardEvent) {
       (
         // no modifiers are required and none are present
         (sc.modifier.length === 0 && !e.ctrlKey && !e.shiftKey && !e.metaKey && !e.altKey) ||
-        // some modifiers are required and every modifier is present in the event
+        // the shortcut is greedy, and fires if at least all of the required modifiers are present
+        (sc.greedy === true && sc.modifier.length > 0 && sc.modifier.every((m) => keyboardEventHasModifier(e, m))) ||
+        // the modifiers specified are exactly the ones present
         (sc.modifier.length !== 0 && doModifiersMatch(sc.modifier, e))
       )
     ) {
@@ -211,6 +217,8 @@ export function displayKeyboardAction(a: KeyboardAction): string {
 
 export const keyboardShortcuts: KeyboardShortcuts = {
   split: {
+    greedy: false,
+    showInMenu: true,
     ignoreInTextField: true,
     modifier: [],
     key: 's',
@@ -233,6 +241,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   splitAtChar: {
+    greedy: false,
+    showInMenu: true,
     ignoreInTextField: false,
     modifier: [ 'ctrlOrCmd' ],
     key: '1',
@@ -255,6 +265,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   shiftCharsRight: {
+    greedy: false,
+    showInMenu: true,
     ignoreInTextField: false,
     modifier: ['ctrlOrCmd', 'shift'],
     key: 'r',
@@ -276,6 +288,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   shiftCharsLeft: {
+    greedy: false,
+    showInMenu: true,
     ignoreInTextField: false,
     modifier: ['ctrlOrCmd', 'shift'],
     key: 'l',
@@ -298,6 +312,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   appendEvent: {
+    greedy: false,
+    showInMenu: true,
     ignoreInTextField: false,
     modifier: [ 'alt' ],
     key: '+',
@@ -328,6 +344,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   prependEvent: {
+    greedy: false,
+    showInMenu: true,
     ignoreInTextField: false,
     modifier: [ 'alt' ],
     key: '-',
@@ -358,6 +376,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   deleteEvents: {
+    greedy: false,
+    showInMenu: true,
     ignoreInTextField: true,
     modifier: [],
     key: 'Backspace',
@@ -371,6 +391,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   joinEvents: {
+    greedy: false,
+    showInMenu: true,
     ignoreInTextField: false,
     modifier: ['ctrlOrCmd'],
     key: 'j',
@@ -385,22 +407,26 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   moveEventStartLeft: {
+    greedy: true,
+    showInMenu: true,
     ignoreInTextField: false,
     modifier: ['alt'],
     key: 'ArrowLeft',
     name: 'Move event start left',
-    description: 'Move the beginning of an event to the left (use Shift to jump)',
+    description: 'Move the beginning of an event to the left',
     icon: 'mdi-arrow-expand-left',
     disabled: () => eventStore.selectedEventIds.length === 0,
     action: (ev) => {
       const e = getSelectedEvent()
       if (e !== undefined) {
-        const i = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
-        undoable(moveEventStartTime(e, i * -1))
+        const t = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
+        undoable(moveEventStartTime(e, t * -1))
       }
     }
   },
   moveEventStartRight: {
+    greedy: true,
+    showInMenu: true,
     ignoreInTextField: false,
     modifier: ['alt'],
     key: 'ArrowRight',
@@ -411,12 +437,14 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     action: (ev) => {
       const e = getSelectedEvent()
       if (e !== undefined) {
-        const i = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
-        undoable(moveEventStartTime(e, i))
+        const t = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
+        undoable(moveEventStartTime(e, t))
       }
     }
   },
   moveEventEndRight: {
+    greedy: true,
+    showInMenu: true,
     ignoreInTextField: false,
     modifier: ['ctrlOrCmd'],
     key: 'ArrowRight',
@@ -427,12 +455,14 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     action: (ev) => {
       const e = getSelectedEvent()
       if (e !== undefined) {
-        const i = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
-        undoable(moveEventEndTime(e, i))
+        const t = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
+        undoable(moveEventEndTime(e, t))
       }
     }
   },
   moveEventEndLeft: {
+    greedy: true,
+    showInMenu: true,
     ignoreInTextField: false,
     modifier: ['ctrlOrCmd'],
     key: 'ArrowLeft',
@@ -443,12 +473,90 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     action: (ev) => {
       const e = getSelectedEvent()
       if (e !== undefined) {
-        const i = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
-        undoable(moveEventEndTime(e, i * -1))
+        const t = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
+        undoable(moveEventEndTime(e, t * -1))
       }
     }
   },
-  focusSearch: {
+  showEditMenu: {
+    greedy: false,
+    showInMenu: true,
+    ignoreInTextField: false,
+    modifier: ['ctrlOrCmd'],
+    key: 'e',
+    name: 'Edit Menu',
+    description: 'Show the editing Options',
+    icon: 'edit',
+    disabled: () => false,
+    action: () => {
+      if (settings.showDrawer === true && settings.activeSidebarItem === 'edit') {
+        settings.showDrawer = false
+      } else {
+        settings.showDrawer = true
+        settings.activeSidebarItem = 'edit'
+      }
+    },
+  },
+  showHistory: {
+    greedy: false,
+    showInMenu: true,
+    ignoreInTextField: false,
+    modifier: ['ctrlOrCmd', 'shift'],
+    key: 'h',
+    name: 'History',
+    description: 'Show the history',
+    icon: 'history',
+    disabled: () => false,
+    action: () => {
+      if (settings.showDrawer === true && settings.activeSidebarItem === 'history') {
+        settings.showDrawer = false
+      } else {
+        settings.showDrawer = true
+        settings.activeSidebarItem = 'history'
+      }
+    },
+  },
+  showWarnings: {
+    greedy: false,
+    showInMenu: true,
+    ignoreInTextField: false,
+    modifier: ['ctrlOrCmd', 'shift'],
+    key: 'e',
+    name: 'Warnings',
+    description: 'Show Warnings in the Sidebar',
+    icon: 'error_outline',
+    disabled: () => false,
+    action: () => {
+      if (settings.showDrawer === true && settings.activeSidebarItem === 'warnings') {
+        settings.showDrawer = false
+      } else {
+        settings.showDrawer = true
+        settings.activeSidebarItem = 'warnings'
+      }
+    },
+  },
+  showBookmarks: {
+    greedy: false,
+    showInMenu: true,
+    ignoreInTextField: false,
+    modifier: ['ctrlOrCmd', 'shift'],
+    key: 'b',
+    name: 'Show Bookmarks',
+    description: 'Show Bookmarks in the Sidebar',
+    icon: 'bookmark_border',
+    disabled: () => false,
+    action: async () => {
+      if (settings.showDrawer === true && settings.activeSidebarItem === 'bookmarks') {
+        settings.showDrawer = false
+      } else {
+        settings.showDrawer = true
+        settings.activeSidebarItem = 'bookmarks'
+      }
+    }
+  },
+  showSearch: {
+    greedy: false,
+    showInMenu: true,
     ignoreInTextField: false,
     modifier: ['ctrlOrCmd'],
     key: 'f',
@@ -457,17 +565,19 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     icon: 'mdi-magnify',
     disabled: () => false,
     action: async () => {
-      if (settings.showDrawer === true && settings.activeSidebarItem === 3) {
+      if (settings.showDrawer === true && settings.activeSidebarItem === 'search') {
         settings.showDrawer = false
       } else {
         settings.showDrawer = true
-        settings.activeSidebarItem = 3
+        settings.activeSidebarItem = 'search'
         await Vue.nextTick()
         eventBus.$emit('focusSearch')
       }
     }
   },
   selectPreviousEvent: {
+    greedy: false,
+    showInMenu: true,
     ignoreInTextField: true,
     modifier: [],
     key: 'ArrowLeft',
@@ -483,6 +593,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   selectNextEvent: {
+    greedy: false,
+    showInMenu: true,
     ignoreInTextField: true,
     modifier: [],
     key: 'ArrowRight',
@@ -498,6 +610,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   playPause: {
+    greedy: false,
+    showInMenu: true,
     ignoreInTextField: false,
     modifier: [ 'ctrlOrCmd' ],
     key: 'Enter',
@@ -519,6 +633,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   playFirstSecondOfEvent: {
+    greedy: false,
+    showInMenu: true,
     ignoreInTextField: false,
     modifier: [ 'ctrlOrCmd', 'alt' ],
     key: 'Enter',
@@ -538,6 +654,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   playLastSecondOfEvent: {
+    greedy: false,
+    showInMenu: true,
     ignoreInTextField: false,
     modifier: [ 'ctrlOrCmd', 'shift' ],
     key: 'Enter',
@@ -557,6 +675,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   scrollToEvent: {
+    greedy: false,
+    showInMenu: true,
     ignoreInTextField: true,
     modifier: [],
     key: 'Enter',
@@ -573,6 +693,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   selectAllEvents: {
+    greedy: false,
+    showInMenu: true,
     ignoreInTextField: true,
     modifier: [ 'ctrlOrCmd' ],
     key: 'a',
@@ -585,6 +707,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   selectNone: {
+    greedy: false,
+    showInMenu: true,
     ignoreInTextField: true,
     modifier: [ 'ctrlOrCmd' ],
     key: 'd',
@@ -597,6 +721,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   saveTranscript: {
+    greedy: false,
+    showInMenu: true,
     ignoreInTextField: false,
     modifier: [ 'ctrlOrCmd' ],
     key: 's',
