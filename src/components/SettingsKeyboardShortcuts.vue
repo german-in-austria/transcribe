@@ -13,6 +13,7 @@
       </v-flex>
       <v-flex xs3>
         <v-select
+          :menu-props="{ lazy: true }"
           class="keyboard-chips"
           hide-details
           small-chips
@@ -27,6 +28,7 @@
       </v-flex>
       <v-flex xs2>
         <v-select
+          :menu-props="{ lazy: true }"
           class="keyboard-chips"
           hide-details
           small-chips
