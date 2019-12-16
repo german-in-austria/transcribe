@@ -30,7 +30,7 @@ interface IpaKeys {
 }
 
 @Component
-export default class  extends Vue {
+export default class IpaOverlay extends Vue {
 
   ipaKeys: IpaKeys = {
     'a': ['ᵃ', 'ᵄ', 'ᵅ', 'ᵆ', 'ͣ', 'ᶛ', 'ₐ', 'a', 'ɑ', 'ɐ'],
