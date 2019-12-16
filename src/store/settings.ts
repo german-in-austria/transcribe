@@ -357,10 +357,9 @@ export async function loadSettings(): Promise<Settings> {
   const r = await localForage.getItem('settings') as string
   return JSON.parse(r) as Settings
 }
-
+// FIXME:
 function mergeSettings(oldSettings: Settings) {
   const mergedSettings = _.mergeWith(settings, oldSettings, (newV, oldV, key) => {
-    console.log(newV, typeof newV)
     if (typeof newV === 'function') {
       return newV
     }
