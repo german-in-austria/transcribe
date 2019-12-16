@@ -440,7 +440,7 @@ export function updateSpeakerEvent(
     ...oldEvent.speakerEvents,
     [speakerId] : {
       speakerEventId: event.eventId,
-      speakerEventTiers: event.speakerEvents[speakerId].speakerEventTiers,
+      speakerEventTiers: event.speakerEvents[speakerId].speakerEventTiers || {},
       tokens
     }
   })
@@ -933,7 +933,7 @@ export function pause() {
   eventStore.isPaused = true
 }
 
-function emitUpdateTimeUntilPaused(t: number, maxT?: number) {
+function emitUpdateTimeUntilPaused(t: number, lockScroll: boolean, maxT?: number) {
   const startTime = performance.now()
   eventStore.currentTime = t
   eventBus.$emit('updateTime', t)
@@ -956,7 +956,7 @@ function emitUpdateTimeUntilPaused(t: number, maxT?: number) {
       return false
     } else {
       // sync scroll if locked.
-      if (settings.lockScroll && settings.lockPlayHead) {
+      if (lockScroll) {
         const e = findEventAt(eventStore.currentTime)
         if (e !== undefined && e.eventId !== currentlyPlayingEventId) {
           currentlyPlayingEventId = e.eventId
@@ -977,7 +977,7 @@ export function playAllFrom(t: number) {
   eventStore.audioElement.play()
   eventStore.isPaused = false
   eventBus.$emit('playAudio', t)
-  emitUpdateTimeUntilPaused(t)
+  emitUpdateTimeUntilPaused(t, settings.lockScroll && settings.lockPlayHead)
 }
 
 export function scrubAudio(t: number) {
@@ -1004,7 +1004,7 @@ export async function playEventsStart(events: LocalTranscriptEvent[], duration: 
         audio
           .playBuffer(buffer, settings.playbackSpeed)
           .addEventListener('ended', () => pause)
-        emitUpdateTimeUntilPaused(synEvent.startTime, synEvent.endTime)
+        emitUpdateTimeUntilPaused(synEvent.startTime, false, synEvent.endTime)
       })
     }
   }
@@ -1029,7 +1029,7 @@ export async function playEventsEnd(events: LocalTranscriptEvent[], duration: nu
         audio
           .playBuffer(buffer, settings.playbackSpeed)
           .addEventListener('ended', () => pause)
-        emitUpdateTimeUntilPaused(synEvent.startTime, synEvent.endTime)
+        emitUpdateTimeUntilPaused(synEvent.startTime, false, synEvent.endTime)
       })
     }
   }
@@ -1057,7 +1057,7 @@ export async function playEvents(events: LocalTranscriptEvent[]) {
         audio
           .playBuffer(buffer, settings.playbackSpeed)
           .addEventListener('ended', () => pause)
-        emitUpdateTimeUntilPaused(startTime, synEvent.endTime)
+        emitUpdateTimeUntilPaused(startTime, false, synEvent.endTime)
       })
     }
   }
