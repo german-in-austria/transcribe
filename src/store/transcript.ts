@@ -128,7 +128,8 @@ export const eventStore = {
   },
   userState: {
     viewingTranscriptEvent: null as LocalTranscriptEvent|null,
-    viewingAudioEvent: null as LocalTranscriptEvent|null
+    viewingAudioEvent: null as LocalTranscriptEvent|null,
+    editingTranscriptEvent: null as LocalTranscriptEvent|null
   },
   transcriptDownloadProgress: 0 as number,
   status: 'empty' as 'empty'|'loading'|'finished'|'new',

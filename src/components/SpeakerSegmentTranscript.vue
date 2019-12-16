@@ -31,15 +31,15 @@
             :data-event-id="event.eventId"
             @keydown.enter.exact.prevent="viewAndSelectAudioEvent(event)"
             @input="(e) => { debouncedUpdateTokenTier(e.target.textContent, tier.id, i) }"
-            @blur="focused = false"
-            @focus="focused = true" />
+            @blur="onBlurEvent"
+            @focus="onFocusEvent" />
           <span v-else class="secondary-token-tier-text" />
         </span>
       </span>
     </div>
     <contenteditable
-      @blur="focused = false"
-      @focus="focused = true"
+      @blur="onBlurEvent"
+      @focus="onFocusEvent"
       @input="(e) => updateDefaultTier(e.target.textContent)"
       @keydown.tab.shift.exact="focusPreviousFrom($event, defaultTier)"
       @keydown.tab.exact="focusNextFrom($event, defaultTier)"
@@ -56,26 +56,6 @@
       :data-event-id="event.eventId"
       class="tokens-input segment-text"
     />
-    <!-- <div
-      @blur="focused = false"
-      @focus="focused = true"
-      @input="(e) => updateDefaultTier(e.target.textContent)"
-      @keydown.tab.shift.exact="focusPreviousFrom($event, defaultTier)"
-      @keydown.tab.exact="focusNextFrom($event, defaultTier)"
-      @keydown.enter.exact.prevent="viewAndSelectAudioEvent(event)"
-      @keydown.right.exact="handleCursor($event, defaultTier)"
-      @keydown.left.exact="handleCursor($event, defaultTier)"
-      @copy.prevent="copyTokens"
-      @cut.prevent="cutTokens"
-      @paste="pasteTokens"
-      :id="`speaker_event_tier_${speaker}__${defaultTier}`"
-      contenteditable="true"
-      v-text="segmentText"
-      :style="textStyle"
-      :data-event-id="event.eventId"
-      :data-speaker-id="speaker"
-      class="tokens-input segment-text">
-    </div> -->
     <div
       v-for="(tier, i) in secondaryTiers"
       :key="i"
@@ -92,8 +72,8 @@
         @keydown.tab.shift.exact="focusPreviousFrom($event, tier.id)"
         @keydown.enter.exact.prevent="viewAndSelectAudioEvent(event)"
         @keydown.tab.exact="focusNextFrom($event, tier.id)"
-        @blur="(e) => { updateEventTier(e.target.textContent, tier.id); focused = false }"
-        @focus="focused = true"
+        @blur="(e) => { updateEventTier(e.target.textContent, tier.id); onBlurEvent() }"
+        @focus="onFocusEvent"
         />
     </div>
   </div>
@@ -126,7 +106,8 @@ import {
   findEventIndexById,
   scrollToAudioEvent,
   scrollToTranscriptEvent,
-  makeEventTierId
+  makeEventTierId,
+  selectEvent
 } from '../store/transcript'
 
 import contenteditable from './helper/Contenteditable.vue'
@@ -164,6 +145,20 @@ export default class SpeakerSegmentTranscript extends Vue {
   debouncedUpdateTokenTier = _.debounce(this.updateTokenTier, 300)
   debouncedUpdateEventTier = _.debounce(this.updateEventTier, 300)
   debouncedCommitEvent = _.debounce(this.commitEvent, 300)
+
+  onBlurEvent() {
+    eventStore.userState.editingTranscriptEvent = null
+    this.focused = false
+  }
+
+  onFocusEvent() {
+    eventStore.userState.editingTranscriptEvent = this.event
+    selectEvent(this.event)
+    if (settings.lockScroll === true) {
+      scrollToAudioEvent(this.event)
+    }
+    this.focused = true
+  }
 
   updateTokenTier(text: string|undefined|null, tierType: TokenTierType, index: number) {
     const cleanText = text === undefined || text === null ? '' : text
@@ -225,14 +220,12 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   focusNextFrom(e: KeyboardEvent, tier: TokenTierType) {
-    console.log('next', tier, eventStore.metadata.tiers, this.speaker, eventStore.metadata.speakers)
     e.preventDefault()
     const i = findEventIndexById(this.event.eventId)
     scrollToTranscriptEvent(
       eventStore.events[i > -1 ? i + 1 : 0],
       { animate: true, focusSpeaker: this.speaker, focusTier: tier, focusRight: false }
     )
-    // }
   }
 
   @Watch('event', { deep: true })
@@ -399,7 +392,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   viewAndSelectAudioEvent(e: LocalTranscriptEvent) {
-    eventStore.selectedEventIds = [ e.eventId ]
+    selectEvent(e)
     scrollToAudioEvent(e)
   }
 
