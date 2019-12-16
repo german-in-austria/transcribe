@@ -222,14 +222,6 @@ export default class Search extends Vue {
     }
   }
 
-  getDefaultOrAllTokenText(t: LocalTranscriptToken) {
-    if (this.defaultTierOnly) {
-      return t.tiers[this.defaultTier].text
-    } else {
-      return _(t.tiers).map(tier => tier.text).value().join(' ')
-    }
-  }
-
   searchEvents(
     term: string,
     es: LocalTranscriptEvent[],
@@ -245,7 +237,6 @@ export default class Search extends Vue {
       regex = new RegExp(term)
     } catch (e) {
       // it failed.
-      return []
     }
     const r = es.reduce((res, e, i) => {
       let index = -1
