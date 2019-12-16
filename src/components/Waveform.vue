@@ -65,7 +65,7 @@
       <v-flex xs12 style="position: relative" class="ml-3">
         <scrollbar
           class="scrollbar"
-          update-on="scrollWaveform"
+          update-on="updateWaveformScrollbar"
           :max-time="eventStore.audioElement.duration"
           @scroll="scrollFromScrollbar"
         />
@@ -245,9 +245,9 @@ export default class Waveform extends Vue {
   }
 
   emitScroll() {
-    EventBus.$emit('scrollWaveform', (
-      this.$refs.svgContainer as HTMLElement).scrollLeft / settings.pixelsPerSecond
-    )
+    const t = (this.$refs.svgContainer as HTMLElement).scrollLeft / settings.pixelsPerSecond
+    EventBus.$emit('scrollWaveform', t)
+    EventBus.$emit('updateWaveformScrollbar', t)
   }
 
   zoomPreview(e: MouseWheelEvent) {
@@ -505,13 +505,14 @@ export default class Waveform extends Vue {
     }
   }
 
-  scrollToSecondSmooth(targetOffset: number) {
+  scrollToSecondSmooth(t: number) {
     const el = this.$refs.svgContainer
     const animationDuration = .25
     const animationDistance = 600
     if (el instanceof HTMLElement) {
       const startTime = performance.now()
       const currentOffset = el.scrollLeft
+      const targetOffset = t * settings.pixelsPerSecond
       const realDistance = Math.abs(currentOffset - targetOffset)
       // SCROLL DIRECTLY TO IT (SHORT DISTANCE)
       if (realDistance < this.$el.clientWidth) {
@@ -559,10 +560,10 @@ export default class Waveform extends Vue {
     }
     if (e !== null && e !== undefined) {
       const duration = e.endTime - e.startTime
-      const offset = (e.startTime + duration / 2) * settings.pixelsPerSecond
-      const targetOffset = offset - this.$el.clientWidth / 2
-      EventBus.$emit('scrollWaveform', targetOffset / settings.pixelsPerSecond)
-      this.scrollToSecondSmooth(targetOffset)
+      const offset = (e.startTime + duration / 2)
+      const tCenter = offset - (this.$el.clientWidth / 2 / settings.pixelsPerSecond)
+      EventBus.$emit('updateWaveformScrollbar', tCenter)
+      this.scrollToSecondSmooth(tCenter)
     }
   }
 
