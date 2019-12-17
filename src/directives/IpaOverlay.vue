@@ -184,7 +184,6 @@ export default class IpaOverlay extends Vue {
 
   keyDown(e: Event) {
     if ((e as KeyboardEvent).key === 'Tab') {
-      this.updatePosition()
       // to put the focus inside the overlay
       if (this.$refs.aBtns) {
         const currentFocus = (this.$refs.aBtns as Element[]).findIndex(el => el === document.activeElement)
@@ -195,6 +194,7 @@ export default class IpaOverlay extends Vue {
         }
       }
     }
+    this.updatePosition(this.aElement)
   }
 
   keyUp(e: Event) {
