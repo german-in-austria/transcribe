@@ -222,7 +222,11 @@ export default class Waveform extends Vue {
   async cacheOverviewWaveform() {
     await util.requestFrameAsync()
     const el = (this.$el.querySelector('.overview-waveform svg') as HTMLElement)
-    localStorage.setItem('waveformOverview__' + eventStore.metadata.audioUrl, el.innerHTML)
+    try {
+      localStorage.setItem('waveformOverview__' + eventStore.metadata.audioUrl, el.innerHTML)
+    } catch (e) {
+      console.log(e)
+    }
   }
 
   hasOverviewCache(): boolean {
