@@ -2,6 +2,21 @@
   <v-list subheader>
     <v-layout class="settings-header">
       <v-flex xs12>
+        <v-subheader>Editing</v-subheader>
+        <v-divider />
+      </v-flex>
+    </v-layout>
+    <v-list-tile>
+      <v-list-tile-content>
+        <v-list-tile-title>Auto-insert spaces before delimiters</v-list-tile-title>
+        <v-list-tile-sub-title>E.g. <code>token.</code> becomes <code>token .</code></v-list-tile-sub-title>
+      </v-list-tile-content>
+      <v-list-tile-action>
+        <v-switch v-model="settings.autoCorrectDelimiterSpace" />
+      </v-list-tile-action>
+    </v-list-tile>
+    <v-layout class="settings-header">
+      <v-flex xs12>
         <v-subheader>Token Types</v-subheader>
         <v-divider />
       </v-flex>

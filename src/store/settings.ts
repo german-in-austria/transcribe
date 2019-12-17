@@ -38,6 +38,7 @@ export type SidebarItem = null|'edit'|'history'|'warnings'|'search'|'bookmarks'
 
 export interface Settings {
   activeSidebarItem: SidebarItem
+  autoCorrectDelimiterSpace: boolean
   showSettings: boolean
   contrast: number
   darkMode: boolean
@@ -365,6 +366,7 @@ export function setIsDarkMode(b: boolean) {
 
 const settings: Settings = {
   activeSidebarItem: 'edit',
+  autoCorrectDelimiterSpace: true,
   showSettings: false,
   contrast: 1,
   darkMode: getIsDarkMode(),
