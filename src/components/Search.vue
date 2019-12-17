@@ -5,13 +5,12 @@
         <small>Search</small>
       </v-subheader>
       <input
-        v-rt-ipa="false"
+        v-rt-ipa="{ show: true, directionV: 'bottom', maxWidth: 310 }"
         type="text"
         ref="input"
         :class="[settings.darkMode && 'theme--dark']"
         :value="eventStore.searchTerm"
         :style="{ color: useRegEx && !isValidRegex ? 'red' : undefined }"
-        @keydown.esc.exact="handleEsc"
         @keydown.enter.exact.stop="findNext"
         @keydown.enter.shift.exact.stop="findPrevious"
         @input="(e) => handleSearch(e.target.value)"
@@ -146,15 +145,14 @@ import * as history from '../store/history'
 })
 export default class Search extends Vue {
 
-  defaultTier = eventStore.metadata.defaultTier
   settings = settings
-  focused = false
   eventStore = eventStore
   toTime = toTime
-  isMenuShown = false
+
   caseSensitive = false
   useRegEx = false
-  defaultTierOnly = false
+  showIpaKeyboard = false
+
   searchResultEventCounter = 0
   isEventSelected = isEventSelected
   playEvent = playEvent
@@ -169,12 +167,10 @@ export default class Search extends Vue {
   }
 
   onFocus() {
-    this.focused = true
     history.stopListening()
   }
 
   onBlur() {
-    this.focused = false
     history.startListening()
   }
 
@@ -190,7 +186,6 @@ export default class Search extends Vue {
     return {
       caseSensitive: this.caseSensitive,
       useRegEx: this.useRegEx,
-      defaultTierOnly: this.defaultTierOnly,
       searchInSpeakers: eventStore.metadata.speakers,
       searchInTiers: eventStore.metadata.tiers
     }
@@ -364,14 +359,6 @@ export default class Search extends Vue {
     }
   }
 
-  handleEsc() {
-    if (eventStore.searchTerm !== '') {
-      eventStore.searchTerm = ''
-      eventStore.searchResults = []
-    } else {
-      (this.$refs.input as any).blur()
-    }
-  }
   goToResult(e: LocalTranscriptEvent) {
     if (e !== undefined) {
       scrollToTranscriptEvent(e)

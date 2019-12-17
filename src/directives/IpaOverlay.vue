@@ -1,7 +1,12 @@
 <template>
   <div
     v-if="ready && aKeys.length > 0"
-    :style="{ top: top + 'px', left: left + 'px' }"
+    :style="{
+      top: top + 'px',
+      left: left + 'px',
+      transform: directionV === 'top' ? 'translateY(-100%)' : 'none',
+      maxWidth: maxWidth + 'px'
+    }"
     class="ipa-overlay">
     <div
       style="white-space: nowrap;"
@@ -82,6 +87,9 @@ export default class IpaOverlay extends Vue {
   ready = false
   lastPosition: number|null = null
   log = console.log
+  directionV: 'top'|'bottom' = 'top'
+  directionH: 'left'|'right' = 'left'
+  maxWidth = 350
 
   top = 0
   left = 0
@@ -105,8 +113,20 @@ export default class IpaOverlay extends Vue {
   updatePosition(el = this.aElement) {
     if (el !== null) {
       const rect = el.getBoundingClientRect()
-      this.top = rect.top
-      this.left = rect.left
+      if (this.directionV === 'top') {
+        this.top = rect.top
+      } else if (this.directionV === 'bottom') {
+        this.top = rect.bottom
+      } else {
+        this.top = rect.top
+      }
+      if (this.directionH === 'left') {
+        this.left = rect.left
+      } else if (this.directionH === 'right') {
+        this.left = rect.right
+      } else {
+        this.left = rect.left
+      }
     }
   }
 
@@ -126,11 +146,16 @@ export default class IpaOverlay extends Vue {
       this.aKeys = []
       if (this.lastPosition || this.lastPosition === 0) {
         const selection = document.getSelection()
-        if (selection !== null && this.aElement !== null && this.aElement.firstChild !== null) {
-          selection.removeAllRanges()
-          const range = new Range()
-          range.setStart(this.aElement.firstChild, this.lastPosition)
-          selection.addRange(range)
+        if (this.aElement instanceof HTMLInputElement) {
+          this.aElement.focus()
+          this.aElement.setSelectionRange(this.lastPosition, this.lastPosition)
+        } else {
+          if (selection !== null && this.aElement !== null && this.aElement.firstChild !== null) {
+            selection.removeAllRanges()
+            const range = new Range()
+            range.setStart(this.aElement.firstChild, this.lastPosition)
+            selection.addRange(range)
+          }
         }
       }
     }
@@ -158,10 +183,11 @@ export default class IpaOverlay extends Vue {
   }
 
   keyDown(e: Event) {
-    this.updatePosition()
     if ((e as KeyboardEvent).key === 'Tab') {
+      this.updatePosition()
+      // to put the focus inside the overlay
       if (this.$refs.aBtns) {
-        const currentFocus = (this.$refs.aBtns as Element[]).findIndex(el => el === document.activeElement);
+        const currentFocus = (this.$refs.aBtns as Element[]).findIndex(el => el === document.activeElement)
         if ((this.$refs.aBtns as HTMLElement[])[currentFocus + 1] !== undefined) {
           e.preventDefault();
           e.stopPropagation();
@@ -172,15 +198,25 @@ export default class IpaOverlay extends Vue {
   }
 
   keyUp(e: Event) {
-    console.log(e, this.aElement)
+    // console.log(e, this.aElement)
     const k = (e as KeyboardEvent).key
-    if (k !== 'Tab' && k !== 'Shift' && this.aElement !== null) {
+
+    if (k === 'Escape') {
+      e.preventDefault()
+      e.stopPropagation()
+      this.aKeys = []
+    } else if (k !== 'Tab' && k !== 'Shift' && this.aElement !== null) {
       this.aKeys = []
       const aSel = document.getSelection()
-      console.log({ aSel })
+      // console.log({ aSel })
       if (aSel !== null) {
-        this.lastPosition = aSel.focusOffset
-        if (k.length === 1 && aSel.focusOffset === (aSel as any).baseOffset) {
+        // tslint:disable-next-line:max-line-length
+        const focusOffset = this.aElement instanceof HTMLInputElement ? this.aElement.selectionEnd || 0 : aSel.focusOffset
+        // tslint:disable-next-line:max-line-length
+        const baseOffset = this.aElement instanceof HTMLInputElement ? this.aElement.selectionStart || 0 : (aSel as any).baseOffset
+        const value = this.aElement.innerText || (this.aElement as HTMLInputElement).value
+        this.lastPosition = focusOffset
+        if (k.length === 1 && focusOffset === baseOffset) {
           if (k === '!') {
             for (const key in this.ipaKeys) {
               if (!this.ipaKeys.hasOwnProperty(key)) {
@@ -190,20 +226,19 @@ export default class IpaOverlay extends Vue {
             }
           } else {
             let alKey = ''
-            const v = this.aElement.innerText || (this.aElement as HTMLInputElement).value
-            if (aSel.focusOffset > 2) {
-              alKey = v.substring(aSel.focusOffset - 3, aSel.focusOffset)
+            if (focusOffset > 2) {
+              alKey = value.substring(focusOffset - 3, focusOffset)
               if (this.ipaKeys[alKey]) {
                 this.aKeys.push({ k: alKey, a: this.ipaKeys[alKey] })
               }
             }
-            if (aSel.focusOffset > 1) {
-              alKey = v.substring(aSel.focusOffset - 2, aSel.focusOffset)
+            if (focusOffset > 1) {
+              alKey = value.substring(focusOffset - 2, focusOffset)
               if (this.ipaKeys[alKey]) {
                 this.aKeys.push({ k: alKey, a: this.ipaKeys[alKey] })
               }
             }
-            const aKey = v.substring(aSel.focusOffset - 1, aSel.focusOffset)
+            const aKey = value.substring(focusOffset - 1, focusOffset)
             if (aKey && this.ipaKeys[aKey]) {
               this.aKeys.push({ k: aKey, a: this.ipaKeys[aKey] })
             }
@@ -226,8 +261,8 @@ export default class IpaOverlay extends Vue {
 <style lang="stylus" scoped>
 .ipa-overlay
   position absolute
-  box-shadow 0 5px 5px -3px rgba(0,0,0,.2), 0 8px 10px 1px rgba(0,0,0,.14), 0 3px 14px 2px rgba(0,0,0,.12);
-  z-index 2
+  box-shadow 0 5px 5px -3px rgba(0,0,0,.2), 0 8px 10px 1px rgba(0,0,0,.14), 0 3px 14px 2px rgba(0,0,0,.12)
+  z-index 99
   max-height 150px
   overflow-y auto
   background rgba(240,240,240,.5)
@@ -235,7 +270,6 @@ export default class IpaOverlay extends Vue {
   color #333
   border-radius 4px
   backdrop-filter blur(20px)
-  transform translateY(-100%)
   font-family sans-serif
 
 .ipa-btn
