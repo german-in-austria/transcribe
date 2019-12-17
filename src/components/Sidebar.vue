@@ -46,7 +46,7 @@
             class="mb-2">
             <v-badge
               :value="errors.length > 0"
-              :color="settings.activeSidebarItem === 2 ? 'blue' : 'grey'">
+              :color="settings.activeSidebarItem === 'warnings' ? 'blue' : 'grey'">
               <v-icon
                 :color="settings.activeSidebarItem === 'warnings' ? 'blue' : ''">
                 error_outline
