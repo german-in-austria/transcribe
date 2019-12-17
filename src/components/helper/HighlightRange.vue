@@ -38,7 +38,9 @@ div
   overflow hidden
   text-overflow ellipsis
   max-width 100%
+
 .highlight
+  color rgba(0,0,0,.8)
   background yellow
   border-radius 3px
 </style>

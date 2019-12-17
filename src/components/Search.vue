@@ -27,7 +27,7 @@
           bottom
           offset-y
           nudge-bottom="5">
-          <div slot="activator" class="tier-and-speaker-selector mt-1">
+          <div slot="activator" :class="['tier-and-speaker-selector mt-1', settings.darkMode && 'theme--dark']">
             <!-- TODO: make nicer -->
             ▾ {{
               areAllSpeakersSelected()
@@ -394,6 +394,8 @@ export default class Search extends Vue {
   background rgba(255, 255, 255, .7)
   border-radius 4px
   padding 0 1em
+  &.theme--dark
+    background #333
 
 .scroller
   height 100%
