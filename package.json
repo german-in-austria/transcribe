@@ -12,6 +12,7 @@
     "dev": "NODE_ENV=development webpack-dev-server",
     "load-swagger": "curl \"$API_HOST/swagger.json\" > ./swagger.json && swagger-ts-client-generator < swagger.json > ./src/api/swagger.ts",
     "apitypes": "env $(cat env-dev.env) bash -c 'npm run load-swagger'",
+    "vue-type-check": "vtc --workspace ./src --onlyTemplate",
     "start": "node server/index.js"
   },
   "keywords": [],
@@ -110,6 +111,7 @@
     "typescript": "^2.9.2",
     "vue-loader": "^12.0.3",
     "vue-template-compiler": "^2.6.8",
+    "vue-type-check": "^1.0.0",
     "webpack": "^2.5.0",
     "webpack-bundle-analyzer": "^3.3.2",
     "webpack-dev-server": "^2.9.7",
