@@ -161,8 +161,10 @@ export default class Search extends Vue {
 
   mounted() {
     eventBus.$on('focusSearch', () => {
-      (this.$refs.input as HTMLInputElement).focus();
-      (this.$refs.input as HTMLInputElement).select();
+      if (this.$refs.input instanceof HTMLInputElement) {
+        this.$refs.input.focus()
+        this.$refs.input.select()
+      }
     })
   }
 
