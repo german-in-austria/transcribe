@@ -310,9 +310,9 @@ export default class Waveform extends Vue {
       await util.requestFrameAsync()
       this.updateSecondsMarkers()
       await util.requestFrameAsync()
-      window.requestIdleCallback(this.doMaybeRerender)
-      await util.requestFrameAsync()
       window.requestIdleCallback(this.updateSegments)
+      await util.requestFrameAsync()
+      this.doMaybeRerender()
     })
   }
 
@@ -337,7 +337,7 @@ export default class Waveform extends Vue {
     const ves = await this.getVisibleEvents(boundLeft, boundRight)
     this.visibleEvents = ves
     // if we didn’t do that, the elements that are re-rendered
-    // (because of the above call) would loose focus, causing the
+    // (because of the above call) would lose focus, causing the
     // window to receive focus, and thus breaking the ability
     // to handle keyboard events from here.
     if (shouldKeepFocus) {
