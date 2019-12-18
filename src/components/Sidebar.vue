@@ -30,14 +30,18 @@
             icon
             @click="clickTab('edit')"
             class="mb-2">
-            <v-icon :color="settings.activeSidebarItem === 'edit' ? 'blue' : ''">edit</v-icon>
+            <v-icon :color="settings.activeSidebarItem === 'edit' ? 'blue' : ''">
+              {{ keyboardShortcuts.showEditMenu.icon }}
+            </v-icon>
           </v-btn>
           <v-btn 
             :title="'History (' + displayKeyboardAction(keyboardShortcuts.showHistory) + ')'"
             icon
             @click="clickTab('history')"
             class="mb-2">
-            <v-icon :color="settings.activeSidebarItem === 'history' ? 'blue' : ''">history</v-icon>
+            <v-icon :color="settings.activeSidebarItem === 'history' ? 'blue' : ''">
+              {{ keyboardShortcuts.showHistory.icon }}
+            </v-icon>
           </v-btn>
           <v-btn
             :title="'Warnings (' + displayKeyboardAction(keyboardShortcuts.showWarnings) + ')'"
@@ -49,7 +53,7 @@
               :color="settings.activeSidebarItem === 'warnings' ? 'blue' : 'grey'">
               <v-icon
                 :color="settings.activeSidebarItem === 'warnings' ? 'blue' : ''">
-                error_outline
+                {{ keyboardShortcuts.showWarnings.icon }}
               </v-icon>
               <span slot="badge">
                 {{ errors.length < 100 ? errors.length : '99+' }}
@@ -61,14 +65,18 @@
             icon
             @click="clickTab('search')"
             class="mb-2">
-            <v-icon :color="settings.activeSidebarItem === 'search' ? 'blue' : ''">mdi-magnify</v-icon>
+            <v-icon :color="settings.activeSidebarItem === 'search' ? 'blue' : ''">
+              {{ keyboardShortcuts.showSearch.icon }}
+            </v-icon>
           </v-btn>
           <v-btn
             :title="'Bookmarks (' + displayKeyboardAction(keyboardShortcuts.showBookmarks) + ')'"
             icon
             @click="clickTab('bookmarks')"
             class="mb-2">
-            <v-icon :color="settings.activeSidebarItem === 'bookmarks' ? 'blue' : ''">bookmark_border</v-icon>
+            <v-icon :color="settings.activeSidebarItem === 'bookmarks' ? 'blue' : ''">
+              {{ keyboardShortcuts.showBookmarks.icon }}
+            </v-icon>
           </v-btn>
         </v-flex>
         <v-flex xs1>
