@@ -719,9 +719,10 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Select none',
     description: 'Selects no Events',
     icon: null,
-    disabled: () => eventStore.selectedEventIds.length === 0,
+    disabled: () => false,
     action: () => {
-      eventStore.selectedEventIds = []
+      deselectEvents()
+      eventStore.userState.timeSelection = { start: null, end: null }
     }
   },
   saveTranscript: {
