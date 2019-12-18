@@ -6,7 +6,7 @@
         <v-divider />
       </v-flex>
     </v-layout>
-    <v-list-tile>
+    <v-list-tile class="pt-2">
       <v-list-tile-content>
         <v-list-tile-title>Auto-insert spaces before delimiters</v-list-tile-title>
         <v-list-tile-sub-title>E.g. <code>token.</code> becomes <code>token .</code></v-list-tile-sub-title>
