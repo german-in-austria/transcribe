@@ -38,7 +38,9 @@ import {
   playAllFrom,
   pause,
   playEventsStart,
-  playEventsEnd
+  playEventsEnd,
+  timeSelectionIsEmpty,
+  playRange
 } from '../store/transcript'
 
 import { saveChangesToServer } from '../service/backend-server'
@@ -524,7 +526,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     key: 'e',
     name: 'Warnings',
     description: 'Show Warnings in the Sidebar',
-    icon: 'error_outline',
+    icon: 'mdi-alert-outline',
     disabled: () => false,
     action: () => {
       if (settings.showDrawer === true && settings.activeSidebarItem === 'warnings') {
@@ -622,7 +624,9 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     action: () => {
       if (eventStore.isPaused === true) {
         const es = getSelectedEvents()
-        if (es.length > 0) {
+        if (!timeSelectionIsEmpty()) {
+          playRange(eventStore.userState.timeSelection.start || 0, eventStore.userState.timeSelection.end || 0)
+        } else if (es.length > 0) {
           playEvents(es)
         } else {
           playAllFrom(eventStore.currentTime)

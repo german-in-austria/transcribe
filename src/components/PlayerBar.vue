@@ -17,8 +17,9 @@
         xs4
         align-content-center>
         <player-bar-button @click="playPause" :size="height">
-          <v-icon v-if="eventStore.isPaused">play_arrow</v-icon>
-          <v-icon v-else>pause</v-icon>
+          <v-icon v-if="eventStore.isPaused && timeSelectionIsEmpty()">play_arrow</v-icon>
+          <v-icon v-if="eventStore.isPaused && !timeSelectionIsEmpty()">mdi-play-outline</v-icon>
+          <v-icon v-if="!eventStore.isPaused">pause</v-icon>
         </player-bar-button>
         <div ref="currentTime" class="current-time"></div>
       </v-flex>
@@ -111,7 +112,9 @@ import {
   getSelectedEvents,
   playEvents,
   playEventsStart,
-  playEventsEnd
+  playEventsEnd,
+  playRange,
+  timeSelectionIsEmpty
 } from '../store/transcript'
 import { requestFrameAsync, isCmdOrCtrl } from '../util/index'
 
@@ -131,6 +134,7 @@ export default class PlayerBar extends Vue {
   setPlaybackVolume = setPlaybackVolume
   settings = settings
   toTime = toTime
+  timeSelectionIsEmpty = timeSelectionIsEmpty
 
   cachedVolume = settings.playbackVolume
   cachedSpeed = .5
@@ -156,7 +160,9 @@ export default class PlayerBar extends Vue {
   playPause(e: Event) {
     if (eventStore.isPaused === true) {
       const es = getSelectedEvents()
-      if (es.length > 0) {
+      if (!timeSelectionIsEmpty()) {
+        playRange(eventStore.userState.timeSelection.start || 0, eventStore.userState.timeSelection.end || 0)
+      } else if (es.length > 0) {
         playEvents(es)
       } else {
         playAllFrom(eventStore.currentTime)

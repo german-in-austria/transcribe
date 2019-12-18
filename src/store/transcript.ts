@@ -128,8 +128,12 @@ export const eventStore = {
   },
   userState: {
     viewingTranscriptEvent: null as LocalTranscriptEvent|null,
+    editingTranscriptEvent: null as LocalTranscriptEvent|null,
     viewingAudioEvent: null as LocalTranscriptEvent|null,
-    editingTranscriptEvent: null as LocalTranscriptEvent|null
+    timeSelection: {
+      start: null as null|number,
+      end: null as null|number
+    }
   },
   transcriptDownloadProgress: 0 as number,
   status: 'empty' as 'empty'|'loading'|'finished'|'new',
@@ -153,6 +157,11 @@ export function tokenTypeFromToken(token: string) {
       id: -1
     }
   }
+}
+
+export function timeSelectionIsEmpty() {
+  return eventStore.userState.timeSelection.start === null &&
+    eventStore.userState.timeSelection.end === null
 }
 
 export function getRecentlyOpened(backEndUrl: string): ServerTranscriptListItem[] {
@@ -994,20 +1003,7 @@ export async function playEventsStart(events: LocalTranscriptEvent[], duration: 
     endTime: Math.min(firstEvent.startTime + duration, firstEvent.endTime)
   }
   if (audio.store.uint8Buffer.byteLength > 0) {
-    const buffer = await audio.decodeBufferTimeSlice(
-      synEvent.startTime,
-      synEvent.endTime,
-      audio.store.uint8Buffer.buffer
-    )
-    if (buffer !== undefined) {
-      requestAnimationFrame(() => {
-        eventStore.isPaused = false
-        audio
-          .playBuffer(buffer, settings.playbackSpeed)
-          .addEventListener('ended', () => pause)
-        emitUpdateTimeUntilPaused(synEvent.startTime, false, synEvent.endTime)
-      })
-    }
+    playRange(synEvent.startTime, synEvent.endTime)
   }
 }
 
@@ -1019,20 +1015,21 @@ export async function playEventsEnd(events: LocalTranscriptEvent[], duration: nu
     startTime: Math.max(lastEvent.endTime - duration, lastEvent.startTime)
   }
   if (audio.store.uint8Buffer.byteLength > 0) {
-    const buffer = await audio.decodeBufferTimeSlice(
-      synEvent.startTime,
-      synEvent.endTime,
-      audio.store.uint8Buffer.buffer
-    )
-    if (buffer !== undefined) {
-      requestAnimationFrame(() => {
-        eventStore.isPaused = false
-        audio
-          .playBuffer(buffer, settings.playbackSpeed)
-          .addEventListener('ended', () => pause)
-        emitUpdateTimeUntilPaused(synEvent.startTime, false, synEvent.endTime)
-      })
-    }
+    playRange(synEvent.startTime, synEvent.endTime)
+  }
+}
+
+export async function playRange(start: number, end: number) {
+  const [ left, right ] = [ start, end ].sort()
+  const buffer = await audio.decodeBufferTimeSlice(left, right, audio.store.uint8Buffer.buffer)
+  if (buffer !== undefined) {
+    requestAnimationFrame(() => {
+      eventStore.isPaused = false
+      audio
+        .playBuffer(buffer, settings.playbackSpeed)
+        .addEventListener('ended', () => pause)
+      emitUpdateTimeUntilPaused(left, false, right)
+    })
   }
 }
 
@@ -1047,20 +1044,7 @@ export async function playEvents(events: LocalTranscriptEvent[]) {
     const startTime = eventStore.currentTime > synEvent.startTime && eventStore.currentTime < synEvent.endTime
       ? eventStore.currentTime
       : synEvent.startTime
-    const buffer = await audio.decodeBufferTimeSlice(
-      startTime,
-      synEvent.endTime,
-      audio.store.uint8Buffer.buffer
-    )
-    if (buffer !== undefined) {
-      requestAnimationFrame(() => {
-        eventStore.isPaused = false
-        audio
-          .playBuffer(buffer, settings.playbackSpeed)
-          .addEventListener('ended', () => pause)
-        emitUpdateTimeUntilPaused(startTime, false, synEvent.endTime)
-      })
-    }
+    playRange(startTime, synEvent.endTime)
   }
 }
 
