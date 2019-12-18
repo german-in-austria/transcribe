@@ -998,54 +998,44 @@ export function scrubAudio(t: number) {
 export async function playEventsStart(events: LocalTranscriptEvent[], duration: number) {
   const sortedEvents = sortEvents(events)
   const firstEvent = sortedEvents[0]
-  const synEvent = {
-    ...firstEvent,
-    endTime: Math.min(firstEvent.startTime + duration, firstEvent.endTime)
-  }
-  if (audio.store.uint8Buffer.byteLength > 0) {
-    playRange(synEvent.startTime, synEvent.endTime)
-  }
+  const [ start, end ] = [ firstEvent.startTime, Math.min(firstEvent.startTime + duration, firstEvent.endTime) ]
+  playRange(start, end)
 }
 
 export async function playEventsEnd(events: LocalTranscriptEvent[], duration: number) {
   const sortedEvents = sortEvents(events)
   const lastEvent = _.last(sortedEvents) as LocalTranscriptEvent
-  const synEvent = {
-    ...lastEvent,
-    startTime: Math.max(lastEvent.endTime - duration, lastEvent.startTime)
-  }
-  if (audio.store.uint8Buffer.byteLength > 0) {
-    playRange(synEvent.startTime, synEvent.endTime)
-  }
+  const [ start, end ] = [ Math.max(lastEvent.endTime - duration, lastEvent.startTime), lastEvent.endTime ]
+  playRange(start, end)
 }
 
 export async function playRange(start: number, end: number) {
-  const [ left, right ] = [ start, end ].sort()
-  const buffer = await audio.decodeBufferTimeSlice(left, right, audio.store.uint8Buffer.buffer)
-  if (buffer !== undefined) {
-    requestAnimationFrame(() => {
-      eventStore.isPaused = false
-      audio
-        .playBuffer(buffer, settings.playbackSpeed)
-        .addEventListener('ended', () => pause)
-      emitUpdateTimeUntilPaused(left, false, right)
-    })
+  if (audio.store.uint8Buffer.byteLength === 0) {
+    console.log('can’t play, no buffer loaded')
+  } else {
+    const [ left, right ] = [ start, end ].sort()
+    const buffer = await audio.decodeBufferTimeSlice(left, right, audio.store.uint8Buffer.buffer)
+    if (buffer !== undefined) {
+      requestAnimationFrame(() => {
+        eventStore.isPaused = false
+        audio
+          .playBuffer(buffer, settings.playbackSpeed)
+          .addEventListener('ended', () => pause)
+        emitUpdateTimeUntilPaused(left, false, right)
+      })
+    }
   }
 }
 
 export async function playEvents(events: LocalTranscriptEvent[]) {
   pause()
   const sortedEvents = sortEvents(events)
-  const synEvent = {
-    ..._(sortedEvents).first() as LocalTranscriptEvent,
-    endTime: (_(sortedEvents).last() as LocalTranscriptEvent).endTime
-  }
-  if (audio.store.uint8Buffer.byteLength > 0) {
-    const startTime = eventStore.currentTime > synEvent.startTime && eventStore.currentTime < synEvent.endTime
-      ? eventStore.currentTime
-      : synEvent.startTime
-    playRange(startTime, synEvent.endTime)
-  }
+  const lastEvent = _(sortedEvents).last() as LocalTranscriptEvent
+  const firstEvent = _(sortedEvents).first() as LocalTranscriptEvent
+  const start = eventStore.currentTime > firstEvent.startTime && eventStore.currentTime < lastEvent.endTime
+    ? eventStore.currentTime
+    : firstEvent.startTime
+  playRange(start, lastEvent.endTime)
 }
 
 export async function playEvent(event: LocalTranscriptEvent) {
