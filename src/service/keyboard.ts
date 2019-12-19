@@ -47,6 +47,7 @@ import { saveChangesToServer } from '../service/backend-server'
 
 import eventBus from '../service/event-bus'
 import settings from '../store/settings';
+import { computeTokenTypesForEvents } from './token-types'
 
 type KeyboardModifier = 'alt'|'shift'|'ctrlOrCmd'
 
@@ -260,8 +261,10 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         const speakerId = e.getAttribute('data-speaker-id')
         const eventId = e.getAttribute('data-event-id')
         if (speakerId !== null && eventId !== null) {
-          console.log({ speakerId, eventId })
+          // console.log({ speakerId, eventId })
           undoable(splitEventAtChar(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
+          // tslint:disable-next-line:max-line-length
+          eventStore.events = eventStore.events = computeTokenTypesForEvents(eventStore.events, eventStore.metadata.defaultTier, [ speakerId ])
         }
       }
     }
@@ -321,7 +324,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     key: 'p',
     name: 'Insert Pause',
     description: 'Insert a pause at the current cursor position',
-    icon: '',
+    icon: 'pause_circle_outline',
     disabled: () => false,
     action: async (ev) => {
       ev.preventDefault()
