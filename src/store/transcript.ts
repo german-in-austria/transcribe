@@ -273,7 +273,7 @@ export function scrollToAudioEvent(e: LocalTranscriptEvent) {
 export function scrollToTranscriptEvent(
   e: LocalTranscriptEvent, opts?: {
     animate: boolean,
-    focusSpeaker: number|null,
+    focusSpeaker: string|null,
     focusTier: string|null,
     focusRight: boolean
   }
@@ -352,6 +352,30 @@ function updateSpeakerTokenOrderStartingAt(speakerId: number, startAtIndex = 0, 
       return e
     }
   })
+}
+
+export function getFirstTokenOrder(e: LocalTranscriptEvent, speakerId: string): number {
+  const speakerEvent = e.speakerEvents[speakerId]
+  if (speakerEvent) {
+    const firstToken = e.speakerEvents[speakerId].tokens[0]
+    if (firstToken) {
+      return firstToken.order
+    } else {
+      return 0
+    }
+  } else {
+    const i = findPreviousSpeakerEvent(speakerId, e.eventId)
+    if (i !== -1) {
+      const prevLastToken = _(eventStore.events[i].speakerEvents[speakerId].tokens).last()
+      if (prevLastToken) {
+        return prevLastToken.order + 1
+      } else {
+        return 0
+      }
+    } else {
+      return 0
+    }
+  }
 }
 
 function getLastEventToken(event: LocalTranscriptEvent|undefined, speakerId: number): LocalTranscriptToken|undefined {
@@ -906,7 +930,7 @@ export function findEventIndexAt(seconds: number): number {
   return _(eventStore.events).findIndex((e) => e.startTime <= seconds && e.endTime >= seconds)
 }
 
-export function findPreviousSpeakerEvent(speaker: number, eventId: number): number {
+export function findPreviousSpeakerEvent(speaker: string, eventId: number): number {
   const i = findEventIndexById(eventId)
   return _(eventStore.events).findLastIndex((e, eventIndex) => eventIndex < i && e.speakerEvents[speaker] !== undefined)
 }

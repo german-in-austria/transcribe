@@ -107,7 +107,8 @@ import {
   scrollToAudioEvent,
   scrollToTranscriptEvent,
   makeEventTierId,
-  selectEvent
+  selectEvent,
+  getFirstTokenOrder
 } from '../store/transcript'
 
 import contenteditable from './helper/Contenteditable.vue'
@@ -126,7 +127,7 @@ import { computeTokenTypesForEvents } from '../service/token-types'
 export default class SpeakerSegmentTranscript extends Vue {
 
   @Prop() event: LocalTranscriptEvent
-  @Prop() speaker: number
+  @Prop() speaker: string
 
   tierHeight = 25
   localEvent = clone(this.event)
@@ -145,6 +146,22 @@ export default class SpeakerSegmentTranscript extends Vue {
   debouncedUpdateTokenTier = _.debounce(this.updateTokenTier, 300)
   debouncedUpdateEventTier = _.debounce(this.updateEventTier, 300)
   debouncedCommitEvent = _.debounce(this.commitEvent, 300)
+
+  mounted() {
+    // tslint:disable-next-line:max-line-length
+    eventBus.$on('updateSpeakerEventText', this.updateTextFromEventBus)
+  }
+
+  destroyed() {
+    eventBus.$off('updateSpeakerEventText', this.updateTextFromEventBus)
+  }
+
+  updateTextFromEventBus({eventId, speakerId, text}: { eventId: string, speakerId: string, text: string }) {
+    if (Number(eventId) === this.event.eventId && speakerId === this.speaker) {
+      this.segmentText = text.replace(/\s/g, ' ')
+      this.updateDefaultTier(this.segmentText)
+    }
+  }
 
   onBlurEvent() {
     eventStore.userState.editingTranscriptEvent = null
@@ -196,7 +213,7 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   updateDefaultTier(text: string|undefined|null) {
     const cleanText = text === undefined || text === null ? '' : text
-    const ts = this.updateLocalTokens(cleanText)
+    this.updateLocalTokens(cleanText)
     this.debouncedCommitEvent()
   }
 
@@ -305,7 +322,7 @@ export default class SpeakerSegmentTranscript extends Vue {
             tokensTiers,
             base,
             extent,
-            this.firstTokenOrder || 0
+            getFirstTokenOrder(this.event, this.speaker)
           )
           // update text presentation
           this.segmentText = this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ')
@@ -370,30 +387,6 @@ export default class SpeakerSegmentTranscript extends Vue {
     return this.event.speakerEvents[this.speaker].tokens
   }
 
-  get firstTokenOrder() {
-    const speakerEvent = this.event.speakerEvents[this.speaker]
-    if (speakerEvent) {
-      const firstToken = this.event.speakerEvents[this.speaker].tokens[0]
-      if (firstToken) {
-        return firstToken.order
-      } else {
-        return undefined
-      }
-    } else {
-      const i = findPreviousSpeakerEvent(this.speaker, this.event.eventId)
-      if (i !== -1) {
-        const prevLastToken = _(eventStore.events[i].speakerEvents[this.speaker].tokens).last()
-        if (prevLastToken) {
-          return prevLastToken.order + 1
-        } else {
-          return 0
-        }
-      } else {
-        return 0
-      }
-    }
-  }
-
   tokenizeText(text: string) {
     return text.split(' ').filter((t) => t !== '')
   }
@@ -423,7 +416,7 @@ export default class SpeakerSegmentTranscript extends Vue {
         }
       }}
     if (!isEqualDeep(this.localEvent, oldEvent)) {
-      undoable(updateSpeakerEvent(newEvent, this.speaker))
+      undoable(updateSpeakerEvent(newEvent, Number(this.speaker)))
       this.updateAllTokenTypes(newEvent)
     } else {
       // nothing to update
@@ -454,7 +447,7 @@ export default class SpeakerSegmentTranscript extends Vue {
           speakerEventTiers: {
             ...this.localEvent.speakerEvents[this.speaker].speakerEventTiers,
             [ tierId ]: {
-              id: makeEventTierId(),
+              id: String(makeEventTierId()),
               type: 'freeText',
               text
             }
@@ -576,8 +569,6 @@ export default class SpeakerSegmentTranscript extends Vue {
         if (change.id !== -1 && eventStore.lockedTokens.indexOf(change.id) > -1) {
           // can’t delete because it’s locked.
           console.log('can’t delete')
-
-          // FIXME: this doesn’t always work.
           // update display text
           setTimeout(() => {
             // tslint:disable-next-line:max-line-length
@@ -590,7 +581,7 @@ export default class SpeakerSegmentTranscript extends Vue {
       }
     })
     this.localTokens = this.localTokens.map((t, i) => {
-      return { ...t, order: (this.firstTokenOrder || 0) + i }
+      return { ...t, order: (getFirstTokenOrder(this.event, this.speaker)) + i }
     })
     return this.localTokens
   }

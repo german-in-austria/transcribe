@@ -11,7 +11,8 @@ export type BusEvent =
   'pauseAudio'|
   'scrubAudio'|
   'updateTime'|
-  'focusSearch'
+  'focusSearch'|
+  'updateSpeakerEventText'
 
 export default EventBus as {
   $on: (e: BusEvent|BusEvent[], fn: (e: any, opts?: any) => any) => void

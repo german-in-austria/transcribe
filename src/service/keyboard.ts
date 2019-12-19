@@ -313,6 +313,42 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       }
     }
   },
+  insertPause: {
+    greedy: true,
+    showInMenu: true,
+    ignoreInTextField: false,
+    modifier: [ 'ctrlOrCmd' ],
+    key: 'p',
+    name: 'Insert Pause',
+    description: 'Insert a pause at the current cursor position',
+    icon: '',
+    disabled: () => false,
+    action: async (ev) => {
+      ev.preventDefault()
+      const s = document.getSelection()
+      const e = ev.target
+      if (
+        s !== null &&
+        e instanceof HTMLElement &&
+        eventStore.userState.timeSelection.start !== null &&
+        eventStore.userState.timeSelection.end !== null
+      ) {
+        const length = Math.abs(eventStore.userState.timeSelection.start - eventStore.userState.timeSelection.end)
+        const speakerId = e.getAttribute('data-speaker-id')
+        const eventId = e.getAttribute('data-event-id')
+        if (speakerId !== null && eventId !== null) {
+          // tslint:disable-next-line:max-line-length
+          const [ left, right ] = [ (s as any).baseOffset, (s as any).extentOffset ].sort()
+          const oldText = e.innerText
+          const insertText = `((${ length.toFixed(1).replace('.', ',') }s))`
+          const text = oldText.substr(0, left) + insertText + oldText.substr(right)
+          console.log({text})
+          eventBus.$emit('updateSpeakerEventText', { eventId, speakerId, text })
+          return false
+        }
+      }
+    }
+  },
   appendEvent: {
     greedy: false,
     showInMenu: true,
@@ -331,7 +367,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent(1, event) ])
         if (es.length > 0 && es[0] !== undefined) {
           scrollToTranscriptEvent(es[0], {
-            focusSpeaker: speaker !== null ? Number(speaker) : null,
+            focusSpeaker: speaker,
             animate: false,
             focusTier: null,
             focusRight: false
@@ -363,7 +399,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent(-1, event) ])
         if (es.length > 0 && es[0] !== undefined) {
           scrollToTranscriptEvent(es[0], {
-            focusSpeaker: speaker !== null ? Number(speaker) : null,
+            focusSpeaker: speaker,
             animate: false,
             focusTier: null,
             focusRight: false
