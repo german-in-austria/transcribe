@@ -49,7 +49,8 @@ export default class PlayHead extends Vue {
   scrollToTime(t: number) {
     if (settings.lockPlayHead === true && eventStore.isPaused === false) {
       requestAnimationFrame(() => {
-        const sidebarWidth = settings.showDrawer === true ? 300 : 0
+        // should be dynamic
+        const sidebarWidth = settings.showDrawer === true ? 350 : 70
         const waveform = document.querySelector('.wave-form')!
         const playHeadLeft = Math.round(t * settings.pixelsPerSecond)
         const viewPortLeft = playHeadLeft - (waveform.clientWidth - sidebarWidth) / 2
@@ -60,7 +61,7 @@ export default class PlayHead extends Vue {
     }
   }
 
-  // this should actually be in the 
+  // this should actually be in the waveform component
   animateScrollCatchUp(t: number) {
     // initially, the playhead is always locked.
     // it gets unlocked, when the user scrolls.
@@ -71,16 +72,16 @@ export default class PlayHead extends Vue {
     // the time it should take the scroller to
     // catch up to the playhead.
     const scrollCatchUpTime = 1
-    // geometry and time formulae
-    const sidebarWidth = settings.showDrawer === true ? 300 : 0
-    const startedTime = performance.now()
+    // geometry and time formulae.
+    // this should be dynamic
+    const sidebarWidth = settings.showDrawer === true ? 350 : 70
     const waveform = document.querySelector('.wave-form')!
     const stageWidth = waveform.clientWidth - sidebarWidth
     const wStart = waveform.scrollLeft
     const wTargetPosition = (t + scrollCatchUpTime) * settings.pixelsPerSecond - stageWidth / 2
     const wDistanceToCover = wTargetPosition - waveform.scrollLeft
-    eventBus.$on('updateTime', function catchUpListener(this: any) {
-      const timeElapsed = (performance.now() - startedTime) / 1000 * settings.playbackSpeed
+    eventBus.$on('updateTime', function catchUpListener(currentTime: number) {
+      const timeElapsed = (currentTime - t) * settings.playbackSpeed
       // if playhead is still locked
       if (settings.lockPlayHead === true) {
         // catch up using quadratic ease in out

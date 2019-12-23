@@ -960,14 +960,14 @@ export function timeFromSeconds(seconds: number) {
 }
 
 export function pause() {
+  eventStore.audioElement.pause()
   eventStore.playAllFrom = null
   eventBus.$emit('pauseAudio', eventStore.currentTime)
-  eventStore.audioElement.pause()
   audio.pauseCurrentBuffer()
   eventStore.isPaused = true
 }
 
-function emitUpdateTimeUntilPaused(t: number, lockScroll: boolean, maxT?: number) {
+function emitUpdateTimeUntilPaused(t: number, lockScroll: boolean, maxT: number, useAudioElement: boolean) {
   const startTime = performance.now()
   eventStore.currentTime = t
   eventBus.$emit('updateTime', t)
@@ -975,10 +975,15 @@ function emitUpdateTimeUntilPaused(t: number, lockScroll: boolean, maxT?: number
   const step = (now: number) => {
     const elapsed = (now - startTime) / 1000 * settings.playbackSpeed
     // more than 16 ms have passed
-    if (t + elapsed - eventStore.currentTime >= .016) {
-      // update and emit.
-      eventStore.currentTime = t + elapsed
+    if (useAudioElement === true) {
+      eventStore.currentTime = eventStore.audioElement.currentTime
       eventBus.$emit('updateTime', eventStore.currentTime)
+    } else {
+      if (t + elapsed - eventStore.currentTime >= .016) {
+        // update and emit.
+        eventStore.currentTime = t + elapsed
+        eventBus.$emit('updateTime', eventStore.currentTime)
+      }
     }
     // paused or over max t.
     if (
@@ -1008,10 +1013,16 @@ export function playAllFrom(t: number) {
   pause()
   eventStore.playAllFrom = t
   eventStore.audioElement.currentTime = t
-  eventStore.audioElement.play()
-  eventStore.isPaused = false
-  eventBus.$emit('playAudio', t)
-  emitUpdateTimeUntilPaused(t, settings.lockScroll && settings.lockPlayHead)
+  eventStore.audioElement.play().then(() => {
+    eventStore.isPaused = false
+    eventBus.$emit('playAudio', t)
+    emitUpdateTimeUntilPaused(
+      eventStore.audioElement.currentTime,
+      settings.lockScroll && settings.lockPlayHead,
+      eventStore.audioElement.duration,
+      true
+    )
+  })
 }
 
 export function scrubAudio(t: number) {
@@ -1045,7 +1056,7 @@ export async function playRange(start: number, end: number) {
         audio
           .playBuffer(buffer, settings.playbackSpeed)
           .addEventListener('ended', () => pause)
-        emitUpdateTimeUntilPaused(left, false, right)
+        emitUpdateTimeUntilPaused(left, false, right, false)
       })
     }
   }
