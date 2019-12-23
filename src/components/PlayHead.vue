@@ -81,7 +81,7 @@ export default class PlayHead extends Vue {
     const wTargetPosition = (t + scrollCatchUpTime) * settings.pixelsPerSecond - stageWidth / 2
     const wDistanceToCover = wTargetPosition - waveform.scrollLeft
     eventBus.$on('updateTime', function catchUpListener(currentTime: number) {
-      const timeElapsed = (currentTime - t) * settings.playbackSpeed
+      const timeElapsed = currentTime - t
       // if playhead is still locked
       if (settings.lockPlayHead === true) {
         // catch up using quadratic ease in out

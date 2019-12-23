@@ -1010,7 +1010,9 @@ function emitUpdateTimeUntilPaused(t: number, lockScroll: boolean, maxT: number,
 }
 
 export function playAllFrom(t: number) {
-  pause()
+  if (eventStore.isPaused === false) {
+    pause()
+  }
   eventStore.playAllFrom = t
   eventStore.audioElement.currentTime = t
   eventStore.audioElement.play().then(() => {
