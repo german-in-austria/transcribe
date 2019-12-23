@@ -85,7 +85,7 @@
           <v-list-tile
             @click="showEventIfExists(item.event)"
             @dblclick="playEvent(item.event)"
-            :class="isEventSelected(item.event.eventId) && 'selected'">
+            :class="isEventSelected(item.event.eventId) && 'search-result-selected'">
             <v-list-tile-content>
               <v-list-tile-sub-title class="subtitle">{{ toTime(item.event.startTime) }} - {{ toTime(item.event.endTime) }}</v-list-tile-sub-title>
               <highlight-range :text="item.text" :start="item.offset" :end="item.offsetEnd" :truncate="42" />
@@ -359,11 +359,17 @@ export default class Search extends Vue {
     }
   }
 
-  goToResult(e: LocalTranscriptEvent) {
+  async goToResult(e: LocalTranscriptEvent) {
     if (e !== undefined) {
       scrollToTranscriptEvent(e)
       scrollToAudioEvent(e)
       selectEvent(e)
+      // await this.$nextTick()
+      // const s = this.$el.querySelector('.search-result-selected')
+      // console.log({ s})
+      // if (s instanceof HTMLElement) {
+      //   s.scrollIntoView({behavior: 'smooth', block: 'end', inline: 'nearest'})
+      // }
     }
   }
   findNext() {
@@ -418,7 +424,7 @@ input
 .subtitle
   height 13px
 
-.selected
+.search-result-selected
   background rgba(0,0,0,.05)
 
 </style>
