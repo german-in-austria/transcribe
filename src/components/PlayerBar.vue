@@ -42,13 +42,16 @@
               open-on-hover
               top>
               <player-bar-button @click="toggleVolumeOnOff" slot="activator" :size="height">
-                <v-icon v-if="settings.playbackVolume <= .33">
+                <v-icon v-if="settings.playbackVolume === 0">
+                  mdi-volume-variant-off
+                </v-icon>
+                <v-icon v-else-if="settings.playbackVolume <= .33">
                   mdi-volume-low
                 </v-icon>
-                <v-icon v-if="settings.playbackVolume > .33 && settings.playbackVolume <= .66">
+                <v-icon v-else-if="settings.playbackVolume > .33 && settings.playbackVolume <= .66">
                   mdi-volume-medium
                 </v-icon>
-                <v-icon v-if="settings.playbackVolume > .66">
+                <v-icon v-else-if="settings.playbackVolume > .66">
                   mdi-volume-high
                 </v-icon>
               </player-bar-button>
@@ -78,7 +81,7 @@
                   hide-details
                   :label="`Speed (${ (settings.playbackSpeed * 100).toFixed(0) }%)`"
                   :min="10"
-                  :max="100"
+                  :max="150"
                   :value="settings.playbackSpeed * 100"
                   @input="setPlaybackSpeed($event / 100)" />
               </div>
