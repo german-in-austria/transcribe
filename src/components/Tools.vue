@@ -13,7 +13,7 @@
         v-show="sc.showInMenu === true"
         :key="k">
         <v-list-tile-avatar>
-          <v-icon>{{ sc.icon }}</v-icon>
+          <v-icon class="tool-icon">{{ sc.icon }}</v-icon>
         </v-list-tile-avatar>
         <v-list-tile-content>
           <v-list-tile-title>
@@ -37,5 +37,7 @@ export default class Tools extends Vue {
   displayKeyboardAction = displayKeyboardAction
 }
 </script>
-<style lang="scss" scoped>
+<style lang="stylus" scoped>
+.tool-icon
+  font-size 18px !important
 </style>
