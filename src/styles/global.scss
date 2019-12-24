@@ -207,6 +207,8 @@ nav.v-toolbar[data-booted=true]{
 
 .v-input--slider label.v-label{
   font-size: 80%;
+  display: inline-block;
+  width: 90px;
 }
 
 .v-input--slider{
