@@ -26,28 +26,31 @@
       <v-layout column fill-height justify-space-between>
         <v-flex>
           <v-btn
+            v-ripple="false"
             :title="'Editing (' + displayKeyboardAction(keyboardShortcuts.showEditMenu) + ')'"
             icon
             @click="clickTab('edit')"
-            class="mb-2">
+            class="mb-2 sidebar-btn">
             <v-icon :color="settings.activeSidebarItem === 'edit' ? 'blue' : ''">
               {{ keyboardShortcuts.showEditMenu.icon }}
             </v-icon>
           </v-btn>
           <v-btn 
+            v-ripple="false"
             :title="'History (' + displayKeyboardAction(keyboardShortcuts.showHistory) + ')'"
             icon
             @click="clickTab('history')"
-            class="mb-2">
+            class="mb-2 sidebar-btn">
             <v-icon :color="settings.activeSidebarItem === 'history' ? 'blue' : ''">
               {{ keyboardShortcuts.showHistory.icon }}
             </v-icon>
           </v-btn>
           <v-btn
+            v-ripple="false"
             :title="'Warnings (' + displayKeyboardAction(keyboardShortcuts.showWarnings) + ')'"
             icon
             @click="clickTab('warnings')"
-            class="mb-2">
+            class="mb-2 sidebar-btn">
             <v-badge
               :value="errors.length > 0"
               :color="settings.activeSidebarItem === 'warnings' ? 'blue' : 'grey'">
@@ -61,19 +64,21 @@
             </v-badge>
           </v-btn>
           <v-btn
+            v-ripple="false"
             :title="'Search (' + displayKeyboardAction(keyboardShortcuts.showSearch) + ')'"
             icon
             @click="clickTab('search')"
-            class="mb-2">
+            class="mb-2 sidebar-btn">
             <v-icon :color="settings.activeSidebarItem === 'search' ? 'blue' : ''">
               {{ keyboardShortcuts.showSearch.icon }}
             </v-icon>
           </v-btn>
           <v-btn
+            v-ripple="false"
             :title="'Bookmarks (' + displayKeyboardAction(keyboardShortcuts.showBookmarks) + ')'"
             icon
             @click="clickTab('bookmarks')"
-            class="mb-2">
+            class="mb-2 sidebar-btn">
             <v-icon :color="settings.activeSidebarItem === 'bookmarks' ? 'blue' : ''">
               {{ keyboardShortcuts.showBookmarks.icon }}
             </v-icon>
@@ -81,7 +86,12 @@
         </v-flex>
         <v-flex xs1>
           <v-spacer />
-          <v-btn @click.stop="settings.showSettings = true" icon flat>
+          <v-btn
+            class="sidebar-btn"
+            v-ripple="false"
+            @click.stop="settings.showSettings = true"
+            icon
+            flat>
             <v-icon>settings</v-icon>
           </v-btn>
         </v-flex>
@@ -118,11 +128,11 @@ import tools from './Tools.vue'
 
 @Component({
   components: {
+    tools,
     editHistory,
     errorList,
-    bookmarks,
     search,
-    tools
+    bookmarks,
   }
 })
 export default class Sidebar extends Vue {
@@ -200,6 +210,14 @@ export default class Sidebar extends Vue {
 }
 </script>
 <style lang="stylus">
+.sidebar-btn
+  border-radius 0
+  margin 0 !important
+  height 55px
+  width 100%
+  &:before
+    border-radius 0
+
 .window
   width 280px
   height 100vh
