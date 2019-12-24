@@ -330,7 +330,7 @@ const spectrogramPresets = [
 ]
 
 export function setPlaybackSpeed(s: number) {
-  settings.playbackSpeed = setNumberInBounds(s)
+  settings.playbackSpeed = setNumberInBounds(s, 0, 1.5)
   eventStore.audioElement.playbackRate = settings.playbackSpeed
 }
 
@@ -398,6 +398,8 @@ const settings: Settings = {
     unknownTokenTypes: true,
     eventOverlaps: true
   }
-}
+};
+
+(window as any)._settings = settings
 
 export default settings
