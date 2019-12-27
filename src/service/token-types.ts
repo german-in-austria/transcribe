@@ -1,7 +1,6 @@
 import { LocalTranscriptEvent, TokenTierType, LocalTranscriptToken, LocalTranscriptSpeakers } from '../store/transcript'
 import settings, { TokenTypesPresetGroup, tokenTypesPresets } from '../store/settings'
 import _ from 'lodash'
-import { clone } from '../util'
 
 // tslint:disable-next-line:max-line-length
 function iterateTokensBySpeakers(
@@ -9,7 +8,6 @@ function iterateTokensBySpeakers(
   speakerIds: string[],
   f: (t: LocalTranscriptToken) => LocalTranscriptToken
 ): LocalTranscriptEvent[] {
-  // const es = clone(esOriginal)
   speakerIds.forEach((s) => {
     es.forEach(e => {
       if (e.speakerEvents[s] !== undefined) {
