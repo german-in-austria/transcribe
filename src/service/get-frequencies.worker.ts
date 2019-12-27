@@ -255,8 +255,7 @@ const FFT = function(this: FFT, bufferSize: number, sampleRate: number, windowFu
   }
 } as any as { new (bufferSize: number, sampleRate: number, windowFunc: string, alpha?: number): FFT }
 
-function makeImage(f: Uint8Array[], gradient: number[][]) {
-  console.log({ gradient })
+function makeImage(f: Uint8Array[], gradient: number[][]): ImageData {
   const image = new ImageData(f.length, f[0].length)
   for (let i = 0; i < image.data.length; i += 4) {
     const j = i / 4
@@ -266,63 +265,8 @@ function makeImage(f: Uint8Array[], gradient: number[][]) {
     image.data[i + 1] = gradient[f[x][y]][1]
     image.data[i + 2] = gradient[f[x][y]][2]
     image.data[i + 3] = gradient[f[x][y]][3] * 255
-    // image.data[i]     = 255
-    // image.data[i + 1] = 255
-    // image.data[i + 2] = 255
-    // image.data[i + 3] = f[x][y]
   }
   return image
-}
-
-function resample(oldMatrix: Uint8Array[], width: number) {
-  const columnsNumber = width
-  const newMatrix = []
-
-  const oldPiece = 1 / oldMatrix.length
-  const newPiece = 1 / columnsNumber
-  let i;
-
-  for (i = 0; i < columnsNumber; i++) {
-    const column = new Array(oldMatrix[0].length);
-    let j;
-
-    for (j = 0; j < oldMatrix.length; j++) {
-      const oldStart = j * oldPiece;
-      const oldEnd = oldStart + oldPiece;
-      const newStart = i * newPiece;
-      const newEnd = newStart + newPiece;
-
-      const overlap = oldEnd <= newStart || newEnd <= oldStart
-        ? 0
-        : Math.min(
-              Math.max(oldEnd, newStart),
-              Math.max(newEnd, oldStart)
-          ) -
-          Math.max(
-              Math.min(oldEnd, newStart),
-              Math.min(newEnd, oldStart)
-          );
-      let k;
-      /* eslint-disable max-depth */
-      if (overlap > 0) {
-        for (k = 0; k < oldMatrix[0].length; k++) {
-          if (column[k] == null) {
-            column[k] = 0;
-          }
-          column[k] += (overlap / newPiece) * oldMatrix[j][k];
-        }
-      }
-    }
-    const intColumn = new Uint8Array(oldMatrix[0].length);
-    let m;
-
-    for (m = 0; m < oldMatrix[0].length; m++) {
-      intColumn[m] = column[m];
-    }
-    newMatrix.push(intColumn);
-  }
-
-  return newMatrix;
 }
 
 function getFrequencies({fftSamples, buffer, length, sampleRate, width, gradient}: {
@@ -357,7 +301,6 @@ function getFrequencies({fftSamples, buffer, length, sampleRate, width, gradient
     frequencies.push(array.reverse())
     currentOffset += fftSamples - nOverlap
   }
-  // const resampled = resample(frequencies, width)
   return [frequencies, makeImage(frequencies, gradient)]
 }
 
