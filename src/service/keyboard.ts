@@ -196,7 +196,7 @@ export async function handleGlobalShortcut(e: KeyboardEvent) {
         (sc.modifier.length === 0 && !e.ctrlKey && !e.shiftKey && !e.metaKey && !e.altKey) ||
         // the shortcut is greedy, and fires if at least all of the required modifiers are present
         (sc.greedy === true && sc.modifier.length > 0 && sc.modifier.every((m) => keyboardEventHasModifier(e, m))) ||
-        // the modifiers specified are exactly the ones present
+        // this shortcut is not greedy, and the modifiers specified are exactly the ones present
         (sc.modifier.length !== 0 && doModifiersMatch(sc.modifier, e))
       )
     ) {
