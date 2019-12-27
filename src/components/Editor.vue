@@ -284,15 +284,6 @@ export default class Editor extends Vue {
     window.location.reload()
   }
 
-  async exportJSON() {
-    if (serverTranscript !== null) {
-      const b = new Blob([ JSON.stringify(this.eventStore.events, undefined, 4) ], {
-        type: 'application/json;charset=UTF-8'
-      })
-      saveAs(b, eventStore.metadata.transcriptName! + '.json')
-    }
-  }
-
   joinEvents(es: number[]) {
     return undoable(joinEvents(es))
   }
