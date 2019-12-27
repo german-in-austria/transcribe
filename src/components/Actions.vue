@@ -7,7 +7,7 @@
     </v-flex>
     <v-list class="flex pb-0" style="flex: 1 0; overflow: scroll;" dense>
       <v-list-tile
-        v-for="(sc, k) in keyboardShortcuts"
+        v-for="(sc, k) in settings.keyboardShortcuts"
         @click="sc.action($event)"
         :disabled="sc.disabled ? sc.disabled() : false"
         v-show="sc.showInMenu === true"
@@ -29,11 +29,12 @@
 </template>
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { keyboardShortcuts, displayKeyboardAction } from '../service/keyboard'
+import { displayKeyboardAction } from '../service/keyboard'
+import settings from '../store/settings'
 
 @Component
-export default class Tools extends Vue {
-  keyboardShortcuts = keyboardShortcuts
+export default class Actions extends Vue {
+  settings = settings
   displayKeyboardAction = displayKeyboardAction
 }
 </script>
