@@ -1,15 +1,19 @@
 
-import * as _ from 'lodash'
+import _ from 'lodash'
 
 export interface Color {
   at: number
   c: number[]
+  // this is so we have an index
+  // and typescript knows that
+  // the key is always a string.
+  [key: string]: number|number[]
 }
 
 export type Gradient = number[][]
 
 export function makeGradient(colors: Color[]): Gradient {
-  return _(colors).reduce((m: number[][], e: { at: number, c: number[] }, i: number, l: any[]) => {
+  return _(colors).reduce((m, e, i, l) => {
     const next = l[i + 1]
     if (next) {
       const steps = next.at - e.at
