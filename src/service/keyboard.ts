@@ -182,7 +182,7 @@ function doModifiersMatch(ms: KeyboardModifier[], e: KeyboardEvent): boolean {
 }
 
 export async function handleGlobalShortcut(e: KeyboardEvent) {
-  _(keyboardShortcuts).forEach(sc => {
+  _(settings.keyboardShortcuts).forEach(sc => {
     if (
       // the function is not disabled
       (sc.disabled === undefined || sc.disabled() === false) &&
@@ -325,7 +325,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Insert Pause',
     description: 'Insert a pause at the current cursor position',
     icon: 'pause_circle_outline',
-    disabled: () => false,
+    disabled: () => eventStore.userState.timeSelection.start === null,
     action: async (ev) => {
       ev.preventDefault()
       const s = document.getSelection()
@@ -757,7 +757,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
   selectNone: {
     greedy: false,
     showInMenu: true,
-    ignoreInTextField: true,
+    ignoreInTextField: false,
     modifier: [ 'ctrlOrCmd' ],
     key: 'd',
     name: 'Select none',
