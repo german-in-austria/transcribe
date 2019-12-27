@@ -1,8 +1,11 @@
 import { makeGradient, Color } from '../lib/gradient'
 import { setNumberInBounds, platform } from '../util'
-import { KeyboardShortcuts, keyboardShortcuts } from '../service/keyboard'
+import { KeyboardShortcuts, keyboardShortcuts, KeyboardAction } from '../service/keyboard'
+import localForage from 'localforage'
+import _ from 'lodash'
 
 import { eventStore } from './transcript'
+import Vue from 'vue'
 
 export interface TokenTypePresetBase {
   name: string
@@ -26,13 +29,25 @@ export interface TokenTypesPresetGroup extends TokenTypePresetBase {
   bracketSymbols: [ RegExp, RegExp ]
 }
 
-// type AnyJson =  boolean | number | string | null | JsonArray | JsonMap
+type JSONValue = string | number | boolean | null | JSONObject | JSONArray
 
-// interface JsonMap {
-//   [key: string]: AnyJson
-// }
+interface JSONObject {
+  [property: string]: JSONValue;
+}
 
-// interface JsonArray extends Array<AnyJson> {}
+interface JSONArray extends Array<JSONValue> {}
+
+type Omit<T, K> = Pick<T, Exclude<keyof T, K>>
+
+type SerializableSettings = Omit<Settings, 'keyboardShortcuts'> & {
+  [key in keyof Settings]: JSONValue
+} & {
+  keyboardShortcuts: {
+    [key in keyof typeof keyboardShortcuts]: Pick<KeyboardAction, 'key' | 'modifier'>
+  }
+}
+
+type yo = Omit<Settings, 'keyboardShortcuts'>
 
 export type SidebarItem = null|'edit'|'history'|'warnings'|'search'|'bookmarks'
 
@@ -355,21 +370,12 @@ export function decreaseVolume(by: number) {
   setPlaybackVolume(settings.playbackVolume - by)
 }
 
-export function getIsDarkMode(): boolean {
-  return JSON.parse(localStorage.getItem('darkMode') || 'false')
-}
-
-export function setIsDarkMode(b: boolean) {
-  settings.darkMode = b
-  localStorage.setItem('darkMode', JSON.stringify(b))
-}
-
 const settings: Settings = {
   activeSidebarItem: 'edit',
   autoCorrectDelimiterSpace: true,
   showSettings: false,
   contrast: 1,
-  darkMode: getIsDarkMode(),
+  darkMode: false,
   drawerWidth: 350,
   emulateHorizontalScrolling: platform() === 'windows' || platform() === 'linux',
   eventDockingInterval: 0.05,
@@ -399,6 +405,52 @@ const settings: Settings = {
     eventOverlaps: true
   }
 };
+
+(async () => {
+  // tslint:disable-next-line:max-line-length
+  const loadedSettings: SerializableSettings|undefined = JSON.parse(await (localForage.getItem('appSettings') as Promise<string>))
+  if (loadedSettings !== undefined && loadedSettings !== null) {
+    _(loadedSettings).forEach((v, k) => {
+      if (k === 'keyboardShortcuts') {
+        settings.keyboardShortcuts = _.mapValues(settings.keyboardShortcuts, (v, k) => {
+          if (loadedSettings.keyboardShortcuts[k] !== undefined) {
+            return {
+              ...v,
+              key: loadedSettings.keyboardShortcuts[k].key,
+              modifier: loadedSettings.keyboardShortcuts[k].modifier
+            }
+          } else {
+            return v
+          }
+        })
+      } else if (k in settings) {
+        (settings as any)[k] = v
+      }
+    })
+  }
+})()
+
+const vIn = new Vue({
+  data() {
+    return { settings }
+  },
+  watch: {
+    settings: {
+      deep: true,
+      handler: (newV: Settings) => {
+        window.requestIdleCallback(() => localForage.setItem('appSettings', stringifySettings(newV)))
+      }
+    }
+  }
+})
+
+export function stringifySettings(s: Settings): string {
+  const serializedSettings: SerializableSettings = {
+    ...s,
+    keyboardShortcuts: _.mapValues(s.keyboardShortcuts, sk => ({ key: sk.key, modifier: sk.modifier }))
+  }
+  return JSON.stringify(serializedSettings)
+}
 
 (window as any)._settings = settings
 
