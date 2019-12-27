@@ -343,9 +343,14 @@ export const keyboardShortcuts: KeyboardShortcuts = {
           // tslint:disable-next-line:max-line-length
           const [ left, right ] = [ (s as any).baseOffset, (s as any).extentOffset ].sort()
           const oldText = e.innerText
+          const leftPart = oldText.substr(0, left)
+          const rightPart = oldText.substr(right)
           const insertText = `((${ length.toFixed(1).replace('.', ',') }s))`
-          const text = oldText.substr(0, left) + insertText + oldText.substr(right)
-          console.log({text})
+          const text = leftPart
+            + (leftPart.endsWith(' ') || leftPart.length === 0 ? '' : ' ')
+            + insertText
+            + (rightPart.startsWith(' ') || rightPart.length === 0 ? '' : ' ')
+            + rightPart
           eventBus.$emit('updateSpeakerEventText', { eventId, speakerId, text })
           return false
         }
