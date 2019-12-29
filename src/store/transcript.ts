@@ -11,6 +11,7 @@ import { HistoryEventAction } from './history'
 import eventBus from '../service/event-bus'
 import { collectTokensViaOffsets } from '../service/copy-paste'
 import { eachFrom } from '../util'
+
 import {
   ServerTranscriptListItem,
   ServerTranscriptInformant,
@@ -112,7 +113,7 @@ export const eventStore = {
 
   isPaused: true as boolean,
   currentTime: 0,
-  recentlyOpened: getRecentlyOpened(localStorage.getItem('backEndUrl') || 'https://dissdb-test.dioe.at'),
+  recentlyOpened: [] as ServerTranscriptListItem[],
   lockedTokens: [] as number[],
   metadata: {
     defaultTier: 'text' as TokenTierType,
@@ -138,7 +139,6 @@ export const eventStore = {
   transcriptDownloadProgress: 0 as number,
   status: 'empty' as 'empty'|'loading'|'finished'|'new',
   playAllFrom: null as number|null,
-  backEndUrl: localStorage.getItem('backEndUrl') || 'https://dissdb-test.dioe.at',
   audioElement: document.createElement('audio')
 };
 
@@ -175,7 +175,7 @@ export function addRecentlyOpened(t: ServerTranscriptListItem): ServerTranscript
     .take(3)
     .value()
   localStorage.setItem(
-    'recentlyOpened__' + eventStore.backEndUrl,
+    'recentlyOpened__' + settings.backEndUrl,
     JSON.stringify(eventStore.recentlyOpened)
   )
   return eventStore.recentlyOpened

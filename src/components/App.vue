@@ -40,17 +40,17 @@
               :loading="isLoadingBackendUrl"
               :error-messages="this.errorMessage !==  null ? [ this.errorMessage ] : []"
               auto-select-first
-              v-model="eventStore.backEndUrl"
+              v-model="settings.backEndUrl"
               :items="backEndUrls"
               label="Select a Back End"
             ></v-combobox>
           </v-flex>
-          <div v-if="loggedIn === false">
-            Please <a :href="`${ eventStore.backEndUrl }/login/`" target="_blank">login</a> and <a @click="loadTranscriptList">refresh</a>
+          <div v-if="settings.backEndUrl !== null && loggedIn === false">
+            Please <a :href="`${ settings.backEndUrl }/login/`" target="_blank">login</a> and <a @click="loadTranscriptList">refresh</a>
           </div>
           <v-progress-circular
             indeterminate
-            v-if="transcriptList === null && loggedIn === true"/>
+            v-if="transcriptList === null && loggedIn === true && settings.backEndUrl !== null"/>
             <v-flex v-if="transcriptList !== null">
               <v-layout justify-center row>
               <v-flex class="pt-5 pl-4 pr-4" xs12 md6>
@@ -242,14 +242,18 @@ export default class App extends Vue {
   importingLocalFile = false
   transcriptList: ServerTranscriptListItem[]|null = null
   loadingTranscriptId: number|null = null
-  loggedIn: boolean = true
+  loggedIn: boolean = false
   importableExmaraldaFile: ParsedExmaraldaXML|null = null
   errorMessage: string|null = null
   isLoadingBackendUrl = false
+
   async updateBackEndUrl(url: string) {
     this.isLoadingBackendUrl = true
-    localStorage.setItem('backEndUrl', url)
-    eventStore.backEndUrl = url
+    settings.backEndUrl = url
+  }
+
+  @Watch('settings.backEndUrl')
+  async onUpdateBackEndUrl(url: string) {
     this.updateTokenTypePreset()
     await this.loadTranscriptList()
     this.isLoadingBackendUrl = false
@@ -264,10 +268,10 @@ export default class App extends Vue {
   }
 
   // FIXME: this is insanely hacky.
-  updateTokenTypePreset() {
-    if (eventStore.backEndUrl.includes('dioedb')) {
+  async updateTokenTypePreset() {
+    if (settings.backEndUrl !== null && settings.backEndUrl.includes('dioedb')) {
       settings.tokenTypesPreset = 'dioeDB'
-    } else if (eventStore.backEndUrl.includes('dissdb')) {
+    } else if (settings.backEndUrl !== null && settings.backEndUrl.includes('dissdb')) {
       settings.tokenTypesPreset = 'dissDB'
     }
   }
@@ -278,23 +282,25 @@ export default class App extends Vue {
   }
 
   async loadTranscriptList() {
-    try {
-      this.errorMessage = null
-      const res = await getServerTranscripts()
-      if (res.transcripts !== undefined) {
-        this.loggedIn = true
-        // only the ones that have not been opened recently opened
-        // this.transcriptList = res.transcripts.filter(t => {
-        //   return eventStore.recentlyOpened.findIndex(t1 => t1.pk === t.pk) === -1
-        // })
-        this.transcriptList = res.transcripts
-      } else if ((res as any).error === 'login') {
+    if (settings.backEndUrl !== null) {
+      try {
+        this.errorMessage = null
+        const res = await getServerTranscripts(settings.backEndUrl)
+        if (res.transcripts !== undefined) {
+          this.loggedIn = true
+          // only the ones that have not been opened recently opened
+          // this.transcriptList = res.transcripts.filter(t => {
+          //   return eventStore.recentlyOpened.findIndex(t1 => t1.pk === t.pk) === -1
+          // })
+          this.transcriptList = res.transcripts
+        } else if ((res as any).error === 'login') {
+          this.loggedIn = false
+        }
+      } catch (e) {
         this.loggedIn = false
+        this.transcriptList = null
+        this.errorMessage = 'could not load transcripts from back end.'
       }
-    } catch (e) {
-      this.loggedIn = false
-      this.transcriptList = null
-      this.errorMessage = 'could not load transcripts from back end.'
     }
   }
 
@@ -333,7 +339,6 @@ export default class App extends Vue {
     localForage.setItem('waveformOverview__' + audioUrl, overviewSvg)
     eventStore.events                     = previousEventStore.events
     eventStore.selectedEventIds           = previousEventStore.selectedEventIds
-    eventStore.backEndUrl                 = previousEventStore.backEndUrl
     eventStore.selectedSearchResult       = previousEventStore.selectedSearchResult
     eventStore.searchResults              = previousEventStore.searchResults
     eventStore.searchTerm                 = previousEventStore.searchTerm

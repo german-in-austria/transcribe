@@ -12,6 +12,7 @@ import {
 } from '../store/transcript'
 import { clone } from '../util/index'
 import serverTranscriptDiff from './backend-server-transcript-diff.worker'
+import settings from '../store/settings'
 
 type ServerTranscriptId = number
 
@@ -221,7 +222,7 @@ export function getAudioUrlFromServerNames(name: string|undefined, path: string|
     console.log({cleanPath, cleanPathWithSlashes})
     // add .ogg if necessary
     const cleanName = name.endsWith('.ogg') ? (name) : (name + '.ogg')
-    return `${ eventStore.backEndUrl }/private-media${cleanPathWithSlashes}${cleanName}`
+    return `${ settings.backEndUrl }/private-media${cleanPathWithSlashes}${cleanName}`
   }
 }
 
@@ -586,7 +587,7 @@ export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenT
 }
 
 export async function getSurveys(): Promise<ServerSurvey[]> {
-  const x = await (await fetch(`${ eventStore.backEndUrl }/routes/einzelerhebungen`, {
+  const x = await (await fetch(`${ settings.backEndUrl }/routes/einzelerhebungen`, {
     credentials: 'include',
     method: 'GET',
     headers: {
@@ -602,7 +603,7 @@ export async function createEmptyTranscript(
   name: string,
   defaultTier: TokenTierType
 ): Promise<{error: string|null, transcript_id: ServerTranscriptId}> {
-  const res = await (await fetch(`${ eventStore.backEndUrl }/routes/transcript/create`, {
+  const res = await (await fetch(`${ settings.backEndUrl }/routes/transcript/create`, {
     credentials: 'include',
     method: 'POST',
     headers: {
@@ -651,8 +652,8 @@ export function getLockedTokensFromServerTranscript(t: ServerTranscript): number
   }
 }
 
-export async function getServerTranscripts(): Promise<{transcripts: ServerTranscriptListItem[]}> {
-  const res = await (await fetch(`${ eventStore.backEndUrl }/routes/transcripts`, {
+export async function getServerTranscripts(backEndUrl: string): Promise<{transcripts: ServerTranscriptListItem[]}> {
+  const res = await (await fetch(`${ backEndUrl }/routes/transcripts`, {
     credentials: 'include'
   })).json()
   return res
@@ -660,7 +661,7 @@ export async function getServerTranscripts(): Promise<{transcripts: ServerTransc
 
 async function performSaveRequest(id: number, t: ServerTranscriptSaveRequest): Promise<ServerTranscriptSaveResponse> {
   return await (
-    await fetch(`${ eventStore.backEndUrl }/routes/transcript/save/${ id }`, {
+    await fetch(`${ settings.backEndUrl }/routes/transcript/save/${ id }`, {
     credentials: 'include',
     method: 'POST',
     headers: {
@@ -793,7 +794,7 @@ export async function getTranscript(
 ): Promise<LocalTranscript> {
   try {
     // download transcript page
-    const res = await (await fetch(`${ eventStore.backEndUrl }/routes/transcript/${ id }/${ chunk }`, {
+    const res = await (await fetch(`${ settings.backEndUrl }/routes/transcript/${ id }/${ chunk }`, {
       credentials: 'include'
     })).json() as ServerTranscript
 

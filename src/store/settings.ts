@@ -52,6 +52,7 @@ type yo = Omit<Settings, 'keyboardShortcuts'>
 export type SidebarItem = null|'edit'|'history'|'warnings'|'search'|'bookmarks'
 
 export interface Settings {
+  backEndUrl: string|null
   activeSidebarItem: SidebarItem
   autoCorrectDelimiterSpace: boolean
   showSettings: boolean
@@ -371,6 +372,7 @@ export function decreaseVolume(by: number) {
 }
 
 const settings: Settings = {
+  backEndUrl: localStorage.getItem('backEndUrl') || null,
   activeSidebarItem: 'edit',
   autoCorrectDelimiterSpace: true,
   showSettings: false,
