@@ -231,10 +231,10 @@ export default class App extends Vue {
   settings = settings
 
   backEndUrls = [
-    'https://dissdb-test.dioe.at',
-    'https://dissdb.dioe.at',
-    'http://localhost:8000',
     'https://dioedb.dioe.at',
+    'https://dissdb.dioe.at',
+    'https://dissdb-test.dioe.at',
+    'http://localhost:8000',
     'https://dioedb.demo.dioe.at'
   ]
 
