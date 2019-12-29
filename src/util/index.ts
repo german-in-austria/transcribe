@@ -3,7 +3,7 @@ type PrimitiveOrNone = number|null|undefined|string
 import * as PromiseWorker from 'promise-worker-transferable'
 import Worker from '../service/buffer-concat.worker'
 const worker = new Worker('')
-const promiseWorker = new PromiseWorker(worker)
+const concatWorker = new PromiseWorker(worker)
 import _ from 'lodash'
 
 export interface UndoRedo {
@@ -18,7 +18,7 @@ interface FileReaderEventTarget extends EventTarget {
 const textWidthCanvas = document.createElement('canvas')
 const textWidthContext = textWidthCanvas.getContext('2d')
 
-export async function resourceAtUrlExists(url: string): Promise<Boolean> {
+export async function resourceAtUrlExists(url: string): Promise<boolean> {
   try {
     await fetch(url, {
       method: 'GET',
@@ -224,8 +224,8 @@ export function range(start: number, end: number) {
 export async function concatUint8ArrayAsync(first: Uint8Array, second: Uint8Array): Promise<Uint8Array[]> {
   const b1 = first.buffer
   const b2 = second.buffer
-  const [ combined, one, two ] = await promiseWorker.postMessage({
-      first   : b1,
+  const [ combined, one, two ] = await concatWorker.postMessage({
+      first  : b1,
       second : b2
     },
     [ b1, b2 ]
