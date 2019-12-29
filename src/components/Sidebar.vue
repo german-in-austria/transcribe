@@ -3,7 +3,7 @@
     <v-flex v-if="active" :style="{ borderRight: active ? '1px solid rgba(255,255,255,.3)' : '0' }">
       <v-window class="window" v-model="settings.activeSidebarItem" vertical>
         <v-window-item value="edit" class="sidebar-scrollable">
-          <tools />
+          <actions />
         </v-window-item>
         <v-window-item value="history" class="sidebar-scrollable">
           <edit-history v-if="history.actions.length > 0" />
@@ -124,11 +124,11 @@ import editHistory from './EditHistory.vue'
 import errorList from './ErrorList.vue'
 import bookmarks from './Bookmarks.vue'
 import search from './Search.vue'
-import tools from './Tools.vue'
+import actions from './Actions.vue'
 
 @Component({
   components: {
-    tools,
+    actions,
     editHistory,
     errorList,
     search,
