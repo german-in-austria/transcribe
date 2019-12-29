@@ -50,10 +50,9 @@ export default class PlayHead extends Vue {
     if (settings.lockPlayHead === true && eventStore.isPaused === false) {
       requestAnimationFrame(() => {
         // should be dynamic
-        const sidebarWidth = settings.showDrawer === true ? 350 : 70
         const waveform = document.querySelector('.wave-form')!
         const playHeadLeft = Math.round(t * settings.pixelsPerSecond)
-        const viewPortLeft = playHeadLeft - (waveform.clientWidth - sidebarWidth) / 2
+        const viewPortLeft = playHeadLeft - waveform.clientWidth / 2
         waveform.scrollLeft = viewPortLeft
       })
     } else {
@@ -74,9 +73,8 @@ export default class PlayHead extends Vue {
     const scrollCatchUpTime = 1
     // geometry and time formulae.
     // this should be dynamic
-    const sidebarWidth = settings.showDrawer === true ? 350 : 70
     const waveform = document.querySelector('.wave-form')!
-    const stageWidth = waveform.clientWidth - sidebarWidth
+    const stageWidth = waveform.clientWidth
     const wStart = waveform.scrollLeft
     const wTargetPosition = (t + scrollCatchUpTime) * settings.pixelsPerSecond - stageWidth / 2
     const wDistanceToCover = wTargetPosition - waveform.scrollLeft

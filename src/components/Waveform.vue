@@ -804,7 +804,7 @@ export default class Waveform extends Vue {
 .wave-form
   margin-top 0px
   position relative
-  max-width 100vw
+  max-width 100%
   will-change scroll-position
   overflow-x scroll
   overflow-y hidden
