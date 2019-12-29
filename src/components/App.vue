@@ -166,6 +166,7 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
+import localForage from 'localforage'
 
 import playerBar from './PlayerBar.vue'
 import editor from './Editor.vue'
@@ -329,7 +330,7 @@ export default class App extends Vue {
     overviewSvg: string,
     historyFile: HistoryEventAction[]
   ) {
-    localStorage.setItem('waveformOverview__' + audioUrl, overviewSvg)
+    localForage.setItem('waveformOverview__' + audioUrl, overviewSvg)
     eventStore.events                     = previousEventStore.events
     eventStore.selectedEventIds           = previousEventStore.selectedEventIds
     eventStore.backEndUrl                 = previousEventStore.backEndUrl

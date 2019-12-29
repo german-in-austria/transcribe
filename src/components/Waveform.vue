@@ -113,6 +113,7 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
 import * as Queue from 'simple-promise-queue'
+import localForage from 'localforage'
 
 import scrollLockButton from './ScrollLockButton.vue'
 import scrollbar from './Scrollbar.vue'
@@ -223,14 +224,15 @@ export default class Waveform extends Vue {
     await util.requestFrameAsync()
     const el = (this.$el.querySelector('.overview-waveform svg') as HTMLElement)
     try {
-      localStorage.setItem('waveformOverview__' + eventStore.metadata.audioUrl, el.innerHTML)
+      localForage.setItem('waveformOverview__' + eventStore.metadata.audioUrl, el.innerHTML)
     } catch (e) {
       console.log(e)
     }
   }
 
-  hasOverviewCache(): boolean {
-    return localStorage.getItem('waveformOverview__' + eventStore.metadata.audioUrl) !== null
+  async hasOverviewCache(): Promise<boolean> {
+    const c = await localForage.getItem('waveformOverview__' + eventStore.metadata.audioUrl)
+    return c !== null
   }
 
   get containerStyle() {
@@ -573,8 +575,9 @@ export default class Waveform extends Vue {
     }
   }
 
-  initWithCache() {
-    const waveformCache = localStorage.getItem('waveformOverview__' + eventStore.metadata.audioUrl)
+  async initWithCache() {
+    // tslint:disable-next-line:max-line-length
+    const waveformCache = (await localForage.getItem('waveformOverview__' + eventStore.metadata.audioUrl)) as string|null
     const scrollLeft = localStorage.getItem('scrollPos')
     if (waveformCache !== null) {
       const overviewEl = (this.$el.querySelector('.overview-waveform svg') as HTMLElement);
@@ -602,7 +605,7 @@ export default class Waveform extends Vue {
           }
         })
       } else {
-        if (this.hasOverviewCache()) {
+        if (await this.hasOverviewCache()) {
           await audio.downloadAudioStream({
             url: eventStore.audioElement.src,
             onStart: (metadata) => {
@@ -628,7 +631,7 @@ export default class Waveform extends Vue {
               this.doMaybeRerender()
             },
             onProgress: async (chunk: AudioBuffer, from: number, to: number) => {
-              if (localStorage.getItem('waveformOverview__' + eventStore.metadata.audioUrl) === null) {
+              if (!(await this.hasOverviewCache())) {
                 await this.drawOverviewWaveformPiece(from, to, chunk)
               }
             }
