@@ -78,37 +78,6 @@
                   prepend-inner-icon="search"
                   autofocus />
                 <v-list two-line style="background: transparent">
-                  <!-- <v-subheader v-if="eventStore.recentlyOpened.length > 0 && searchTerm === ''">
-                    Recently Opened
-                  </v-subheader>
-                  <template v-for="transcript in eventStore.recentlyOpened">
-                    <v-divider v-if="searchTerm === ''" :key="'d' + transcript.pk" />
-                    <transition-group :key="'t'+ transcript.pk">
-                      <v-list-tile
-                        v-if="searchTerm === ''"
-                        :key="'recently_' + transcript.pk" 
-                        :disabled="loadingTranscriptId !== null"
-                        @click="loadRemoteTranscript(transcript)">
-                        <v-list-tile-avatar>
-                          <v-progress-circular
-                            class="mb-2"
-                            size="20"
-                            width="2"
-                            v-if="loadingTranscriptId === transcript.pk"
-                            indeterminate />
-                          <v-icon color="grey" v-else>cloud_queue</v-icon>
-                        </v-list-tile-avatar>
-                        <v-list-tile-content>
-                          <v-list-tile-title>
-                            {{ transcript.n }}
-                          </v-list-tile-title>
-                          <v-list-tile-sub-title>
-                            {{ transcript.ut }}
-                          </v-list-tile-sub-title>
-                        </v-list-tile-content>
-                      </v-list-tile>
-                    </transition-group>
-                  </template> -->
                   <v-subheader>
                     Server Transcripts
                   </v-subheader>
@@ -181,7 +150,6 @@ import {
   eventStore,
   speakerEventHasErrors,
   loadAudioFromFile,
-  addRecentlyOpened,
   loadAudioFromUrl,
 } from '../store/transcript'
 
@@ -288,10 +256,6 @@ export default class App extends Vue {
         const res = await getServerTranscripts(settings.backEndUrl)
         if (res.transcripts !== undefined) {
           this.loggedIn = true
-          // only the ones that have not been opened recently opened
-          // this.transcriptList = res.transcripts.filter(t => {
-          //   return eventStore.recentlyOpened.findIndex(t1 => t1.pk === t.pk) === -1
-          // })
           this.transcriptList = res.transcripts
         } else if ((res as any).error === 'login') {
           this.loggedIn = false
@@ -430,7 +394,6 @@ export default class App extends Vue {
       if (eventStore.metadata.audioUrl !== null) {
         y.src = eventStore.metadata.audioUrl
         y.addEventListener('durationchange', (e) => {
-          addRecentlyOpened(t)
           this.loadingTranscriptId = null
           eventStore.audioElement = y
           if (eventStore.status !== 'finished') {

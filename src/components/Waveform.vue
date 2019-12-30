@@ -278,7 +278,7 @@ export default class Waveform extends Vue {
     const c = this.$refs.svgContainer
     if (c instanceof HTMLElement) {
       e.preventDefault()
-      c.scrollLeft = c.scrollLeft + (e.deltaY) / (e.shiftKey === true ? 10 : 1)
+      c.scrollLeft = c.scrollLeft + (e.deltaY) * (e.shiftKey === true ? 2 : 1)
     }
   }
 

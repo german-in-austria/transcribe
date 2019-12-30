@@ -113,7 +113,6 @@ export const eventStore = {
 
   isPaused: true as boolean,
   currentTime: 0,
-  recentlyOpened: [] as ServerTranscriptListItem[],
   lockedTokens: [] as number[],
   metadata: {
     defaultTier: 'text' as TokenTierType,
@@ -162,23 +161,6 @@ export function tokenTypeFromToken(token: string) {
 export function timeSelectionIsEmpty() {
   return eventStore.userState.timeSelection.start === null &&
     eventStore.userState.timeSelection.end === null
-}
-
-export function getRecentlyOpened(backEndUrl: string): ServerTranscriptListItem[] {
-  return JSON.parse(localStorage.getItem('recentlyOpened__' + backEndUrl) || '[]')
-}
-
-export function addRecentlyOpened(t: ServerTranscriptListItem): ServerTranscriptListItem[] {
-  eventStore.recentlyOpened = _([t])
-    .concat(eventStore.recentlyOpened)
-    .uniqBy(ts => ts.pk)
-    .take(3)
-    .value()
-  localStorage.setItem(
-    'recentlyOpened__' + settings.backEndUrl,
-    JSON.stringify(eventStore.recentlyOpened)
-  )
-  return eventStore.recentlyOpened
 }
 
 export async function exportEventAudio(eventIds: number[]) {
