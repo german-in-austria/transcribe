@@ -3,7 +3,7 @@ type PrimitiveOrNone = number|null|undefined|string
 import * as PromiseWorker from 'promise-worker-transferable'
 import Worker from '../service/buffer-concat.worker'
 const worker = new Worker('')
-const promiseWorker = new PromiseWorker(worker)
+const concatWorker = new PromiseWorker(worker)
 import _ from 'lodash'
 
 export interface UndoRedo {
@@ -13,6 +13,33 @@ export interface UndoRedo {
 
 interface FileReaderEventTarget extends EventTarget {
   result: ArrayBuffer|string
+}
+
+const textWidthCanvas = document.createElement('canvas')
+const textWidthContext = textWidthCanvas.getContext('2d')
+
+export async function resourceAtUrlExists(url: string): Promise<boolean> {
+  try {
+    await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        Range: `bytes=0-${ 100 * 1024 }`
+      }
+    })
+    return true
+  } catch (e) {
+    return false
+  }
+}
+
+export function getTextWidth(text: string, fontSize: number, fontFace: string) {
+  if (textWidthContext !== null) {
+    textWidthContext.font = fontSize + 'px ' + fontFace
+    return textWidthContext.measureText(text).width
+  } else {
+    throw new Error('context not available')
+  }
 }
 
 export function setNumberInBounds(n: number, min = 0, max = 1) {
@@ -87,10 +114,18 @@ export function fileToUint8ArrayAndName(f: File): Promise<{ b: Uint8Array, n: st
   })
 }
 
+export function eachFrom<T>(list: T[], startIndex: number, callback: (e: T, i: number) => T): T[] {
+  const len = list.length
+  for (let i = startIndex; i < len; i++ ) {
+    list[i] = callback(list[i], i)
+  }
+  return list
+}
+
 export function groupConsecutiveBy<T>(list: T[], callback: (e: T, i: number) => string): T[][] {
   const c: T[][] = [[]]
   let latestKey = ''
-  _(list).forEach((e, i) => {
+  list.forEach((e, i) => {
     const newKey = callback(e, i)
     if (newKey === latestKey || i === 0) {
       c[c.length - 1].push(e)
@@ -189,8 +224,8 @@ export function range(start: number, end: number) {
 export async function concatUint8ArrayAsync(first: Uint8Array, second: Uint8Array): Promise<Uint8Array[]> {
   const b1 = first.buffer
   const b2 = second.buffer
-  const [ combined, one, two ] = await promiseWorker.postMessage({
-      first   : b1,
+  const [ combined, one, two ] = await concatWorker.postMessage({
+      first  : b1,
       second : b2
     },
     [ b1, b2 ]

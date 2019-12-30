@@ -2,6 +2,7 @@
   <div :class="{
     selected: isSelected,
     segment: true,
+    'theme--dark': settings.darkMode,
     'fragment-of': hasFragmentOfInAnyFirstToken
   }">
     <div
@@ -9,11 +10,12 @@
       tabindex="-1"
       :class="{
         time: true,
-        error: hasErrors,
         viewing: isViewingEvent(event)
       }"
       @dblclick="playEvent(event)"
       @mousedown.meta.stop="selectOrDeselectEvent(event)"
+      @mousedown.ctrl.stop="selectOrDeselectEvent(event)"
+      @mousedown.shift="selectEventRange(event)"
       @mousedown.exact="selectAndScrollToEvent(event)">
       {{ toTime(event.startTime) }} - {{ toTime(event.endTime) }}
     </div>
@@ -23,11 +25,7 @@
       v-for="(speaker, speakerKey) in eventStore.metadata.speakers"
       :key="speakerKey">
       <speaker-segment-transcript
-        @focus="(e, event) => $emit('focus', e, event)"
         class="tokens"
-        :index="index"
-        :previous-event="previousEvent"
-        :next-event="nextEvent"
         :event="event"
         :speaker="speakerKey"
       />
@@ -44,15 +42,16 @@ import {
   deleteSelectedEvents,
   LocalTranscriptEvent,
   selectEvent,
+  selectEventRange,
   selectOrDeselectEvent,
   playEvent,
   scrollToAudioEvent,
-  speakerEventHasErrors,
   toTime
 } from '../store/transcript'
 
 import { undoable } from '../store/history'
-import settings from '../store/settings';
+import { getTextWidth } from '../util'
+import settings from '../store/settings'
 
 @Component({
   components: {
@@ -62,17 +61,15 @@ import settings from '../store/settings';
 export default class SegmentTranscript extends Vue {
 
   @Prop() event: LocalTranscriptEvent
-  @Prop() nextEvent: LocalTranscriptEvent|undefined
-  @Prop() previousEvent: LocalTranscriptEvent|undefined
   @Prop({ default: false }) isSelected: boolean
-  @Prop() index: number
-  @Prop() width?: number
 
   eventStore = eventStore
   offsetWidth = 0
   selectOrDeselectEvent = selectOrDeselectEvent
   playEvent = playEvent
   toTime = toTime
+  settings = settings
+  selectEventRange = selectEventRange
 
   get speakerHeight() {
     return eventStore.metadata.tiers.filter(t => t.show === true).length * 25 + 'px'
@@ -98,25 +95,11 @@ export default class SegmentTranscript extends Vue {
     undoable(deleteSelectedEvents())
   }
 
-  mounted() {
-    // if the width argument is undefined, that means it’s never been rendered.
-    if (this.width === undefined) {
-      // compute the width (perform layout op)
-      this.offsetWidth = (this.$el as HTMLElement).offsetWidth + 1
-    // if it’s set, we’ll just reuse the width from the last time it was rendered.
-    } else {
-      this.offsetWidth = this.width
-    }
-    // emit the new width
-    this.$emit('element-render', this.offsetWidth)
-  }
-
-  get hasErrors() {
-    return speakerEventHasErrors(this.event)
-  }
-
-  beforeDestroy() {
-    this.$emit('element-unrender', this.offsetWidth)
+  getLongestSpeakerText(e: LocalTranscriptEvent): string[]|undefined {
+    return _(e.speakerEvents)
+      .map(se => se.tokens.map(t => t.tiers[eventStore.metadata.defaultTier].text))
+      .sortBy(ts => ts.length)
+      .last()
   }
 
   selectAndScrollToEvent(e: LocalTranscriptEvent) {
@@ -132,10 +115,12 @@ export default class SegmentTranscript extends Vue {
   display inline-block
   vertical-align top
   border-left 1px solid
-  border-color rgba(255,255,255,.2)
   transition border-color .25s
   padding 0 6px
   color #444
+  border-color rgba(0,0,0,.15)
+  &.theme--dark
+    border-color rgba(255,255,255,.2)
 
 .segment.fragment-of
   border-color rgba(255,255,255,0)
@@ -152,11 +137,12 @@ export default class SegmentTranscript extends Vue {
   padding 0 1em
   border-radius 10px
   &:hover
-    background rgba(255,255,255,.1)
+    transition color .2s
+    color #333
   &.error
     color white
   &.viewing
-    background #ccc
+    background #D8DFED
     color #333
 
 .selected .time
@@ -164,8 +150,12 @@ export default class SegmentTranscript extends Vue {
   color white
 
 .speaker-segment
-  border-bottom 1px solid rgba(255,255,255,.1)
+  border-bottom 1px solid rgba(0,0,0,.15)
   height 25px
+
+.theme--dark
+  .speaker-segment
+    border-bottom 1px solid rgba(255,255,255,.1)
 
 .speaker-segment:last-child
   border-bottom 0

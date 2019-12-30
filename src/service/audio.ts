@@ -518,6 +518,7 @@ async function getOrFetchAudioBuffer(
       const headerBuffer = await getOrFetchHeaderBuffer(url)
       const startByte = Math.max(fileSize * (from / audioLength) - 1024 * 1024, 0).toFixed(0)
       const endByte   = Math.min(fileSize * (to / audioLength) + 1024 * 1024, fileSize).toFixed(0)
+      console.log({ startByte, endByte, from, to, fileSize, audioLength, url })
       const buffer = await (await fetch(url, {
         credentials: 'include',
         headers: { Range: `bytes=${startByte}-${endByte}` }

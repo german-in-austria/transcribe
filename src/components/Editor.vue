@@ -1,74 +1,75 @@
 <template>
   <div class="fill-height">
     <v-toolbar class="elevation-0" fixed app>
-      <div>{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
-      <v-spacer></v-spacer>
-      <div>
-        <search />
-      </div>
-      <div class="pr-4">
-        <v-tooltip transition="none" bottom>
-          <v-btn slot="activator" @click.stop="showSettings = true" icon flat>
-            <v-icon>settings</v-icon>
-          </v-btn>
-          <span>Settings</span>
-        </v-tooltip>
-        <v-menu
-          :disabled="eventStore.status === 'loading' || isSaving"
-          open-on-hover
-          min-width="150"
-          nudge-bottom="10"
-          transition="none"
-          offset-y>
-          <v-btn
-            slot="activator"
-            @click="saveToServer"
-            :loading="eventStore.status === 'loading' || isSaving"
+      <v-flex xs4>
+        <v-btn icon @click="reload"><v-icon>chevron_left</v-icon></v-btn>
+      </v-flex>
+      <v-flex xs4 class="text-xs-center">
+        <div style="opacity: .7; font-size: small">{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
+      </v-flex>
+      <v-flex xs4 class="text-xs-right">
+        <!-- <search-simple style="display: inline-block" /> -->
+        <div style="display: inline-block">
+          <v-tooltip transition="none" bottom>
+            <span>Settings</span>
+          </v-tooltip>
+          <v-menu
             :disabled="eventStore.status === 'loading' || isSaving"
-            icon flat>
-            <v-icon>save_alt</v-icon>
-            <template v-slot:loader>
-              <v-progress-circular
-                :color="settings.darkMode ? '#fff' : '#333'"
-                :size="16"
-                :rotate="-90"
-                :width="2"
-                :indeterminate="eventStore.transcriptDownloadProgress === 1"
-                :value="eventStore.transcriptDownloadProgress * 100" />
-            </template>
-          </v-btn>
-          <v-list dense class="context-menu-list">
-            <v-list-tile @click="exportProject">
-              <v-list-tile-content>
-                <v-list-tile-title>Download Project</v-list-tile-title>
-              </v-list-tile-content>
-            </v-list-tile>
-            <v-divider />
-            <v-list-tile @click="saveToServer">
-              <v-list-tile-content>
-                <v-list-tile-title>Save To Server</v-list-tile-title>
-              </v-list-tile-content>
-            </v-list-tile>
-          </v-list>
-        </v-menu>
-        <v-tooltip transition="none" bottom>
-          <v-btn
-            slot="activator"
-            @click.stop="() => settings.showDrawer = !settings.showDrawer"
-            icon flat>
-            <v-badge color="error" overlap :value="errors.length > 0">
-              <span slot="badge">{{ errors.length }}</span>
-              <v-icon>mdi-tools</v-icon>
-            </v-badge>
-          </v-btn>
-          <span>History & Errors</span>
-        </v-tooltip>
-      </div>
+            open-on-hover
+            min-width="150"
+            nudge-bottom="10"
+            transition="none"
+            offset-y>
+            <v-btn
+              slot="activator"
+              @click="saveToServer"
+              :loading="eventStore.status === 'loading' || isSaving"
+              :disabled="eventStore.status === 'loading' || isSaving"
+              icon flat>
+              <v-icon>save_alt</v-icon>
+              <template v-slot:loader>
+                <v-progress-circular
+                  :color="settings.darkMode ? '#fff' : '#333'"
+                  :size="16"
+                  :rotate="-90"
+                  :width="2"
+                  :indeterminate="eventStore.transcriptDownloadProgress === 1 || isSaving"
+                  :value="eventStore.transcriptDownloadProgress * 100" />
+              </template>
+            </v-btn>
+            <v-list dense class="context-menu-list">
+              <v-list-tile @click="exportProject">
+                <v-list-tile-content>
+                  <v-list-tile-title>Download Project</v-list-tile-title>
+                </v-list-tile-content>
+              </v-list-tile>
+              <v-divider />
+              <v-list-tile @click="saveToServer">
+                <v-list-tile-content>
+                  <v-list-tile-title>Save To Server</v-list-tile-title>
+                </v-list-tile-content>
+              </v-list-tile>
+            </v-list>
+          </v-menu>
+          <!-- <v-tooltip transition="none" bottom>
+            <v-btn
+              slot="activator"
+              @click.stop="() => settings.showDrawer = !settings.showDrawer"
+              icon flat>
+              <v-badge color="error" overlap :value="errors.length > 0">
+                <span slot="badge">{{ errors.length }}</span>
+                <v-icon>mdi-tools</v-icon>
+              </v-badge>
+            </v-btn>
+            <span>History & Errors</span>
+          </v-tooltip> -->
+        </div>
+      </v-flex>
     </v-toolbar>
     <settings-view
-      v-if="showSettings" 
-      @close="showSettings = false"
-      :show="showSettings" />
+      v-if="settings.showSettings" 
+      @close="settings.showSettings = false"
+      :show="settings.showSettings" />
     <spectrogram
       v-if="isSpectrogramVisible"
       @close="isSpectrogramVisible = false"
@@ -79,7 +80,6 @@
       v-if="eventStore.audioElement.src"
       tabindex="-1"
       class="no-outline"
-      @scroll="handleScroll"
       @show-menu="doShowMenu"
       :height="300">
       <play-head />
@@ -165,12 +165,12 @@
             class="error-overview"
             :style="{ left: `${ error.startTime / eventStore.audioElement.duration * 100}%` }" />
         </div>
-        <div class="search-overview-container">
-          <search-results />
-        </div>
+        <!-- <div class="search-overview-container">
+          <search-results-inline />
+        </div> -->
       </div>
     </wave-form>
-    <drop-file @update="loadAudioFile" class="fill-height" v-else>
+    <drop-file @update="loadAudioFromFile" class="fill-height" v-else>
     </drop-file>
     <player-bar />
     <transcript-editor />
@@ -186,11 +186,10 @@ import playerBar from './PlayerBar.vue'
 import waveForm from './Waveform.vue'
 import settingsView from './Settings.vue'
 import spectrogram from './Spectrogram.vue'
-import search from './Search.vue'
-import searchResults from './SearchResults.vue'
+// import searchSimple from './SearchSimple.vue'
+// import searchResultsInline from './SearchResultsInline.vue'
 import transcriptEditor from './TranscriptEditor.vue'
 import playHead from './PlayHead.vue'
-import scrollbar from './Scrollbar.vue'
 import dropFile from './DropFile.vue'
 
 import {
@@ -204,9 +203,8 @@ import {
   getSelectedEvent,
   isEventSelected,
   joinEvents,
-  loadAudioFile,
+  loadAudioFromFile,
   playEvent,
-  saveChangesToServer,
   scrollToAudioEvent,
   scrollToTranscriptEvent,
   selectEventRange,
@@ -216,6 +214,7 @@ import {
   splitEvent,
 } from '../store/transcript'
 
+import { saveChangesToServer } from '../service/backend-server'
 import { handleGlobalShortcut } from '../service/keyboard'
 
 import {
@@ -233,12 +232,13 @@ import {
 import {
   isWaveformEventVisible,
   getScrollLeftAudio
-} from '../service/events-dom'
+} from '../service/dom-methods'
 
 import settings from '../store/settings'
 import audio from '../service/audio'
 import { serverTranscript } from '../service/backend-server'
 import { generateProjectFile } from '../service/backend-files'
+import eventBus from '../service/event-bus'
 
 @Component({
   components: {
@@ -247,13 +247,13 @@ import { generateProjectFile } from '../service/backend-files'
     settingsView,
     spectrogram,
     playHead,
-    search,
-    searchResults,
-    scrollbar,
+    // searchSimple,
+    // searchResultsInline,
     dropFile,
     playerBar
   }
 })
+
 export default class Editor extends Vue {
 
   errors: LocalTranscriptEvent[] = []
@@ -262,7 +262,7 @@ export default class Editor extends Vue {
   getSelectedEvent = getSelectedEvent
   isEventSelected = isEventSelected
   history = history
-  loadAudioFile = loadAudioFile
+  loadAudioFromFile = loadAudioFromFile
   exportEventAudio = exportEventAudio
 
   scrollTranscriptIndex: number = 0
@@ -273,7 +273,6 @@ export default class Editor extends Vue {
 
   scrollToTranscriptEvent = scrollToTranscriptEvent
   settings = settings
-  showSettings = false
   showSearch = false
   showMenu = false
   isSaving = false
@@ -281,13 +280,8 @@ export default class Editor extends Vue {
   menuY = 0
   layerX = 0 // this is used for splitting
 
-  async exportJSON() {
-    if (serverTranscript !== null) {
-      const b = new Blob([ JSON.stringify(this.eventStore.events, undefined, 4) ], {
-        type: 'application/json;charset=UTF-8'
-      })
-      saveAs(b, eventStore.metadata.transcriptName! + '.json')
-    }
+  reload() {
+    window.location.reload()
   }
 
   joinEvents(es: number[]) {
@@ -307,21 +301,21 @@ export default class Editor extends Vue {
   }
 
   async saveToServer() {
-    if (this.history.actions.length > 0) {
-      this.isSaving = true
-      try {
-        await saveChangesToServer()
-      } catch (e) {
-        console.log(e)
-      } finally {
-        this.isSaving = false
-      }
+    // if (this.history.actions.length > 0) {
+    this.isSaving = true
+    try {
+      eventStore.events = await saveChangesToServer(eventStore.events)
+    } catch (e) {
+      console.log(e)
+    } finally {
+      this.isSaving = false
     }
+    // }
   }
 
   async doShowMenu(e: MouseEvent) {
     // this is used for splitting
-    this.layerX = e.layerX
+    this.layerX = e.offsetX
     const ev = findEventAt(((await getScrollLeftAudio()) + e.x) / settings.pixelsPerSecond)
     if (ev !== undefined) {
       if (isCmdOrCtrl(e)) {
@@ -356,13 +350,14 @@ export default class Editor extends Vue {
 
   mounted() {
     startUndoListener()
-    window.onbeforeunload = (e) => {
+    window.onbeforeunload = (e: BeforeUnloadEvent) => {
       if (history.actions.length > 0) {
         e.preventDefault()
         // Chrome requires returnValue to be set
         e.returnValue = ''
       }
     }
+    eventBus.$on('scrollWaveform', this.hideMenu)
     document.addEventListener('keydown', handleGlobalShortcut)
   }
 
@@ -370,7 +365,7 @@ export default class Editor extends Vue {
     document.removeEventListener('keydown', handleGlobalShortcut)
   }
 
-  handleScroll() {
+  hideMenu() {
     if (this.showMenu === true) {
       this.showMenu = false
     }
@@ -399,17 +394,6 @@ export default class Editor extends Vue {
     background-clip content-box
   // &::-webkit-scrollbar-corner
   // &::-webkit-resizer
-
-.transcript-scrollbar
-  top -15px
-  position relative
-  height 20px
-
-.jump-to
-  opacity 0
-  positon absolute
-  top 5px
-  right 5px
 
 .context-menu-list a
   cursor default !important

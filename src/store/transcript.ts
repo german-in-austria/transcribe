@@ -6,22 +6,16 @@ import {
   clone,
   fileToUint8ArrayAndName
 } from '../util'
-import settings from '../store/settings'
+import settings, { tokenTypesPresets } from '../store/settings'
 import { HistoryEventAction } from './history'
 import eventBus from '../service/event-bus'
+import { collectTokensViaOffsets } from '../service/copy-paste'
+import { eachFrom } from '../util'
 
 import {
-  localTranscriptToServerTranscript,
-  localTranscriptToServerSaveRequest,
-  serverTranscript,
-  serverTranscriptToLocal,
-  updateServerTranscriptWithChanges,
-  ServerTranscriptSaveResponse,
   ServerTranscriptListItem,
-  ServerTranscriptInformants,
+  ServerTranscriptInformant,
   ServerTranscriptTokenTypes,
-  ServerTranscript,
-  createEmptyTranscript
 } from '../service/backend-server'
 
 declare global {
@@ -35,8 +29,16 @@ interface LocalTranscriptTokenTier {
   text: string
   type: number|null
 }
-type LocalTranscriptSpeakers = ServerTranscriptInformants
-type LocalTranscriptTokenTypes = ServerTranscriptTokenTypes
+
+export interface LocalTranscriptSpeaker extends ServerTranscriptInformant {
+  searchInSpeaker: boolean
+}
+
+export interface LocalTranscriptSpeakers {
+  [speakerId: number]: LocalTranscriptSpeaker
+}
+
+export type LocalTranscriptTokenTypes = ServerTranscriptTokenTypes
 
 export type TokenTierType = 'text'|'ortho'|'phon'
 
@@ -51,19 +53,21 @@ export interface LocalTranscriptToken {
 }
 
 export interface TierFreeText {
+  id: string
   type: 'freeText'
   text: string
 }
 
-export interface TierAnnotation {
-  type: 'annotation',
-  tags: number[]
-}
-
-export type LocalTranscriptSpeakerEventTier = TierFreeText|TierAnnotation
+export type LocalTranscriptSpeakerEventTier = TierFreeText
 
 export interface LocalTranscriptSpeakerEventTiers {
   [tierId: string]: LocalTranscriptSpeakerEventTier
+}
+
+export interface LocalTranscriptSpeakerEvent {
+  speakerEventId: number
+  tokens: LocalTranscriptToken[]
+  speakerEventTiers: LocalTranscriptSpeakerEventTiers
 }
 
 export interface LocalTranscriptEvent {
@@ -71,11 +75,7 @@ export interface LocalTranscriptEvent {
   startTime: number
   endTime: number,
   speakerEvents: {
-    [speakerId: string]: {
-      speakerEventId: number
-      tokens: LocalTranscriptToken[]
-      speakerEventTiers: LocalTranscriptSpeakerEventTiers
-    }
+    [speakerId: string]: LocalTranscriptSpeakerEvent
   }
 }
 
@@ -83,10 +83,22 @@ export interface LocalTranscriptEditEvent extends LocalTranscriptEvent {
   editType: 'UPDATE'|'DELETE'|'ADD'
 }
 
+export interface SearchResult {
+  resultId: number
+  offset: number
+  offsetEnd: number
+  text: string
+  speakerId: string
+  tierId: string
+  event: LocalTranscriptEvent
+}
+
 export interface LocalTranscriptTier {
-  type: 'basic'|'token'|'freeText'
+  searchInTier: boolean
+  type: 'token'|'freeText'
   name: string
   show: boolean
+  id: TokenTierType
 }
 
 export type LocalTranscript = LocalTranscriptEvent[]
@@ -94,13 +106,15 @@ export type LocalTranscript = LocalTranscriptEvent[]
 export const eventStore = {
   events: [] as LocalTranscriptEvent[],
   selectedEventIds: [] as number[],
-  selectedSearchResult: null as LocalTranscriptEvent|null,
-  searchResults: [] as LocalTranscriptEvent[],
+
+  selectedSearchResult: null as SearchResult|null,
+  searchResults: [] as SearchResult[],
   searchTerm: '',
-  playingEvent: null as LocalTranscriptEvent|null,
+
   isPaused: true as boolean,
   currentTime: 0,
-  recentlyOpened: JSON.parse(localStorage.getItem('recentlyOpened') || '[]'),
+  recentlyOpened: [] as ServerTranscriptListItem[],
+  lockedTokens: [] as number[],
   metadata: {
     defaultTier: 'text' as TokenTierType,
     speakers: {} as LocalTranscriptSpeakers,
@@ -115,18 +129,24 @@ export const eventStore = {
   },
   userState: {
     viewingTranscriptEvent: null as LocalTranscriptEvent|null,
-    viewingAudioEvent: null as LocalTranscriptEvent|null
+    editingTranscriptEvent: null as LocalTranscriptEvent|null,
+    viewingAudioEvent: null as LocalTranscriptEvent|null,
+    timeSelection: {
+      start: null as null|number,
+      end: null as null|number
+    }
   },
   transcriptDownloadProgress: 0 as number,
   status: 'empty' as 'empty'|'loading'|'finished'|'new',
   playAllFrom: null as number|null,
-  backEndUrl: localStorage.getItem('backEndUrl') || 'https://dissdb-test.dioe.at',
   audioElement: document.createElement('audio')
-}
+};
+
+(window as any).eventStore = eventStore;
 
 export function tokenTypeFromToken(token: string) {
-  const type = _(settings.tokenTypes).find((tt) => {
-    return tt.regex.test(token)
+  const type = _(tokenTypesPresets[settings.tokenTypesPreset]).find((tt) => {
+    return tt.type === 'single' && tt.regex.test(token.replace('=', ''))
   })
   if (type !== undefined) {
     return type
@@ -139,6 +159,15 @@ export function tokenTypeFromToken(token: string) {
   }
 }
 
+export function timeSelectionIsEmpty() {
+  return eventStore.userState.timeSelection.start === null &&
+    eventStore.userState.timeSelection.end === null
+}
+
+export function getRecentlyOpened(backEndUrl: string): ServerTranscriptListItem[] {
+  return JSON.parse(localStorage.getItem('recentlyOpened__' + backEndUrl) || '[]')
+}
+
 export function addRecentlyOpened(t: ServerTranscriptListItem): ServerTranscriptListItem[] {
   eventStore.recentlyOpened = _([t])
     .concat(eventStore.recentlyOpened)
@@ -146,7 +175,7 @@ export function addRecentlyOpened(t: ServerTranscriptListItem): ServerTranscript
     .take(3)
     .value()
   localStorage.setItem(
-    'recentlyOpened',
+    'recentlyOpened__' + settings.backEndUrl,
     JSON.stringify(eventStore.recentlyOpened)
   )
   return eventStore.recentlyOpened
@@ -174,7 +203,22 @@ export async function exportEventAudio(eventIds: number[]) {
   }
 }
 
-export function loadAudioFile(f: File|Uint8Array|null): Promise<HTMLAudioElement> {
+export function loadAudioFromUrl(url: string): Promise<HTMLAudioElement> {
+  return new Promise((resolve, reject) => {
+    const a = document.createElement('audio')
+    a.src = url
+    a.addEventListener('durationchange', function listener() {
+      a.removeEventListener('durationchange', listener)
+      audio.store.isLocalFile = false
+      eventStore.audioElement = a
+      console.log({aDuration: a.duration})
+      eventStore.audioMetadata.length = a.duration
+      resolve(a)
+    })
+  })
+}
+
+export function loadAudioFromFile(f: File|Uint8Array): Promise<HTMLAudioElement> {
   return new Promise(async (resolve, reject) => {
     let audioUrl = ''
     const a = document.createElement('audio')
@@ -195,7 +239,7 @@ export function loadAudioFile(f: File|Uint8Array|null): Promise<HTMLAudioElement
       eventStore.audioElement = a
       eventStore.audioMetadata.length = a.duration
       eventStore.audioMetadata.fileSize = audio.store.uint8Buffer.byteLength
-      resolve(a as HTMLAudioElement)
+      resolve(a)
     })
   })
 }
@@ -210,11 +254,15 @@ export function tokenize(s: string): string[] {
     .filter(t => t !== '')
 }
 
-export function selectSearchResult(e: LocalTranscriptEvent) {
-  eventStore.selectedSearchResult  = e
-  scrollToAudioEvent(e)
-  scrollToTranscriptEvent(e)
-  selectEvent(e)
+export function getTextFromTokens(ts: LocalTranscriptToken[], defaultTier: TokenTierType): string {
+  return ts.map(t => t.tiers[defaultTier].text).join(' ')
+}
+
+export function selectSearchResult(r: SearchResult) {
+  eventStore.selectedSearchResult  = r
+  scrollToAudioEvent(r.event)
+  scrollToTranscriptEvent(r.event)
+  selectEvent(r.event)
 }
 
 export function scrollToAudioEvent(e: LocalTranscriptEvent) {
@@ -223,12 +271,19 @@ export function scrollToAudioEvent(e: LocalTranscriptEvent) {
 }
 
 export function scrollToTranscriptEvent(
-  e: LocalTranscriptEvent, opts?: { animate: boolean, focusSpeaker: number|null }
+  e: LocalTranscriptEvent, opts?: {
+    animate: boolean,
+    focusSpeaker: string|null,
+    focusTier: string|null,
+    focusRight: boolean
+  }
 ) {
   eventStore.userState.viewingTranscriptEvent = e
   eventBus.$emit('scrollToTranscriptEvent', e, {
     animate: true,
     focusSpeaker: null,
+    focusTier: eventStore.metadata.defaultTier,
+    focusRight: false,
     ...opts
   })
 }
@@ -242,6 +297,10 @@ export function makeTokenId() {
 }
 
 export function makeTierId() {
+  return Number(_.uniqueId()) * -1
+}
+
+export function makeEventTierId() {
   return Number(_.uniqueId()) * -1
 }
 
@@ -270,25 +329,21 @@ export function speakerEventHasErrors(event: LocalTranscriptEvent): boolean {
 }
 
 function updateSpeakerTokenOrderStartingAt(speakerId: number, startAtIndex = 0, add: number) {
-  return _(eventStore.events).map((e, eventIndex) => {
-    if (eventIndex > startAtIndex) {
-      if (e.speakerEvents[speakerId] !== undefined) {
-        const tokens = e.speakerEvents[speakerId].tokens
-        if (tokens.length > 0) {
-          return {
-            ...e,
-            speakerEvents: {
-              ...e.speakerEvents,
-              [speakerId]: {
-                ...e.speakerEvents[speakerId],
-                tokens: tokens.map((t) => {
-                  return { ...t, order: t.order + add }
-                })
-              }
+  eachFrom(eventStore.events, startAtIndex, (e) => {
+    if (e.speakerEvents[speakerId] !== undefined) {
+      const tokens = e.speakerEvents[speakerId].tokens
+      if (tokens.length > 0) {
+        return {
+          ...e,
+          speakerEvents: {
+            ...e.speakerEvents,
+            [speakerId]: {
+              ...e.speakerEvents[speakerId],
+              tokens: tokens.map(t => {
+                return { ...t, order: t.order + add }
+              })
             }
           }
-        } else {
-          return e
         }
       } else {
         return e
@@ -296,24 +351,56 @@ function updateSpeakerTokenOrderStartingAt(speakerId: number, startAtIndex = 0, 
     } else {
       return e
     }
-  }).value()
+  })
 }
 
-function getLastEventToken(event: LocalTranscriptEvent, speakerId: number): LocalTranscriptToken|undefined {
-  const speakerEvent = event.speakerEvents[speakerId]
-  if (speakerEvent !== undefined && speakerEvent.tokens.length > 0) {
-    return _(speakerEvent.tokens).last()
+export function getFirstTokenOrder(e: LocalTranscriptEvent, speakerId: string): number {
+  const speakerEvent = e.speakerEvents[speakerId]
+  if (speakerEvent) {
+    const firstToken = e.speakerEvents[speakerId].tokens[0]
+    if (firstToken) {
+      return firstToken.order
+    } else {
+      return 0
+    }
   } else {
-    return undefined
+    const i = findPreviousSpeakerEvent(speakerId, e.eventId)
+    if (i !== -1) {
+      const prevLastToken = _(eventStore.events[i].speakerEvents[speakerId].tokens).last()
+      if (prevLastToken) {
+        return prevLastToken.order + 1
+      } else {
+        return 0
+      }
+    } else {
+      return 0
+    }
   }
 }
 
-function hasNextFragmentMarker(event: LocalTranscriptEvent, speakerId: number, tier: TokenTierType): boolean {
-  const lastToken = getLastEventToken(event, speakerId)
-  if (lastToken !== undefined) {
-    return lastToken.tiers[tier].text.endsWith('=')
+function getLastEventToken(event: LocalTranscriptEvent|undefined, speakerId: number): LocalTranscriptToken|undefined {
+  if (event === undefined) {
+    return undefined
   } else {
+    const speakerEvent = event.speakerEvents[speakerId]
+    if (speakerEvent !== undefined && speakerEvent.tokens.length > 0) {
+      return _(speakerEvent.tokens).last()
+    } else {
+      return undefined
+    }
+  }
+}
+
+function hasNextFragmentMarker(event: LocalTranscriptEvent|undefined, speakerId: number, tier: TokenTierType): boolean {
+  if (event === undefined) {
     return false
+  } else {
+    const lastToken = getLastEventToken(event, speakerId)
+    if (lastToken !== undefined) {
+      return lastToken.tiers[tier].text.endsWith('=')
+    } else {
+      return false
+    }
   }
 }
 
@@ -321,69 +408,118 @@ function setFirstTokenFragmentOf(
   eventIndex: number,
   speakerId: number,
   lastEventToken?: LocalTranscriptToken
-): boolean {
-  if (lastEventToken === undefined) {
-    return false
-  } else {
-    const event = eventStore.events[eventIndex]
-    if (event !== undefined) {
-      const speakerEvent = event.speakerEvents[speakerId]
-      if (speakerEvent !== undefined) {
-        const firstToken = eventStore.events[eventIndex].speakerEvents[speakerId].tokens[0]
-        if (firstToken !== undefined) {
-          eventStore.events[eventIndex].speakerEvents[speakerId].tokens[0].fragmentOf = lastEventToken.id
-          return true
-        } else {
-          return false
-        }
-      } else {
-        return false
+) {
+  const event = eventStore.events[eventIndex]
+  // console.log('next event', event)
+  if (event !== undefined) {
+    const speakerEvent = event.speakerEvents[speakerId]
+    if (speakerEvent !== undefined) {
+      const firstToken = eventStore.events[eventIndex].speakerEvents[speakerId].tokens[0]
+      if (firstToken !== undefined) {
+        eventStore.events[eventIndex].speakerEvents[speakerId].tokens[0].fragmentOf = lastEventToken
+          ? lastEventToken.id
+          : null
       }
-    } else {
-      return true
     }
   }
 }
 
+export function updateSpeakerEvents(
+  es: LocalTranscriptEvent[],
+  speakerId: number,
+  eTokens: LocalTranscriptToken[][]
+): HistoryEventAction {
+  const newEs = es.map((e, i) => ({
+    ...e,
+    speakerEvents: {
+      [speakerId]: {
+        ...e.speakerEvents[speakerId],
+        tokens: eTokens[i]
+      }
+    }
+  }))
+  const updateHistoryActions = newEs.map((e, i) => updateSpeakerEvent(e, speakerId))
+  return {
+    id: _.uniqueId(),
+    time: new Date(),
+    apply: true,
+    type: 'CHANGE_TOKENS',
+    before: _(updateHistoryActions).map(hea => clone(hea.before)).flatten().value(),
+    after: _(updateHistoryActions).map(hea => clone(hea.after)).flatten().value()
+  }
+}
+
+export function hasEventTiers(se: LocalTranscriptSpeakerEvent): boolean {
+  // tslint:disable-next-line:max-line-length
+  return !_.isEmpty(se.speakerEventTiers) && _.some(se.speakerEventTiers, (set) => set.text !== undefined && set.text.trim() !== '' )
+}
+
+export function hasTokens(se: LocalTranscriptSpeakerEvent): boolean {
+  return se.tokens.length > 0 && se.tokens[0].tiers[eventStore.metadata.defaultTier].text.trim() !== ''
+}
+
 export function updateSpeakerEvent(
   event: LocalTranscriptEvent,
-  speakerId: number,
-  tokens: LocalTranscriptToken[],
+  speakerId: number
 ): HistoryEventAction {
-  const oldEvent = eventStore.events[findEventIndexById(event.eventId)]
+  const tokens = event.speakerEvents[speakerId].tokens
+  const eventIndex = findEventIndexById(event.eventId)
+  const oldEvent = eventStore.events[eventIndex]
   const isNew = oldEvent.speakerEvents[speakerId] === undefined
-  const deletedSpeakerId = tokens.length === 0 ? speakerId : undefined
+  // tslint:disable-next-line:max-line-length
+  const deletedSpeakerId = !hasTokens(event.speakerEvents[speakerId]) && !hasEventTiers(event.speakerEvents[speakerId]) ? speakerId : undefined
   const tokenCountDifference = isNew ? tokens.length : tokens.length - oldEvent.speakerEvents[speakerId].tokens.length
   const speakerEvents = _({
-      // merge the new speaker
-      ...oldEvent.speakerEvents,
-      [speakerId] : {
-        speakerEventId: event.eventId,
-        speakerEventTiers: {},
-        tokens
-      }
-    })
-    // remove deleted speaker events
-    .reduce((m, e, k, l) => {
-      if (Number(k) !== Number(deletedSpeakerId)) {
-        m[k] = e
-      }
-      return m
-    }, {} as LocalTranscriptEvent['speakerEvents'])
+    // merge the new speaker
+    ...oldEvent.speakerEvents,
+    [speakerId] : {
+      speakerEventId: event.eventId,
+      speakerEventTiers: event.speakerEvents[speakerId].speakerEventTiers || {},
+      tokens
+    }
+  })
+  // remove deleted speaker events
+  .reduce((m, e, k, l) => {
+    if (Number(k) !== Number(deletedSpeakerId)) {
+      m[k] = e
+    }
+    return m
+  }, {} as LocalTranscriptEvent['speakerEvents'])
+
+  // create the event
   const newEvent = clone({...oldEvent, speakerEvents})
-  const index = findEventIndexById(event.eventId)
-  // UPDATE EVENT
-  eventStore.events.splice(index, 1, newEvent)
+
+  console.log({newEvent})
+
   // if it has a fragment marker ("="),
   // mark the first token in the next
   // speaker event as a fragment_of
   if (hasNextFragmentMarker(newEvent, speakerId, eventStore.metadata.defaultTier)) {
-    setFirstTokenFragmentOf(index + 1, speakerId, getLastEventToken(newEvent, speakerId))
+    setFirstTokenFragmentOf(eventIndex + 1, speakerId, getLastEventToken(newEvent, speakerId))
+  // unset, if it doesn’t
+  } else {
+    setFirstTokenFragmentOf(eventIndex + 1, speakerId, undefined)
   }
+
+  // UPDATE EVENT
+  eventStore.events.splice(eventIndex, 1, newEvent)
+  // if the last token in the previous event
+  // has a fragment marker (=), set fragment of here.
+  if (hasNextFragmentMarker(getPreviousEvent(event.eventId), speakerId, eventStore.metadata.defaultTier)) {
+    const t = getLastEventToken(getPreviousEvent(event.eventId), speakerId)
+    if (t !== undefined) {
+      setFirstTokenFragmentOf(eventIndex, speakerId, t)
+    }
+  // unset, if it doesn’t
+  } else {
+    setFirstTokenFragmentOf(eventIndex, speakerId, undefined)
+  }
+
   // update token order if the length has changed
   if (tokenCountDifference !== 0) {
-    eventStore.events = updateSpeakerTokenOrderStartingAt(speakerId, index, tokenCountDifference)
+    updateSpeakerTokenOrderStartingAt(speakerId, eventIndex, tokenCountDifference)
   }
+  // console.log('after update', clone(eventStore.events[eventIndex]), eventStore.events[eventIndex])
   return {
     id: _.uniqueId(),
     time: new Date(),
@@ -410,11 +546,11 @@ export function resizeEvents(...es: LocalTranscriptEvent[]): HistoryEventAction 
   }
 }
 
-export function findEventOverlaps(e: LocalTranscriptEvent): LocalTranscriptEvent[][] {
+export function findEventOverlaps(e: LocalTranscriptEvent, events = eventStore.events): LocalTranscriptEvent[][] {
   const left: LocalTranscriptEvent[] = []
   const middle: LocalTranscriptEvent[] = []
   const right: LocalTranscriptEvent[] = []
-  eventStore.events.forEach(ev => {
+  events.forEach(ev => {
     if (ev.eventId !== e.eventId) {
       // left side overlapped
       if (ev.startTime <= e.startTime && ev.endTime > e.startTime && ev.endTime <= e.endTime) {
@@ -435,9 +571,9 @@ export function isEventDockedToEvent(...es: LocalTranscriptEvent[]): boolean {
   return sortEvents(es).every((e, i, l) => {
     // true if it’s either the first event
     // or the distance to the previous one is smaller than the settings dock interval
-    if (i !== 0) {
-      console.log('distance', e.startTime, e.endTime, e.startTime - l[ i - 1].endTime)
-    }
+    // if (i !== 0) {
+    //   console.log('distance', e.startTime, e.endTime, e.startTime - l[ i - 1].endTime)
+    // }
     return i === 0 || e.startTime - l[ i - 1].endTime <= settings.eventDockingInterval
   })
 }
@@ -528,11 +664,47 @@ export function insertEvent(e: LocalTranscriptEvent): HistoryEventAction {
   }
 }
 
-export function addEvent(atTime: number): HistoryEventAction {
+export function appendEmptyEventAfter(e: LocalTranscriptEvent|undefined): HistoryEventAction|undefined {
+  // an event is selected
+  if (e !== undefined) {
+    const next = findNextEventAt(e.endTime)
+    // there is one after it.
+    if (next !== undefined) {
+      if (isEventDockedToEvent(e, next)) {
+        // it’s docked, so there’s nothing to do
+        return undefined
+      } else {
+        // there is room, so we add one
+        return addEvent(e.endTime, Math.min(2, next.startTime - e.endTime))
+      }
+    } else {
+      return addEvent(e.endTime, 2)
+    }
+  }
+}
+
+// see above
+export function prependEmptyEventBefore(e: LocalTranscriptEvent|undefined): HistoryEventAction|undefined {
+  if (e !== undefined) {
+    const prev = findPreviousEventAt(e.endTime)
+    console.log({ prev })
+    if (prev !== undefined) {
+      if (isEventDockedToEvent(prev, e)) {
+        return undefined
+      } else {
+        return addEvent(Math.max(prev.endTime, e.startTime - 2), Math.min(2, e.startTime - prev.endTime))
+      }
+    } else {
+      return addEvent(Math.max(0, e.startTime - 2), Math.min(e.startTime, 2))
+    }
+  }
+}
+
+export function addEvent(atTime: number, length = 1): HistoryEventAction {
   const nextEvent = findNextEventAt(atTime)
   const newEvent: LocalTranscriptEvent = {
     startTime: atTime,
-    endTime: atTime + 1,
+    endTime: atTime + length,
     eventId: makeEventId(),
     speakerEvents: {}
   }
@@ -578,18 +750,97 @@ export function deleteEvent(event: LocalTranscriptEvent): HistoryEventAction {
   }
 }
 
-export function splitEvent(event: LocalTranscriptEvent, splitAt: number): HistoryEventAction {
+function splitTokensAtFactor(ts: LocalTranscriptToken[], factor: number): LocalTranscriptToken[][] {
+  // _.partition would have been nicer here
+  // but typescript keeps getting confused with it.
+  return ts.reduce((m, e, i, l) => {
+    m[ i / l.length <= factor ? 0 : 1 ].push(e)
+    return m
+  }, [[], []] as LocalTranscriptToken[][])
+}
+
+export function shiftCharsLeft(eventId: number, speakerId: number, start: number, end: number): HistoryEventAction {
+  return shiftCharsAcrossEvents(eventId, speakerId, start, end, -1)
+}
+
+export function shiftCharsRight(eventId: number, speakerId: number, start: number, end: number): HistoryEventAction {
+  return shiftCharsAcrossEvents(eventId, speakerId, start, end, 1)
+}
+
+export function shiftCharsAcrossEvents(
+  eventId: number,
+  speakerId: number,
+  start: number,
+  end: number,
+  direction: 1|-1
+): HistoryEventAction {
+  const [ left, right ] = [ start, end ].sort()
+  const i = findEventIndexById(eventId)
+  const e = eventStore.events[ i ]
+  const targetE = eventStore.events[ i + direction ]
+  // it exists, and there’s also one to the left of it & selection is collapsed
+  if (e !== undefined && targetE !== undefined) {
+    const ts = e.speakerEvents[speakerId].tokens
+    const text = getTextFromTokens(ts, eventStore.metadata.defaultTier)
+    // console.log({ ts, text, e, targetE })
+    return updateSpeakerEvents([ e, targetE ], speakerId, [
+      // changed source event
+      collectTokensViaOffsets(
+        e.speakerEvents[speakerId].tokens,
+        //                 keep right  : keep left
+        direction === -1 ? right       : 0,
+        direction === -1 ? text.length : left
+      ),
+      // changed target event
+      (() => {
+        // append
+        if (direction === -1) {
+          return [
+            ...targetE.speakerEvents[speakerId] ? targetE.speakerEvents[speakerId].tokens : [],
+            ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, 0, right)
+          ]
+        // prepend
+        } else {
+          return [
+            ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, left, text.length),
+            ...targetE.speakerEvents[speakerId] ? targetE.speakerEvents[speakerId].tokens : [],
+          ]
+        }
+      })()
+    ])
+  } else {
+    throw new Error('Move tokens: source or target event not found.')
+  }
+}
+
+export function splitEvent(event: LocalTranscriptEvent, splitTime: number): HistoryEventAction {
   const i = findEventIndexById(event.eventId)
   const before = clone(eventStore.events[i])
+  const eventLength = event.endTime - event.startTime
+  const cutAtProgressFactor = splitTime / eventLength
+  const newEventId = makeEventId()
   const leftEvent: LocalTranscriptEvent = {
     ...event,
-    endTime: event.startTime + splitAt
+    speakerEvents: {
+      ..._(event.speakerEvents).mapValues(se => {
+        return { ...se, tokens: splitTokensAtFactor(se.tokens, cutAtProgressFactor)[0] }
+      }).value()
+    },
+    endTime: event.startTime + splitTime
   }
   const rightEvent: LocalTranscriptEvent = {
-    startTime: event.startTime + splitAt,
+    startTime: event.startTime + splitTime,
     endTime: event.endTime,
-    eventId: makeEventId(),
-    speakerEvents: {}
+    eventId: newEventId,
+    speakerEvents: {
+      ..._(event.speakerEvents).mapValues(se => {
+        return {
+          ...se,
+          speakerEventId: newEventId,
+          tokens: splitTokensAtFactor(se.tokens, cutAtProgressFactor)[1]
+        }
+      }).value()
+    },
   }
   eventStore.events.splice(i, 1, leftEvent, rightEvent)
   return {
@@ -599,6 +850,66 @@ export function splitEvent(event: LocalTranscriptEvent, splitAt: number): Histor
     type: 'SPLIT',
     before: [ before ],
     after: [ clone(leftEvent), clone(rightEvent) ]
+  }
+}
+
+export function splitEventAtChar(
+  eventId: number,
+  speakerId: number,
+  start: number,
+  end: number
+): HistoryEventAction[]  {
+  const [ left, right ] = [start, end].sort()
+  const i = findEventIndexById(eventId)
+  // event exists
+  if (i !== -1) {
+    const e = eventStore.events[i]
+    const before = clone(e)
+    const tokens = e.speakerEvents[speakerId] !== undefined ? e.speakerEvents[speakerId].tokens : []
+    const segmentCharacters = getTextFromTokens(tokens, eventStore.metadata.defaultTier).length
+    // selection is collapsed and not at beginning or end: split into two
+    console.log({right, segmentCharacters})
+    if (left === right && left !== 0 && right !== segmentCharacters) {
+      const splitFactor = left / segmentCharacters
+      const splitTime = splitFactor * (e.endTime - e.startTime)
+      const newEventId = makeEventId()
+      const leftEvent: LocalTranscriptEvent = {
+        ...e,
+        speakerEvents: {
+          ..._(e.speakerEvents).mapValues((se, sid) => ({
+            ...se,
+            tokens: collectTokensViaOffsets(e.speakerEvents[sid].tokens, 0, left)
+          })).value()
+        },
+        endTime: e.startTime + splitTime
+      }
+      const rightEvent: LocalTranscriptEvent = {
+        startTime: e.startTime + splitTime,
+        endTime: e.endTime,
+        eventId: newEventId,
+        speakerEvents: {
+          ..._(e.speakerEvents).mapValues((se, sid) => ({
+            ...se,
+            speakerEventId: newEventId,
+            tokens: collectTokensViaOffsets(e.speakerEvents[sid].tokens, left, segmentCharacters)
+          })).value()
+        },
+      }
+      eventStore.events.splice(i, 1, leftEvent, rightEvent)
+      return [{
+        id: _.uniqueId(),
+        time: new Date(),
+        apply: true,
+        type: 'SPLIT',
+        before: [ before ],
+        after: [ clone(leftEvent), clone(rightEvent) ]
+      }]
+    } else {
+      // double split
+      return []
+    }
+  } else {
+    return []
   }
 }
 
@@ -619,9 +930,15 @@ export function findEventIndexAt(seconds: number): number {
   return _(eventStore.events).findIndex((e) => e.startTime <= seconds && e.endTime >= seconds)
 }
 
-export function findPreviousSpeakerEvent(speaker: number, eventId: number): number|undefined {
+export function findPreviousSpeakerEvent(speaker: string, eventId: number): number {
   const i = findEventIndexById(eventId)
   return _(eventStore.events).findLastIndex((e, eventIndex) => eventIndex < i && e.speakerEvents[speaker] !== undefined)
+}
+
+export function getPreviousEvent(id: number): LocalTranscriptEvent|undefined {
+  const sorted = sortEvents(eventStore.events)
+  const index = sorted.findIndex(e => e.eventId === id) - 1
+  return sorted[index]
 }
 
 export function deleteEventById(id: number) {
@@ -643,15 +960,14 @@ export function timeFromSeconds(seconds: number) {
 }
 
 export function pause() {
-  eventStore.playAllFrom = null
-  eventStore.playingEvent = null
-  eventBus.$emit('pauseAudio', eventStore.currentTime)
   eventStore.audioElement.pause()
+  eventStore.playAllFrom = null
+  eventBus.$emit('pauseAudio', eventStore.currentTime)
   audio.pauseCurrentBuffer()
   eventStore.isPaused = true
 }
 
-function emitUpdateTimeUntilPaused(t: number, maxT?: number) {
+function emitUpdateTimeUntilPaused(t: number, lockScroll: boolean, maxT: number, useAudioElement: boolean) {
   const startTime = performance.now()
   eventStore.currentTime = t
   eventBus.$emit('updateTime', t)
@@ -659,22 +975,31 @@ function emitUpdateTimeUntilPaused(t: number, maxT?: number) {
   const step = (now: number) => {
     const elapsed = (now - startTime) / 1000 * settings.playbackSpeed
     // more than 16 ms have passed
-    if (t + elapsed - eventStore.currentTime >= .016) {
-      // update and emit.
-      eventStore.currentTime = t + elapsed
+    if (useAudioElement === true) {
+      eventStore.currentTime = eventStore.audioElement.currentTime
       eventBus.$emit('updateTime', eventStore.currentTime)
+    } else {
+      if (t + elapsed - eventStore.currentTime >= .016) {
+        // update and emit.
+        eventStore.currentTime = t + elapsed
+        eventBus.$emit('updateTime', eventStore.currentTime)
+      }
     }
     // paused or over max t.
-    if (eventStore.isPaused === true || (maxT !== undefined && eventStore.currentTime >= maxT)) {
+    if (
+      (maxT !== undefined && eventStore.currentTime >= maxT) ||
+      eventStore.isPaused === true
+    ) {
       // stop emitting.
+      eventStore.isPaused = true
       return false
     } else {
       // sync scroll if locked.
-      if (settings.lockScroll && settings.lockPlayHead) {
+      if (lockScroll) {
         const e = findEventAt(eventStore.currentTime)
         if (e !== undefined && e.eventId !== currentlyPlayingEventId) {
           currentlyPlayingEventId = e.eventId
-          scrollToTranscriptEvent(e, { animate: false, focusSpeaker: null })
+          scrollToTranscriptEvent(e)
         }
       }
       // continue emitting
@@ -685,13 +1010,21 @@ function emitUpdateTimeUntilPaused(t: number, maxT?: number) {
 }
 
 export function playAllFrom(t: number) {
-  pause()
+  if (eventStore.isPaused === false) {
+    pause()
+  }
   eventStore.playAllFrom = t
   eventStore.audioElement.currentTime = t
-  eventStore.audioElement.play()
-  eventStore.isPaused = false
-  eventBus.$emit('playAudio', t)
-  emitUpdateTimeUntilPaused(t)
+  eventStore.audioElement.play().then(() => {
+    eventStore.isPaused = false
+    eventBus.$emit('playAudio', t)
+    emitUpdateTimeUntilPaused(
+      eventStore.audioElement.currentTime,
+      settings.lockScroll && settings.lockPlayHead,
+      eventStore.audioElement.duration,
+      true
+    )
+  })
 }
 
 export function scrubAudio(t: number) {
@@ -699,31 +1032,47 @@ export function scrubAudio(t: number) {
   eventBus.$emit('scrubAudio', t)
 }
 
-export async function playEvents(events: LocalTranscriptEvent[]) {
-  pause()
+export async function playEventsStart(events: LocalTranscriptEvent[], duration: number) {
   const sortedEvents = sortEvents(events)
-  const synEvent = {
-    ..._(sortedEvents).first() as LocalTranscriptEvent,
-    endTime: (_(sortedEvents).last() as LocalTranscriptEvent).endTime
-  }
-  if (audio.store.uint8Buffer.byteLength > 0) {
-    const buffer = await audio.decodeBufferTimeSlice(
-      synEvent.startTime,
-      synEvent.endTime,
-      audio.store.uint8Buffer.buffer
-    )
+  const firstEvent = sortedEvents[0]
+  const [ start, end ] = [ firstEvent.startTime, Math.min(firstEvent.startTime + duration, firstEvent.endTime) ]
+  playRange(start, end)
+}
+
+export async function playEventsEnd(events: LocalTranscriptEvent[], duration: number) {
+  const sortedEvents = sortEvents(events)
+  const lastEvent = _.last(sortedEvents) as LocalTranscriptEvent
+  const [ start, end ] = [ Math.max(lastEvent.endTime - duration, lastEvent.startTime), lastEvent.endTime ]
+  playRange(start, end)
+}
+
+export async function playRange(start: number, end: number) {
+  if (audio.store.uint8Buffer.byteLength === 0) {
+    console.log('can’t play, no buffer loaded')
+  } else {
+    const [ left, right ] = [ start, end ].sort()
+    const buffer = await audio.decodeBufferTimeSlice(left, right, audio.store.uint8Buffer.buffer)
     if (buffer !== undefined) {
       requestAnimationFrame(() => {
-        eventStore.playingEvent = synEvent
         eventStore.isPaused = false
-        eventBus.$emit('playEvents', events)
         audio
           .playBuffer(buffer, settings.playbackSpeed)
           .addEventListener('ended', () => pause)
-        emitUpdateTimeUntilPaused(synEvent.startTime, synEvent.endTime)
+        emitUpdateTimeUntilPaused(left, false, right, false)
       })
     }
   }
+}
+
+export async function playEvents(events: LocalTranscriptEvent[]) {
+  pause()
+  const sortedEvents = sortEvents(events)
+  const lastEvent = _(sortedEvents).last() as LocalTranscriptEvent
+  const firstEvent = _(sortedEvents).first() as LocalTranscriptEvent
+  const start = eventStore.currentTime > firstEvent.startTime && eventStore.currentTime < lastEvent.endTime
+    ? eventStore.currentTime
+    : firstEvent.startTime
+  playRange(start, lastEvent.endTime)
 }
 
 export async function playEvent(event: LocalTranscriptEvent) {
@@ -737,6 +1086,10 @@ function getSpeakersFromEvents(es: LocalTranscriptEvent[]): string[] {
     .value()
 }
 
+function getEventById(id: number): LocalTranscriptEvent|undefined {
+  return getEventsByIds([ id ])[0]
+}
+
 function getEventsByIds(ids: number[]): LocalTranscriptEvent[] {
   return _(eventStore.selectedEventIds)
     .map((id) => eventStore.events[findEventIndexById(id)])
@@ -748,6 +1101,17 @@ function getEventsByIds(ids: number[]): LocalTranscriptEvent[] {
 export function replaceEvents(oldEvents: LocalTranscriptEvent[], newEvents: LocalTranscriptEvent[]) {
   oldEvents.forEach(deleteEvent)
   newEvents.forEach(insertEvent)
+}
+
+// tslint:disable-next-line:max-line-length
+export function findEventGaps(es: LocalTranscriptEvent[], maxGap = .1): Array<{ duration: number, start: number, end: number }> {
+  return es.reduce((m, e, i, l) => {
+    const gap = l[i + 1] !== undefined ? l[i + 1].startTime - e.endTime : 0
+    if (gap > maxGap) {
+      m.push({duration: gap, start: e.endTime, end: l[i + 1].startTime})
+    }
+    return m
+  }, [] as Array<{ duration: number, start: number, end: number }>)
 }
 
 export function joinEvents(eventIds: number[]): HistoryEventAction {
@@ -797,9 +1161,10 @@ export function isMostRecentSelection(id: number) {
   return _.last(eventStore.selectedEventIds) === id
 }
 
-export function selectNextEvent(increase: 1|-1 = 1): LocalTranscriptEvent|undefined {
-  if (eventStore.selectedEventIds.length > 0) {
-    const i = findEventIndexById(eventStore.selectedEventIds[0])
+export function selectNextEvent(increase: 1|-1 = 1, event?: LocalTranscriptEvent): LocalTranscriptEvent|undefined {
+  const id = event ? event.eventId : eventStore.selectedEventIds[0]
+  if (id !== undefined) {
+    const i = findEventIndexById(id)
     const e = eventStore.events[i + increase]
     return selectEvent(e)[0]
   } else {
@@ -878,62 +1243,4 @@ export function getSelectedEvent(): LocalTranscriptEvent|undefined {
 export function toTime(time: number, decimalPlaces = 0): string {
   // seconds to readable time
   return new Date(time * 1000).toISOString().substr(11, 8 + (decimalPlaces > 0 ? decimalPlaces + 1 : 0))
-}
-
-export async function convertToServerTranscript(es: LocalTranscriptEvent[]): Promise<ServerTranscript|null> {
-  if (serverTranscript !== null) {
-    return localTranscriptToServerTranscript(serverTranscript, es)
-  } else {
-    return null
-  }
-}
-
-export async function saveChangesToServer() {
-  console.log('save to server', serverTranscript)
-  if (serverTranscript !== null) {
-    const t = await localTranscriptToServerSaveRequest(serverTranscript, eventStore.events)
-    const tid = await (async () => {
-      if (t.aTranskript !== undefined) {
-        if (t.aTranskript.pk > -1) {
-          return t.aTranskript.pk
-        } else {
-          const { transcript_id } = await createEmptyTranscript(
-            t.aEinzelErhebung!.pk,
-            t.aTranskript!.n,
-            t.aTranskript!.default_tier!
-          )
-          return transcript_id
-        }
-      }
-    })()
-    if (tid !== undefined) {
-      const serverChanges = await (
-        await fetch(`${ eventStore.backEndUrl }/routes/transcript/save/${ tid }`, {
-        credentials: 'include',
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(t),
-      })).json() as ServerTranscriptSaveResponse
-      console.log({
-        localChanges: _(t.aTokens).toArray().value(),
-        localDeletionsAndInserts: _(t.aTokens).toArray().filter((token) => {
-          return token.status === 'delete' || token.status === 'insert'
-        }).value(),
-        serverDeletionsAndErrorsAndInserts: _(serverChanges.aTokens).toArray().filter((token) => {
-          return token.newStatus === 'deleted' || token.newStatus === 'inserted' || token.newStatus === 'error'
-        }).value(),
-        groupedErrors: _(serverChanges.aTokens)
-          .toArray()
-          .filter(token => token.error !== undefined)
-          .groupBy(token => token.error)
-          .value()
-      })
-      eventStore.events = serverTranscriptToLocal(updateServerTranscriptWithChanges(serverChanges))
-    } else {
-      throw new Error('transcript id is undefined')
-    }
-  }
 }

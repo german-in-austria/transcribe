@@ -1,6 +1,9 @@
 <template>
   <div style="height: 100%">
     <v-list v-if="history.actions.length > 0" dense>
+      <v-subheader>
+        <small>History</small>
+      </v-subheader>
       <v-list-tile @click="goToInitialState">
         <v-list-tile-avatar><small>(1)</small></v-list-tile-avatar>
         <v-list-tile-content>
@@ -215,7 +218,7 @@ export default class EditHistory extends Vue {
   opacity .5
 
 .scroller
-  height calc(100% - 40px)
+  height calc(100% - 80px)
 
 .action-preview-container
   max-width 400px

@@ -21,7 +21,7 @@
           <v-tabs-items>
             <v-tab-item>
               <v-list subheader class="pa-4">
-                <v-subheader>Interaction</v-subheader>
+                <v-subheader>Interaction & UI</v-subheader>
                 <v-divider />
                 <v-list-tile>
                   <v-list-tile-title>Mousewheel scrolls horizontally</v-list-tile-title>
@@ -36,9 +36,15 @@
                   </v-list-tile-action>
                 </v-list-tile>
                 <v-list-tile>
+                  <v-list-tile-title>Play Event after Appending</v-list-tile-title>
+                  <v-list-tile-action>
+                    <v-switch v-model="settings.playEventOnAppend" />
+                  </v-list-tile-action>
+                </v-list-tile>
+                <v-list-tile>
                   <v-list-tile-title>Dark Theme</v-list-tile-title>
                   <v-list-tile-action>
-                    <v-switch v-model="settings.darkMode" />
+                    <v-switch v-model="settings.darkMode"/>
                   </v-list-tile-action>
                 </v-list-tile>
                 <v-list-tile>
@@ -129,11 +135,14 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
 import SettingsKeyboardShortcuts from './SettingsKeyboardShortcuts.vue'
 import SettingsTokenTypes from './SettingsTokenTypes.vue'
+import { makeGradient } from '../lib/gradient'
+import { Chrome as ColorPicker } from 'vue-color'
 
 @Component({
   components: {
     SettingsKeyboardShortcuts,
-    SettingsTokenTypes
+    SettingsTokenTypes,
+    ColorPicker
   }
 })
 export default class Settings extends Vue {
@@ -141,6 +150,13 @@ export default class Settings extends Vue {
   @Prop({ default: false }) show: boolean
   settings = settings
   activeTab = null
+
+  updateGradient(i: number, c: any) {
+    this.settings.spectrogramColors[i].c = [c.rgba.r, c.rgba.g, c.rgba.b, c.rgba.a]
+    const g = makeGradient(this.settings.spectrogramColors)
+    this.settings.spectrogramGradient = g
+  }
+
 }
 </script>
 <style lang="stylus">

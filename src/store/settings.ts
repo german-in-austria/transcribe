@@ -1,38 +1,235 @@
 import { makeGradient, Color } from '../lib/gradient'
 import { setNumberInBounds, platform } from '../util'
-import { KeyboardShortcuts, keyboardShortcuts } from '../service/keyboard'
+import { KeyboardShortcuts, keyboardShortcuts, KeyboardAction } from '../service/keyboard'
+import localForage from 'localforage'
+import _ from 'lodash'
 
 import { eventStore } from './transcript'
+import Vue from 'vue'
+
+export interface TokenTypePresetBase {
+  name: string
+  color: string
+  id: number
+}
+
+type TokenTypePresetName = 'dioeDB'|'dissDB'
+
+export type TokenTypesPreset = {
+  [name in TokenTypePresetName]: Array<TokenTypesPresetGroup | TokenTypesPresetSingle>;
+}
+
+export interface TokenTypesPresetSingle extends TokenTypePresetBase {
+  type: 'single'
+  regex: RegExp
+}
+
+export interface TokenTypesPresetGroup extends TokenTypePresetBase {
+  type: 'group'
+  bracketSymbols: [ RegExp, RegExp ]
+}
+
+type JSONValue = string | number | boolean | null | JSONObject | JSONArray
+
+interface JSONObject {
+  [property: string]: JSONValue;
+}
+
+interface JSONArray extends Array<JSONValue> {}
+
+type Omit<T, K> = Pick<T, Exclude<keyof T, K>>
+
+type SerializableSettings = Omit<Settings, 'keyboardShortcuts'> & {
+  [key in keyof Settings]: JSONValue
+} & {
+  keyboardShortcuts: {
+    [key in keyof typeof keyboardShortcuts]: Pick<KeyboardAction, 'key' | 'modifier'>
+  }
+}
+
+type yo = Omit<Settings, 'keyboardShortcuts'>
+
+export type SidebarItem = null|'edit'|'history'|'warnings'|'search'|'bookmarks'
 
 export interface Settings {
-  showDrawer: boolean
-  drawerWidth: number
+  backEndUrl: string|null
+  activeSidebarItem: SidebarItem
+  autoCorrectDelimiterSpace: boolean
+  showSettings: boolean
   contrast: number
-  spectrogramGradient: number[][]
-  spectrogramColors: Color[]
-  waveFormColors: string[]
-  lockScroll: boolean
-  lockPlayHead: boolean
-  playbackSpeed: number,
-  playbackVolume: number,
-  pixelsPerSecond: number
-  emulateHorizontalScrolling: boolean
   darkMode: boolean
-  showSegmentBoxes: boolean
-  showSpectrograms: boolean
+  drawerWidth: number
+  emulateHorizontalScrolling: boolean
+  eventDockingInterval: number
+  keyboardShortcuts: KeyboardShortcuts
+  lockPlayHead: boolean
+  lockScroll: boolean
   minimumEventLength: number
-  useMonoWaveForm: boolean
   moveEventTimeByInterval: number
   moveEventTimeByIntervalSmall: number
-  eventDockingInterval: number
+  maxEventGap: number
+  pixelsPerSecond: number
+  playbackSpeed: number,
+  playbackVolume: number,
+  showDrawer: boolean
+  showSegmentBoxes: boolean
+  showSpectrograms: boolean
   skipInterval: number
-  tokenTypes: Array<{
-    name: string
-    regex: RegExp
-    color: string
-    id: number
-  }>
-  keyboardShortcuts: KeyboardShortcuts
+  spectrogramColors: Color[]
+  spectrogramGradient: number[][]
+  tokenTypesPreset: keyof TokenTypesPreset
+  useMonoWaveForm: boolean
+  waveFormColors: string[]
+  playEventOnAppend: boolean
+  showErrors: {
+    eventGaps: boolean
+    unknownTokenTypes: boolean
+    eventOverlaps: boolean
+  }
+}
+
+export const tokenTypesPresets: TokenTypesPreset = {
+  dioeDB: [
+    {
+      type: 'single',
+      name: 'segments-unclear',
+      regex: /(\*)([a-zA-ZÜüÄäÖöß']+)(\*)/,
+      color: '#6B6B6B',
+      id: 9
+    },
+    {
+      type: 'single',
+      name: 'untransferable-lexics',
+      regex: /(_)([a-zA-ZÜüÄäÖöß']+)(_)/,
+      color: '#FFAF3C',
+      id: 8
+    },
+    {
+      type: 'single',
+      name: 'interrupted',
+      regex: /([a-zA-ZÜüÄäÖöß']+\/$)|(\/[a-zA-ZÜüÄäÖöß']+$)/u,
+      color: '#6699CC',
+      id: 6
+    },
+    {
+      type: 'single',
+      name: 'pause',
+      regex: /\(\((([a-zA-ZÜüÄäÖöß']+)|(\d+(,\d)?s|))\)\)/u,
+      color: '#6B6B6B',
+      id: 3
+    },
+    {
+      type: 'group',
+      name: 'incomprehensible',
+      bracketSymbols: [
+        /(\(([a-zA-ZÜüÄäÖöß'\?]+))/u,
+        /((.+)\))/u
+      ],
+      color: '#ccc',
+      id: 7
+    },
+    {
+      type: 'group',
+      name: 'anonymized',
+      bracketSymbols: [
+        /(\[([a-zA-ZÜüÄäÖöß'\?]+))/u,
+        /(.+\](N|O|Z|S))/,
+      ],
+      color: '#880000',
+      id: 10
+    },
+    {
+      type: 'single',
+      name: 'other',
+      regex: /\{([a-zA-ZÜüÄäÖöß']+)\}/u,
+      color: '#880000',
+      id: 4
+    },
+    {
+      type: 'single',
+      name: 'delimiter',
+      regex: /^(\/)?(\?|\.|\,|!)"?$/,
+      color: '#1717FB',
+      id: 2
+    },
+    {
+      type: 'single',
+      name: 'word',
+      regex: /^([a-zA-ZÜüÄäÖöß'"\-]+$)/u,
+      color: 'transparent',
+      id: 1
+    },
+  ],
+  dissDB: [
+    {
+      type: 'single',
+      name: 'pause',
+      regex: /\[[\s\S]{1,}s\]/u,
+      color: '#6B6B6B',
+      id: 3
+    },
+    {
+      type: 'group',
+      name: 'non-verbal',
+      bracketSymbols: [
+        /\(\((.+)|\[(.+)/u,
+        /(.+)\)\)|(.+)\]/u
+      ],
+      color: '#008800',
+      id: 5
+    },
+    {
+      type: 'single',
+      name: 'delimiter',
+      regex: /^(\?|\.|\,|!)"?/,
+      color: '#1717FB',
+      id: 2
+    },
+    {
+      type: 'single',
+      name: 'interrupted',
+      regex: /([a-zA-ZÜüÄäÖöß]+\/)/u,
+      color: '#6699CC',
+      id: 6
+    },
+    {
+      type: 'single',
+      name: 'contraction',
+      regex: /_[a-zA-ZÜüÄäÖöß]+|[a-zA-ZÜüÄäÖöß]+_/,
+      color: '#d47d0f',
+      id: 8
+    },
+    {
+      type: 'group',
+      name: 'proper-name',
+      bracketSymbols: [
+        /(\{(.+))/u,
+        /(\{?(.+)\})/u
+      ],
+      color: '#880000',
+      id: 4
+    },
+    {
+      type: 'group',
+      name: 'incomprehensible',
+      // regex: /\((.+)\)/u,
+      bracketSymbols: [
+        /\((.+)/u,
+        /\(?(.+)\)/u
+        // /(\(([a-zA-ZÜüÄäÖöß\?]+))/u,
+        // /(\(?[a-zA-ZÜüÄäÖöß]+\))/u
+      ],
+      color: '#6f6f6f',
+      id: 7
+    },
+    {
+      type: 'single',
+      name: 'word',
+      regex: /^[a-zA-ZÜüÄäÖöß]+/u,
+      color: 'transparent',
+      id: 1
+    },
+  ],
 }
 
 const spectrogramColors = [
@@ -149,7 +346,7 @@ const spectrogramPresets = [
 ]
 
 export function setPlaybackSpeed(s: number) {
-  settings.playbackSpeed = setNumberInBounds(s)
+  settings.playbackSpeed = setNumberInBounds(s, 0, 1.5)
   eventStore.audioElement.playbackRate = settings.playbackSpeed
 }
 
@@ -175,78 +372,88 @@ export function decreaseVolume(by: number) {
 }
 
 const settings: Settings = {
-  showDrawer: false,
-  drawerWidth: 300,
+  backEndUrl: localStorage.getItem('backEndUrl') || null,
+  activeSidebarItem: 'edit',
+  autoCorrectDelimiterSpace: true,
+  showSettings: false,
   contrast: 1,
-  spectrogramGradient: makeGradient(spectrogramPresets[1].colors),
-  spectrogramColors: spectrogramPresets[1].colors,
-  waveFormColors: [ '#fb7676', '#6699CC' ],
-  lockScroll: false,
-  lockPlayHead: true,
-  playbackSpeed: 1,
-  playbackVolume: 1,
   darkMode: false,
-  pixelsPerSecond: 150,
+  drawerWidth: 350,
   emulateHorizontalScrolling: platform() === 'windows' || platform() === 'linux',
-  showSegmentBoxes: true,
-  showSpectrograms: false,
-  useMonoWaveForm: false,
+  eventDockingInterval: 0.05,
+  keyboardShortcuts,
+  lockPlayHead: true,
+  lockScroll: false,
   minimumEventLength: 0.2,
+  maxEventGap: 1,
   moveEventTimeByInterval: 0.2,
   moveEventTimeByIntervalSmall: 0.01,
-  eventDockingInterval: 0.05,
+  pixelsPerSecond: 150,
+  playbackSpeed: 1,
+  playbackVolume: 1,
+  showDrawer: false,
+  showSegmentBoxes: true,
+  showSpectrograms: false,
   skipInterval: 1,
-  tokenTypes: [
-    {
-      name: 'proper-name',
-      regex: /\{(.+)\}/u,
-      color: '#880000',
-      id: 4
-    },
-    {
-      name: 'pause',
-      regex: /\[[\s\S]{1,}s\]/u,
-      color: '#6B6B6B',
-      id: 3
-    },
-    {
-      name: 'non-verbal',
-      regex: /\(\((.+)\)\)|\[(.+)\]/u,
-      color: '#008800',
-      id: 5
-    },
-    {
-      name: 'delimiter',
-      regex: /^(\?|\.|\,|!)/,
-      color: '#1717FB',
-      id: 2
-    },
-    {
-      name: 'interrupted',
-      regex: /([a-zA-ZÜüÄäÖöß]+\/)/u,
-      color: '#6699CC',
-      id: 6
-    },
-    {
-      name: 'contraction',
-      regex: /_[a-zA-ZÜüÄäÖöß]+|[a-zA-ZÜüÄäÖöß]+_/,
-      color: '#d47d0f',
-      id: 8
-    },
-    {
-      name: 'incomprehensible',
-      regex: /\((.+)\)/u,
-      color: '#6f6f6f',
-      id: 7
-    },
-    {
-      name: 'word',
-      regex: /^[a-zA-ZÜüÄäÖöß]+/u,
-      color: 'transparent',
-      id: 1
-    },
-  ],
-  keyboardShortcuts
+  spectrogramColors: spectrogramPresets[1].colors,
+  spectrogramGradient: makeGradient(spectrogramPresets[1].colors),
+  tokenTypesPreset: 'dioeDB',
+  useMonoWaveForm: false,
+  waveFormColors: [ '#fb7676', '#6699CC' ],
+  playEventOnAppend: true,
+  showErrors: {
+    eventGaps: true,
+    unknownTokenTypes: true,
+    eventOverlaps: true
+  }
+};
+
+(async () => {
+  // tslint:disable-next-line:max-line-length
+  const loadedSettings: SerializableSettings|undefined = JSON.parse(await (localForage.getItem('appSettings') as Promise<string>))
+  if (loadedSettings !== undefined && loadedSettings !== null) {
+    _(loadedSettings).forEach((v, k) => {
+      if (k === 'keyboardShortcuts') {
+        settings.keyboardShortcuts = _.mapValues(settings.keyboardShortcuts, (v, k) => {
+          if (loadedSettings.keyboardShortcuts[k] !== undefined) {
+            return {
+              ...v,
+              key: loadedSettings.keyboardShortcuts[k].key,
+              modifier: loadedSettings.keyboardShortcuts[k].modifier
+            }
+          } else {
+            return v
+          }
+        })
+      } else if (k in settings) {
+        (settings as any)[k] = v
+      }
+    })
+  }
+})()
+
+const vIn = new Vue({
+  data() {
+    return { settings }
+  },
+  watch: {
+    settings: {
+      deep: true,
+      handler: (newV: Settings) => {
+        window.requestIdleCallback(() => localForage.setItem('appSettings', stringifySettings(newV)))
+      }
+    }
+  }
+})
+
+export function stringifySettings(s: Settings): string {
+  const serializedSettings: SerializableSettings = {
+    ...s,
+    keyboardShortcuts: _.mapValues(s.keyboardShortcuts, sk => ({ key: sk.key, modifier: sk.modifier }))
+  }
+  return JSON.stringify(serializedSettings)
 }
+
+(window as any)._settings = settings
 
 export default settings

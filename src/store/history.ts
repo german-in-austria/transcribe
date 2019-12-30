@@ -71,7 +71,7 @@ import {
 
 import {
   isWaveformEventVisible
-} from '../service/events-dom'
+} from '../service/dom-methods'
 
 export interface HistoryEventAction {
   id: string
@@ -95,7 +95,7 @@ async function undoRedoHandler(e: KeyboardEvent) {
     if (action !== undefined) {
       notifyPeers(action, 'UNDO')
       selectEvents(action.before)
-      if (!await isWaveformEventVisible(action.before[0])) {
+      if (action.before[0] !== undefined && !await isWaveformEventVisible(action.before[0])) {
         scrollToAudioEvent(action.before[0])
         scrollToTranscriptEvent(action.before[0])
       }
@@ -107,7 +107,7 @@ async function undoRedoHandler(e: KeyboardEvent) {
     if (action !== undefined) {
       notifyPeers(action, 'REDO')
       selectEvents(action.after)
-      if (!await isWaveformEventVisible(action.after[0])) {
+      if (action.after[0] !== undefined && !await isWaveformEventVisible(action.after[0])) {
         scrollToAudioEvent(action.after[0])
         scrollToTranscriptEvent(action.after[0])
       }
@@ -207,18 +207,22 @@ export function redo(): HistoryEventAction|undefined {
   }
 }
 
-export function undoable(action: HistoryEventAction|HistoryEventAction[]): LocalTranscriptEvent[] {
+export function undoable(action: HistoryEventAction|HistoryEventAction[]|undefined): LocalTranscriptEvent[] {
   // when doing an undoable thing,
   // all things that have been undone before
   // are not re-doable anymore, and are deleted.
   // the new undoable action is appended.
-  notifyPeers(action, 'DO')
-  history.actions = history.actions
-    .filter(a => a.apply === true)
-    .concat(action)
-  if (_.isArray(action)) {
-    return _(action).flatMap(a => a.after).value()
+  if (action !== undefined) {
+    notifyPeers(action, 'DO')
+    history.actions = history.actions
+      .filter(a => a.apply === true)
+      .concat(action)
+    if (_.isArray(action)) {
+      return _(action).flatMap(a => a.after).value()
+    } else {
+      return action.after
+    }
   } else {
-    return action.after
+    return []
   }
 }

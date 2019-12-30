@@ -1,11 +1,14 @@
 import {
   LocalTranscript,
-  LocalTranscriptToken
+  LocalTranscriptToken,
+  TokenTierType
 } from '../store/transcript'
 
 import {
   ServerEvent,
   ServerToken,
+  ServerEventTiers,
+  ServerSpeakerEventTiers,
   ServerTranscript,
   ServerTranscriptSaveRequest,
   SaveRequest
@@ -17,6 +20,7 @@ const textDecoder = new TextDecoder('utf-8')
 import reduce from 'lodash/reduce'
 import keyBy from 'lodash/keyBy'
 import mapValues from 'lodash/mapValues'
+import mergeWith from 'lodash/mergeWith'
 
 function padEnd(string: string, targetLength: number, padString: string) {
   // tslint:disable-next-line:no-bitwise
@@ -54,7 +58,12 @@ function replaceLastOccurrence(token: string, toReplace: string, replaceWith: st
   )
 }
 
-function getTokenTextWithFragments(t: LocalTranscriptToken, speakerId: string, es: LocalTranscript): string {
+function getTokenTextWithFragments(
+  t: LocalTranscriptToken,
+  speakerId: string,
+  es: LocalTranscript,
+  defaultTier: TokenTierType
+): string {
   const event = es.find((e) => {
     return e.speakerEvents[speakerId] !== undefined &&
     e.speakerEvents[speakerId].tokens[0] !== undefined &&
@@ -62,14 +71,15 @@ function getTokenTextWithFragments(t: LocalTranscriptToken, speakerId: string, e
   })
   if (event !== undefined) {
     const nextToken = event.speakerEvents[speakerId].tokens[0]
-    const newText = replaceLastOccurrence(t.tiers.text.text, '=', nextToken.tiers.text.text)
+    const newText = replaceLastOccurrence(t.tiers[defaultTier].text, '=', nextToken.tiers[defaultTier].text)
     if (tokenHasFragment(newText)) {
-      return t.tiers.text.text.replace('=', '') + getTokenTextWithFragments(nextToken, speakerId, es)
+      // tslint:disable-next-line:max-line-length
+      return t.tiers[defaultTier].text.replace('=', '') + getTokenTextWithFragments(nextToken, speakerId, es, defaultTier)
     } else {
       return newText
     }
   } else {
-    return t.tiers.text.text
+    return t.tiers[defaultTier].text
   }
 }
 
@@ -81,15 +91,41 @@ function hasTokenChanged(l: ServerToken, r: ServerToken): boolean {
     l.i  !== r.i ||
     l.e  !== r.e ||
     l.o  !== r.o ||
+    l.p  !== r.p ||
     l.fo !== r.fo
   )
 }
 
 function hasEventChanged(l: ServerEvent, r: ServerEvent): boolean {
+  if (JSON.stringify(l.event_tiers) !== JSON.stringify(r.event_tiers)) {
+    console.log(JSON.stringify(l.event_tiers), JSON.stringify(r.event_tiers))
+  }
   return (
     l.e !== r.e ||
-    l.s !== r.s
+    l.s !== r.s ||
+    // hasEventTierChanged(l.event_tiers, r.event_tiers)
+    JSON.stringify(l.event_tiers) !== JSON.stringify(r.event_tiers)
   )
+}
+
+function markEventTiersInsertStatus(e: ServerEvent): ServerEvent {
+  e.event_tiers = mapValues(e.event_tiers, (speakerEventTiers) => mapValues(speakerEventTiers, (t) => {
+    return {...t, status: 'upsert'}
+  }))
+  return e
+}
+
+function markEventTierUpdateStatus(newEvent: ServerEvent, oldEvent: ServerEvent): ServerEvent {
+  // tslint:disable-next-line:max-line-length
+  const oldEs = mapValues(oldEvent.event_tiers, (ets, speaker) => mapValues(ets, (et) => ({...et, status: 'delete' }) ))
+  const newEs = mapValues(newEvent.event_tiers, (ets, speaker) => mapValues(ets, (et) => ({...et, status: 'upsert' }) ))
+  const m = mergeWith(oldEs, newEs, (oldE, newE) => {
+    // if there’s an old event, use the new event ("upsert" status)
+    if (oldE !== undefined && oldE.ti !== undefined) {
+      return newE
+    }
+  })
+  return { ...newEvent, event_tiers: m }
 }
 
 // tslint:disable-next-line:max-line-length
@@ -102,6 +138,7 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
   const newServerEvents: ServerEvent[] = []
   const newServerTokens = reduce(localTranscript, (m, event) => {
     mapValues(event.speakerEvents, (speakerEvent, speakerId) => {
+      // events
       newServerEvents.push({
         pk: speakerEvent.speakerEventId,
         s: padEnd(timeFromSeconds(event.startTime), 14, '0'),
@@ -110,20 +147,21 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
         tid: {
           [speakerId]: speakerEvent.tokens.map((t) => t.id)
         },
-        event_tiers: mapValues(event.speakerEvents, (e) => {
-          return reduce(e.speakerEventTiers, (memo, et, tierId) => {
-            if (et.type === 'freeText') {
-              memo[tierId] = {
-                t: et.text,
-                ti: tierId
-              }
-            } else {
-              // it’s an annotation thing.
+        event_tiers: reduce(event.speakerEvents, (serverSpeakerEventTiers, se, sId) => {
+          const tiers = reduce(se.speakerEventTiers, (serverEventTiers, et, tierId) => {
+            serverEventTiers[et.id] = {
+              ti: Number(tierId),
+              t: et.text,
             }
-            return memo
-          }, {} as _.Dictionary<{t: string, ti: string}>)
-        })
+            return serverEventTiers
+          }, {} as ServerEventTiers)
+          if (Object.keys(tiers).length !== 0) {
+            serverSpeakerEventTiers[sId] = tiers
+          }
+          return serverSpeakerEventTiers
+        }, {} as ServerSpeakerEventTiers)
       })
+      // tokens
       return speakerEvent.tokens.map((t, i, tokens) => {
         const token = {
           e : speakerEvent.speakerEventId,
@@ -133,17 +171,19 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
           s : oldTranscript.aTokens[t.id] ? oldTranscript.aTokens[t.id].s : -1,
           sr: oldTranscript.aTokens[t.id] ? oldTranscript.aTokens[t.id].sr : -1,
           t : t.tiers.text.text,
-          p : t.tiers.phon.text,
+          p : t.tiers.phon.text || undefined,
           // Text in ortho is basically useless, so we populate it with "text".
           to: t.tiers.ortho.text,
           tr: t.order,
           // TODO: this could be null
-          tt: t.tiers.text.type as number,
+          tt: t.tiers[defaultTier].type as number,
           fo: t.fragmentOf || undefined
         }
         // it is the last token and has a fragment marker
         if (i + 1 === tokens.length && tokenHasFragment(token.t)) {
-          token.t = getTokenTextWithFragments(t, speakerId, localTranscript)
+          console.log('tokenHasFragment', token)
+          token.t = getTokenTextWithFragments(t, speakerId, localTranscript, defaultTier)
+          console.log('tokenTextWithFragments', token.t)
         }
         m[t.id] = token
       })
@@ -186,7 +226,7 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
   const eventUpdatesAndInserts = reduce(newIndexedEvents, (m, e) => {
     if (e.pk < 0) {
       m.push({
-        ...e,
+        ...markEventTiersInsertStatus(e),
         status: 'insert'
       })
     } else if (
@@ -194,7 +234,7 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
       hasEventChanged(e, oldIndexedEvents[e.pk])
     ) {
       m.push({
-        ...e,
+        ...markEventTierUpdateStatus(e, oldIndexedEvents[e.pk]),
         status: 'update'
       })
     }

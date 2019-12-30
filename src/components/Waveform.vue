@@ -62,10 +62,11 @@
       </div>
     </div>
     <v-layout row style="margin-top: -40px; padding-bottom: 20px;">
-      <v-flex xs12 class="ml-3">
-        <scrollbar  
+      <v-flex xs12 style="position: relative" class="ml-3">
+        <scrollbar
           class="scrollbar"
-          update-on="scrollWaveform"
+          update-on="updateWaveformScrollbar"
+          :max-time="eventStore.audioElement.duration"
           @scroll="scrollFromScrollbar"
         />
         <div
@@ -112,6 +113,7 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
 import * as Queue from 'simple-promise-queue'
+import localForage from 'localforage'
 
 import scrollLockButton from './ScrollLockButton.vue'
 import scrollbar from './Scrollbar.vue'
@@ -190,13 +192,13 @@ export default class Waveform extends Vue {
 
   mounted() {
     EventBus.$on('scrollTranscript', this.scrollLockedScroll)
-    EventBus.$on('scrollToAudioEvent', this.doScrollToSegment)
+    EventBus.$on('scrollToAudioEvent', this.scrollToSegment)
     this.initWithAudio()
   }
 
   beforeDestroy() {
     EventBus.$off('scrollTranscript', this.scrollLockedScroll)
-    EventBus.$off('scrollToAudioEvent', this.doScrollToSegment)
+    EventBus.$off('scrollToAudioEvent', this.scrollToSegment)
   }
 
   scrollLockedScroll(t: number) {
@@ -221,11 +223,16 @@ export default class Waveform extends Vue {
   async cacheOverviewWaveform() {
     await util.requestFrameAsync()
     const el = (this.$el.querySelector('.overview-waveform svg') as HTMLElement)
-    localStorage.setItem(eventStore.metadata.audioUrl + '_overview', el.innerHTML)
+    try {
+      localForage.setItem('waveformOverview__' + eventStore.metadata.audioUrl, el.innerHTML)
+    } catch (e) {
+      console.log(e)
+    }
   }
 
-  hasOverviewCache(): boolean {
-    return localStorage.getItem(eventStore.metadata.audioUrl + '_overview') !== null
+  async hasOverviewCache(): Promise<boolean> {
+    const c = await localForage.getItem('waveformOverview__' + eventStore.metadata.audioUrl)
+    return c !== null
   }
 
   get containerStyle() {
@@ -244,9 +251,9 @@ export default class Waveform extends Vue {
   }
 
   emitScroll() {
-    EventBus.$emit('scrollWaveform', (
-      this.$refs.svgContainer as HTMLElement).scrollLeft / settings.pixelsPerSecond
-    )
+    const t = (this.$refs.svgContainer as HTMLElement).scrollLeft / settings.pixelsPerSecond
+    EventBus.$emit('scrollWaveform', t)
+    EventBus.$emit('updateWaveformScrollbar', t)
   }
 
   zoomPreview(e: MouseWheelEvent) {
@@ -303,13 +310,11 @@ export default class Waveform extends Vue {
     }
     scrollTimer = window.requestAnimationFrame(async () => {
       await util.requestFrameAsync()
-      this.$emit('scroll')
-      await util.requestFrameAsync()
       this.updateSecondsMarkers()
       await util.requestFrameAsync()
-      window.requestIdleCallback(this.doMaybeRerender)
-      await util.requestFrameAsync()
       window.requestIdleCallback(this.updateSegments)
+      await util.requestFrameAsync()
+      this.doMaybeRerender()
     })
   }
 
@@ -334,7 +339,7 @@ export default class Waveform extends Vue {
     const ves = await this.getVisibleEvents(boundLeft, boundRight)
     this.visibleEvents = ves
     // if we didn’t do that, the elements that are re-rendered
-    // (because of the above call) would loose focus, causing the
+    // (because of the above call) would lose focus, causing the
     // window to receive focus, and thus breaking the ability
     // to handle keyboard events from here.
     if (shouldKeepFocus) {
@@ -500,20 +505,20 @@ export default class Waveform extends Vue {
     const el = this.$refs.svgContainer
     if (t !== null && el instanceof HTMLElement) {
       const left = settings.pixelsPerSecond * t
-      console.log('scrollToSecond.')
       requestAnimationFrame(() => {
         el.scrollLeft = left
       })
     }
   }
 
-  scrollToSecondSmooth(targetOffset: number) {
+  scrollToSecondSmooth(t: number) {
     const el = this.$refs.svgContainer
     const animationDuration = .25
     const animationDistance = 600
     if (el instanceof HTMLElement) {
       const startTime = performance.now()
       const currentOffset = el.scrollLeft
+      const targetOffset = t * settings.pixelsPerSecond
       const realDistance = Math.abs(currentOffset - targetOffset)
       // SCROLL DIRECTLY TO IT (SHORT DISTANCE)
       if (realDistance < this.$el.clientWidth) {
@@ -527,6 +532,8 @@ export default class Waveform extends Vue {
               animationDuration
             )
             requestAnimationFrame(step)
+          } else {
+            el.scrollLeft = targetOffset
           }
         }
         requestAnimationFrame(step)
@@ -555,21 +562,22 @@ export default class Waveform extends Vue {
     }
   }
 
-  doScrollToSegment(e?: LocalTranscriptEvent|null) {
+  scrollToSegment(e?: LocalTranscriptEvent|null) {
     if (eventStore.playAllFrom !== null) {
       this.disableAutoScrollDuringPlayback()
     }
     if (e !== null && e !== undefined) {
       const duration = e.endTime - e.startTime
-      const offset = (e.startTime + duration / 2) * settings.pixelsPerSecond
-      const targetOffset = offset - this.$el.clientWidth / 2
-      EventBus.$emit('scrollWaveform', targetOffset / settings.pixelsPerSecond)
-      this.scrollToSecondSmooth(targetOffset)
+      const offset = (e.startTime + duration / 2)
+      const tCenter = offset - (this.$el.clientWidth / 2 / settings.pixelsPerSecond)
+      EventBus.$emit('updateWaveformScrollbar', tCenter)
+      this.scrollToSecondSmooth(tCenter)
     }
   }
 
-  initWithCache() {
-    const waveformCache = localStorage.getItem(eventStore.metadata.audioUrl + '_overview')
+  async initWithCache() {
+    // tslint:disable-next-line:max-line-length
+    const waveformCache = (await localForage.getItem('waveformOverview__' + eventStore.metadata.audioUrl)) as string|null
     const scrollLeft = localStorage.getItem('scrollPos')
     if (waveformCache !== null) {
       const overviewEl = (this.$el.querySelector('.overview-waveform svg') as HTMLElement);
@@ -597,7 +605,7 @@ export default class Waveform extends Vue {
           }
         })
       } else {
-        if (this.hasOverviewCache()) {
+        if (await this.hasOverviewCache()) {
           await audio.downloadAudioStream({
             url: eventStore.audioElement.src,
             onStart: (metadata) => {
@@ -623,7 +631,7 @@ export default class Waveform extends Vue {
               this.doMaybeRerender()
             },
             onProgress: async (chunk: AudioBuffer, from: number, to: number) => {
-              if (localStorage.getItem(eventStore.metadata.audioUrl + '_overview') === null) {
+              if (!(await this.hasOverviewCache())) {
                 await this.drawOverviewWaveformPiece(from, to, chunk)
               }
             }
@@ -796,7 +804,7 @@ export default class Waveform extends Vue {
 .wave-form
   margin-top 0px
   position relative
-  max-width 100vw
+  max-width 100%
   will-change scroll-position
   overflow-x scroll
   overflow-y hidden
@@ -830,6 +838,10 @@ select
 
 .waveform-outer
   .scrollbar
+    position absolute
+    z-index 1
+    width 100%
+    height 60px
     transition opacity .25s
     opacity 0
   &:hover

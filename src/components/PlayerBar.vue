@@ -2,10 +2,10 @@
   <div :style="{minHeight: height}" :class="['playerbar', settings.darkMode && 'theme--dark']">
     <v-layout row>
       <v-flex xs4 text-xs-right>
-        <player-bar-button :size="height">
+        <player-bar-button @click="playStart" :size="height">
           <v-icon>mdi-contain-start</v-icon>
         </player-bar-button>
-        <player-bar-button :size="height">
+        <player-bar-button @click="playEnd" :size="height">
           <v-icon>mdi-contain-end</v-icon>
         </player-bar-button>
       </v-flex>
@@ -17,8 +17,9 @@
         xs4
         align-content-center>
         <player-bar-button @click="playPause" :size="height">
-          <v-icon v-if="eventStore.isPaused">play_arrow</v-icon>
-          <v-icon v-else>pause</v-icon>
+          <v-icon v-if="eventStore.isPaused && timeSelectionIsEmpty()">play_arrow</v-icon>
+          <v-icon v-if="eventStore.isPaused && !timeSelectionIsEmpty()">mdi-play-outline</v-icon>
+          <v-icon v-if="!eventStore.isPaused">pause</v-icon>
         </player-bar-button>
         <div ref="currentTime" class="current-time"></div>
       </v-flex>
@@ -41,13 +42,16 @@
               open-on-hover
               top>
               <player-bar-button @click="toggleVolumeOnOff" slot="activator" :size="height">
-                <v-icon v-if="settings.playbackVolume <= .33">
+                <v-icon v-if="settings.playbackVolume === 0">
+                  mdi-volume-variant-off
+                </v-icon>
+                <v-icon v-else-if="settings.playbackVolume <= .33">
                   mdi-volume-low
                 </v-icon>
-                <v-icon v-if="settings.playbackVolume > .33 && settings.playbackVolume <= .66">
+                <v-icon v-else-if="settings.playbackVolume > .33 && settings.playbackVolume <= .66">
                   mdi-volume-medium
                 </v-icon>
-                <v-icon v-if="settings.playbackVolume > .66">
+                <v-icon v-else-if="settings.playbackVolume > .66">
                   mdi-volume-high
                 </v-icon>
               </player-bar-button>
@@ -77,7 +81,7 @@
                   hide-details
                   :label="`Speed (${ (settings.playbackSpeed * 100).toFixed(0) }%)`"
                   :min="10"
-                  :max="100"
+                  :max="150"
                   :value="settings.playbackSpeed * 100"
                   @input="setPlaybackSpeed($event / 100)" />
               </div>
@@ -107,7 +111,13 @@ import {
   eventStore,
   toTime,
   playAllFrom,
-  pause
+  pause,
+  getSelectedEvents,
+  playEvents,
+  playEventsStart,
+  playEventsEnd,
+  playRange,
+  timeSelectionIsEmpty
 } from '../store/transcript'
 import { requestFrameAsync, isCmdOrCtrl } from '../util/index'
 
@@ -127,6 +137,7 @@ export default class PlayerBar extends Vue {
   setPlaybackVolume = setPlaybackVolume
   settings = settings
   toTime = toTime
+  timeSelectionIsEmpty = timeSelectionIsEmpty
 
   cachedVolume = settings.playbackVolume
   cachedSpeed = .5
@@ -150,8 +161,37 @@ export default class PlayerBar extends Vue {
   }
 
   playPause(e: Event) {
-    if (eventStore.isPaused) {
-      playAllFrom(eventStore.currentTime)
+    if (eventStore.isPaused === true) {
+      const es = getSelectedEvents()
+      if (!timeSelectionIsEmpty()) {
+        playRange(eventStore.userState.timeSelection.start || 0, eventStore.userState.timeSelection.end || 0)
+      } else if (es.length > 0) {
+        playEvents(es)
+      } else {
+        playAllFrom(eventStore.currentTime)
+      }
+    } else {
+      pause()
+    }
+  }
+
+  playStart() {
+    if (eventStore.isPaused === true) {
+      const es = getSelectedEvents()
+      if (es.length > 0) {
+        playEventsStart(es, 1)
+      }
+    } else {
+      pause()
+    }
+  }
+
+  playEnd() {
+    if (eventStore.isPaused === true) {
+      const es = getSelectedEvents()
+      if (es.length > 0) {
+        playEventsEnd(es, 1)
+      }
     } else {
       pause()
     }

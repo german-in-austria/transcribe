@@ -6,15 +6,16 @@ export type BusEvent =
   'scrollTranscript'|
   'scrollToTranscriptEvent'|
   'scrollToAudioEvent'|
+  'updateWaveformScrollbar'|
   'playAudio'|
   'pauseAudio'|
-  'playEvents'|
   'scrubAudio'|
   'updateTime'|
-  'focusSearch'
+  'focusSearch'|
+  'updateSpeakerEventText'
 
 export default EventBus as {
-  $on: (e: BusEvent, fn: (e: any, opts?: any) => any) => void
-  $off: (e: BusEvent, fn: (e: any, opts?: any) => any) => void
+  $on: (e: BusEvent|BusEvent[], fn: (e: any, opts?: any) => any) => void
+  $off: (e: BusEvent|BusEvent[], fn: (e: any, opts?: any) => any) => void
   $emit: (e: BusEvent, p?: any, opts?: any) => void
 }

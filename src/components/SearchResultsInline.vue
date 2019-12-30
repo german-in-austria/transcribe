@@ -1,5 +1,5 @@
 <template>
-  <div :class="['search-results-container', settings.darkTheme === true && 'theme--dark']">
+  <div :class="['search-results-container', settings.darkMode === true && 'theme--dark']">
     <div
       @mouseover="handleResultMouseOver"
       @mouseout="handleResultMouseOut"
@@ -87,7 +87,9 @@ export default class SearchResults extends Vue {
     if (eventId !== null) {
       const i = findEventIndexById(Number(eventId))
       const e = eventStore.events[i]
-      selectSearchResult(e)
+      scrollToAudioEvent(e)
+      scrollToTranscriptEvent(e)
+      selectEvent(e)
     }
   }
 
@@ -104,7 +106,7 @@ export default class SearchResults extends Vue {
         if (oldRes) {
           oldRes.classList.remove('result-selected')
         }
-        const res = c.querySelector(`[data-event-id="${ eventStore.selectedSearchResult.eventId }"]`)
+        const res = c.querySelector(`[data-event-id="${ eventStore.selectedSearchResult.event.eventId }"]`)
         if (res) {
           res.classList.add('result-selected')
         }
@@ -117,9 +119,9 @@ export default class SearchResults extends Vue {
     const t = eventStore.searchTerm
     const c = this.$refs.resultContainer
     const resHtml = eventStore.searchResults.map((r, i, l) => {
-      const left = this.getPercentageOffset(r.startTime)
+      const left = this.getPercentageOffset(r.event.startTime)
       return `<div
-        data-event-id="${r.eventId}"
+        data-event-id="${r.event.eventId}"
         class="result-overview"
         style="left: ${ left }%">
       </div>`

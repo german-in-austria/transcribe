@@ -1,8 +1,9 @@
 <template>
-  <v-flex :style="theme" class="pt-4 speaker-panel" xs1>
+  <v-flex :style="theme" class="speaker-panel">
     <div
-      :style="{height: speakerHeight}"
-      :key="i" v-for="(speaker, i) in eventStore.metadata.speakers"
+      :style="{height: speakerHeight + 1}"
+      :key="i"
+      v-for="(speaker, i) in eventStore.metadata.speakers"
       class="speaker">
       <v-menu
         close-delay="500"
@@ -15,8 +16,8 @@
           <span class="speaker-triangle">▶</span> {{ speaker.k }}
           <div
             class="secondary-tiers"
-            :style="{ lineHeight: tierHeight + 'px' }"
-            v-for="tier in secondaryVisibleTiers" :key="tier.name">
+            :style="{ lineHeight: tierHeight + 1 + 'px' }"
+            v-for="tier in secondaryVisibleTiers" :key="tier.id">
             {{ tier.name }}
           </div>
         </div>
@@ -27,11 +28,20 @@
             :disabled="tier.id === eventStore.metadata.defaultTier"
             @click="tier.show = !tier.show">
             <v-list-tile-avatar>
-              <v-icon v-if="tier.show === true">check</v-icon>
+              <v-icon v-if="tier.show === true || tier.id === eventStore.metadata.defaultTier">check</v-icon>
             </v-list-tile-avatar>
             <v-list-tile-content>
               <v-list-tile-title>{{ tier.name }}</v-list-tile-title>
             </v-list-tile-content>
+          </v-list-tile>
+          <v-divider />
+          <v-list-tile @click="expandOrCollapse">
+          <v-list-tile-avatar>
+          </v-list-tile-avatar>
+          <v-list-tile-content>
+            <v-list-tile-title v-if="!allExpanded">expand all</v-list-tile-title>
+            <v-list-tile-title v-else>collapse all</v-list-tile-title>
+          </v-list-tile-content>
           </v-list-tile>
         </v-list>
       </v-menu>
@@ -56,7 +66,31 @@ export default class SpeakerPanel extends Vue {
   }
 
   get secondaryVisibleTiers() {
-    return eventStore.metadata.tiers.filter(t => t.name !== 'default' && t.show === true)
+    return eventStore.metadata.tiers.filter((t, k) => t.id !== eventStore.metadata.defaultTier && t.show === true)
+  }
+
+  get allExpanded() {
+    return eventStore.metadata.tiers.every(t => t.id === eventStore.metadata.defaultTier || t.show === true)
+  }
+
+  expandOrCollapse() {
+    if (this.allExpanded) {
+      return this.collapseAll()
+    } else {
+      return this.expandAll()
+    }
+  }
+
+  expandAll() {
+    eventStore.metadata.tiers = eventStore.metadata.tiers.map((t) => {
+      return {...t, show: true}
+    })
+  }
+
+  collapseAll() {
+    eventStore.metadata.tiers = eventStore.metadata.tiers.map((t) => {
+      return {...t, show: t.id === eventStore.metadata.defaultTier}
+    })
   }
 
   get theme() {
@@ -71,6 +105,8 @@ export default class SpeakerPanel extends Vue {
 <style lang="stylus" scoped>
 .speaker-panel
   z-index 1
+  padding-top 27px
+  flex-grow 0
 
 .secondary-tiers
   text-align right
@@ -78,7 +114,7 @@ export default class SpeakerPanel extends Vue {
 
 .speaker
   cursor default
-  padding .2em 1em
+  padding 0 1em
   border-radius 1px
   border-bottom 1px solid rgba(255,255,255,.1)
   font-weight 300

@@ -26,7 +26,7 @@ export function getTokenPartWithMetadata(
       // edit the defaultTier text, so it only contains the selected text
       [ eventStore.metadata.defaultTier ]: {
         ...e.tiers[ eventStore.metadata.defaultTier ],
-        text: e.tiers[ eventStore.metadata.defaultTier ].text.substring(range1, range2)
+        text: e.tiers[ eventStore.metadata.defaultTier ].text.substring(range1, range2) + '='
       },
     }
   }
@@ -127,24 +127,24 @@ export function unserializeTokenTiers(tokens: string): Array<Pastable<LocalTrans
 }
 
 export function collectTokensViaOffsets(
-  localTokens: LocalTranscriptToken[], start: number, end: number): Array<Pastable<LocalTranscriptToken>> {
+  tokens: LocalTranscriptToken[], start: number, end: number): Array<Pastable<LocalTranscriptToken>> {
   // start and end are not necessarily from left to right
-  const left = Math.min(start, end)
-  const right = Math.max(start, end)
+  const [left, right] = [start, end].sort()
   // init cursor
   let cursor = 0
   // reduce to relevant tokens and mark partiality
-  return localTokens.reduce((m, e, i) => {
+  return tokens.reduce((m, e, i) => {
     // get range for token
     const tokenStart = cursor
     const tokenEnd = cursor + e.tiers[ eventStore.metadata.defaultTier ].text.length
     // move cursor to the end of the token and account for whitespace
     cursor = tokenEnd + 1
     // decide whether it’s in the range
+    console.log({ tokenStart, tokenEnd, cursor, t: e.tiers.ortho.text })
     if (left <= tokenStart && right >= tokenEnd) {
       // token is fully in collection range, not partial
       return m.concat({ ...e, partial: false, index: i })
-    } else if (left > tokenEnd || right < tokenStart) {
+    } else if (left > tokenEnd || right <= tokenStart) {
       // token is outside of collection range -> do nothing
       return m
     } else {

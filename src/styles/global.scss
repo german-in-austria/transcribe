@@ -1,4 +1,8 @@
 
+.small{
+  font-size: 80%;
+}
+
 .absolute{
   position: absolute;
 }
@@ -74,7 +78,27 @@ img[lazy=loaded] {
   max-height: calc(90vh - 40px);
   overflow-y: auto;
 }
+.settings-header{
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 2;
+}
 
+main.v-content[data-booted=true]{
+  transition: none !important;
+}
+
+nav.v-toolbar[data-booted=true]{
+  transition: none !important;
+}
+
+.theme--light.v-toolbar{
+  background-color: #e8e8e8;
+}
+.theme--dark .settings-header{
+  background: #282828;
+}
 .theme--dark.v-toolbar{
   background-color: #191918 !important;
 }
@@ -84,8 +108,7 @@ img[lazy=loaded] {
 
 .v-menu__content,
 .blur-background{
-  background: transparent !important;
-  backdrop-filter: blur(30px);
+  background: rgba(243, 243, 243, 0.95);
   border: 1px solid #ddd;
   border-radius: 4px !important;
 }
@@ -95,9 +118,23 @@ img[lazy=loaded] {
 .v-menu__content .v-card.theme--dark,
 .blur-background .v-list.theme--dark,
 .v-menu__content .v-list.theme--dark{
-  background: rgba(20,20,20,.6) !important;
+  background: rgba(41, 41, 41, 0.95) !important;
   box-shadow: 0 5px 30px rgba(0,0,0,.2);
 }
+
+@supports (backdrop-filter: blur(30px)) {
+  .v-menu__content,
+  .blur-background {
+    background: transparent !important;
+    backdrop-filter: blur(30px);
+  }
+  .v-menu__content .v-card.theme--dark,
+  .blur-background .v-list.theme--dark,
+  .v-menu__content .v-list.theme--dark {
+    background: rgba(20,20,20,.6) !important;
+  }
+}
+
 .v-menu__content .avatar i.v-icon,
 .context-menu .avatar i.v-icon{
   font-size: 1.1em;
@@ -106,30 +143,54 @@ img[lazy=loaded] {
   font-size: 1.2em;
 }
 
+.v-list__tile--disabled .v-list__tile__avatar{
+  opacity: .5
+}
+
 .v-menu__content .v-list__tile__avatar,
 .context-menu .v-list__tile__avatar{
   min-width: 40px;
   margin-left: -10px;
 }
-.v-navigation-drawer{
-  background: rgba(20,20,20,.6) !important;
-  backdrop-filter: blur(20px);
-  border-left: 1px solid rgba(255,255,255,.075);
+
+.v-navigation-drawer[data-booted=true] {
+  transition: none !important;
+  transition-property: none !important;
 }
 
+.v-navigation-drawer{
+  background: rgba(20,20,20,.95) !important;
+  border-left: 1px solid rgba(255,255,255,.075);
+}
 .v-navigation-drawer.theme--light{
-  background: rgba(200,200,200,.4) !important;
+  background: rgba(228, 228, 228, 0.95) !important;
   border-left: 1px solid rgba(255,255,255,.3)
 }
+/* @supports (backdrop-filter: blur(20px)) {
+  .v-navigation-drawer{
+    background: rgba(20,20,20,.6) !important;
+    backdrop-filter: blur(20px);
+  }
+  .v-navigation-drawer.theme--light{
+    background: rgba(200,200,200,.4) !important;
+  }
+}*/
 .v-navigation-drawer__border{
   display: none;
 }
 .v-navigation-drawer .v-tabs__bar.theme--dark{
   background-color: transparent
 }
-.v-list__tile__sub-title, .v-list__tile__title{
+.v-list__tile,
+.v-list__tile__sub-title,
+.v-list__tile__title {
   transition: none !important;
 }
+
+.v-badge__badge{
+  font-size: 11px;
+}
+
 .v-menu__content .v-list--dense:not(.list--two-line) a,
 .context-menu .v-list--dense:not(.v-list--two-line) a,
 .v-menu__content .v-list--dense .v-list__tile:not(.v-list__tile--avatar),
@@ -146,6 +207,8 @@ img[lazy=loaded] {
 
 .v-input--slider label.v-label{
   font-size: 80%;
+  display: inline-block;
+  width: 90px;
 }
 
 .v-input--slider{

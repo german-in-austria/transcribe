@@ -1,6 +1,5 @@
 <template>
   <div
-    :data-speaker-id="speaker"
     :class="[
       'segment-editor',
       isMarkedWithFragment && 'has-next-fragment',
@@ -13,36 +12,50 @@
         :key="token.id">
         <span
           v-text="token.tiers[defaultTier].text"
-          :class="['token-type-indicator', focused && 'focused', 'type-' + token.tiers[defaultTier].type]"
+          :class="[
+            'token-type-indicator',
+            focused && 'focused',
+            'type-' + token.tiers[defaultTier].type,
+            eventStore.lockedTokens.indexOf(token.id) > -1 && 'locked-token'
+          ]"
           :style="{ backgroundColor: colorFromTokenType(token.tiers[defaultTier].type) }">
-        </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span :class="['secondary-token-tier', settings.darkMode === true && 'theme--dark']" v-for="(tier, tierIndex) in secondaryTiers" :key="tier.name">
-          <span
+        </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span :class="['secondary-token-tier', settings.darkMode === true && 'theme--dark']" v-for="(tier, tierIndex) in secondaryTiers" :key="tier.id">
+          <contenteditable
+            v-rt-ipa="{show: tier.id === 'phon'}"
             v-if="tier.type === 'token'"
             :style="{top: (tierIndex + 1) * tierHeight + 'px'}"
             :class="['secondary-token-tier-text', settings.darkMode === true && 'theme--dark']"
-            v-text="token.tiers[tier.name] !== undefined ? token.tiers[tier.name].text : undefined"
-            contenteditable="true"
-            @blur="(e) => updateAndCommitLocalTokenTier(e, tier.name, i)"
-            @focus="(e) => $emit('focus', e, event)" />
+            :value="token.tiers[tier.id] !== undefined ? token.tiers[tier.id].text : undefined"
+            :id="`speaker_event_tier_${speaker}__${tier.id}`"
+            :data-speaker-id="speaker"
+            :data-event-id="event.eventId"
+            @keydown.enter.exact.prevent="viewAndSelectAudioEvent(event)"
+            @input="(e) => { debouncedUpdateTokenTier(e.target.textContent, tier.id, i) }"
+            @blur="onBlurEvent"
+            @focus="onFocusEvent" />
           <span v-else class="secondary-token-tier-text" />
         </span>
       </span>
     </div>
-    <div
-      @focus="onFocus"
-      @input="updateLocalTokens"
-      @blur="updateAndCommitLocalTokens"
+    <contenteditable
+      @blur="onBlurEvent"
+      @focus="onFocusEvent"
+      @input="(e) => updateDefaultTier(e.target.textContent)"
       @keydown.tab.shift.exact="focusPreviousFrom($event, defaultTier)"
       @keydown.tab.exact="focusNextFrom($event, defaultTier)"
       @keydown.enter.exact.prevent="viewAndSelectAudioEvent(event)"
+      @keydown.right.exact="handleCursor($event, defaultTier)"
+      @keydown.left.exact="handleCursor($event, defaultTier)"
       @copy.prevent="copyTokens"
       @cut.prevent="cutTokens"
-      @paste="pasteTokens"
-      contenteditable="true"
-      v-text="segmentText"
+      @paste.prevent="pasteTokens"
+      :id="`speaker_event_tier_${speaker}__${defaultTier}`"
+      :value="segmentText"
       :style="textStyle"
-      class="tokens-input segment-text">
-    </div>
+      :data-speaker-id="speaker"
+      :data-event-id="event.eventId"
+      class="tokens-input segment-text"
+    />
     <div
       v-for="(tier, i) in secondaryTiers"
       :key="i"
@@ -52,11 +65,16 @@
         v-if="localTokens.length && tier.type === 'freeText'"
         v-text="getTierFreeTextText(tier.id)"
         contenteditable="true"
+        :id="`speaker_event_tier_${speaker}__${tier.id}`"
         :class="['secondary-free-text-tier-text', settings.darkMode === true && 'theme--dark']"
-        @keydown.tab.shift.exact="focusPreviousFrom(tier.id)"
-        @keydown.tab.exact="focusNextFrom(tier.id)"
-        @blur="(e) => updateAndCommitLocalEventTier(e, tier.id, tier.type)"
-        @focus="(e) => $emit('focus', e, event)" />
+        :data-speaker-id="speaker"
+        :data-event-id="event.eventId"
+        @keydown.tab.shift.exact="focusPreviousFrom($event, tier.id)"
+        @keydown.enter.exact.prevent="viewAndSelectAudioEvent(event)"
+        @keydown.tab.exact="focusNextFrom($event, tier.id)"
+        @blur="(e) => { updateEventTier(e.target.textContent, tier.id); onBlurEvent() }"
+        @focus="onFocusEvent"
+        />
     </div>
   </div>
 </template>
@@ -65,8 +83,7 @@
 
 import contenteditableDirective from 'vue-contenteditable-directive'
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import settings from '../store/settings'
-import parseCsv from 'tiny-csv'
+import settings, { tokenTypesPresets } from '../store/settings'
 
 import {
   clone,
@@ -88,26 +105,33 @@ import {
   tokenTypeFromToken,
   findEventIndexById,
   scrollToAudioEvent,
-  scrollToTranscriptEvent
+  scrollToTranscriptEvent,
+  makeEventTierId,
+  selectEvent,
+  getFirstTokenOrder
 } from '../store/transcript'
 
+import contenteditable from './helper/Contenteditable.vue'
 import * as copyPaste from '../service/copy-paste'
 import { undoable } from '../store/history'
 import * as _ from 'lodash'
 import * as jsdiff from 'diff'
 import eventBus from '../service/event-bus'
+import { computeTokenTypesForEvents } from '../service/token-types'
 
-@Component
+@Component({
+  components: {
+    contenteditable
+  }
+})
 export default class SpeakerSegmentTranscript extends Vue {
 
   @Prop() event: LocalTranscriptEvent
-  @Prop() nextEvent: LocalTranscriptEvent|undefined
-  @Prop() previousEvent: LocalTranscriptEvent|undefined
-  @Prop() speaker: number
-  @Prop() index: number
+  @Prop() speaker: string
 
   tierHeight = 25
   localEvent = clone(this.event)
+  eventStore = eventStore
   localTokens = this.localEvent.speakerEvents[this.speaker]
     ? this.localEvent.speakerEvents[this.speaker].tokens
     : []
@@ -119,50 +143,125 @@ export default class SpeakerSegmentTranscript extends Vue {
   playEvent = playEvent
   updateSpeakerEvent = updateSpeakerEvent
 
-  isFirstSpeaker(speakerId: number) {
-    return _(eventStore.metadata.speakers)
-      .map((s, id) => ({...s, id}))
-      .findIndex(s => s.id === String(speakerId)) === 0
+  debouncedUpdateTokenTier = _.debounce(this.updateTokenTier, 300)
+  debouncedUpdateEventTier = _.debounce(this.updateEventTier, 300)
+  debouncedCommitEvent = _.debounce(this.commitEvent, 300)
+
+  mounted() {
+    // tslint:disable-next-line:max-line-length
+    eventBus.$on('updateSpeakerEventText', this.updateTextFromEventBus)
   }
 
-  isLastSpeaker(speakerId: number) {
-    return _(eventStore.metadata.speakers)
-      .map((s, id) => ({...s, id}))
-      .findIndex(s => s.id === String(speakerId)) === _(eventStore.metadata.speakers).toArray().value().length - 1
+  destroyed() {
+    eventBus.$off('updateSpeakerEventText', this.updateTextFromEventBus)
   }
 
-  focusPreviousFrom(e: KeyboardEvent, tier: string) {
-    console.log('prev', tier, eventStore.metadata.tiers, this.speaker, eventStore.metadata.speakers)
-    if (this.isFirstSpeaker(this.speaker)) {
-      e.preventDefault()
-      const i = findEventIndexById(this.event.eventId)
-      scrollToTranscriptEvent(
-        eventStore.events[i > 0 ? i - 1 : 0],
-        { animate: true, focusSpeaker: this.speaker }
-      )
+  updateTextFromEventBus({eventId, speakerId, text}: { eventId: string, speakerId: string, text: string }) {
+    if (Number(eventId) === this.event.eventId && speakerId === this.speaker) {
+      this.segmentText = text.replace(/\s/g, ' ')
+      this.updateDefaultTier(this.segmentText)
     }
   }
 
-  focusNextFrom(e: KeyboardEvent, tier: string) {
-    console.log('next', tier, eventStore.metadata.tiers, this.speaker, eventStore.metadata.speakers)
-    if (this.isLastSpeaker(this.speaker)) {
-      e.preventDefault()
-      const i = findEventIndexById(this.event.eventId)
-      scrollToTranscriptEvent(
-        eventStore.events[i > -1 ? i + 1 : 0],
-        { animate: true, focusSpeaker: this.speaker }
-      )
+  onBlurEvent() {
+    eventStore.userState.editingTranscriptEvent = null
+    this.focused = false
+    if (settings.autoCorrectDelimiterSpace === true) {
+      if (this.event.speakerEvents[this.speaker] !== undefined) {
+        const text = this.event.speakerEvents[this.speaker].tokens.map(t => t.tiers[this.defaultTier].text).join(' ')
+        const replacedText = text.replace(/\b(\/?[\.|\?|\,|\!])\B/g, ' $1')
+        this.updateDefaultTier(replacedText)
+      }
     }
   }
 
-  // TODO: redundant?
-  @Watch('event')
+  onFocusEvent() {
+    eventStore.userState.editingTranscriptEvent = this.event
+    selectEvent(this.event)
+    if (settings.lockScroll === true) {
+      scrollToAudioEvent(this.event)
+    }
+    this.focused = true
+  }
+
+  updateTokenTier(text: string|undefined|null, tierType: TokenTierType, index: number) {
+    const cleanText = text === undefined || text === null ? '' : text
+    this.localTokens[index].tiers[tierType] = { text: cleanText, type: null }
+    this.commitEvent()
+  }
+
+  updateAllTokenTypes(event: LocalTranscriptEvent) {
+    eventStore.events = computeTokenTypesForEvents(eventStore.events, this.defaultTier, [ String(this.speaker) ])
+    const thisEvent = eventStore.events[findEventIndexById(this.event.eventId)]
+    this.updateLocalTokenTypes(thisEvent)
+  }
+
+  updateLocalTokenTypes(e: LocalTranscriptEvent) {
+    this.localTokens = this.localTokens.map((t, i) => {
+      return {
+        ...t,
+        tiers: {
+          ...t.tiers,
+          [this.defaultTier]: {
+            text: t.tiers[this.defaultTier].text,
+            type: e.speakerEvents[this.speaker].tokens[i].tiers[this.defaultTier].type
+          }
+        }
+      }
+    })
+  }
+
+  updateDefaultTier(text: string|undefined|null) {
+    const cleanText = text === undefined || text === null ? '' : text
+    this.updateLocalTokens(cleanText)
+    this.debouncedCommitEvent()
+  }
+
+  handleCursor(e: KeyboardEvent, tier: TokenTierType) {
+    const s = getSelection()
+    const n = s !== null ? s.focusNode : null
+    if (e.currentTarget instanceof HTMLElement && s !== null && n !== null) {
+      if (e.key === 'ArrowLeft' && s.anchorOffset === 0) {
+        this.focusPreviousFrom(e, tier)
+      } else if (e.key === 'ArrowRight' && s !== null && s.anchorOffset === n.textContent!.length) {
+        this.focusNextFrom(e, tier)
+      }
+    }
+  }
+
+  focusPreviousFrom(e: KeyboardEvent, tier: TokenTierType) {
+    e.preventDefault()
+    const i = findEventIndexById(this.event.eventId)
+    scrollToTranscriptEvent(
+      eventStore.events[i > 0 ? i - 1 : 0],
+      {
+        animate: true,
+        focusSpeaker: this.speaker,
+        focusTier: tier,
+        focusRight: true
+      }
+    )
+  }
+
+  focusNextFrom(e: KeyboardEvent, tier: TokenTierType) {
+    e.preventDefault()
+    const i = findEventIndexById(this.event.eventId)
+    scrollToTranscriptEvent(
+      eventStore.events[i > -1 ? i + 1 : 0],
+      { animate: true, focusSpeaker: this.speaker, focusTier: tier, focusRight: false }
+    )
+  }
+
+  @Watch('event', { deep: true })
   onUpdateEvent(newEvent: LocalTranscriptEvent) {
+    // update if not focused
+    // console.log('watcher', window.getSelection())
     this.localEvent = clone(newEvent)
     this.localTokens = this.localEvent.speakerEvents[this.speaker]
       ? this.localEvent.speakerEvents[this.speaker].tokens
       : []
     this.segmentText = this.localTokens ? this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ') : ''
+    // don’t update if focused
   }
 
   async cutTokens(e: ClipboardEvent) {
@@ -177,15 +276,10 @@ export default class SpeakerSegmentTranscript extends Vue {
       this.segmentText = this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ')
       await this.$nextTick()
       this.setCursorPosition(e.currentTarget as HTMLElement, Math.min(base, extent))
+      this.debouncedCommitEvent()
     } else {
       // nothing is selected, copy nothing.
     }
-  }
-
-  onFocus(e: FocusEvent) {
-    e.preventDefault()
-    this.$emit('focus', e, this.event)
-    console.log('this.$el.getBoundingClientRect()', this.$el.getBoundingClientRect())
   }
 
   copyTokens(e: ClipboardEvent) {
@@ -211,38 +305,40 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   async pasteTokens(e: ClipboardEvent) {
     // get clipboard data as string
-    const clipboardString = e.clipboardData.getData('text/plain')
-    const s = document.getSelection()
-    try {
-      // TODO: check what is returned here if it’s not a csv
-      const tokensTiers = copyPaste.unserializeTokenTiers(clipboardString)
-      if (tokensTiers.length > 0 && s !== null) {
-        // copy to local variables, because the selection might change.
-        const base = s.baseOffset
-        const extent = s.extentOffset
-        e.preventDefault()
-        // update tokens
-        this.localTokens = copyPaste.mergePastableTokensAt(
-          this.localTokens,
-          tokensTiers,
-          base,
-          extent,
-          this.firstTokenOrder || 0
-        )
-        // update text presentation
-        this.segmentText = this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ')
-        if (e.currentTarget !== null) {
-          await this.$nextTick()
-          console.log('s.baseOffset, s.extentOffset', base, extent)
-          this.setCursorPosition(e.currentTarget as HTMLElement, Math.max(base, extent))
+    if (e.clipboardData !== null) {
+      const clipboardString = e.clipboardData.getData('text/plain')
+      const s = document.getSelection()
+      try {
+        // TODO: check what is returned here if it’s not a csv
+        const tokensTiers = copyPaste.unserializeTokenTiers(clipboardString)
+        if (tokensTiers.length > 0 && s !== null) {
+          // copy to local variables, because the selection might change.
+          const base = s.baseOffset
+          const extent = s.extentOffset
+          e.preventDefault()
+          // update tokens
+          this.localTokens = copyPaste.mergePastableTokensAt(
+            this.localTokens,
+            tokensTiers,
+            base,
+            extent,
+            getFirstTokenOrder(this.event, this.speaker)
+          )
+          // update text presentation
+          this.segmentText = this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ')
+          if (e.currentTarget !== null) {
+            await this.$nextTick()
+            this.setCursorPosition(e.currentTarget as HTMLElement, Math.max(base, extent))
+          }
+        } else {
+          // paste as string.
+          document.execCommand('insertHTML', false, clipboardString)
         }
-      } else {
-        // paste as string.
-        document.execCommand('insertHTML', false, clipboardString)
+        this.debouncedCommitEvent()
+      } catch (e) {
+        console.error(e)
+        // do nothing (i.e. default OS functionality)
       }
-    } catch (e) {
-      console.error(e)
-      // do nothing (i.e. default OS functionality)
     }
   }
 
@@ -284,48 +380,24 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   get secondaryTiers() {
-    return eventStore.metadata.tiers.filter(t => t.name !== 'default' && t.show === true)
+    return eventStore.metadata.tiers.filter(t => t.id !== this.defaultTier && t.show === true)
   }
 
   get tokens() {
     return this.event.speakerEvents[this.speaker].tokens
   }
 
-  get firstTokenOrder() {
-    const speakerEvent = this.event.speakerEvents[this.speaker]
-    if (speakerEvent) {
-      const firstToken = this.event.speakerEvents[this.speaker].tokens[0]
-      if (firstToken) {
-        return firstToken.order
-      } else {
-        return undefined
-      }
-    } else {
-      const i = findPreviousSpeakerEvent(this.speaker, this.event.eventId)
-      if (i !== undefined) {
-        const prevLastToken = _(eventStore.events[i].speakerEvents[this.speaker].tokens).last()
-        if (prevLastToken) {
-          return prevLastToken.order + 1
-        } else {
-          return 0
-        }
-      } else {
-        return 0
-      }
-    }
-  }
-
   tokenizeText(text: string) {
-    return text.trim().split(' ').filter((t) => t !== '')
+    return text.split(' ').filter((t) => t !== '')
   }
 
   viewAndSelectAudioEvent(e: LocalTranscriptEvent) {
-    eventStore.selectedEventIds = [ e.eventId ]
+    selectEvent(e)
     scrollToAudioEvent(e)
   }
 
   colorFromTokenType(id: number): string {
-    const c = this.settings.tokenTypes.find(tt => tt.id === id)
+    const c = tokenTypesPresets[settings.tokenTypesPreset].find(tt => tt.id === id)
     if (c) {
       return c.color
     } else {
@@ -333,64 +405,99 @@ export default class SpeakerSegmentTranscript extends Vue {
     }
   }
 
-  commit() {
-    if (
-      // it’s new and not empty
-      (
-        this.event.speakerEvents[this.speaker] === undefined &&
-        this.localTokens.length !== 0
-      ) ||
-      // it’s old and it has changed
-      (
-        this.event.speakerEvents[this.speaker] !== undefined &&
-        !isEqualDeep(this.localTokens, this.event.speakerEvents[this.speaker].tokens)
-      )
-    ) {
-      // perform update
-      undoable(updateSpeakerEvent(this.localEvent, this.speaker, this.localTokens))
+  commitEvent() {
+    const oldEvent = findEventIndexById(this.event.eventId)
+    const newEvent: LocalTranscriptEvent = {
+      ...this.localEvent,
+      speakerEvents: {
+        [ this.speaker ]: {
+          ...this.localEvent.speakerEvents[this.speaker],
+          tokens: this.localTokens
+        }
+      }}
+    if (!isEqualDeep(this.localEvent, oldEvent)) {
+      undoable(updateSpeakerEvent(newEvent, Number(this.speaker)))
+      this.updateAllTokenTypes(newEvent)
     } else {
       // nothing to update
     }
   }
 
-  updateAndCommitLocalEventTier(e: Event, id: string, tierType: string) {
-    if (
-      this.localEvent.speakerEvents[this.speaker] !== undefined &&
+  isValidTierEventText(text: string): boolean {
+    return text.trim() !== ''
+  }
+
+  hasEventTierChanged(text: string, tierId: string): boolean {
+    return this.localEvent.speakerEvents[this.speaker].speakerEventTiers[tierId].text !== text
+  }
+
+  eventTierExists(tierId: string): boolean {
+    return this.localEvent.speakerEvents[this.speaker] !== undefined &&
       this.localEvent.speakerEvents[this.speaker].speakerEventTiers !== undefined &&
-      this.localEvent.speakerEvents[this.speaker].speakerEventTiers[id] !== undefined) {
-      if (tierType === 'freeText') {
-        (this.localEvent
-          .speakerEvents[this.speaker]
-          .speakerEventTiers[id] as TierFreeText
-        ).text = (e.target as HTMLElement).textContent as string
+      this.localEvent.speakerEvents[this.speaker].speakerEventTiers[tierId] !== undefined
+  }
+
+  createEventTier(text: string, tierId: string) {
+    this.localEvent = {
+      ...this.localEvent,
+      speakerEvents: {
+        ...this.localEvent.speakerEvents,
+        [ this.speaker ]: {
+          ...this.localEvent.speakerEvents[this.speaker],
+          speakerEventTiers: {
+            ...this.localEvent.speakerEvents[this.speaker].speakerEventTiers,
+            [ tierId ]: {
+              id: String(makeEventTierId()),
+              type: 'freeText',
+              text
+            }
+          }
+        }
       }
-      this.commit()
-    } else {
-      console.log('CREATE!')
-      // does not yet exist
     }
   }
 
-  updateAndCommitLocalTokenTier(e: Event, tierName: TokenTierType, i: number) {
-    const text = (e.target as HTMLElement).textContent as string
-    this.localTokens[i].tiers[tierName] = { text, type: null }
-    this.commit()
+  deleteEventTier(tierId: string) {
+    const e = this.localEvent
+    delete e.speakerEvents[this.speaker].speakerEventTiers[tierId]
+    this.localEvent = e
   }
 
-  async updateAndCommitLocalTokens(e: Event) {
-    await this.updateLocalTokens(e)
-    this.commit()
+  updateEventTierText(text: string, tierId: string) {
+    this.localEvent.speakerEvents[this.speaker].speakerEventTiers[tierId].text = text
   }
 
-  async updateLocalTokens(e: Event) {
+  updateEventTier(text: string|null|undefined, tierId: string) {
+    const cleanText = text === null || text === undefined ? '' : text
+    if (this.eventTierExists(tierId) && this.hasEventTierChanged(cleanText, tierId)) {
+      if (this.isValidTierEventText(cleanText)) {
+        // update
+        this.updateEventTierText(cleanText, tierId)
+        this.commitEvent()
+      } else {
+        // delete
+        this.deleteEventTier(tierId)
+        this.commitEvent()
+      }
+    } else if (this.isValidTierEventText(cleanText)) {
+      // create
+      this.createEventTier(cleanText, tierId)
+      this.commitEvent()
+    }
+  }
+
+  updateLocalTokens(text: string) {
     // await requestFrameAsync()
-    const newTokens = this.tokenizeText((e.target as HTMLDivElement).textContent as string).map((t, i) => {
-      return { text: t, index: i }
+    const newTokens = this.tokenizeText(text).map((t, i) => {
+      return { text: t, index: i, id: -1 }
     })
-    const oldTokens = this.localTokens.map((t, i) => ({ text: t.tiers[this.defaultTier].text, index: i }))
-    console.log({ newTokens, oldTokens })
+    const oldTokens = this.localTokens.map((t, i) => ({
+      text: t.tiers[this.defaultTier].text,
+      id: t.id,
+      index: i
+    }))
     const hunks = jsdiff.diffArrays(oldTokens, newTokens, { comparator: (l, r) => l.text === r.text })
-    console.log({hunks})
+    // console.log({ hunks })
     const changes = _(hunks)
       .filter((h) => h.added === true || h.removed === true)
       .map((h) => h.value.map(v => ({
@@ -409,6 +516,7 @@ export default class SpeakerSegmentTranscript extends Vue {
         if (g.length > 1) {
           return [{
             ...g[1],
+            id: g[0].id,
             type: 'update'
           }]
         } else {
@@ -421,7 +529,6 @@ export default class SpeakerSegmentTranscript extends Vue {
     let addedCounter = 0
     _.each(changes, (change, i) => {
       if (change.type === 'update') {
-        console.log('update', this.localTokens[change.index + addedCounter])
         this.localTokens[change.index + addedCounter] = {
           ...this.localTokens[change.index + addedCounter],
           tiers: {
@@ -459,21 +566,24 @@ export default class SpeakerSegmentTranscript extends Vue {
         })
         addedCounter = addedCounter + 1
       } else if (change.type === 'remove') {
-        this.localTokens.splice(change.index + addedCounter, 1)
-        addedCounter = addedCounter - 1
+        if (change.id !== -1 && eventStore.lockedTokens.indexOf(change.id) > -1) {
+          // can’t delete because it’s locked.
+          console.log('can’t delete')
+          // update display text
+          setTimeout(() => {
+            // tslint:disable-next-line:max-line-length
+            this.segmentText = this.localTokens ? this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ') : ''
+          }, 16)
+        } else {
+          this.localTokens.splice(change.index + addedCounter, 1)
+          addedCounter = addedCounter - 1
+        }
       }
     })
     this.localTokens = this.localTokens.map((t, i) => {
-      return { ...t, order: (this.firstTokenOrder || 0) + i }
+      return { ...t, order: (getFirstTokenOrder(this.event, this.speaker)) + i }
     })
-  }
-
-  updateLabelText(e: Event) {
-    this.focused = false
-    const text = (e.target as HTMLDivElement).textContent
-    if (text !== null && text !== '') {
-      updateSpeakerEvent(this.event, this.speaker, this.tokens)
-    }
+    return this.localTokens
   }
 
   get textStyle() {
@@ -483,7 +593,8 @@ export default class SpeakerSegmentTranscript extends Vue {
       }
     } else {
       return {
-        color: '#333'
+        color: 'white',
+        caretColor: 'black'
       }
     }
   }
@@ -565,6 +676,9 @@ export default class SpeakerSegmentTranscript extends Vue {
   display inline
   pointer-events none
 
+.locked-token
+  border-bottom 3px solid red
+
 // in the light theme, the text inside of the
 // indicator should be in front and white.
 .theme--light .token-type-indicator:not(.type-1)
@@ -584,6 +698,14 @@ export default class SpeakerSegmentTranscript extends Vue {
     &:last-child .secondary-token-tier-text
       border-top-right-radius 5px
       border-bottom-right-radius 5px
+
+.theme--light .token-display
+  .token-type-indicator
+    position relative
+    z-index 0
+    &.type-1
+      z-index 1
+      color #333 !important
 
 .tokens-input
   top 0

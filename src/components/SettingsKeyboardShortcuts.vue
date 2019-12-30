@@ -1,6 +1,6 @@
 <template>
   <div class="pa-4">
-    <v-layout>
+    <v-layout class="settings-header">
       <v-flex xs12>
         <v-subheader>Keyboard Shortcuts</v-subheader>
         <v-divider />
@@ -13,6 +13,7 @@
       </v-flex>
       <v-flex xs3>
         <v-select
+          :menu-props="{ lazy: true }"
           class="keyboard-chips"
           hide-details
           small-chips
@@ -27,6 +28,7 @@
       </v-flex>
       <v-flex xs2>
         <v-select
+          :menu-props="{ lazy: true }"
           class="keyboard-chips"
           hide-details
           small-chips

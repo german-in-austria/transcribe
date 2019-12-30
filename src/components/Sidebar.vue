@@ -1,91 +1,109 @@
 <template>
-  <v-tabs v-if="active" hide-slider class="sidebar layout fill-height column" height="64" grow v-model="activeTab">
-    <v-tab>
-      <v-icon>edit</v-icon>
-    </v-tab>
-    <v-tab>
-      <v-icon>history</v-icon>
-    </v-tab>
-    <v-tab>
-      <v-badge :value="errors.length > 0" color="grey">
-        <v-icon>error_outline</v-icon> <span slot="badge">{{ errors.length }}</span>
-      </v-badge>
-    </v-tab>
-    <v-tab>
-      <v-icon>bookmark_border</v-icon>
-    </v-tab>
-    <v-tabs-items class="sidebar-scrollable">
-      <v-tab-item>
-        <v-subheader>
-          <small>Actions</small>
-        </v-subheader>
-        <v-list dense>
-          <v-list-tile>
-            <v-list-tile-avatar>
-              <v-icon>call_split</v-icon>
-            </v-list-tile-avatar>
-            <v-list-tile-content>
-              <v-list-tile-title>
-                split
-              </v-list-tile-title>
-            </v-list-tile-content>
-            <v-list-tile-action>
-              {{ displayKeyboardAction(keyboardShortcuts.split) }}
-            </v-list-tile-action>
-          </v-list-tile>
-          <v-list-tile :disabled="eventStore.selectedEventIds.length === 0">
-            <v-list-tile-avatar>
-              <v-icon>delete</v-icon>
-            </v-list-tile-avatar>
-            <v-list-tile-content>
-              <v-list-tile-title>
-                delete
-              </v-list-tile-title>
-            </v-list-tile-content>
-            <v-list-tile-action>
-              {{ displayKeyboardAction(keyboardShortcuts.deleteEvents) }}
-            </v-list-tile-action>
-          </v-list-tile>
-          <v-list-tile :disabled="eventStore.selectedEventIds.length < 2">
-            <v-list-tile-avatar>
-              <v-icon>merge_type</v-icon>
-            </v-list-tile-avatar>
-            <v-list-tile-content>
-              <v-list-tile-title>
-                join
-              </v-list-tile-title>
-            </v-list-tile-content>
-            <v-list-tile-action>
-              {{ displayKeyboardAction(keyboardShortcuts.joinEvents) }}
-            </v-list-tile-action>
-          </v-list-tile>
-        </v-list>
-      </v-tab-item>
-      <v-tab-item>
-        <edit-history v-if="history.actions.length > 0" />
-        <div v-else class="text-xs-center grey--text mt-4">
-          <small>Edits will appear here.</small>
-        </div>
-      </v-tab-item>
-      <v-tab-item>
-        <error-list :errors="errors" v-if="errors.length > 0" />
-        <div v-else class="text-xs-center grey--text mt-4">
-          <small>Errors will appear here.</small>
-        </div>
-      </v-tab-item>
-      <v-tab-item>
-        <div class="text-xs-center grey--text mt-4">
-          <small>Bookmarks will appear here</small>
-        </div>
-      </v-tab-item>
-    </v-tabs-items>
-  </v-tabs>
+  <v-layout>
+    <v-flex v-if="active" :style="{ borderRight: active ? '1px solid rgba(255,255,255,.3)' : '0' }">
+      <v-window class="window" v-model="settings.activeSidebarItem" vertical>
+        <v-window-item value="edit" class="sidebar-scrollable">
+          <actions />
+        </v-window-item>
+        <v-window-item value="history" class="sidebar-scrollable">
+          <edit-history v-if="history.actions.length > 0" />
+          <div v-else class="text-xs-center grey--text mt-4">
+            <small>Edits will appear here.</small>
+          </div>
+        </v-window-item>
+        <v-window-item value="warnings" class="sidebar-scrollable">
+          <error-list :errors="errors"/>
+        </v-window-item>
+        <v-window-item value="search" class="sidebar-scrollable">
+          <search />
+        </v-window-item>
+        <v-window-item value="bookmarks" class="sidebar-scrollable">
+          <bookmarks />
+        </v-window-item>
+      </v-window>
+    </v-flex>
+    <v-flex class="sidebar-picker text-xs-center pt-2">
+      <v-layout column fill-height justify-space-between>
+        <v-flex>
+          <v-btn
+            v-ripple="false"
+            :title="'Editing (' + displayKeyboardAction(keyboardShortcuts.showEditMenu) + ')'"
+            icon
+            @click="clickTab('edit')"
+            class="mb-2 sidebar-btn">
+            <v-icon :color="settings.activeSidebarItem === 'edit' ? 'blue' : ''">
+              {{ keyboardShortcuts.showEditMenu.icon }}
+            </v-icon>
+          </v-btn>
+          <v-btn 
+            v-ripple="false"
+            :title="'History (' + displayKeyboardAction(keyboardShortcuts.showHistory) + ')'"
+            icon
+            @click="clickTab('history')"
+            class="mb-2 sidebar-btn">
+            <v-icon :color="settings.activeSidebarItem === 'history' ? 'blue' : ''">
+              {{ keyboardShortcuts.showHistory.icon }}
+            </v-icon>
+          </v-btn>
+          <v-btn
+            v-ripple="false"
+            :title="'Warnings (' + displayKeyboardAction(keyboardShortcuts.showWarnings) + ')'"
+            icon
+            @click="clickTab('warnings')"
+            class="mb-2 sidebar-btn">
+            <v-badge
+              :value="errors.length > 0"
+              :color="settings.activeSidebarItem === 'warnings' ? 'blue' : 'grey'">
+              <v-icon
+                :color="settings.activeSidebarItem === 'warnings' ? 'blue' : ''">
+                {{ keyboardShortcuts.showWarnings.icon }}
+              </v-icon>
+              <span slot="badge">
+                {{ errors.length < 100 ? errors.length : '99+' }}
+              </span>
+            </v-badge>
+          </v-btn>
+          <v-btn
+            v-ripple="false"
+            :title="'Search (' + displayKeyboardAction(keyboardShortcuts.showSearch) + ')'"
+            icon
+            @click="clickTab('search')"
+            class="mb-2 sidebar-btn">
+            <v-icon :color="settings.activeSidebarItem === 'search' ? 'blue' : ''">
+              {{ keyboardShortcuts.showSearch.icon }}
+            </v-icon>
+          </v-btn>
+          <v-btn
+            v-ripple="false"
+            :title="'Bookmarks (' + displayKeyboardAction(keyboardShortcuts.showBookmarks) + ')'"
+            icon
+            @click="clickTab('bookmarks')"
+            class="mb-2 sidebar-btn">
+            <v-icon :color="settings.activeSidebarItem === 'bookmarks' ? 'blue' : ''">
+              {{ keyboardShortcuts.showBookmarks.icon }}
+            </v-icon>
+          </v-btn>
+        </v-flex>
+        <v-flex xs1>
+          <v-spacer />
+          <v-btn
+            class="sidebar-btn"
+            v-ripple="false"
+            @click.stop="settings.showSettings = true"
+            icon
+            flat>
+            <v-icon>settings</v-icon>
+          </v-btn>
+        </v-flex>
+      </v-layout>
+    </v-flex>
+  </v-layout>
 </template>
 <script lang="ts">
+
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import editHistory from './EditHistory.vue'
-import errorList from './ErrorList.vue'
 import * as _ from 'lodash'
+
 import {
   LocalTranscriptEvent,
   scrollToAudioEvent,
@@ -93,35 +111,54 @@ import {
   scrollToTranscriptEvent,
   eventStore,
   selectEvent,
-  speakerEventHasErrors,
-  toTime
+  toTime,
+  sortEvents
 } from '../store/transcript'
-
 import { history } from '../store/history'
+import settings, { SidebarItem } from '../store/settings'
+
+import { getErrors, ErrorEvent } from '../service/errors'
 import { keyboardShortcuts, displayKeyboardAction } from '../service/keyboard'
 
-interface ErrorEvent extends LocalTranscriptEvent {
-  error_type: 'time_overlap'|'unknown_token'
-}
+import editHistory from './EditHistory.vue'
+import errorList from './ErrorList.vue'
+import bookmarks from './Bookmarks.vue'
+import search from './Search.vue'
+import actions from './Actions.vue'
 
 @Component({
   components: {
+    actions,
     editHistory,
-    errorList
+    errorList,
+    search,
+    bookmarks,
   }
 })
 export default class Sidebar extends Vue {
 
   @Prop() active: boolean
 
+  settings = settings
   errors: ErrorEvent[] = []
   history = history
-  activeTab = 0
   eventStore = eventStore
   stuckAtBottom = false
   toTime = toTime
   keyboardShortcuts = keyboardShortcuts
   displayKeyboardAction = displayKeyboardAction
+  debouncedGetErrors = _.debounce(this.getErrors, 500)
+
+  clickTab(e: SidebarItem) {
+    if (e === settings.activeSidebarItem && settings.showDrawer === true) {
+      settings.showDrawer = false
+    } else {
+      settings.activeSidebarItem = e
+      if (settings.showDrawer === false) {
+        settings.showDrawer = true
+      }
+    }
+  }
 
   beforeUpdate() {
     if (this.$el && this.$el.querySelector) {
@@ -134,12 +171,28 @@ export default class Sidebar extends Vue {
     }
   }
 
+  @Watch('settings.showErrors', { deep: true })
+  async onErrorSettingsUpdate() {
+    this.getErrors()
+  }
+  @Watch('settings.maxEventGap')
+  async onGapSettingsUpdate() {
+    this.getErrors()
+  }
   @Watch('eventStore.events')
-  onEventsUpdate(newEvents: LocalTranscriptEvent[]) {
-    this.errors = _(newEvents)
-      .filter((e, i) => newEvents[i - 1] !== undefined && e.startTime < newEvents[i - 1].endTime)
-      .map((e) => ({...e, error_type: 'time_overlap'} as ErrorEvent))
-      .value()
+  async onEventsUpdate(newEvents: LocalTranscriptEvent[]) {
+    this.debouncedGetErrors()
+  }
+
+  async getErrors() {
+    await this.$nextTick()
+    window.requestIdleCallback(() => {
+      this.errors = getErrors(eventStore.events)
+    })
+  }
+
+  mounted() {
+    this.getErrors()
   }
 
   updated() {
@@ -157,22 +210,34 @@ export default class Sidebar extends Vue {
 }
 </script>
 <style lang="stylus">
+.sidebar-btn
+  border-radius 0
+  margin 0 !important
+  height 55px
+  width 100%
+  &:before
+    border-radius 0
+
+.window
+  width 280px
+  height 100vh
 .sidebar-scrollable
-  height calc(100% - 70px)
+  height 100vh
   .v-window__container
   .v-window-item
   .v-list
     height 100%
   .title
     height 19px
-    
   .subtitle
     height 18px
     font-size 11px
-
   .undo-btn
     opacity 0
-
   .tile:hover .undo-btn
     opacity 1
+
+.sidebar-picker
+  height 100vh
+  background rgba(255,255,255,.1)
 </style>

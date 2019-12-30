@@ -1,6 +1,6 @@
 import Vue from 'vue'
 
-import { LocalTranscriptEvent } from '../store/transcript'
+import { LocalTranscriptEvent, findEventIndexById, eventStore } from '../store/transcript'
 import { requestFrameAsync } from '../util'
 
 export async function getScrollLeftAudio(): Promise<number> {
@@ -13,7 +13,33 @@ export async function getScrollLeftAudio(): Promise<number> {
   }
 }
 
-export async function focusSelectedEventElement(e: LocalTranscriptEvent) {
+export function getFocusedSpeaker(): string|null {
+  if (
+    document.activeElement instanceof HTMLElement &&
+    document.activeElement.dataset &&
+    document.activeElement.dataset.speakerId
+  ) {
+    return document.activeElement.dataset.speakerId
+  } else {
+    return null
+  }
+}
+
+export function getFocusedEvent(): LocalTranscriptEvent|null {
+  if (
+    document.activeElement instanceof HTMLElement &&
+    document.activeElement.dataset &&
+    document.activeElement.dataset.speakerId &&
+    document.activeElement.dataset.eventId
+  ) {
+    const i = findEventIndexById(Number(document.activeElement.dataset.eventId))
+    return eventStore.events[i]
+  } else {
+    return null
+  }
+}
+
+export async function focusSelectedEventElement() {
   await Vue.nextTick()
   setTimeout(() => {
     const el = (

@@ -9,7 +9,7 @@
         v-for="(speakerTier, i) in speakersWithMissingDefaultTier"
         :key="i"
         v-model="showMissingDefaultTierError">
-        Default Tier missing for speaker {{ speakerTier.to_speaker.Kuerzel }}
+        Default Tier missing for speaker {{ speakerTier.to_speaker !== null ? speakerTier.to_speaker.Kuerzel : '' }}
       </v-snackbar>
     </div>
     <v-dialog
@@ -40,6 +40,13 @@
                     ref="basicInfoForm"
                     class="pb-5"
                     v-model="basicInfoValid">
+                    <v-text-field 
+                      v-model="transcriptName"
+                      label="Transcript Name"
+                      :rules="[
+                        (transcriptName === null || transcriptName.trim() === '') && 'Please enter a name for the transcript',
+                        !isTranscriptNameUnique(transcriptName) && 'Name already exists.'
+                      ]" />
                     <v-autocomplete
                       :disabled="surveys === null"
                       :loading="surveys === null"
@@ -65,13 +72,6 @@
                         </v-list-tile-action-text>
                       </template>
                     </v-autocomplete>
-                    <v-text-field 
-                      v-model="transcriptName"
-                      label="Transcript Name"
-                      :rules="[
-                        (transcriptName === null || transcriptName.trim() === '') && 'Please enter a name for the transcript',
-                        !isTranscriptNameUnique(transcriptName) && 'Name already exists.'
-                      ]" />
                   </v-form>
                 </v-flex>
               </v-layout>
@@ -113,8 +113,11 @@
                 <v-flex class="grey--text caption pt-2" xs4>
                   From Exmaralda File
                 </v-flex>
-                <v-flex class="grey--text caption pt-2" xs6>
+                <v-flex class="grey--text caption pt-2" xs4>
                   To Speakers and Tiers
+                </v-flex>
+                <v-flex class="grey--text caption pt-2 offset-xs2" xs1>
+                  Preview
                 </v-flex>
               </v-layout>
               <v-form
@@ -134,7 +137,7 @@
                     <v-flex xs1 class="pl-3">
                       <v-checkbox
                         class="pt-0"
-                        @change="updateIsEverthingSelected"
+                        @change="updateIsEverythingSelected"
                         v-model="speakerTier.select_for_import"
                       />
                     </v-flex>
@@ -350,12 +353,13 @@
 <script lang='ts'>
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
-
+import { resourceAtUrlExists } from '../util'
 import {
   ServerInformant,
   ServerSurvey,
   getSurveys,
-  ServerTranscriptListItem
+  ServerTranscriptListItem,
+  getAudioUrlFromServerNames
 } from '../service/backend-server'
 
 import {
@@ -393,6 +397,7 @@ export default class ExmaraldaImporter extends Vue {
   transcriptName: string|null = this.importable.fileName.replace('.exb', '')
   selectedSurvey: ServerSurvey|null = null
   audioFileName: string|null = null
+  audioFileUrl: string|null = null
   selectedAudioFile: File|null = null
 
   showMissingDefaultTierError = false
@@ -403,7 +408,7 @@ export default class ExmaraldaImporter extends Vue {
     this.surveys = await getSurveys()
   }
 
-  isTranscriptNameUnique(n: string): boolean {
+  isTranscriptNameUnique(n: string|null): boolean {
     return this.transcripts.findIndex(t => t.n === n) === -1
   }
 
@@ -442,9 +447,15 @@ export default class ExmaraldaImporter extends Vue {
     )
   }
 
-  selectSurvey(survey: ServerSurvey) {
+  async selectSurvey(survey: ServerSurvey) {
     this.selectedSurvey = survey
-    this.audioFileName = survey.Audiofile
+    const audioFileUrl = getAudioUrlFromServerNames(survey.Audiofile, survey.Dateipfad)
+    if (audioFileUrl !== null && await resourceAtUrlExists(audioFileUrl)) {
+      this.audioFileName = survey.Audiofile + '.ogg'
+      this.audioFileUrl = audioFileUrl
+    } else {
+      // not found.
+    }
   }
 
   getSelectedDefaultTierForSpeaker(to_speaker: ServerInformant): SpeakerTierImportable[] {
@@ -490,9 +501,10 @@ export default class ExmaraldaImporter extends Vue {
     this.importable.speakerTiers = this.importable.speakerTiers.map((t) => {
       return { ...t, select_for_import: v }
     })
-    this.updateIsEverthingSelected()
+    this.updateIsEverythingSelected()
   }
 
+  // FIXME: to_speaker can be null
   tokenTiersAvailable(to_speaker: ServerInformant) {
 
     const selectedTiersForSpeaker = this.importable.speakerTiers
@@ -512,7 +524,7 @@ export default class ExmaraldaImporter extends Vue {
           disabled: selectedTiersForSpeaker.indexOf('ortho') > -1 || this.globalDefaultTier === 'ortho'
         },
         {
-          text: 'variational',
+          text: 'eye dialect',
           value: 'text',
           description: 'phonetic transcription\n using the latin alphabet',
           disabled: selectedTiersForSpeaker.indexOf('text') > -1 || this.globalDefaultTier === 'text'
@@ -529,7 +541,7 @@ export default class ExmaraldaImporter extends Vue {
   get speakersWithMissingDefaultTier(): SpeakerTierImportable[] {
     return _(this.importable.speakerTiers)
       .filter(t => t.select_for_import === true && t.to_speaker !== null)
-      .groupBy((st) => st.to_speaker!.pk)
+      .groupBy(st => st.to_speaker!.pk)
       .filter(tiersBySpeaker => tiersBySpeaker.filter(t => t.to_tier_type === 'default').length !== 1)
       .toArray()
       .flatten()
@@ -567,13 +579,14 @@ export default class ExmaraldaImporter extends Vue {
             this.selectedSurvey,
             this.globalDefaultTier
           ),
-          this.selectedAudioFile
+          this.selectedAudioFile,
+          this.audioFileUrl
         )
       }
     }
   }
 
-  updateIsEverthingSelected() {
+  updateIsEverythingSelected() {
     const every = _(this.importable.speakerTiers).every(t => t.select_for_import)
     if (every) {
       this.isAnythingOrAllSelected = true

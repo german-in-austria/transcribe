@@ -12,6 +12,7 @@ import {
 } from '../store/transcript'
 import { clone } from '../util/index'
 import serverTranscriptDiff from './backend-server-transcript-diff.worker'
+import settings from '../store/settings'
 
 type ServerTranscriptId = number
 
@@ -31,11 +32,22 @@ export type SaveResponse<T> = SaveRequest<T> & {
   newPk?: number
 }
 
+export interface ServerEventSaveResponse extends SaveResponse<ServerEvent> {
+  event_tiers: {
+    [speakerKey: string]: {
+      [eventTierId: string]: SaveResponse<ServerEventTierContent>
+    }
+  }
+}
+
 export interface ServerTranscriptSaveResponse extends ServerTranscript {
   aTokens: {
     [token_id: string]: SaveResponse<ServerToken>
   }
-  aEvents: Array<SaveResponse<ServerEvent>>
+  aEvents: ServerEventSaveResponse[]
+  aTiers: {
+    [tier_id: string]: SaveResponse<ServerTier>
+  }
 }
 
 export interface ServerTranscriptSaveRequest extends ServerTranscript {
@@ -74,15 +86,48 @@ export interface ServerTranscriptTokenTypes {
 }
 
 export interface ServerTranscriptInformants {
-  [speaker_id: number]: {
-    ka: string // abbrev anonymized
-    k: string // abbrev
-  }
+  [speaker_id: number]: ServerTranscriptInformant
+}
+
+export interface ServerTranscriptInformant {
+  ka: string // abbrev anonymized
+  k: string // abbrev
+}
+
+export interface ServerAnswer {
+  // there are other properties here
+  // that we don’t care about now
+  it: number // token id
+}
+
+export interface ServerAnswerSet {
+  // there are other properties here
+  // that we don’t care about now
+  its: number // token set id
+}
+
+export interface TokenRange {
+  ivt: number // token id (id von token)
+  ibt: number // token id (id bis token)
+}
+
+export interface TokenSet {
+  t: number[] // token ids
+}
+
+export interface ServerTier {
+  tier_name: string
 }
 
 export interface ServerTranscript {
+  aAntworten?: {
+    [answer_id: string]: ServerAnswer|ServerAnswerSet
+  }
+  aTokenSets?: {
+    [set_id: number]: TokenRange|TokenSet
+  }
   aTiers: {
-    [tier_id: string]: string
+    [tier_id: string]: ServerTier
   }
   aTokens: {
     [token_id: string]: ServerToken
@@ -96,12 +141,6 @@ export interface ServerTranscript {
     trId: number
   }
   aInformanten?: ServerTranscriptInformants
-  aTokenSets?: {
-    [setId: number]: {
-      ivt: number // starting at token id (von)
-      ibt: number // ending at token id (bis)
-    }
-  }
   aTranskript?: {
     default_tier?: TokenTierType|null
     n: string // name
@@ -129,20 +168,33 @@ export interface ServerToken {
   fo?: number // fragment of
 }
 
+export interface ServerEventTierContent {
+  // event tier string
+  t: string
+  // tier id
+  ti: number
+}
+
+export interface ServerEventTiers {
+  [event_tier_id: string]: ServerEventTierContent
+}
+
+export interface ServerSpeakerEventTiers {
+  [speaker_id: string]: ServerEventTiers
+}
+
+export interface ServerSpeakerEventTiersSaveResponse {
+  [speaker_id: string]: {
+    [event_tier_id: string]: SaveResponse<ServerEventTierContent>
+  }
+}
+
 export interface ServerEvent {
   pk: number
   tid: {
     [speaker_id: string]: number[]
   }
-  event_tiers: {
-    [speaker_id: string]: {
-      [event_tier_id: string]: {
-        // event tier string
-        t: string
-        ti: string
-      }
-    }
-  }
+  event_tiers: ServerSpeakerEventTiers
   e: string // end
   s: string // start
   l: 0
@@ -151,65 +203,98 @@ export interface ServerEvent {
 const diffWorker = new PromiseWorker(new serverTranscriptDiff())
 const textEncoder = new TextEncoder()
 
-export let serverTranscript = null as ServerTranscript|null
+export let serverTranscript: ServerTranscript|null = null
+
+export function getAudioUrlFromServerNames(name: string|undefined, path: string|undefined): string|null {
+  if (path === undefined || name === undefined) {
+    return null
+  } else {
+    // windows file paths to urls with normal forward slashes
+    const cleanPath = path.split('\\').join('/')
+    // add slashes left and right conditionally
+    const cleanPathWithSlashes = cleanPath.startsWith('/')
+      ? (cleanPath.endsWith('/')
+        ? cleanPath
+        : cleanPath + '/')
+      : '/' + (cleanPath.endsWith('/')
+        ? cleanPath
+        : cleanPath + '/')
+    console.log({cleanPath, cleanPathWithSlashes})
+    // add .ogg if necessary
+    const cleanName = name.endsWith('.ogg') ? (name) : (name + '.ogg')
+    return `${ settings.backEndUrl }/private-media${cleanPathWithSlashes}${cleanName}`
+  }
+}
 
 export function getMetadataFromServerTranscript(res: ServerTranscript) {
+  const defaultTier = res.aTranskript!.default_tier || 'text'
   const v = {
-    speakers: res.aInformanten!,
+    speakers: _.mapValues(res.aInformanten!, inf => ({ ...inf, searchInSpeaker: true })),
     tokenTypes: res.aTokenTypes!,
     transcriptName: res.aTranskript!.n,
-    defaultTier: res.aTranskript!.default_tier || 'text',
-    audioUrl: res.aEinzelErhebung!.af !== undefined
-      ? `${ eventStore.backEndUrl }/private-media`
-        + res.aEinzelErhebung!.dp.split('\\').join('/')
-        + res.aEinzelErhebung!.af
-        + '.ogg'
-      : null,
-    tiers: _(res.aTiers).map((t, tid) => {
-      return {
-        type: 'freeText',
-        name: t,
-        show: false,
-        id: tid
-      }
-    })
-    .concat([
+    defaultTier,
+    audioUrl: getAudioUrlFromServerNames(res.aEinzelErhebung!.af, res.aEinzelErhebung!.dp),
+    tiers: [
       {
-        type: 'basic',
-        name: 'default',
-        show: true,
+        searchInTier: true,
+        type: 'token',
+        name: 'eye dialect',
+        show: defaultTier === 'text',
         id: 'text'
       },
       {
+        searchInTier: true,
         type: 'token',
         name: 'ortho',
-        show: false,
+        show: defaultTier === 'ortho',
         id: 'ortho'
       },
       {
+        searchInTier: true,
         type: 'token',
         name: 'phon',
-        show: false,
+        show: defaultTier === 'phon',
         id: 'phon'
       }
-    ]).value() as LocalTranscriptTier[]
+    ].concat(_(res.aTiers).map((t, tid) => ({
+      searchInTier: true,
+      type: 'freeText',
+      name: t.tier_name,
+      show: false,
+      id:   tid
+    })).value()) as LocalTranscriptTier[]
   }
   return v
 }
 
 export function mergeServerTranscript(s: ServerTranscript) {
-  const oldSt = (serverTranscript === null ? {aTokens: undefined, aEvents: []} : serverTranscript)
+
+  const oldSt = (serverTranscript === null ? {
+    aTokens: undefined,
+    aEvents: [],
+    aAntworten: undefined,
+    aTokenSets: undefined
+  } : serverTranscript)
+
   serverTranscript = {
     ...oldSt,
     ...s,
+    aAntworten: {
+      ...oldSt.aAntworten,
+      ...s.aAntworten
+    },
+    aTokenSets: {
+      ...oldSt.aTokenSets,
+      ...s.aTokenSets
+    },
     aTokens: {
       ...oldSt.aTokens,
       ...s.aTokens
     },
-    aEvents: [
+    aEvents: _.uniqBy([
       ...oldSt.aEvents,
       ...s.aEvents
-    ]
+    ], (e) => e.pk)
   }
   // console.log({tokens: _(s.aTokens).toArray().sortBy(t => t.tr).value()})
 }
@@ -243,6 +328,7 @@ function reverseString(str: string) {
 }
 
 function replaceLastOccurrence(token: string, toReplace: string, replaceWith: string): string {
+  // console.log('replaceLastOccurrence', token, toReplace, replaceWith)
   return reverseString(
     reverseString(token).replace(
       reverseString(toReplace),
@@ -276,7 +362,7 @@ function findNextFragmentOfId(
       // it refers to the current token
       tokens[nextEvent.tid[speakerKey][0]].fo === tokenId
     ) {
-      // return the next event’s id
+      // return the next event’s first token id
       return nextEvent.tid[speakerKey][0]
     } else {
       return undefined
@@ -286,14 +372,29 @@ function findNextFragmentOfId(
   }
 }
 
-export function serverEventSaveResponseToServerEvent(e: SaveResponse<ServerEvent>): ServerEvent {
+// tslint:disable-next-line:max-line-length
+function serverEventTiersSaveResponseToServerEventTiers(speakerEventTiers: ServerSpeakerEventTiersSaveResponse): ServerSpeakerEventTiers {
+  return _(speakerEventTiers).mapValues((speakerEventTier, speakerId) => {
+    return _(speakerEventTier).reduce((m, e, k) => {
+      if ((e as any).newStatus !== 'deleted') {
+        m[e.newPk || k] = {
+          ti: e.ti,
+          t: e.t
+        }
+      }
+      return m
+    }, {} as ServerEventTiers)
+  }).value()
+}
+
+export function serverEventSaveResponseToServerEvent(e: ServerEventSaveResponse): ServerEvent {
   return {
     e: e.e,
     l: e.l,
     pk: e.newPk || e.pk,
     s: e.s,
     tid: e.tid,
-    event_tiers: e.event_tiers
+    event_tiers: serverEventTiersSaveResponseToServerEventTiers(e.event_tiers)
   }
 }
 
@@ -308,6 +409,7 @@ export function serverTokenSaveResponseToServerToken(
     fo: t.fo,
     i: t.i,
     o: t.o,
+    p: t.p,
     s: t.s,
     sr: t.sr,
     t: t.t,
@@ -322,23 +424,37 @@ function mergeTokenChanges(
   tcs: _.Dictionary<SaveResponse<ServerToken>>,
   es: Array<SaveResponse<ServerEvent>>
 ): _.Dictionary<ServerToken> {
-    const tokens = clone(ts)
-    const keyedEvents = _(es).keyBy('pk').value()
-    _(tcs).each((t, id) => {
-      if (t.newStatus === 'deleted') {
-        delete tokens[id]
-      } else if (t.newStatus === 'inserted') {
-        tokens[t.newPk!] = serverTokenSaveResponseToServerToken(t, keyedEvents)
-      } else if (t.newStatus === 'updated') {
-        tokens[id] = serverTokenSaveResponseToServerToken(t, keyedEvents)
+  const tokens = clone(ts)
+  const keyedEvents = _(es).keyBy('pk').value()
+  _(tcs).each((t, id) => {
+    if (t.newStatus === 'deleted') {
+      delete tokens[id]
+    } else if (t.newStatus === 'inserted') {
+      tokens[t.newPk!] = serverTokenSaveResponseToServerToken(t, keyedEvents)
+    } else if (t.newStatus === 'updated') {
+      tokens[id] = serverTokenSaveResponseToServerToken(t, keyedEvents)
+    }
+  })
+  return tokens
+}
+
+function mergeTierChanges(
+  tiers: _.Dictionary<ServerTier>,
+  tiersUpdates: _.Dictionary<SaveResponse<ServerTier>>
+): _.Dictionary<ServerTier> {
+  return _(tiersUpdates).reduce((m, e, k, l) => {
+    if (e.newStatus !== 'deleted' && e.newStatus !== 'error') {
+      m[e.newPk || k] = {
+        tier_name: e.tier_name
       }
-    })
-    return tokens
+    }
+    return m
+  }, {} as _.Dictionary<ServerTier>)
 }
 
 function mergeEventChanges(
   es: ServerEvent[],
-  ecs: Array<SaveResponse<ServerEvent>>,
+  ecs: ServerEventSaveResponse[],
   ts: _.Dictionary<ServerToken>
 ): ServerEvent[] {
   const keyedEvents = _(clone(es)).keyBy('pk').value()
@@ -348,7 +464,7 @@ function mergeEventChanges(
       delete keyedEvents[e.pk]
     } else if (e.newStatus === 'inserted') {
       keyedEvents[e.newPk!] = serverEventSaveResponseToServerEvent(e)
-      console.log('inserted event', keyedEvents[e.newPk!], e.newPk)
+      // console.log('inserted event', keyedEvents[e.newPk!], e.newPk)
     } else if (e.newStatus === 'updated') {
       keyedEvents[e.pk] = serverEventSaveResponseToServerEvent(e)
     }
@@ -368,12 +484,15 @@ function mergeEventChanges(
   return _.toArray(keyedEvents)
 }
 
-export function updateServerTranscriptWithChanges(s: ServerTranscriptSaveResponse): ServerTranscript {
+// tslint:disable-next-line:max-line-length
+export function updateServerTranscriptWithChanges(st: ServerTranscript, ss: ServerTranscriptSaveResponse): ServerTranscript {
   if (serverTranscript !== null) {
-    const newTokens = mergeTokenChanges(serverTranscript.aTokens, s.aTokens, s.aEvents)
-    const newEvents = mergeEventChanges(serverTranscript.aEvents, s.aEvents, newTokens)
+    const newTokens = mergeTokenChanges(st.aTokens, ss.aTokens, ss.aEvents)
+    const newEvents = mergeEventChanges(st.aEvents, ss.aEvents, newTokens)
+    const newTiers = mergeTierChanges(st.aTiers, ss.aTiers)
     const x = {
-      ...s,
+      ...ss,
+      aTiers: newTiers,
       aTokens: newTokens,
       aEvents: newEvents
     }
@@ -384,25 +503,27 @@ export function updateServerTranscriptWithChanges(s: ServerTranscriptSaveRespons
   }
 }
 
-export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
-  const defaultTier = (() => {
-    if (
-      s.aTranskript === undefined ||
-      s.aTranskript.default_tier === null ||
-      s.aTranskript.default_tier === undefined
-    ) {
-      return 'text'
-    } else {
-      return s.aTranskript.default_tier
-    }
-  })()
+function maybeAddFragments(base: string, next?: string) {
+  if (next !== undefined && next !== '') {
+    const res = replaceLastOccurrence(base, next, '=')
+    console.log('added fragment', base, next, res)
+    return res
+  } else {
+    return base
+  }
+}
+
+export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenTierType): LocalTranscript {
   return _(s.aEvents)
+    .uniqBy(e => e.pk)
+    // sort, so the grouped events are in the correct order.
+    .sortBy(e => timeToSeconds(e.s))
     // group into events by startTime and endTime
     .groupBy((e) => e.s + '-' + e.e)
     // so we can access it as a list
     .toArray()
     // generate unified local events
-    .map((eG, iG, lG) => {
+    .map((eG: ServerEvent[], iG, lG) => {
       return {
         eventId: eG[0].pk,
         startTime: timeToSeconds(eG[0].s),
@@ -411,13 +532,14 @@ export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
           _.each(se.tid, (tokenIds, speakerKey) => {
             m[speakerKey] = {
               speakerEventTiers: _(eG).reduce((ts, e) => {
-                const x = _(e.event_tiers[speakerKey]).mapValues((t, tierId) => {
-                  ts[tierId] = {
+                _(e.event_tiers[speakerKey]).each((t, tierEventId) => {
+                  ts[t.ti] = {
+                    id: tierEventId,
                     type: 'freeText',
                     text: t.t
                   }
-                  return ts[tierId]
-                }).value()
+                  return ts[t.ti]
+                })
                 return ts
               }, {} as LocalTranscriptSpeakerEventTiers),
               speakerEventId: se.pk,
@@ -425,6 +547,7 @@ export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
                 if (s.aTokens[tokenId] === undefined) {
                   console.log('not found', tokenId, se)
                 }
+                const nextFragmentOfId = findNextFragmentOfId(tokenId, speakerKey, lG, iG, s.aTokens)
                 return {
                   id: tokenId,
                   fragmentOf: s.aTokens[tokenId].fo || null,
@@ -432,24 +555,21 @@ export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
                   order: s.aTokens[tokenId].tr,
                   tiers: {
                     text: {
-                      // replace fragment in current token,
-                      // if next token has a "fragment_of" marker
-                      text: (() => {
-                        const nextFragmentOfId = findNextFragmentOfId(tokenId, speakerKey, lG, iG, s.aTokens)
-                        if (nextFragmentOfId !== undefined) {
-                          return replaceLastOccurrence(s.aTokens[tokenId].t, s.aTokens[nextFragmentOfId].t, '=')
-                        } else {
-                          return s.aTokens[tokenId].t
-                        }
-                      })(),
+                      text: maybeAddFragments(
+                        s.aTokens[tokenId].t,
+                        nextFragmentOfId !== undefined ? s.aTokens[nextFragmentOfId].t : ''
+                      ),
                       type: defaultTier === 'text' ? s.aTokens[tokenId].tt : null
                     },
                     ortho: {
-                      text: s.aTokens[tokenId].o || '',
+                      text: maybeAddFragments(
+                        s.aTokens[tokenId].o || '',
+                        nextFragmentOfId !== undefined ? s.aTokens[nextFragmentOfId].o : ''
+                      ),
                       type: defaultTier === 'ortho' ? s.aTokens[tokenId].tt : null
                     },
                     phon: {
-                      text: (s.aTokens[tokenId] as any).p || '',
+                      text: s.aTokens[tokenId].p !== undefined ? s.aTokens[tokenId].p as string : '',
                       type: defaultTier === 'phon' ? s.aTokens[tokenId].tt : null
                     }
                   }
@@ -462,11 +582,12 @@ export function serverTranscriptToLocal(s: ServerTranscript): LocalTranscript {
       }
     })
     .orderBy(e => e.startTime)
+    .uniqBy(e => e.eventId)
     .value()
 }
 
 export async function getSurveys(): Promise<ServerSurvey[]> {
-  const x = await (await fetch(`${ eventStore.backEndUrl }/routes/einzelerhebungen`, {
+  const x = await (await fetch(`${ settings.backEndUrl }/routes/einzelerhebungen`, {
     credentials: 'include',
     method: 'GET',
     headers: {
@@ -482,7 +603,7 @@ export async function createEmptyTranscript(
   name: string,
   defaultTier: TokenTierType
 ): Promise<{error: string|null, transcript_id: ServerTranscriptId}> {
-  const res = await (await fetch(`${ eventStore.backEndUrl }/routes/transcript/create`, {
+  const res = await (await fetch(`${ settings.backEndUrl }/routes/transcript/create`, {
     credentials: 'include',
     method: 'POST',
     headers: {
@@ -502,11 +623,166 @@ export async function createEmptyTranscript(
   }
 }
 
-export async function getServerTranscripts(): Promise<{transcripts: ServerTranscriptListItem[]}> {
-  const res = await (await fetch(`${ eventStore.backEndUrl }/routes/transcripts`, {
+export function getLockedTokensFromServerTranscript(t: ServerTranscript): number[] {
+  if (t.aAntworten !== undefined) {
+    return _(t.aAntworten!).reduce((m = [], e) => {
+      // single token
+      if ('it' in e) {
+        return m.concat(e.it)
+      // token set or range
+      } else if ('its' in e && t.aTokenSets !== undefined) {
+        const ts = t.aTokenSets[e.its]
+        if (ts !== undefined) {
+          if ('t' in ts) {
+            // token set
+            return m.concat(ts.t)
+          } else {
+            // token range
+            return m.concat([ ts.ivt, ts.ibt ])
+          }
+        } else {
+          return m
+        }
+      } else {
+        return m
+      }
+    }, [] as number[])
+  } else {
+    return []
+  }
+}
+
+export async function getServerTranscripts(backEndUrl: string): Promise<{transcripts: ServerTranscriptListItem[]}> {
+  const res = await (await fetch(`${ backEndUrl }/routes/transcripts`, {
     credentials: 'include'
   })).json()
   return res
+}
+
+async function performSaveRequest(id: number, t: ServerTranscriptSaveRequest): Promise<ServerTranscriptSaveResponse> {
+  return await (
+    await fetch(`${ settings.backEndUrl }/routes/transcript/save/${ id }`, {
+    credentials: 'include',
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(t),
+  })).json() as ServerTranscriptSaveResponse
+}
+
+export async function convertToServerTranscript(es: LocalTranscriptEvent[]): Promise<ServerTranscript|null> {
+  if (serverTranscript !== null) {
+    return localTranscriptToServerTranscript(serverTranscript, es)
+  } else {
+    return null
+  }
+}
+
+function logServerResponse(req: ServerTranscriptSaveRequest, res: ServerTranscriptSaveResponse) {
+  console.log({
+    localChanges: _(req.aTokens).toArray().value(),
+    localDeletionsAndInserts: _(req.aTokens).toArray().filter((token) => {
+      return token.status === 'delete' || token.status === 'insert'
+    }).value(),
+    serverDeletionsAndErrorsAndInserts: _(res.aTokens).toArray().filter((token) => {
+      return token.newStatus === 'deleted' || token.newStatus === 'inserted' || token.newStatus === 'error'
+    }).value(),
+    groupedErrors: _(res.aTokens)
+      .toArray()
+      .filter(token => token.error !== undefined)
+      .groupBy(token => token.error)
+      .value()
+  })
+}
+
+// also changes metadata: tiers.
+export async function saveChangesToServer(es: LocalTranscriptEvent[]): Promise<LocalTranscriptEvent[]> {
+  // there’s no transcript or no id => throw
+  if ( serverTranscript === null || serverTranscript.aTranskript === undefined ) {
+    throw new Error('transcript id is undefined')
+  } else {
+    // it’s already on the server
+    if (serverTranscript.aTranskript.pk > -1) {
+      const t = await localTranscriptToServerSaveRequest(serverTranscript, es)
+      // console.log({ ServerTranscriptSaveRequest: t })
+      const serverChanges = await performSaveRequest(serverTranscript.aTranskript.pk, t)
+      // console.log({ serverChanges })
+      logServerResponse(t, serverChanges)
+      const updatedServerTranscript = updateServerTranscriptWithChanges(serverTranscript, serverChanges)
+      console.log({updatedServerTranscript})
+      const updatedLocalTranscript = serverTranscriptToLocal(
+        updatedServerTranscript,
+        eventStore.metadata.defaultTier || 'text'
+      )
+      // eventStore.events = updatedLocalTranscript
+      return updatedLocalTranscript
+      // console.log({ updatedServerTranscript, updatedLocalTranscript })
+    // it’s a new transcript
+    } else {
+      console.log({ serverTranscript })
+      const { transcript_id } = await createEmptyTranscript(
+        serverTranscript.aEinzelErhebung!.pk,
+        serverTranscript.aTranskript.n,
+        serverTranscript.aTranskript.default_tier!
+      )
+      console.log('created transcript with id', transcript_id)
+      const transcriptWithoutTokensAndEvents = {
+        ...serverTranscript,
+        aTranskript: {
+          ...serverTranscript.aTranskript,
+          pk: transcript_id
+        },
+        aTokens: {},
+        aEvents: []
+      }
+      const t = await localTranscriptToServerSaveRequest(transcriptWithoutTokensAndEvents, eventStore.events)
+      const serverChanges = await performSaveRequest(transcript_id, t)
+      logServerResponse(t, serverChanges)
+      const updatedServerTranscript = updateServerTranscriptWithChanges(transcriptWithoutTokensAndEvents, serverChanges)
+      console.log({ updatedServerTranscript })
+      const updatedLocalTranscript = serverTranscriptToLocal(
+        updatedServerTranscript,
+        eventStore.metadata.defaultTier || 'text'
+      )
+      console.log({ updatedLocalTranscript })
+      const { tiers } = getMetadataFromServerTranscript(serverTranscript)
+      eventStore.metadata.tiers = tiers
+      serverTranscript.aTranskript!.pk = transcript_id
+      // eventStore.events = updatedLocalTranscript
+      return updatedLocalTranscript
+    }
+  }
+}
+
+function appendTranscriptEventChunk(a: LocalTranscriptEvent[], b: LocalTranscriptEvent[]): LocalTranscriptEvent[] {
+  const lastOfPrevious = _(a).last()
+  const firstOfNext = _(b).first()
+  if (lastOfPrevious !== undefined && firstOfNext !== undefined) {
+    if (
+      // it’s at exactly the same time
+      lastOfPrevious.startTime === firstOfNext.startTime &&
+      lastOfPrevious.endTime === firstOfNext.endTime
+    ) {
+      // merge
+      const mergedEvent: LocalTranscriptEvent = {
+        ...lastOfPrevious,
+        speakerEvents: {
+          ...lastOfPrevious.speakerEvents,
+          ...firstOfNext.speakerEvents
+        }
+      }
+      // replace the lastOfPrevious & firstOfNext with the merged event
+      return _.initial(a).concat(mergedEvent).concat(_.tail(b))
+    } else {
+      // normal concatenation
+      return a.concat(b)
+    }
+  } else {
+    // normal concatenation
+    return a.concat(b)
+  }
 }
 
 export async function getTranscript(
@@ -518,15 +794,24 @@ export async function getTranscript(
 ): Promise<LocalTranscript> {
   try {
     // download transcript page
-    const res = await (await fetch(`${ eventStore.backEndUrl }/routes/transcript/${ id }/${ chunk }`, {
+    const res = await (await fetch(`${ settings.backEndUrl }/routes/transcript/${ id }/${ chunk }`, {
       credentials: 'include'
     })).json() as ServerTranscript
-    // when it’s the first page
+
+    // merge the chunk
+    mergeServerTranscript(res)
+
+    // when it’s the first page, get it’s metadata
     if (res.aNr === 0) {
       eventStore.metadata = getMetadataFromServerTranscript(res)
     }
-    // convert and concat
-    eventStore.events = buffer.concat(serverTranscriptToLocal(res))
+
+    // get and concat the locked tokens
+    eventStore.lockedTokens = eventStore.lockedTokens.concat(getLockedTokensFromServerTranscript(res))
+
+    const eventChunk = serverTranscriptToLocal(res, eventStore.metadata.defaultTier || 'text')
+    // update the store
+    eventStore.events = appendTranscriptEventChunk(eventStore.events, eventChunk)
     // progress callback with data
     if (onProgress !== undefined) {
       onProgress(res.aNr / (totalSteps || res.aTmNr || 10), eventStore.events, res)

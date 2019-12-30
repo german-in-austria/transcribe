@@ -3,7 +3,8 @@ var path = require('path')
 var webpack = require('webpack')
 var UglifyJsPlugin = require('uglifyjs-webpack-plugin')
 var CopyWebpackPlugin = require('copy-webpack-plugin')
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
+// const SentryWebpackPlugin = require('@sentry/webpack-plugin')
 var _ = require('lodash')
 
 module.exports = {
@@ -21,7 +22,13 @@ module.exports = {
         from: path.resolve(__dirname, "./index.html"),
         to: "index.html"
       }
-    ])
+    ]),
+    // new SentryWebpackPlugin({
+    //   include: '.',
+    //   ignoreFile: '.sentrycliignore',
+    //   ignore: ['node_modules', 'webpack.config.js'],
+    //   configFile: 'sentry.properties'
+    // })
   ],
   output: {
     path: path.resolve(__dirname, "./dist"),

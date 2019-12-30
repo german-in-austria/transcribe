@@ -8,19 +8,29 @@
       }"
     />
     <div
-      @mousedown="startDrag"
+      @mousedown.exact="startDrag"
+      @mousedown.shift="startSelection"
       ref="stage"
       class="play-head-stage"
       :style="{
         zIndex: inFront ? 1 : 'auto'
       }"
     />
+    <div
+      v-if="eventStore.userState.timeSelection.start !== null && eventStore.userState.timeSelection.end !== null"
+      :style="{
+        left: getSelectionLeft() * settings.pixelsPerSecond + 'px',
+        width: getSelectionLength() * settings.pixelsPerSecond + 'px'
+      }"
+      class="selection">
+      <div class="selection-length">{{ getSelectionLength().toFixed(2) }} sec</div>
+    </div>
   </div>
 </template>
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { eventStore, scrubAudio } from '../store/transcript'
+import { eventStore, scrubAudio, deselectEvents, toTime } from '../store/transcript'
 import audio from '../service/audio'
 import { easeInOutQuad, requestFrameAsync } from '../util'
 import settings from '../store/settings'
@@ -29,31 +39,20 @@ import eventBus from '../service/event-bus'
 @Component
 export default class PlayHead extends Vue {
 
-  @Prop() posX: number
-
   inFront = false
   audioStore = audio.store
   eventStore = eventStore
   left = 10
   settings = settings
-
-  // TODO: what’s that good for
-  @Watch('posX')
-  moveToPos(posX: number) {
-    this.left = this.posX
-  }
-
-  log(e: any) {
-    console.log(e)
-  }
+  toTime = toTime
 
   scrollToTime(t: number) {
     if (settings.lockPlayHead === true && eventStore.isPaused === false) {
       requestAnimationFrame(() => {
-        const sidebarWidth = settings.showDrawer === true ? 300 : 0
+        // should be dynamic
         const waveform = document.querySelector('.wave-form')!
         const playHeadLeft = Math.round(t * settings.pixelsPerSecond)
-        const viewPortLeft = playHeadLeft - (waveform.clientWidth - sidebarWidth) / 2
+        const viewPortLeft = playHeadLeft - waveform.clientWidth / 2
         waveform.scrollLeft = viewPortLeft
       })
     } else {
@@ -61,7 +60,7 @@ export default class PlayHead extends Vue {
     }
   }
 
-  // this should actually be in the 
+  // this should actually be in the waveform component
   animateScrollCatchUp(t: number) {
     // initially, the playhead is always locked.
     // it gets unlocked, when the user scrolls.
@@ -72,16 +71,15 @@ export default class PlayHead extends Vue {
     // the time it should take the scroller to
     // catch up to the playhead.
     const scrollCatchUpTime = 1
-    // geometry and time formulae
-    const sidebarWidth = settings.showDrawer === true ? 300 : 0
-    const startedTime = performance.now()
+    // geometry and time formulae.
+    // this should be dynamic
     const waveform = document.querySelector('.wave-form')!
-    const stageWidth = waveform.clientWidth - sidebarWidth
+    const stageWidth = waveform.clientWidth
     const wStart = waveform.scrollLeft
     const wTargetPosition = (t + scrollCatchUpTime) * settings.pixelsPerSecond - stageWidth / 2
     const wDistanceToCover = wTargetPosition - waveform.scrollLeft
-    eventBus.$on('updateTime', function catchUpListener(this: any) {
-      const timeElapsed = (performance.now() - startedTime) / 1000 * settings.playbackSpeed
+    eventBus.$on('updateTime', function catchUpListener(currentTime: number) {
+      const timeElapsed = currentTime - t
       // if playhead is still locked
       if (settings.lockPlayHead === true) {
         // catch up using quadratic ease in out
@@ -115,10 +113,40 @@ export default class PlayHead extends Vue {
   }
 
   startDrag(e: MouseEvent) {
+    eventStore.userState.timeSelection = { start: null, end: null }
+    deselectEvents()
     this.inFront = true
     scrubAudio(e.offsetX / settings.pixelsPerSecond)
     document.addEventListener('mousemove', this.drag)
     document.addEventListener('mouseup', this.endDrag)
+  }
+
+  getSelectionLeft() {
+    return Math.min(eventStore.userState.timeSelection.start || 0, eventStore.userState.timeSelection.end || 0)
+  }
+
+  getSelectionLength() {
+    return Math.abs((eventStore.userState.timeSelection.end || 0) - (eventStore.userState.timeSelection.start || 0))
+  }
+
+  startSelection(e: MouseEvent) {
+    deselectEvents()
+    this.inFront = true
+    eventStore.userState.timeSelection.start = e.offsetX / settings.pixelsPerSecond
+    document.addEventListener('mousemove', this.dragSelection)
+    document.addEventListener('mouseup', this.endSelection)
+  }
+
+  dragSelection(e: MouseEvent) {
+    // console.log(e.offsetX / settings.pixelsPerSecond, e)
+    eventStore.userState.timeSelection.end = e.offsetX / settings.pixelsPerSecond
+  }
+
+  endSelection(e: MouseEvent) {
+    this.inFront = false
+    eventStore.userState.timeSelection.end = e.offsetX / settings.pixelsPerSecond
+    document.removeEventListener('mousemove', this.dragSelection)
+    document.removeEventListener('mouseup', this.endSelection)
   }
 
   drag(e: MouseEvent) {
@@ -127,7 +155,7 @@ export default class PlayHead extends Vue {
 
   endDrag(e: MouseEvent) {
     this.inFront = false
-    this.left = e.layerX
+    this.left = e.offsetX
     document.removeEventListener('mousemove', this.drag)
     document.removeEventListener('mouseup', this.endDrag)
   }
@@ -153,4 +181,31 @@ export default class PlayHead extends Vue {
   right 0
   top 0
   height 300px
+
+.selection
+  overflow hidden
+  top 50px
+  bottom 60px
+  position absolute
+  background rgba(100, 149, 237, 0.2)
+  border 1px solid cornflowerblue
+  border-radius 8px
+  opacity 1
+  z-index 2
+  pointer-events none
+
+.selection-length
+  background cornflowerblue
+  color white
+  font-size 85%
+  text-align center
+  line-height 22px
+  height 22px
+  user-select none
+  overflow hidden
+  position absolute
+  top 0
+  border-bottom-right-radius 8px
+  margin 0 auto
+  padding 0 10px
 </style>
