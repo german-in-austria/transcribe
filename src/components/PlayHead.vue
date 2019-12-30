@@ -184,8 +184,8 @@ export default class PlayHead extends Vue {
 
 .selection
   overflow hidden
-  top 70px
-  bottom 50px
+  top 50px
+  bottom 60px
   position absolute
   background rgba(100, 149, 237, 0.2)
   border 1px solid cornflowerblue
@@ -197,15 +197,15 @@ export default class PlayHead extends Vue {
 .selection-length
   background cornflowerblue
   color white
-  font-size 90%
+  font-size 85%
   text-align center
   line-height 22px
   height 22px
   user-select none
   overflow hidden
   position absolute
-  bottom 0
+  top 0
+  border-bottom-right-radius 8px
   margin 0 auto
-  left 0
-  right 0
+  padding 0 10px
 </style>
