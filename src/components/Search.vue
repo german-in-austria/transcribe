@@ -78,9 +78,10 @@
     <v-list class="flex pb-0" style="flex: 1 0; overflow: hidden;" dense>
       <RecycleScroller
         class="scroller"
+        ref="resultScroller"
         :items="eventStore.searchResults"
         key-field="resultId"
-        :item-size="40">
+        :item-size="resultItemHeight">
         <template v-slot="{ item }">
           <v-list-tile
             @click="showEventIfExists(item.event)"
@@ -149,6 +150,7 @@ export default class Search extends Vue {
   eventStore = eventStore
   toTime = toTime
 
+  resultItemHeight = 40
   caseSensitive = false
   useRegEx = false
   showIpaKeyboard = false
@@ -359,17 +361,23 @@ export default class Search extends Vue {
     }
   }
 
-  async goToResult(e: LocalTranscriptEvent) {
+  scrollToSearchResult(e: LocalTranscriptEvent) {
+    const i = eventStore.searchResults.findIndex(r => r.event.eventId === e.eventId)
+    const offset = i * this.resultItemHeight
+    requestAnimationFrame(() => {
+      const s = this.$el.querySelector('.scroller')
+      if (s instanceof HTMLElement) {
+        s.scrollTop = offset
+      }
+    })
+  }
+
+  async goToResult(e: LocalTranscriptEvent|undefined) {
     if (e !== undefined) {
       scrollToTranscriptEvent(e)
       scrollToAudioEvent(e)
       selectEvent(e)
-      // await this.$nextTick()
-      // const s = this.$el.querySelector('.search-result-selected')
-      // console.log({ s})
-      // if (s instanceof HTMLElement) {
-      //   s.scrollIntoView({behavior: 'smooth', block: 'end', inline: 'nearest'})
-      // }
+      this.scrollToSearchResult(e)
     }
   }
   findNext() {
@@ -405,6 +413,7 @@ export default class Search extends Vue {
 
 .scroller
   height 100%
+  scroll-behavior smooth
 
 .outer
   position relative
