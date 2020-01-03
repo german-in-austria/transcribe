@@ -10,10 +10,11 @@
     "build:get-frequencies": "asc ./src/service/wasm/get-frequencies.ts -t ./src/service/wasm/module2.untouched.wat -b ./src/service/wasm/module2.untouched.wasm --validate --sourceMap --measure",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "NODE_ENV=development webpack-dev-server",
+    "dev-server": "nodemon --watch 'server/**/*.ts' --ignore 'server/**/*.spec.ts' --exec 'ts-node' --project server/tsconfig.json server/index.ts",
     "load-swagger": "curl \"$API_HOST/swagger.json\" > ./swagger.json && swagger-ts-client-generator < swagger.json > ./src/api/swagger.ts",
     "apitypes": "env $(cat env-dev.env) bash -c 'npm run load-swagger'",
     "vue-type-check": "vtc --workspace ./src --onlyTemplate",
-    "start": "node server/index.js"
+    "start": "ts-node server/index.ts"
   },
   "keywords": [],
   "author": {
@@ -57,6 +58,7 @@
     "localforage": "^1.7.3",
     "lodash": "^4.17.15",
     "peaks.js": "^0.9.7",
+    "peer": "^0.2.10",
     "peerjs": "^1.0.4",
     "promise-worker": "^2.0.0",
     "promise-worker-transferable": "^1.0.4",
@@ -65,6 +67,7 @@
     "simple-promise-queue": "^0.1.7",
     "source-map-loader": "^0.2.4",
     "tiny-csv": "^3.0.0",
+    "ts-node": "^8.5.4",
     "typed-emitter": "^0.2.0",
     "uglifyjs-webpack-plugin": "^1.1.4",
     "undo-manager": "^1.0.5",
@@ -92,7 +95,10 @@
   },
   "devDependencies": {
     "@sentry/webpack-plugin": "^1.9.3",
+    "@types/compression": "^1.0.1",
+    "@types/cookie-session": "^2.0.37",
     "@types/diff": "^3.5.2",
+    "@types/express": "^4.17.2",
     "@types/jszip": "^3.1.5",
     "@types/lodash-es": "^4.17.3",
     "@types/node": "^8.0.58",
@@ -103,6 +109,7 @@
     "assemblyscript": "github:AssemblyScript/assemblyscript",
     "css-loader": "^0.28.7",
     "node-sass": "^4.9.4",
+    "nodemon": "^2.0.2",
     "raw-loader": "^0.5.1",
     "sass-loader": "^6.0.6",
     "scss-loader": "0.0.1",
