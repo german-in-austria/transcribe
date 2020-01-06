@@ -409,6 +409,27 @@ const settings: Settings = {
 };
 
 (async () => {
+  await loadAndMergeLocalSettings()
+  updateLocalSettingsOnChange()
+})()
+
+function updateLocalSettingsOnChange() {
+  return new Vue({
+    data() {
+      return { settings }
+    },
+    watch: {
+      settings: {
+        deep: true,
+        handler: (newV: Settings) => {
+          window.requestIdleCallback(() => localForage.setItem('appSettings', stringifySettings(newV)))
+        }
+      }
+    }
+  })
+}
+
+async function loadAndMergeLocalSettings() {
   // tslint:disable-next-line:max-line-length
   const loadedSettings: SerializableSettings|undefined = JSON.parse(await (localForage.getItem('appSettings') as Promise<string>))
   if (loadedSettings !== undefined && loadedSettings !== null) {
@@ -430,23 +451,9 @@ const settings: Settings = {
       }
     })
   }
-})()
+}
 
-const vIn = new Vue({
-  data() {
-    return { settings }
-  },
-  watch: {
-    settings: {
-      deep: true,
-      handler: (newV: Settings) => {
-        window.requestIdleCallback(() => localForage.setItem('appSettings', stringifySettings(newV)))
-      }
-    }
-  }
-})
-
-export function stringifySettings(s: Settings): string {
+function stringifySettings(s: Settings): string {
   const serializedSettings: SerializableSettings = {
     ...s,
     keyboardShortcuts: _.mapValues(s.keyboardShortcuts, sk => ({ key: sk.key, modifier: sk.modifier }))
@@ -454,6 +461,6 @@ export function stringifySettings(s: Settings): string {
   return JSON.stringify(serializedSettings)
 }
 
-(window as any)._settings = settings
+// (window as any)._settings = settings
 
 export default settings
