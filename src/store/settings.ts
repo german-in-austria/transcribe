@@ -79,6 +79,7 @@ export interface Settings {
   useMonoWaveForm: boolean
   waveFormColors: string[]
   playEventOnAppend: boolean
+  scrollSpeed: 1
   showErrors: {
     eventGaps: boolean
     unknownTokenTypes: boolean
@@ -399,6 +400,7 @@ const settings: Settings = {
   useMonoWaveForm: false,
   waveFormColors: [ '#fb7676', '#6699CC' ],
   playEventOnAppend: true,
+  scrollSpeed: 1,
   showErrors: {
     eventGaps: true,
     unknownTokenTypes: true,
@@ -411,6 +413,12 @@ const settings: Settings = {
   updateLocalSettingsOnChange()
 })()
 
+function updateLocalSettings(s: Settings) {
+  return window.requestIdleCallback(() => localForage.setItem('appSettings', stringifySettings(s)))
+}
+
+const debouncedUpdateLocalSettings = _.debounce(updateLocalSettings, 500)
+
 function updateLocalSettingsOnChange() {
   return new Vue({
     data() {
@@ -420,7 +428,7 @@ function updateLocalSettingsOnChange() {
       settings: {
         deep: true,
         handler: (newV: Settings) => {
-          window.requestIdleCallback(() => localForage.setItem('appSettings', stringifySettings(newV)))
+          debouncedUpdateLocalSettings(newV)
         }
       }
     }

@@ -266,7 +266,7 @@ export default class TranscriptEditor extends Vue {
 
   scrollTranscriptBy(pixels: number, fast = false) {
     this.lastScrollLeft = this.innerLeft
-    this.setInnerLeft(this.innerLeft - pixels * (fast === true ? 2 : 1))
+    this.setInnerLeft(this.innerLeft - pixels * (fast === true ? 2 : 1) * settings.scrollSpeed)
     this.debouncedEmitScroll()
     this.throttledRenderer(this.innerLeft <= this.lastScrollLeft)
     this.lastScrollLeft = this.innerLeft
