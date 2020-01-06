@@ -3,6 +3,8 @@
     ref="input"
     v-text="value"
     contenteditable="true"
+    @keyup="emitCaretPos"
+    @mouseup="emitCaretPos"
     v-on="$listeners"
   />
 </template>
@@ -59,6 +61,14 @@ export default class Contenteditable extends Vue {
           selection.removeAllRanges()
           selection.addRange(range)
       }
+    }
+  }
+
+  emitCaretPos() {
+    const sel = document.getSelection()
+    if (sel !== null) {
+      const caretPos = sel.focusOffset
+      this.$emit('move-caret', caretPos)
     }
   }
 

@@ -5,6 +5,11 @@
       isMarkedWithFragment && 'has-next-fragment',
       settings.darkMode === false && 'theme--light'
     ]">
+    <div class="tag-tooltip" v-if="selectedToken !== null" :style="{position: 'absolute', left: tokenTooltipOffset + 'px'}">
+      <div>
+        {{ selectedToken !== null ? selectedToken.tiers[defaultTier].text : '' }}
+      </div>
+    </div>
     <div :class="['token-display', 'segment-text']">
       <span
         class="token"
@@ -49,6 +54,7 @@
       @copy.prevent="copyTokens"
       @cut.prevent="cutTokens"
       @paste.prevent="pasteTokens"
+      @move-caret="onMoveCaret"
       :id="`speaker_event_tier_${speaker}__${defaultTier}`"
       :value="segmentText"
       :style="textStyle"
@@ -89,7 +95,8 @@ import {
   clone,
   isEqualDeep,
   requestFrameAsync,
-  isUndoOrRedo
+  isUndoOrRedo,
+  getTextWidth
 } from '../util'
 
 import {
@@ -138,6 +145,8 @@ export default class SpeakerSegmentTranscript extends Vue {
   defaultTier = eventStore.metadata.defaultTier
   segmentText = this.localTokens ? this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ') : ''
   focused = false
+  selectedToken: LocalTranscriptToken|null = null
+  tokenTooltipOffset = 0
 
   settings = settings
   playEvent = playEvent
@@ -156,6 +165,29 @@ export default class SpeakerSegmentTranscript extends Vue {
     eventBus.$off('updateSpeakerEventText', this.updateTextFromEventBus)
   }
 
+  onMoveCaret(pos: number) {
+    const i = this.getTokenIndexByCharacterOffset(pos)
+    if (i !== -1) {
+      this.selectedToken = this.localTokens[i]
+      const textBefore = this.localTokens.slice(0, i).map(t => t.tiers[this.defaultTier].text).join(' ')
+      this.tokenTooltipOffset = getTextWidth(textBefore, 14, 'HKGrotesk')
+    }
+  }
+
+  // TODO: this could be moved to the transcript store
+  getTokenIndexByCharacterOffset(offset: number): number {
+    let currentStart = 0
+    return this.localTokens.findIndex((e, i) => {
+      const currentEnd = currentStart + e.tiers[this.defaultTier].text.length
+      if (offset >= currentStart && offset <= currentEnd) {
+        return true
+      } else {
+        currentStart = currentEnd + 1
+        return false
+      }
+    })
+  }
+
   updateTextFromEventBus({eventId, speakerId, text}: { eventId: string, speakerId: string, text: string }) {
     if (Number(eventId) === this.event.eventId && speakerId === this.speaker) {
       this.segmentText = text.replace(/\s/g, ' ')
@@ -165,6 +197,7 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   onBlurEvent() {
     eventStore.userState.editingTranscriptEvent = null
+    this.selectedToken = null
     this.focused = false
     if (settings.autoCorrectDelimiterSpace === true) {
       if (this.event.speakerEvents[this.speaker] !== undefined) {
@@ -727,4 +760,17 @@ export default class SpeakerSegmentTranscript extends Vue {
 
 .has-next-fragment
   text-align right
+
+.tag-tooltip
+  box-shadow 0 5px 5px -3px rgba(0,0,0,.2), 0 8px 10px 1px rgba(0,0,0,.14), 0 3px 14px 2px rgba(0,0,0,.12)
+  z-index 99
+  max-height 150px
+  overflow-y auto
+  background rgba(240,240,240,.5)
+  border 1px solid #ddd
+  color #333
+  border-radius 4px
+  backdrop-filter blur(20px)
+  transform translateY(-100%)
+  transition left .2s
 </style>
