@@ -47,8 +47,6 @@ type SerializableSettings = Omit<Settings, 'keyboardShortcuts'> & {
   }
 }
 
-type yo = Omit<Settings, 'keyboardShortcuts'>
-
 export type SidebarItem = null|'edit'|'history'|'warnings'|'search'|'bookmarks'
 
 export interface Settings {
@@ -433,8 +431,8 @@ async function loadAndMergeLocalSettings() {
   // tslint:disable-next-line:max-line-length
   const loadedSettings: SerializableSettings|undefined = JSON.parse(await (localForage.getItem('appSettings') as Promise<string>))
   if (loadedSettings !== undefined && loadedSettings !== null) {
-    _(loadedSettings).forEach((v, k) => {
-      if (k === 'keyboardShortcuts') {
+    _(loadedSettings).forEach((setting, settingKey) => {
+      if (settingKey === 'keyboardShortcuts') {
         settings.keyboardShortcuts = _.mapValues(settings.keyboardShortcuts, (v, k) => {
           if (loadedSettings.keyboardShortcuts[k] !== undefined) {
             return {
@@ -446,8 +444,8 @@ async function loadAndMergeLocalSettings() {
             return v
           }
         })
-      } else if (k in settings) {
-        (settings as any)[k] = v
+      } else if (settingKey in settings) {
+        (settings as any)[settingKey] = setting
       }
     })
   }
