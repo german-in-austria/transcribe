@@ -170,7 +170,7 @@ export default class SpeakerSegmentTranscript extends Vue {
     if (i !== -1) {
       this.selectedToken = this.localTokens[i]
       const textBefore = this.localTokens.slice(0, i).map(t => t.tiers[this.defaultTier].text).join(' ')
-      this.tokenTooltipOffset = getTextWidth(textBefore, 14, 'HKGrotesk')
+      this.tokenTooltipOffset = getTextWidth(textBefore + ' ', 14, 'HKGrotesk')
     }
   }
 
