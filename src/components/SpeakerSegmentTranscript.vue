@@ -6,9 +6,10 @@
       settings.darkMode === false && 'theme--light'
     ]">
     <div class="tag-tooltip" v-if="selectedToken !== null" :style="{position: 'absolute', left: tokenTooltipOffset + 'px'}">
-      <div>
+      <!-- <div>
         {{ selectedToken !== null ? selectedToken.tiers[defaultTier].text : '' }}
-      </div>
+      </div> -->
+      <tagsystem :tagsData="tagsData" :tags="[]" :http="http" mode="edit" />
     </div>
     <div :class="['token-display', 'segment-text']">
       <span
@@ -90,6 +91,9 @@
 import contenteditableDirective from 'vue-contenteditable-directive'
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings, { tokenTypesPresets } from '../store/settings'
+import * as tagsystem from '../lib/tagsystemVUE/src/tagsystemIndex'
+
+console.log({ tagsystem })
 
 import {
   clone,
@@ -128,7 +132,8 @@ import { computeTokenTypesForEvents } from '../service/token-types'
 
 @Component({
   components: {
-    contenteditable
+    contenteditable,
+    tagsystem: tagsystem.TagsystemVue
   }
 })
 export default class SpeakerSegmentTranscript extends Vue {
@@ -155,6 +160,28 @@ export default class SpeakerSegmentTranscript extends Vue {
   debouncedUpdateTokenTier = _.debounce(this.updateTokenTier, 300)
   debouncedUpdateEventTier = _.debounce(this.updateEventTier, 300)
   debouncedCommitEvent = _.debounce(this.commitEvent, 300)
+
+  // TAGSYSTEM
+
+  http = {
+    post(url: string, payload: any) {
+      return fetch(settings.backEndUrl + url, {
+        credentials: 'include',
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+    }
+  }
+
+  tagsData = {
+    data: new tagsystem.TagsystemObject.TagsystemBase(this.http)
+  }
+
+  // END TAGSYSTEM
 
   mounted() {
     // tslint:disable-next-line:max-line-length

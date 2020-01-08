@@ -1,0 +1,3 @@
+[submodule "src/lib/tagsystemVUE"]
+	path = src/lib/tagsystemVUE
+	url = https://github.com/german-in-austria/tagsystemVUE.git
