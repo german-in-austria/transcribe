@@ -174,7 +174,7 @@ export default class Waveform extends Vue {
   // state
   disabled = false
   loading = false
-  scaleFactorY = .85
+  scaleFactorY = .75
   scaleFactorX = 1
   overviewHeight = 60
   visibleSeconds: number[] = []
