@@ -13,7 +13,7 @@
         :style="{ color: useRegEx && !isValidRegex ? 'red' : undefined }"
         @keydown.enter.exact.stop="findNext"
         @keydown.enter.shift.exact.stop="findPrevious"
-        @input="(e) => handleSearch(e.target.value)"
+        @input="(e) => { eventStore.searchTerm = e.target.value; debouncedHandleSearch(e.target.value) }"
         @focus="onFocus"
         @blur="onBlur"
         placeholder="Search…"/>
@@ -158,6 +158,8 @@ export default class Search extends Vue {
   searchResultEventCounter = 0
   isEventSelected = isEventSelected
   playEvent = playEvent
+
+  debouncedHandleSearch = _.debounce(this.handleSearch, 200)
 
   mounted() {
     eventBus.$on('focusSearch', () => {
@@ -328,7 +330,6 @@ export default class Search extends Vue {
   }
 
   handleSearch(term: string) {
-    eventStore.searchTerm = term
     if (eventStore.searchTerm === '') {
       eventStore.searchResults = []
     } else {
