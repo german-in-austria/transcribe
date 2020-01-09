@@ -38,6 +38,10 @@ export default class Scrollbar extends Vue {
   isDragging = false
 
   mounted() {
+    this.listenToEvents(this.updateOn)
+  }
+
+  listenToEvents(es: BusEvent|BusEvent[]) {
     if (Array.isArray(this.updateOn)) {
       this.updateOn.forEach((e) => EventBus.$on(e, this.moveThumbToTime))
     } else {
@@ -45,12 +49,16 @@ export default class Scrollbar extends Vue {
     }
   }
 
-  beforeDestroy() {
+  unlisten(es: BusEvent|BusEvent[]) {
     if (Array.isArray(this.updateOn)) {
       this.updateOn.forEach((e) => EventBus.$off(e, this.moveThumbToTime))
     } else {
       EventBus.$off(this.updateOn, this.moveThumbToTime)
     }
+  }
+
+  beforeDestroy() {
+    this.unlisten(this.updateOn)
   }
 
   async getOffsets(x: number) {
