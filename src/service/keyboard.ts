@@ -341,7 +341,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         const eventId = e.getAttribute('data-event-id')
         if (speakerId !== null && eventId !== null) {
           // tslint:disable-next-line:max-line-length
-          const [ left, right ] = [ (s as any).baseOffset, (s as any).extentOffset ].sort()
+          const [ left, right ] = [ (s as any).baseOffset, (s as any).extentOffset ].sort((a, b) => a - b)
           const oldText = e.innerText
           const leftPart = oldText.substr(0, left)
           const rightPart = oldText.substr(right)

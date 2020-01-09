@@ -129,7 +129,7 @@ export function unserializeTokenTiers(tokens: string): Array<Pastable<LocalTrans
 export function collectTokensViaOffsets(
   tokens: LocalTranscriptToken[], start: number, end: number): Array<Pastable<LocalTranscriptToken>> {
   // start and end are not necessarily from left to right
-  const [left, right] = [start, end].sort()
+  const [left, right] = [start, end].sort((a, b) => a - b)
   // init cursor
   let cursor = 0
   // reduce to relevant tokens and mark partiality
@@ -140,7 +140,6 @@ export function collectTokensViaOffsets(
     // move cursor to the end of the token and account for whitespace
     cursor = tokenEnd + 1
     // decide whether it’s in the range
-    console.log({ tokenStart, tokenEnd, cursor, t: e.tiers.ortho.text })
     if (left <= tokenStart && right >= tokenEnd) {
       // token is fully in collection range, not partial
       return m.concat({ ...e, partial: false, index: i })

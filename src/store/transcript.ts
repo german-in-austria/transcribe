@@ -756,7 +756,7 @@ export function shiftCharsAcrossEvents(
   end: number,
   direction: 1|-1
 ): HistoryEventAction {
-  const [ left, right ] = [ start, end ].sort()
+  const [ left, right ] = [ start, end ].sort((a, b) => a - b)
   const i = findEventIndexById(eventId)
   const e = eventStore.events[ i ]
   const targetE = eventStore.events[ i + direction ]
@@ -805,7 +805,10 @@ export function splitEvent(event: LocalTranscriptEvent, splitTime: number): Hist
     ...event,
     speakerEvents: {
       ..._(event.speakerEvents).mapValues(se => {
-        return { ...se, tokens: splitTokensAtFactor(se.tokens, cutAtProgressFactor)[0] }
+        return {
+          ...se,
+          tokens: splitTokensAtFactor(se.tokens, cutAtProgressFactor)[0]
+        }
       }).value()
     },
     endTime: event.startTime + splitTime
@@ -841,7 +844,7 @@ export function splitEventAtChar(
   start: number,
   end: number
 ): HistoryEventAction[]  {
-  const [ left, right ] = [start, end].sort()
+  const [ left, right ] = [start, end].sort((a, b) => a - b)
   const i = findEventIndexById(eventId)
   // event exists
   if (i !== -1) {
@@ -1032,7 +1035,7 @@ export async function playRange(start: number, end: number) {
   if (audio.store.uint8Buffer.byteLength === 0) {
     console.log('can’t play, no buffer loaded')
   } else {
-    const [ left, right ] = [ start, end ].sort()
+    const [ left, right ] = [ start, end ].sort((a, b) => a - b)
     const buffer = await audio.decodeBufferTimeSlice(left, right, audio.store.uint8Buffer.buffer)
     if (buffer !== undefined) {
       requestAnimationFrame(() => {
