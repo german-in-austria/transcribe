@@ -437,7 +437,7 @@ export function hasEventTiers(se: LocalTranscriptSpeakerEvent): boolean {
 }
 
 export function hasTokens(se: LocalTranscriptSpeakerEvent): boolean {
-  return se.tokens.length > 0 && se.tokens[0].tiers[eventStore.metadata.defaultTier].text.trim() !== ''
+  return se.tokens.length > 0 && se.tokens.map(t => t.tiers[eventStore.metadata.defaultTier].text).join('').trim() !== ''
 }
 
 export function updateSpeakerEvent(
@@ -450,6 +450,7 @@ export function updateSpeakerEvent(
   const isNew = oldEvent.speakerEvents[speakerId] === undefined
   // tslint:disable-next-line:max-line-length
   const deletedSpeakerId = !hasTokens(event.speakerEvents[speakerId]) && !hasEventTiers(event.speakerEvents[speakerId]) ? speakerId : undefined
+  console.log({deletedSpeakerId})
   const tokenCountDifference = isNew ? tokens.length : tokens.length - oldEvent.speakerEvents[speakerId].tokens.length
   const speakerEvents = _({
     // merge the new speaker
@@ -757,6 +758,8 @@ export function shiftCharsAcrossEvents(
   direction: 1|-1
 ): HistoryEventAction {
   const [ left, right ] = [ start, end ].sort((a, b) => a - b)
+  console.log('left right', left, right)
+  console.log('start end', start, end)
   const i = findEventIndexById(eventId)
   const e = eventStore.events[ i ]
   const targetE = eventStore.events[ i + direction ]
@@ -765,31 +768,39 @@ export function shiftCharsAcrossEvents(
     const ts = e.speakerEvents[speakerId].tokens
     const text = getTextFromTokens(ts, eventStore.metadata.defaultTier)
     // console.log({ ts, text, e, targetE })
-    return updateSpeakerEvents([ e, targetE ], speakerId, [
+    const sourceTokens = collectTokensViaOffsets(
+      e.speakerEvents[speakerId].tokens,
+      //                 keep right  : keep left
+      direction === -1 ? right       : 0,
+      direction === -1 ? text.length : left
+    )
+    const targetTokens = (() => {
+      // append
+      if (direction === -1) {
+        return [
+          ...targetE.speakerEvents[speakerId] ? targetE.speakerEvents[speakerId].tokens : [],
+          ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, 0, right)
+        ]
+      // prepend
+      } else {
+        return [
+          ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, left, text.length),
+          ...targetE.speakerEvents[speakerId] ? targetE.speakerEvents[speakerId].tokens : [],
+        ]
+      }
+    })()
+    console.log('sourceTokens', sourceTokens.map(t => t.tiers[eventStore.metadata.defaultTier].text))
+    console.log('targetTokens', targetTokens.map(t => t.tiers[eventStore.metadata.defaultTier].text))
+    console.log(clone(e))
+    console.log(clone(targetE))
+    const historyEvent = updateSpeakerEvents([ e, targetE ], speakerId, [
       // changed source event
-      collectTokensViaOffsets(
-        e.speakerEvents[speakerId].tokens,
-        //                 keep right  : keep left
-        direction === -1 ? right       : 0,
-        direction === -1 ? text.length : left
-      ),
+      sourceTokens,
       // changed target event
-      (() => {
-        // append
-        if (direction === -1) {
-          return [
-            ...targetE.speakerEvents[speakerId] ? targetE.speakerEvents[speakerId].tokens : [],
-            ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, 0, right)
-          ]
-        // prepend
-        } else {
-          return [
-            ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, left, text.length),
-            ...targetE.speakerEvents[speakerId] ? targetE.speakerEvents[speakerId].tokens : [],
-          ]
-        }
-      })()
+      targetTokens
     ])
+    console.log(historyEvent)
+    return historyEvent
   } else {
     throw new Error('Move tokens: source or target event not found.')
   }

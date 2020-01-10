@@ -9,6 +9,9 @@
 .text-light{
   font-weight: 300;
 }
+.text-lowercase{
+  text-transform: lowercase !important;
+}
 .text-uppercase{
   text-transform: uppercase;
   letter-spacing: .2em !important;

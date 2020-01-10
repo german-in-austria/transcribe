@@ -10,7 +10,7 @@ import {
   LocalTranscriptSpeakerEventTiers,
   TokenTierType
 } from '../store/transcript'
-import { clone } from '../util/index'
+import { clone, getTextWidth } from '../util/index'
 import serverTranscriptDiff from './backend-server-transcript-diff.worker'
 import settings from '../store/settings'
 
@@ -553,6 +553,10 @@ export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenT
                   fragmentOf: s.aTokens[tokenId].fo || null,
                   sentenceId: s.aTokens[tokenId].s || null,
                   order: s.aTokens[tokenId].tr,
+                  // TODO: proposal:
+                  // calculate the width ahead of time
+                  // and use that for virtual scrolling
+                  // width: getTextWidth(s.aTokens[tokenId].o!, 14, 'HKGrotesk'),
                   tiers: {
                     text: {
                       text: maybeAddFragments(
