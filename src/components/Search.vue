@@ -97,11 +97,14 @@
     </v-list>
     <v-flex class="pl-3 pr-3" shrink>
       <v-divider />
-      <div :class="['small grey--text text-xs-center mb-3 mt-3', !settings.darkMode && 'text--darken-2' ]">
-        <span>
+      <v-layout>
+        <v-flex :class="['small grey--text text-xs-center mb-3 mt-3', !settings.darkMode && 'text--darken-2' ]">
           {{ eventStore.searchResults.length }} results in {{ searchResultEventCounter }} events
-        </span>
-      </div>
+        </v-flex>
+        <v-flex class="text-xs-right">
+          <v-btn @click="exportResultsExcel(eventStore.searchResults)" class="elevation-0 text-lowercase mt-2" small>export</v-btn>
+        </v-flex>
+      </v-layout>
     </v-flex>
   </v-layout>
 </template>
@@ -207,6 +210,18 @@ export default class Search extends Vue {
       scrollToAudioEvent(e)
       scrollToTranscriptEvent(e)
     }
+  }
+
+  async exportResultsExcel(ress: SearchResult[]) {
+    const rows = ress.map(r => {
+      return {
+        transcript_title: eventStore.metadata.transcriptName,
+        transcript_setting: '',
+        speaker_name: eventStore.metadata.speakers[Number(r.speakerId)].k,
+        tier_name: r.tierId,
+        // matched_token: getToken
+      }
+    })
   }
 
   get selectedResultIndex(): number|null {
