@@ -244,6 +244,7 @@ export default class Search extends Vue {
         transcript_setting: '',
         speaker_name: eventStore.metadata.speakers[Number(res.speakerId)].k,
         tier_name: res.tierId,
+        // TODO: move to the newer typescript with optional "?". this sux.
         // tslint:disable-next-line:max-line-length
         matched_token: maybe(res.event.speakerEvents[res.speakerId].tokens[tokenIndex].tiers[res.tierId as TokenTierType]).text,
         left_context: prev !== undefined ? getTextFromTier(prev, res.tierId, res.speakerId) : '',
