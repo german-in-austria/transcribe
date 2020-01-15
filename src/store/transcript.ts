@@ -13,7 +13,6 @@ import { collectTokensViaOffsets } from '../service/copy-paste'
 import { eachFrom } from '../util'
 
 import {
-  ServerTranscriptListItem,
   ServerTranscriptInformant,
   ServerTranscriptTokenTypes,
 } from '../service/backend-server'
@@ -236,8 +235,49 @@ export function tokenize(s: string): string[] {
     .filter(t => t !== '')
 }
 
+export function isTokenTier(tier: string): tier is TokenTierType {
+  return ['ortho', 'text', 'phon'].indexOf(tier) > -1
+}
+
+export function speakerEventHasTier(e: LocalTranscriptEvent, speaker: string, tier: string): boolean {
+  return isTokenTier(tier) ||
+    e.speakerEvents[speaker] !== undefined &&
+    e.speakerEvents[speaker].speakerEventTiers[tier] !== undefined
+}
+
+export function eventHasSpeaker(e: LocalTranscriptEvent, speaker: string): boolean {
+  return e.speakerEvents[speaker] !== undefined
+}
+
+export function getTextFromTier(e: LocalTranscriptEvent, tier: string, speaker: string): string {
+  if (eventHasSpeaker(e, speaker)) {
+    if (isTokenTier(tier)) {
+      return getTextFromTokens(e.speakerEvents[speaker].tokens, tier)
+    } else if (speakerEventHasTier(e, speaker, tier)) {
+      return e.speakerEvents[speaker].speakerEventTiers[tier].text
+    } else {
+      return ''
+    }
+  } else {
+    return ''
+  }
+}
+
 export function getTextFromTokens(ts: LocalTranscriptToken[], defaultTier: TokenTierType): string {
   return ts.map(t => t.tiers[defaultTier].text).join(' ')
+}
+
+export function getTokenIndexByCharacterOffset(tokens: LocalTranscriptToken[], offset: number): number {
+  let currentStart = 0
+  return tokens.findIndex(e => {
+    const currentEnd = currentStart + e.tiers[eventStore.metadata.defaultTier].text.length
+    if (offset >= currentStart && offset <= currentEnd) {
+      return true
+    } else {
+      currentStart = currentEnd + 1
+      return false
+    }
+  })
 }
 
 export function selectSearchResult(r: SearchResult) {
@@ -929,6 +969,17 @@ export function findEventIndexAt(seconds: number): number {
 export function findPreviousSpeakerEvent(speaker: string, eventId: number): number {
   const i = findEventIndexById(eventId)
   return _(eventStore.events).findLastIndex((e, eventIndex) => eventIndex < i && e.speakerEvents[speaker] !== undefined)
+}
+
+export function findNextSpeakerEvent(speaker: string, eventId: number): number {
+  const i = findEventIndexById(eventId)
+  return _(eventStore.events).findIndex((e, eventIndex) => eventIndex > i && e.speakerEvents[speaker] !== undefined)
+}
+
+export function getNextEvent(id: number): LocalTranscriptEvent|undefined {
+  const sorted = sortEvents(eventStore.events)
+  const index = sorted.findIndex(e => e.eventId === id) + 1
+  return sorted[index]
 }
 
 export function getPreviousEvent(id: number): LocalTranscriptEvent|undefined {

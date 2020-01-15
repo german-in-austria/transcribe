@@ -102,7 +102,13 @@
           {{ eventStore.searchResults.length }} results in {{ searchResultEventCounter }} events
         </v-flex>
         <v-flex class="text-xs-right">
-          <v-btn @click="exportResultsExcel(eventStore.searchResults)" class="elevation-0 text-lowercase mt-2" small>export</v-btn>
+          <v-btn
+            @click="exportResultsExcel(eventStore.searchResults)"
+            :disabled="eventStore.searchResults.length === 0"
+            class="elevation-0 text-lowercase mt-2"
+            small>
+            export
+          </v-btn>
         </v-flex>
       </v-layout>
     </v-flex>
@@ -135,8 +141,23 @@ import {
   LocalTranscriptTier,
   SearchResult,
   getSelectedEvent,
-  LocalTranscriptSpeakers
+  LocalTranscriptSpeakers,
+  getTokenIndexByCharacterOffset,
+  getPreviousEvent,
+  getTextFromTokens,
+  findPreviousSpeakerEvent,
+  findNextSpeakerEvent,
+  getNextEvent,
+  getTextFromTier
 } from '../store/transcript'
+
+function maybe<T>(a: T): T|any {
+  if (a === undefined) {
+    return {} as any
+  } else {
+    return a
+  }
+}
 
 import * as history from '../store/history'
 
@@ -213,15 +234,24 @@ export default class Search extends Vue {
   }
 
   async exportResultsExcel(ress: SearchResult[]) {
-    const rows = ress.map(r => {
+    const rows = ress.map(res => {
+      const tokenIndex = getTokenIndexByCharacterOffset(res.event.speakerEvents[res.speakerId].tokens, res.offset)
+      const prev = getPreviousEvent(res.event.eventId)
+      const next = getNextEvent(res.event.eventId)
+      console.log('res.tierId', res.tierId)
       return {
-        transcript_title: eventStore.metadata.transcriptName,
+        transcript_name: eventStore.metadata.transcriptName,
         transcript_setting: '',
-        speaker_name: eventStore.metadata.speakers[Number(r.speakerId)].k,
-        tier_name: r.tierId,
-        // matched_token: getToken
+        speaker_name: eventStore.metadata.speakers[Number(res.speakerId)].k,
+        tier_name: res.tierId,
+        // tslint:disable-next-line:max-line-length
+        matched_token: maybe(res.event.speakerEvents[res.speakerId].tokens[tokenIndex].tiers[res.tierId as TokenTierType]).text,
+        left_context: prev !== undefined ? getTextFromTier(prev, res.tierId, res.speakerId) : '',
+        content: res.text,
+        right_context: next !== undefined ? getTextFromTier(next, res.tierId, res.speakerId) : ''
       }
     })
+    console.log({rows})
   }
 
   get selectedResultIndex(): number|null {
