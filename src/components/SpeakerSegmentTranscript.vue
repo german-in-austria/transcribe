@@ -168,7 +168,7 @@ export default class SpeakerSegmentTranscript extends Vue {
     this.focused = false
     if (settings.autoCorrectDelimiterSpace === true) {
       if (this.event.speakerEvents[this.speaker] !== undefined) {
-        const text = this.event.speakerEvents[this.speaker].tokens.map(t => t.tiers[this.defaultTier].text).join(' ')
+        const text = this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ')
         const replacedText = text.replace(/\b(\/?[\.|\?|\,|\!])\B/g, ' $1')
         this.updateDefaultTier(replacedText)
       }
