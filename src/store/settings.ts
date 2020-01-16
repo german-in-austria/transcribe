@@ -370,6 +370,14 @@ export function decreaseVolume(by: number) {
   setPlaybackVolume(settings.playbackVolume - by)
 }
 
+export const defaultPixelsPerSecond = 150
+export const minPixelsPerSecond = 30
+export const maxPixelsPerSecond = 1000
+
+export function setPixelsPerSecond(newVal: number) {
+  settings.pixelsPerSecond = setNumberInBounds(newVal, minPixelsPerSecond, maxPixelsPerSecond)
+}
+
 const settings: Settings = {
   backEndUrl: localStorage.getItem('backEndUrl') || null,
   activeSidebarItem: 'edit',
@@ -387,7 +395,7 @@ const settings: Settings = {
   maxEventGap: 1,
   moveEventTimeByInterval: 0.2,
   moveEventTimeByIntervalSmall: 0.01,
-  pixelsPerSecond: 150,
+  pixelsPerSecond: defaultPixelsPerSecond,
   playbackSpeed: 1,
   playbackVolume: 1,
   showDrawer: false,

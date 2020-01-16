@@ -119,7 +119,7 @@ import scrollLockButton from './ScrollLockButton.vue'
 import scrollbar from './Scrollbar.vue'
 import segmentBox from './SegmentBox.vue'
 
-import settings from '../store/settings'
+import settings, { minPixelsPerSecond, maxPixelsPerSecond } from '../store/settings'
 import { undoable } from '../store/history'
 import audio from '../service/audio'
 import * as util from '../util'
@@ -158,9 +158,7 @@ export default class Waveform extends Vue {
   @Prop({ default: 300 }) height: number
 
   // config
-  zoomLevels = [.25, .5, .75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4]
   drawDistance = 5000 // pixels in both directions from the center of the viewport (left and right)
-  initialPixelsPerSecond = settings.pixelsPerSecond // this the initial real zoom value
   overviewSvgWidth = 1500 // width of the overview waveform in pixels
 
   // bind stores
@@ -175,7 +173,7 @@ export default class Waveform extends Vue {
   disabled = false
   loading = false
   scaleFactorY = .75
-  scaleFactorX = 1
+
   overviewHeight = 60
   visibleSeconds: number[] = []
   visibleEvents: LocalTranscriptEvent[] = []
@@ -185,7 +183,7 @@ export default class Waveform extends Vue {
   scrollTimeout = null
 
   temporaryZoomOrigin = 0
-  temporaryScaleX = 1
+  temporaryPixelsPerSecond = settings.pixelsPerSecond
 
   hideSegments = false
   hideSecondMarkers = false
@@ -260,16 +258,37 @@ export default class Waveform extends Vue {
     e.preventDefault()
     const el = (this.$el as HTMLElement).querySelector('.wave-form-inner')
     const c = this.$refs.svgContainer
-    const newVirtualTempScaleX = this.temporaryScaleX - e.deltaY * 0.02
     if (el instanceof HTMLElement && c instanceof HTMLElement) {
+      this.hideSegments = true
+      this.hideSecondMarkers = true
       this.temporaryZoomOrigin = e.x + c.scrollLeft
-      if (
-        this.scaleFactorX * newVirtualTempScaleX >= .25 &&
-        this.scaleFactorX * newVirtualTempScaleX <= 4
-      ) {
-        this.hideSegments = true
-        this.hideSecondMarkers = true
-        this.temporaryScaleX = newVirtualTempScaleX
+      this.temporaryPixelsPerSecond = Math.round(util.setNumberInBounds(
+        this.temporaryPixelsPerSecond - e.deltaY,
+        minPixelsPerSecond,
+        maxPixelsPerSecond
+      ))
+    }
+  }
+
+  zoom(e: WheelEvent) {
+    if (e.ctrlKey === true) {
+      // if it should transform by some factor.
+      if (this.temporaryPixelsPerSecond !== settings.pixelsPerSecond) {
+        // get the target time at the current mouse pos
+        const el = (this.$refs.svgContainer as HTMLElement)
+        const oldTargetTime = (el.scrollLeft + e.x) / settings.pixelsPerSecond
+        // reset state
+        this.temporaryZoomOrigin = 0
+        this.hideSegments = false
+        this.hideSecondMarkers = false
+        // set actual pixel per second value via scale factor
+        settings.pixelsPerSecond = Math.round(this.temporaryPixelsPerSecond)
+        this.totalWidth = this.audioLength * settings.pixelsPerSecond
+        // scroll to the target time (scrollLeft)
+        this.scrollToSecond(oldTargetTime - e.x / settings.pixelsPerSecond)
+        // rerender
+        this.clearRenderCache()
+        this.doMaybeRerender()
       }
     }
   }
@@ -453,38 +472,12 @@ export default class Waveform extends Vue {
     this.clearRenderCache()
   }
 
-  zoom(e: WheelEvent) {
-    if (e.ctrlKey === true) {
-      // if it should transform by some factor.
-      if (this.temporaryScaleX !== 1) {
-        // compute the new scale factor
-        this.scaleFactorX = this.scaleFactorX * this.temporaryScaleX
-        // get the target time at the current mouse pos
-        const el = (this.$refs.svgContainer as HTMLElement)
-        const oldTargetTime = (el.scrollLeft + e.x) / settings.pixelsPerSecond
-        // reset state
-        this.temporaryScaleX = 1
-        this.temporaryZoomOrigin = 0
-        this.hideSegments = false
-        this.hideSecondMarkers = false
-        // set actual pixel per second value via scale factor
-        settings.pixelsPerSecond = Math.round(this.initialPixelsPerSecond * this.scaleFactorX)
-        this.totalWidth = this.audioLength * settings.pixelsPerSecond
-        // scroll to the target time (scrollLeft)
-        this.scrollToSecond(oldTargetTime - e.x / settings.pixelsPerSecond)
-        // rerender
-        this.clearRenderCache()
-        this.doMaybeRerender()
-      }
-    }
-  }
-
   get stageStyle() {
     return {
       height: this.height + 'px',
       width: this.totalWidth + 'px',
       transformOrigin: this.temporaryZoomOrigin + 'px',
-      transform: `scaleX(${this.temporaryScaleX >= 0.1 ? this.temporaryScaleX : 0.1})`
+      transform: `scaleX(${ this.temporaryPixelsPerSecond / settings.pixelsPerSecond })`
     }
   }
 
