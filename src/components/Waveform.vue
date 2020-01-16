@@ -272,16 +272,18 @@ export default class Waveform extends Vue {
 
   zoom(e: WheelEvent) {
     if (e.ctrlKey === true) {
+
+      const el = (this.$refs.svgContainer as HTMLElement)
+      const oldTargetTime = (el.scrollLeft + e.x) / settings.pixelsPerSecond
+      // reset state
+      this.temporaryZoomOrigin = 0
+      this.hideSegments = false
+      this.hideSecondMarkers = false
+
       // if it should transform by some factor.
       if (this.temporaryPixelsPerSecond !== settings.pixelsPerSecond) {
         // get the target time at the current mouse pos
-        const el = (this.$refs.svgContainer as HTMLElement)
-        const oldTargetTime = (el.scrollLeft + e.x) / settings.pixelsPerSecond
-        // reset state
-        this.temporaryZoomOrigin = 0
-        this.hideSegments = false
-        this.hideSecondMarkers = false
-        // set actual pixel per second value via scale factor
+        // set actual pixel per second value
         settings.pixelsPerSecond = Math.round(this.temporaryPixelsPerSecond)
         this.totalWidth = this.audioLength * settings.pixelsPerSecond
         // scroll to the target time (scrollLeft)
