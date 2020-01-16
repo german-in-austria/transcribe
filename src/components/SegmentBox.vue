@@ -14,7 +14,7 @@
         {{ eventStore.metadata.speakers[i].k }}: {{ se.tokens.map(t => t.tiers[eventStore.metadata.defaultTier].text).join(' ') }}
       </div>
     </div>
-    <resize-parent
+    <resize-event
       v-if="isEventSelected(event.eventId)"
       class="resizer"
       resizing-class="resizing"
@@ -22,7 +22,7 @@
       :parent-min-width="12"
       left
     />
-    <resize-parent
+    <resize-event
       v-if="isEventSelected(event.eventId)"
       class="resizer"
       resizing-class="resizing"
@@ -35,7 +35,7 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch, Provide } from 'vue-property-decorator'
-import ResizeParent from './helper/ResizeParent.vue'
+import ResizeEvent from './helper/ResizeEvent.vue'
 import { undoable } from '../store/history'
 import settings from '../store/settings'
 
@@ -54,7 +54,7 @@ import {
 
 @Component({
   components: {
-    ResizeParent
+    ResizeEvent
   }
 })
 export default class SegmentBox extends Vue {
