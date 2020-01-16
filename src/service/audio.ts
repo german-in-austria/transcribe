@@ -15,7 +15,7 @@ import GetFrequenciesWorker from './get-frequencies.worker'
 const getFrequenciesWorker = new PromiseWorker(new GetFrequenciesWorker(''))
 
 import OggIndexWorker from './oggindex.worker'
-import { toTime } from '../store/transcript'
+import { toTime, LocalTranscriptEvent } from '../store/transcript'
 import _ from 'lodash';
 const oggIndexWorker = new PromiseWorker(new OggIndexWorker(''))
 
@@ -73,6 +73,14 @@ export function readU8le(dataView: DataView, i: number) {
   const v1 = readU4le(dataView, i)
   const v2 = readU4le(dataView, i + 4)
   return v1 !== null && v2 !== null ? 0x100000000 * v2 + v1 : null
+}
+
+export function createMediaFragmentUrl(audioUrl: string, event: LocalTranscriptEvent) {
+  return audioUrl
+    + '#t='
+    + event.startTime.toFixed(2)
+    + ','
+    + event.endTime.toFixed(2)
 }
 
 function getOggNominalBitrate(buffer: ArrayBuffer): number {

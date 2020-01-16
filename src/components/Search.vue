@@ -28,17 +28,10 @@
           offset-y
           nudge-bottom="5">
           <div slot="activator" :class="['tier-and-speaker-selector mt-1', settings.darkMode && 'theme--dark']">
-            <!-- TODO: make nicer -->
-            ▾ {{
-              areAllSpeakersSelected()
-                ? 'all speakers'
-                : Object.values(eventStore.metadata.speakers).filter(s => s.searchInSpeaker === true).length + ' speaker(s)'
-            }},
-            {{
-              areAllTiersSelected()
-                ? 'all tiers'
-                : eventStore.metadata.tiers.filter(s => s.searchInTier === true).length + ' tier(s)'
-            }}
+            ▾ <span v-if="areAllSpeakersSelected()">all speakers</span>
+              <span v-else>{{ getSelectedSpeakersLength() }} speaker{{ getSelectedSpeakersLength() !== 1 ? 's' : '' }}</span>,
+              <span v-if="areAllTiersSelected()">all tiers</span>
+              <span v-else>{{  getSelectedTiersLength() }} tier{{ getSelectedTiersLength() !== 1 ? 's' : '' }}</span>
           </div>
           <v-list class="context-menu-list" dense>
             <v-subheader>
@@ -118,10 +111,13 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import * as _ from 'lodash'
 import eventBus from '../service/event-bus'
-import settings from '../store/settings'
+import * as history from '../store/history'
+import { createMediaFragmentUrl } from '../service/audio'
+import settings, { tokenTypesPresets } from '../store/settings'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import HighlightRange from './helper/HighlightRange.vue'
 import Checkbox from './helper/Checkbox.vue'
+import * as xlsx from 'xlsx'
 
 import {
   findNextEventAt,
@@ -148,18 +144,17 @@ import {
   findPreviousSpeakerEvent,
   findNextSpeakerEvent,
   getNextEvent,
-  getTextFromTier
+  getTextFromTier,
+  isTokenTier
 } from '../store/transcript'
 
-function maybe<T>(a: T): T|any {
+function maybe<T>(a: T): T|{} {
   if (a === undefined) {
-    return {} as any
+    return {} as T
   } else {
     return a
   }
 }
-
-import * as history from '../store/history'
 
 @Component({
   components: {
@@ -202,6 +197,14 @@ export default class Search extends Vue {
     history.startListening()
   }
 
+  getSelectedSpeakersLength(): number {
+    return _.filter(eventStore.metadata.speakers, s => s.searchInSpeaker === true).length
+  }
+
+  getSelectedTiersLength(): number {
+    return eventStore.metadata.tiers.filter(s => s.searchInTier === true).length
+  }
+
   areAllTiersSelected(): boolean {
     return eventStore.metadata.tiers.every(t => t.searchInTier === true)
   }
@@ -235,24 +238,43 @@ export default class Search extends Vue {
 
   async exportResultsExcel(ress: SearchResult[]) {
     const rows = ress.map(res => {
-      const tokenIndex = getTokenIndexByCharacterOffset(res.event.speakerEvents[res.speakerId].tokens, res.offset)
+      let matched = ''
+      let tokenType = ''
+      if (isTokenTier(res.tierId)) {
+        const tokenIndex = getTokenIndexByCharacterOffset(res.event.speakerEvents[res.speakerId].tokens, res.offset)
+        // tslint:disable-next-line:max-line-length
+        const token = res.event.speakerEvents[res.speakerId].tokens[tokenIndex].tiers[res.tierId as TokenTierType] || { type: null, text: '' }
+        const t = tokenTypesPresets[settings.tokenTypesPreset].find(tt => tt.id === token.type)
+        if (t !== undefined) {
+          tokenType = t.name
+        }
+        matched = token.text
+      } else {
+        matched = getTextFromTier(res.event, res.tierId, res.speakerId)
+      }
       const prev = getPreviousEvent(res.event.eventId)
       const next = getNextEvent(res.event.eventId)
-      console.log('res.tierId', res.tierId)
       return {
         transcript_name: eventStore.metadata.transcriptName,
         transcript_setting: '',
         speaker_name: eventStore.metadata.speakers[Number(res.speakerId)].k,
         tier_name: res.tierId,
-        // TODO: move to the newer typescript with optional "?". this sux.
-        // tslint:disable-next-line:max-line-length
-        matched_token: maybe(res.event.speakerEvents[res.speakerId].tokens[tokenIndex].tiers[res.tierId as TokenTierType]).text,
+        matched_token: matched,
+        token_type: tokenType,
         left_context: prev !== undefined ? getTextFromTier(prev, res.tierId, res.speakerId) : '',
         content: res.text,
-        right_context: next !== undefined ? getTextFromTier(next, res.tierId, res.speakerId) : ''
+        right_context: next !== undefined ? getTextFromTier(next, res.tierId, res.speakerId) : '',
+        event_audio: createMediaFragmentUrl(eventStore.metadata.audioUrl as string, res.event)
       }
     })
-    console.log({rows})
+    const sheet = xlsx.utils.json_to_sheet(rows)
+    const file = xlsx.writeFile(
+      { Sheets: { sheet }, SheetNames: [ 'sheet' ], },
+      eventStore.metadata.transcriptName
+      + '_search_'
+      + eventStore.searchTerm.replace(/[^a-z0-9]/gi, '_')
+      + '.xlsx'
+    )
   }
 
   get selectedResultIndex(): number|null {
@@ -366,7 +388,6 @@ export default class Search extends Vue {
       }
       return res
     }, [] as SearchResult[])
-    console.log({r})
     return r
   }
 
