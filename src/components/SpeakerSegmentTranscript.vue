@@ -272,7 +272,9 @@ export default class SpeakerSegmentTranscript extends Vue {
       const selectedTokens = copyPaste.collectTokensViaOffsets(this.localTokens, base, extent)
       this.localTokens = copyPaste.removeTokensAndTokenParts(this.localTokens, selectedTokens)
       const csv = copyPaste.serializeTokens(selectedTokens)
-      e.clipboardData.setData('text/plain', csv)
+      if (e.clipboardData !== null) {
+        e.clipboardData.setData('text/plain', csv)
+      }
       this.segmentText = this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ')
       await this.$nextTick()
       this.setCursorPosition(e.currentTarget as HTMLElement, Math.min(base, extent))
@@ -287,7 +289,9 @@ export default class SpeakerSegmentTranscript extends Vue {
     if (s !== null) {
       const tokens = copyPaste.collectTokensViaOffsets(this.localTokens, s.baseOffset, s.extentOffset)
       const csv = copyPaste.serializeTokens(tokens)
-      e.clipboardData.setData('text/plain', csv)
+      if (e.clipboardData !== null) {
+        e.clipboardData.setData('text/plain', csv)
+      }
     } else {
       // nothing is selected, copy nothing.
     }
@@ -299,8 +303,10 @@ export default class SpeakerSegmentTranscript extends Vue {
     const sel = window.getSelection()
     range.setStart(el.firstChild || el.parentNode!.firstChild!, pos)
     range.collapse(true)
-    sel.removeAllRanges()
-    sel.addRange(range)
+    if (sel !== null) {
+      sel.removeAllRanges()
+      sel.addRange(range)
+    }
   }
 
   async pasteTokens(e: ClipboardEvent) {
