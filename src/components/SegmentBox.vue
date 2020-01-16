@@ -71,7 +71,7 @@ export default class SegmentBox extends Vue {
   isEventSelected = isEventSelected
   playEvent = playEvent
   settings = settings
-  
+
   get hasOverlap() {
     const x = (
       this.previousEvent !== undefined &&
