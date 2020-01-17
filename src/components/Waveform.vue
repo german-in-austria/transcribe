@@ -274,6 +274,7 @@ export default class Waveform extends Vue {
     if (e.ctrlKey === true) {
 
       const el = (this.$refs.svgContainer as HTMLElement)
+      // get the target time at the current mouse pos
       const oldTargetTime = (el.scrollLeft + e.x) / settings.pixelsPerSecond
       // reset state
       this.temporaryZoomOrigin = 0
@@ -282,7 +283,6 @@ export default class Waveform extends Vue {
 
       // if it should transform by some factor.
       if (this.temporaryPixelsPerSecond !== settings.pixelsPerSecond) {
-        // get the target time at the current mouse pos
         // set actual pixel per second value
         settings.pixelsPerSecond = Math.round(this.temporaryPixelsPerSecond)
         this.totalWidth = this.audioLength * settings.pixelsPerSecond
