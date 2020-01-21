@@ -39,7 +39,7 @@
             </v-subheader>
             <v-list-tile
               v-for="(tier, i) in eventStore.metadata.tiers"
-              :key="i"
+              :key="'tier__' + i"
               @click="tier.searchInTier = !tier.searchInTier">
               <v-list-tile-avatar>
                 <v-icon v-if="tier.searchInTier === true">check</v-icon>
@@ -54,7 +54,7 @@
             </v-subheader>
             <v-list-tile
               v-for="(speaker, speakerKey) in eventStore.metadata.speakers"
-              :key="speakerKey"
+              :key="'speaker__' + speakerKey"
               @click="speaker.searchInSpeaker = !speaker.searchInSpeaker">
               <v-list-tile-avatar>
                 <v-icon v-if="speaker.searchInSpeaker === true">check</v-icon>
