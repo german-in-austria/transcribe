@@ -78,30 +78,29 @@
                   </v-subheader>
                   <template v-for="(transcript) in filteredTranscriptList">
                     <v-divider :key="'dk' + transcript.pk" />
-                    <transition-group :key="'ts'+ transcript.pk">
-                      <v-list-tile
-                        :key="transcript.pk" 
-                        :disabled="loadingTranscriptId !== null"
-                        @click="loadRemoteTranscript(transcript)">
-                        <v-list-tile-avatar>
-                          <v-progress-circular
-                            class="mb-2"
-                            size="20"
-                            width="2"
-                            v-if="loadingTranscriptId === transcript.pk"
-                            indeterminate />
-                          <v-icon color="grey" v-else>cloud_queue</v-icon>
-                        </v-list-tile-avatar>
-                        <v-list-tile-content>
-                          <v-list-tile-title>
-                            {{ transcript.n }}
-                          </v-list-tile-title>
-                          <v-list-tile-sub-title>
-                            {{ transcript.ut }}
-                          </v-list-tile-sub-title>
-                        </v-list-tile-content>
-                      </v-list-tile>
-                    </transition-group>
+                    <v-list-tile
+                      :key="transcript.pk" 
+                      :disabled="loadingTranscriptId !== null || transcript.locked === true"
+                      @click="loadRemoteTranscript(transcript)">
+                      <v-list-tile-avatar>
+                        <v-icon v-if="transcript.locked">lock</v-icon>
+                        <v-progress-circular
+                          class="mb-2"
+                          size="20"
+                          width="2"
+                          v-else-if="loadingTranscriptId === transcript.pk"
+                          indeterminate />
+                        <v-icon color="grey" v-else>cloud_queue</v-icon>
+                      </v-list-tile-avatar>
+                      <v-list-tile-content>
+                        <v-list-tile-title>
+                          {{ transcript.n }}
+                        </v-list-tile-title>
+                        <v-list-tile-sub-title>
+                          {{ transcript.ut }}
+                        </v-list-tile-sub-title>
+                      </v-list-tile-content>
+                    </v-list-tile>
                   </template>
                   <v-list-tile class="text-xs-center" v-if="filteredTranscriptList.length === 0">
                     <span class="caption">
@@ -219,8 +218,15 @@ export default class App extends Vue {
     this.updateTokenTypePreset(url)
     await this.loadTranscriptList(url)
     this.isLoadingBackendUrl = false
-    socket.connectToSocket('http://localhost:3000')
-    socket.onMessage('any', console.log)
+    socket.connectToSocket('https://dioedb.dioe.at')
+    socket.onMessage(console.log)
+    socket.onMessage((m) => {
+      if (m.type === 'list_open_transcripts' && this.transcriptList !== null) {
+        this.transcriptList = this.transcriptList.map(t => {
+          return { ...t, locked: m.transcripts.some(ts => ts.transcript_id === t.pk && ts.app === 'anno') }
+        })
+      }
+    })
   }
 
   onDropFile(e: DragEvent) {

@@ -10,6 +10,7 @@ export function connectToSocket(url: string) {
   socket = socketIo(
     // 'https://dioedb.dioe.at',
     url,
+    // 'http://localhost:3000',
     { path: '/updates' }
   )
 }
@@ -20,12 +21,10 @@ export function sendMessage(m: ClientMessage) {
   }
 }
 
-export function onMessage(t: Message['type']|'any', cb: (m: Message) => void) {
+export function onMessage(cb: (m: Message) => void) {
   if (socket !== null) {
     socket.on('message', (sm: Message) => {
-      if (t === sm.type || t === 'any') {
-        cb(sm)
-      }
+      cb(sm)
     })
   }
 }
