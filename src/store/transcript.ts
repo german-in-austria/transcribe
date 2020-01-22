@@ -829,10 +829,6 @@ export function shiftCharsAcrossEvents(
         ]
       }
     })()
-    console.log('sourceTokens', sourceTokens.map(t => t.tiers[eventStore.metadata.defaultTier].text))
-    console.log('targetTokens', targetTokens.map(t => t.tiers[eventStore.metadata.defaultTier].text))
-    console.log(clone(e))
-    console.log(clone(targetE))
     const historyEvent = updateSpeakerEvents([ e, targetE ], speakerId, [
       // changed source event
       sourceTokens,

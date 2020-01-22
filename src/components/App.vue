@@ -1,10 +1,5 @@
 <template>
-  <v-app
-    :style="settings.contrast > 1
-      ? `filter: contrast(${settings.contrast})`
-      : ''"
-    :dark="settings.darkMode"
-    >
+  <v-app :dark="settings.darkMode">
     <v-navigation-drawer
       v-if="eventStore.status !== 'empty'"
       stateless
@@ -142,10 +137,9 @@ import editor from './Editor.vue'
 import sidebar from './Sidebar.vue'
 import exmaraldaImporter from './ExmaraldaImporter.vue'
 
+import * as socket from '../service/socket'
 import audio from '../service/audio'
 import settings from '../store/settings'
-
-import socketIo from 'socket.io-client'
 
 import {
   LocalTranscriptEvent,
@@ -197,6 +191,8 @@ import {
 })
 export default class App extends Vue {
 
+  @Prop() transcript_id: number|null
+
   eventStore = eventStore
   settings = settings
 
@@ -216,7 +212,6 @@ export default class App extends Vue {
   importableExmaraldaFile: ParsedExmaraldaXML|null = null
   errorMessage: string|null = null
   isLoadingBackendUrl = false
-  socket: SocketIOClient.Socket|null = null
 
   async connectToBackend(url: string) {
     this.isLoadingBackendUrl = true
@@ -224,15 +219,8 @@ export default class App extends Vue {
     this.updateTokenTypePreset(url)
     await this.loadTranscriptList(url)
     this.isLoadingBackendUrl = false
-    if (this.socket !== null) {
-      this.socket.disconnect()
-    }
-    this.socket = socketIo(
-      // 'https://dioedb.dioe.at',
-      'http://localhost:3000',
-      { path: '/updates' }
-    )
-    this.socket.on('message', console.log)
+    socket.connectToSocket('http://localhost:3000')
+    socket.onMessage('any', console.log)
   }
 
   onDropFile(e: DragEvent) {
@@ -396,13 +384,11 @@ export default class App extends Vue {
     // TODO: ugly
     this.loadingTranscriptId = t.pk
     const y = document.createElement('audio')
-    if (this.socket !== null) {
-      this.socket.send({
-        type: 'open_transcript',
-        app: 'transcribe',
-        transcript_id: t.pk
-      })
-    }
+    socket.sendMessage({
+      type: 'open_transcript',
+      transcript_id: t.pk,
+      app: 'transcribe'
+    })
     getTranscript(t.pk, (progress, events) => {
       eventStore.transcriptDownloadProgress = progress
       if (eventStore.metadata.audioUrl !== null) {
@@ -419,6 +405,3 @@ export default class App extends Vue {
   }
 }
 </script>
-
-<style lang="stylus" scoped>
-</style>

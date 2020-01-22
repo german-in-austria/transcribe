@@ -48,12 +48,6 @@
                   </v-list-tile-action>
                 </v-list-tile>
                 <v-list-tile>
-                  <v-list-tile-title>Theme Contrast</v-list-tile-title>
-                  <v-list-tile-action>
-                    <v-slider class="mr-3 mt-3 mb-0" thumb-label v-model="settings.contrast" :step=".1" :min=".9" :max="1.5" />
-                  </v-list-tile-action>
-                </v-list-tile>
-                <v-list-tile>
                   <v-list-tile-title>Scroll Speed</v-list-tile-title>
                   <v-list-tile-action>
                     <v-slider class="mr-3 mt-3 mb-0" thumb-label v-model="settings.scrollSpeed" :step=".1" :min=".5" :max="5" />

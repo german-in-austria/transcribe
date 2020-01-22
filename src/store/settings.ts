@@ -54,7 +54,6 @@ export interface Settings {
   activeSidebarItem: SidebarItem
   autoCorrectDelimiterSpace: boolean
   showSettings: boolean
-  contrast: number
   darkMode: boolean
   drawerWidth: number
   emulateHorizontalScrolling: boolean
@@ -383,7 +382,6 @@ const settings: Settings = {
   activeSidebarItem: 'edit',
   autoCorrectDelimiterSpace: true,
   showSettings: false,
-  contrast: 1,
   darkMode: false,
   drawerWidth: 350,
   emulateHorizontalScrolling: platform() === 'windows' || platform() === 'linux',
@@ -474,7 +472,5 @@ function stringifySettings(s: Settings): string {
   }
   return JSON.stringify(serializedSettings)
 }
-
-// (window as any)._settings = settings
 
 export default settings
