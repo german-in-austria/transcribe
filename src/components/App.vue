@@ -100,6 +100,11 @@
                           {{ transcript.ut }}
                         </v-list-tile-sub-title>
                       </v-list-tile-content>
+                      <v-list-tile-action>
+                        <v-chip small v-for="(user, i) in transcript.users" :key="i">
+                          {{ user }}
+                        </v-chip>
+                      </v-list-tile-action>
                     </v-list-tile>
                   </template>
                   <v-list-tile class="text-xs-center" v-if="filteredTranscriptList.length === 0">
@@ -177,7 +182,8 @@ import {
 
 import {
   history,
-  HistoryEventAction
+  HistoryEventAction,
+  handleRemotePeerEvent
 } from '../store/history'
 
 @Component({
@@ -223,7 +229,11 @@ export default class App extends Vue {
     socket.onMessage((m) => {
       if (m.type === 'list_open_transcripts' && this.transcriptList !== null) {
         this.transcriptList = this.transcriptList.map(t => {
-          return { ...t, locked: m.transcripts.some(ts => ts.transcript_id === t.pk && ts.app === 'anno') }
+          return {
+            ...t,
+            users: m.transcripts.filter(ts => ts.transcript_id === t.pk).map(ts => ts.user.name),
+            locked: m.transcripts.some(ts => ts.transcript_id === t.pk && ts.app === 'anno')
+          }
         })
       }
     })
@@ -394,6 +404,11 @@ export default class App extends Vue {
       type: 'open_transcript',
       transcript_id: t.pk,
       app: 'transcribe'
+    })
+    socket.onMessage(m => {
+      if (m.type === 'transcript_operation' && m.transcript_id === t.pk) {
+        handleRemotePeerEvent(m.operation)
+      }
     })
     getTranscript(t.pk, (progress, events) => {
       eventStore.transcriptDownloadProgress = progress

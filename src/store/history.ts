@@ -1,5 +1,7 @@
 import _ from 'lodash'
 
+import uuid from 'uuid/v4'
+
 import {
   LocalTranscriptEvent,
   replaceEvents,
@@ -16,6 +18,11 @@ import {
   isWaveformEventVisible
 } from '../service/dom-methods'
 
+import { onMessage, sendMessage } from '../service/socket'
+import { serverTranscript } from '../service/backend-server'
+
+type HistoryApplicationType = 'UNDO'|'REDO'|'DO'|'JUMPTOSTATE'
+
 export interface HistoryEventAction {
   id: string
   type: 'RESIZE'|'DELETE'|'CHANGE_TOKENS'|'ADD'|'JOIN'|'INSERT'|'SPLIT'
@@ -29,6 +36,40 @@ export let history = {
   actions: [] as HistoryEventAction[]
 }
 
+export function handleRemotePeerEvent(data: [HistoryEventAction|HistoryEventAction[]|number, HistoryApplicationType]) {
+  const [p, t] = data
+  if (typeof p === 'number') {
+    if (t === 'JUMPTOSTATE') {
+      jumpToStateIndex(p)
+    }
+  } else {
+    if (t === 'DO') {
+      history.actions = history.actions
+        .filter(a => a.apply === true)
+        .concat(p)
+      if (_.isArray(p)) {
+        _(p).forEach(a => replaceEvents(a.before, a.after))
+      } else {
+        replaceEvents(p.before, p.after)
+      }
+    } else if (t === 'UNDO') {
+      // if (_.isArray(p)) {
+      //   p.forEach(undoAction)
+      // } else {
+      //   undoAction(p)
+      // }
+      undo()
+    } else if (t === 'REDO') {
+      redo()
+      // if (_.isArray(p)) {
+      //   p.forEach(redoAction)
+      // } else {
+      //   redoAction(p)
+      // }
+    }
+  }
+}
+
 async function undoRedoHandler(e: KeyboardEvent) {
   const d = isUndoOrRedo(e)
   if (d.undo === true) {
@@ -36,6 +77,7 @@ async function undoRedoHandler(e: KeyboardEvent) {
     e.preventDefault()
     const action = undo()
     if (action !== undefined) {
+      notifyPeers(action, 'UNDO')
       selectEvents(action.before)
       if (action.before[0] !== undefined && !await isWaveformEventVisible(action.before[0])) {
         scrollToAudioEvent(action.before[0])
@@ -47,6 +89,7 @@ async function undoRedoHandler(e: KeyboardEvent) {
     e.preventDefault()
     const action = redo()
     if (action !== undefined) {
+      notifyPeers(action, 'REDO')
       selectEvents(action.after)
       if (action.after[0] !== undefined && !await isWaveformEventVisible(action.after[0])) {
         scrollToAudioEvent(action.after[0])
@@ -104,7 +147,23 @@ function jumpToStateIndex(target: number) {
 export function jumpToState(action: HistoryEventAction) {
   const ai = history.actions.findIndex((a) => a.id === action.id)
   // if the index was found.
+  notifyPeers(ai, 'JUMPTOSTATE')
   jumpToStateIndex(ai)
+}
+
+function notifyPeers(p: HistoryEventAction|HistoryEventAction[]|number, t: HistoryApplicationType) {
+  sendMessage({
+    type: 'transcript_operation',
+    app: 'transcribe',
+    operation: [p, t],
+    transcript_id: (() => {
+      if (serverTranscript && serverTranscript.aTranskript && serverTranscript.aTranskript.pk) {
+        return serverTranscript.aTranskript.pk
+      } else {
+        return -1
+      }
+    })()
+  })
 }
 
 function undoAction(a: HistoryEventAction) {
@@ -145,6 +204,7 @@ export function undoable(action: HistoryEventAction|HistoryEventAction[]|undefin
   // are not re-doable anymore, and are deleted.
   // the new undoable action is appended.
   if (action !== undefined) {
+    notifyPeers(action, 'DO')
     history.actions = history.actions
       .filter(a => a.apply === true)
       .concat(action)
