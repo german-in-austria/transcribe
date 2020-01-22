@@ -36,7 +36,7 @@
           <v-flex xs1>
             <v-combobox
               style="width: 300px; margin: 20px auto 0 auto"
-              @change="updateBackEndUrl"
+              @change="connectToBackend"
               :loading="isLoadingBackendUrl"
               :error-messages="this.errorMessage !==  null ? [ this.errorMessage ] : []"
               auto-select-first
@@ -145,6 +145,8 @@ import exmaraldaImporter from './ExmaraldaImporter.vue'
 import audio from '../service/audio'
 import settings from '../store/settings'
 
+import socketIo from 'socket.io-client'
+
 import {
   LocalTranscriptEvent,
   eventStore,
@@ -214,17 +216,23 @@ export default class App extends Vue {
   importableExmaraldaFile: ParsedExmaraldaXML|null = null
   errorMessage: string|null = null
   isLoadingBackendUrl = false
+  socket: SocketIOClient.Socket|null = null
 
-  async updateBackEndUrl(url: string) {
+  async connectToBackend(url: string) {
     this.isLoadingBackendUrl = true
     settings.backEndUrl = url
-  }
-
-  @Watch('settings.backEndUrl')
-  async onUpdateBackEndUrl(url: string) {
-    this.updateTokenTypePreset()
-    await this.loadTranscriptList()
+    this.updateTokenTypePreset(url)
+    await this.loadTranscriptList(url)
     this.isLoadingBackendUrl = false
+    if (this.socket !== null) {
+      this.socket.disconnect()
+    }
+    this.socket = socketIo(
+      // 'https://dioedb.dioe.at',
+      'http://localhost:3000',
+      { path: '/updates' }
+    )
+    this.socket.on('message', console.log)
   }
 
   onDropFile(e: DragEvent) {
@@ -235,36 +243,35 @@ export default class App extends Vue {
     }
   }
 
-  // FIXME: this is insanely hacky.
-  async updateTokenTypePreset() {
-    if (settings.backEndUrl !== null && settings.backEndUrl.includes('dioedb')) {
+  // FIXME: very hacky.
+  async updateTokenTypePreset(url: string) {
+    if (url !== null && url.includes('dioedb')) {
       settings.tokenTypesPreset = 'dioeDB'
-    } else if (settings.backEndUrl !== null && settings.backEndUrl.includes('dissdb')) {
+    } else if (url !== null && url.includes('dissdb')) {
       settings.tokenTypesPreset = 'dissDB'
     }
   }
 
   async mounted() {
-    this.updateTokenTypePreset()
-    this.loadTranscriptList()
+    if (settings.backEndUrl !== null) {
+      this.connectToBackend(settings.backEndUrl)
+    }
   }
 
-  async loadTranscriptList() {
-    if (settings.backEndUrl !== null) {
-      try {
-        this.errorMessage = null
-        const res = await getServerTranscripts(settings.backEndUrl)
-        if (res.transcripts !== undefined) {
-          this.loggedIn = true
-          this.transcriptList = res.transcripts
-        } else if ((res as any).error === 'login') {
-          this.loggedIn = false
-        }
-      } catch (e) {
+  async loadTranscriptList(url: string) {
+    try {
+      this.errorMessage = null
+      const res = await getServerTranscripts(url)
+      if (res.transcripts !== undefined) {
+        this.loggedIn = true
+        this.transcriptList = res.transcripts
+      } else if ((res as any).error === 'login') {
         this.loggedIn = false
-        this.transcriptList = null
-        this.errorMessage = 'could not load transcripts from back end.'
       }
+    } catch (e) {
+      this.loggedIn = false
+      this.transcriptList = null
+      this.errorMessage = 'could not load transcripts from back end.'
     }
   }
 
@@ -389,6 +396,13 @@ export default class App extends Vue {
     // TODO: ugly
     this.loadingTranscriptId = t.pk
     const y = document.createElement('audio')
+    if (this.socket !== null) {
+      this.socket.send({
+        type: 'open_transcript',
+        app: 'transcribe',
+        transcript_id: t.pk
+      })
+    }
     getTranscript(t.pk, (progress, events) => {
       eventStore.transcriptDownloadProgress = progress
       if (eventStore.metadata.audioUrl !== null) {
