@@ -8,9 +8,7 @@ export function connectToSocket(url: string) {
     socket.disconnect()
   }
   socket = socketIo(
-    // 'https://dioedb.dioe.at',
     url,
-    // 'http://localhost:3000',
     { path: '/updates' }
   )
 }
