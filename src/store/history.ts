@@ -1,7 +1,5 @@
 import _ from 'lodash'
 
-import uuid from 'uuid/v4'
-
 import {
   LocalTranscriptEvent,
   replaceEvents,
@@ -18,7 +16,7 @@ import {
   isWaveformEventVisible
 } from '../service/dom-methods'
 
-import { onMessage, sendMessage } from '../service/socket'
+import { sendMessage } from '../service/socket'
 import { serverTranscript } from '../service/backend-server'
 
 type HistoryApplicationType = 'UNDO'|'REDO'|'DO'|'JUMPTOSTATE'
