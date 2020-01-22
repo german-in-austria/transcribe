@@ -235,6 +235,14 @@ nav.v-toolbar[data-booted=true]{
 .v-select--chips.keyboard-chips .v-chip--small{
   border-radius: 3px
 } 
+.v-chip .v-chip__content {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  line-height: 30px;
+}
+
 .no-flex-direction{
   flex-direction: unset;
 }

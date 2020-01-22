@@ -101,7 +101,7 @@
                         </v-list-tile-sub-title>
                       </v-list-tile-content>
                       <v-list-tile-action>
-                        <v-chip small v-for="(user, i) in transcript.users" :key="i">
+                        <v-chip style="max-width: 120px;" small v-for="(user, i) in transcript.users" :key="i">
                           {{ user }}
                         </v-chip>
                       </v-list-tile-action>
@@ -224,7 +224,8 @@ export default class App extends Vue {
     this.updateTokenTypePreset(url)
     await this.loadTranscriptList(url)
     this.isLoadingBackendUrl = false
-    socket.connectToSocket('https://dioedb.dioe.at')
+    // TODO: dynamic via ENV
+    socket.connectToSocket('http://localhost:3000')
     socket.onMessage(console.log)
     socket.onMessage((m) => {
       if (m.type === 'list_open_transcripts' && this.transcriptList !== null) {
