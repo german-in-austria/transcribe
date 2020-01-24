@@ -4,7 +4,6 @@ var webpack = require('webpack')
 var UglifyJsPlugin = require('uglifyjs-webpack-plugin')
 var CopyWebpackPlugin = require('copy-webpack-plugin')
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
-// const SentryWebpackPlugin = require('@sentry/webpack-plugin')
 var _ = require('lodash')
 
 module.exports = {
@@ -23,12 +22,6 @@ module.exports = {
         to: "index.html"
       }
     ]),
-    // new SentryWebpackPlugin({
-    //   include: '.',
-    //   ignoreFile: '.sentrycliignore',
-    //   ignore: ['node_modules', 'webpack.config.js'],
-    //   configFile: 'sentry.properties'
-    // })
   ],
   output: {
     path: path.resolve(__dirname, "./dist"),
@@ -141,17 +134,14 @@ if (process.env.NODE_ENV === 'production') {
   require('dotenv').config({ path: './env-production.env' })
   // http://vue-loader.vuejs.org/en/workflow/production.html
   console.log(process.env.API_HOST, 'process.env.API_HOST')
+  module.exports.devtool = 'source-map'
   module.exports.plugins = (module.exports.plugins || []).concat([
     new webpack.DefinePlugin({
       'process.env': _(process.env).mapValues((v) => {
         return JSON.stringify(v)
       }).value()
     }),
-    new UglifyJsPlugin({
-      sourceMap: false
-    }),
-    new webpack.LoaderOptionsPlugin({
-      minimize: true
-    })
+    new UglifyJsPlugin({sourceMap: true}),
+    new webpack.LoaderOptionsPlugin({minimize: true})
   ])
 }
