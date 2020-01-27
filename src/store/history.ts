@@ -34,8 +34,8 @@ export let history = {
   actions: [] as HistoryEventAction[]
 }
 
-export function handleRemotePeerEvent(data: [HistoryEventAction|HistoryEventAction[]|number, HistoryApplicationType]) {
-  const [p, t] = data
+export function handleRemotePeerEvent(data: [string, HistoryEventAction|HistoryEventAction[]|number]) {
+  const [t, p] = data
   if (typeof p === 'number') {
     if (t === 'JUMPTOSTATE') {
       jumpToStateIndex(p)
@@ -149,11 +149,11 @@ export function jumpToState(action: HistoryEventAction) {
   jumpToStateIndex(ai)
 }
 
-function notifyPeers(p: HistoryEventAction|HistoryEventAction[]|number, t: HistoryApplicationType) {
+function notifyPeers(a: HistoryEventAction|HistoryEventAction[]|number, t: HistoryApplicationType) {
   sendMessage({
-    type: 'transcript_operation',
+    type: 'transcript_action',
     app: 'transcribe',
-    operation: [p, t],
+    action: [t, a],
     transcript_id: (() => {
       if (serverTranscript && serverTranscript.aTranskript && serverTranscript.aTranskript.pk) {
         return serverTranscript.aTranskript.pk

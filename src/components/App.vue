@@ -407,8 +407,8 @@ export default class App extends Vue {
       app: 'transcribe'
     })
     socket.onMessage(m => {
-      if (m.type === 'transcript_operation' && m.transcript_id === t.pk) {
-        handleRemotePeerEvent(m.operation)
+      if (m.type === 'transcript_action' && m.transcript_id === t.pk) {
+        handleRemotePeerEvent(m.action)
       }
     })
     getTranscript(t.pk, (progress, events) => {
