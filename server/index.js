@@ -5,11 +5,9 @@ if(process.env.NODE_ENV !== 'production'){
 }
 
 const express = require('express')
-const cookieSession = require('cookie-session')
 const compression = require('compression')
 const path = require('path')
 const app = express()
-const index = require('fs').readFileSync('./dist/index.html', 'utf8')
 
 // This app runs behind an
 // application load balancer
