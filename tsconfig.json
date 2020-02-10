@@ -27,7 +27,8 @@
         }
     },
     "exclude": [
-      "./src/**/wasm"
+      "./src/**/wasm",
+      "./src/lib/dioe-real-time-server"
     ],
     "include": [
         "./src/**/*"
