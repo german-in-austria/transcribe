@@ -159,6 +159,7 @@ export default class Waveform extends Vue {
 
   // config
   drawDistance = 5000 // pixels in both directions from the center of the viewport (left and right)
+  drawWidth = 5000
   overviewSvgWidth = 1500 // width of the overview waveform in pixels
 
   // bind stores
@@ -319,10 +320,6 @@ export default class Waveform extends Vue {
         this.disableAutoScrollDuringPlayback()
       }
     }
-  }
-
-  get drawWidth(): number {
-    return 5000
   }
 
   async handleScroll() {
