@@ -5,6 +5,39 @@ if we can find all the required information, we can convert textual tags to data
 TODO: delete tags that have been converted.
 
 ```SQL
+
+-- CONVERT idiosyncratic phonetic annotations to standard textual
+-- e.g. "ei.1.D.P#_P" => "[eiVar, eiReal, ae-Diph, eiDiph, LautVor, P, MG, LautNach, P]"
+UPDATE
+  event_tier
+SET text = g.newtagset
+FROM (
+  SELECT * FROM (
+    SELECT
+      --  split rows into definitions (e.g. "iG.#3, iG.#8" or "iG.#3,iG.#8" to "ig.#3" and "iG.#8")
+      TRIM((regexp_split_to_table(text, E'\,\\s?'))) as text,
+      event_id_id,
+      tier_id_id,
+      event_tier.id AS tier_event_id,
+      "ID_Inf_id" as inf_id
+    FROM event_tier
+    JOIN tier
+      ON tier.id = event_tier.tier_id_id
+    WHERE tier.tier_name = 'phon.anno'
+       OR tier.tier_name = 'phon_anno'
+      AND TRIM(text) != ''
+  ) t
+  JOIN conversion_table
+    ON text = oldtag
+  WHERE TRIM(text) != ''
+  AND text NOT LIKE '[%'
+  AND newtagset != text
+) g
+WHERE event_tier.id = g.tier_event_id
+;
+
+-- PARSE text tags into data structure, and link them to
+-- answers and token-sets
 WITH parsed_tags as (
   SELECT * FROM (
     SELECT
@@ -109,7 +142,7 @@ antworttags as (
             FROM "KorpusDB_tbl_antworten"
            WHERE (
              ist_token_id = first_token
-             OR (select id from tokenset where id_von_token_id = first_token and id_bis_token_id = last_token LIMIT 1) = ist_tokenset_id
+             OR (SELECT id FROM tokenset WHERE id_von_token_id = first_token AND id_bis_token_id = last_token LIMIT 1) = ist_tokenset_id
            ) AND "Reihung" = answer_order
           LIMIT 1
         ) as answer_id,
