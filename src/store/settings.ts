@@ -13,7 +13,7 @@ export interface TokenTypePresetBase {
   id: number
 }
 
-type TokenTypePresetName = 'dioeDB'|'dissDB'
+type TokenTypePresetName = 'PP03'|'dissDB'|'PP04'
 
 export type TokenTypesPreset = {
   [name in TokenTypePresetName]: Array<TokenTypesPresetGroup | TokenTypesPresetSingle>;
@@ -88,7 +88,39 @@ export interface Settings {
 }
 
 export const tokenTypesPresets: TokenTypesPreset = {
-  dioeDB: [
+  PP04: [
+    {
+      type: 'group',
+      name: 'anonymized',
+      bracketSymbols: [
+        /(\[([a-zA-ZÜüÄäÖöß'\?]+))/u,
+        /(.+\](N|NZ|O|OP|OA|OS|P|Z))/,
+      ],
+      color: '#880000',
+      id: 10
+    },
+    {
+      type: 'group',
+      name: 'incomprehensible',
+      bracketSymbols: [
+        /(\(([a-zA-ZÜüÄäÖöß'\?]+))/u,
+        /((.+)\))/u
+      ],
+      color: '#ccc',
+      id: 7
+    },
+    {
+      type: 'group',
+      name: 'non-verbal',
+      bracketSymbols: [
+        /\(\((.+)|\[(.+)/u,
+        /(.+)\)\)|(.+)\]/u
+      ],
+      color: '#008800',
+      id: 5
+    }
+  ],
+  PP03: [
     {
       type: 'single',
       name: 'segments-unclear',
@@ -404,7 +436,7 @@ const settings: Settings = {
   skipInterval: 1,
   spectrogramColors: spectrogramPresets[1].colors,
   spectrogramGradient: makeGradient(spectrogramPresets[1].colors),
-  tokenTypesPreset: 'dioeDB',
+  tokenTypesPreset: 'PP03',
   useMonoWaveForm: false,
   waveFormColors: [ '#fb7676', '#6699CC' ],
   playEventOnAppend: true,
