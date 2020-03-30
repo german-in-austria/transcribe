@@ -44,14 +44,12 @@
                 </v-list-tile>
                 <v-list-tile>
                   <v-list-tile-title>Dark Theme</v-list-tile-title>
-                  <v-list-tile-action>
-                    <v-switch v-model="settings.darkMode"/>
-                  </v-list-tile-action>
-                </v-list-tile>
-                <v-list-tile>
-                  <v-list-tile-title>Theme Contrast</v-list-tile-title>
-                  <v-list-tile-action>
-                    <v-slider class="mr-3 mt-3 mb-0" thumb-label v-model="settings.contrast" :step=".1" :min=".9" :max="1.5" />
+                  <v-list-tile-action class="pr-4">
+                    <v-btn-toggle v-model="settings.darkMode" class="elevation-0">
+                      <v-btn large title="dark mode" :value="true" flat><v-icon>mdi-lightbulb-off</v-icon></v-btn>
+                      <v-btn large title="light mode" :value="false" flat><v-icon>mdi-lightbulb-outline</v-icon></v-btn>
+                    </v-btn-toggle>
+                    <!-- <v-switch v-model="settings.darkMode"/> -->
                   </v-list-tile-action>
                 </v-list-tile>
                 <v-list-tile>
