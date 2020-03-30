@@ -3,6 +3,7 @@
     lazy
     :transition="false"
     @input="$event === false && $emit('close')"
+    @keydown.esc="$emit('close')"
     :value="show"
     content-class="settings-dialog"
     max-width="700">
