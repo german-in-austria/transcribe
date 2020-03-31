@@ -1,4 +1,12 @@
 
+
+@keyframes slide-down {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
 .small{
   font-size: 80%;
 }
@@ -70,8 +78,11 @@ img[lazy=loaded] {
 .bold{
   font-weight: bold;
 }
-.settings-dialog{
-  border-radius: 10px;
+.v-dialog{
+  margin: 0;
+  animation: slide-down .25s ease-out;
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
   align-self: baseline;
   overflow: hidden;
   overflow-y: initial !important;

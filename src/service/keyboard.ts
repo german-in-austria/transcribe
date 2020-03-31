@@ -39,7 +39,7 @@ import {
   pause,
   playEventsStart,
   playEventsEnd,
-  timeSelectionIsEmpty,
+  timeSpanSelectionIsEmpty,
   playRange
 } from '../store/transcript'
 
@@ -325,7 +325,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Insert Pause',
     description: 'Insert a pause at the current cursor position',
     icon: 'pause_circle_outline',
-    disabled: () => eventStore.userState.timeSelection.start === null,
+    disabled: () => eventStore.userState.timeSpanSelection.start === null,
     action: async (ev) => {
       ev.preventDefault()
       const s = document.getSelection()
@@ -333,10 +333,10 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       if (
         s !== null &&
         e instanceof HTMLElement &&
-        eventStore.userState.timeSelection.start !== null &&
-        eventStore.userState.timeSelection.end !== null
+        eventStore.userState.timeSpanSelection.start !== null &&
+        eventStore.userState.timeSpanSelection.end !== null
       ) {
-        const length = Math.abs(eventStore.userState.timeSelection.start - eventStore.userState.timeSelection.end)
+        const length = Math.abs(eventStore.userState.timeSpanSelection.start - eventStore.userState.timeSpanSelection.end)
         const speakerId = e.getAttribute('data-speaker-id')
         const eventId = e.getAttribute('data-event-id')
         if (speakerId !== null && eventId !== null) {
@@ -668,8 +668,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     action: () => {
       if (eventStore.isPaused === true) {
         const es = getSelectedEvents()
-        if (!timeSelectionIsEmpty()) {
-          playRange(eventStore.userState.timeSelection.start || 0, eventStore.userState.timeSelection.end || 0)
+        if (!timeSpanSelectionIsEmpty()) {
+          playRange(eventStore.userState.timeSpanSelection.start || 0, eventStore.userState.timeSpanSelection.end || 0)
         } else if (es.length > 0) {
           playEvents(es)
         } else {
@@ -766,7 +766,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     disabled: () => false,
     action: () => {
       deselectEvents()
-      eventStore.userState.timeSelection = { start: null, end: null }
+      eventStore.userState.timeSpanSelection = { start: null, end: null }
     }
   },
   saveTranscript: {

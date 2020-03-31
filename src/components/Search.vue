@@ -21,8 +21,9 @@
         <checkbox :disabled="useRegEx" :value="caseSensitive || useRegEx" @input="caseSensitive = $event" label="Case Sensitive" />
         <checkbox v-model="useRegEx" label="Regular Expression" />
         <v-menu
+          lazy
           close-delay="500"
-          transition="fade-transition"
+          :transition="false"
           :close-on-content-click="false"
           bottom
           offset-y

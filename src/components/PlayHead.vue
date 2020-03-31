@@ -17,7 +17,7 @@
       }"
     />
     <div
-      v-if="eventStore.userState.timeSelection.start !== null && eventStore.userState.timeSelection.end !== null"
+      v-if="eventStore.userState.timeSpanSelection.start !== null && eventStore.userState.timeSpanSelection.end !== null"
       :style="{
         left: getSelectionLeft() * settings.pixelsPerSecond + 'px',
         width: getSelectionLength() * settings.pixelsPerSecond + 'px'
@@ -113,7 +113,7 @@ export default class PlayHead extends Vue {
   }
 
   startDrag(e: MouseEvent) {
-    eventStore.userState.timeSelection = { start: null, end: null }
+    eventStore.userState.timeSpanSelection = { start: null, end: null }
     deselectEvents()
     this.inFront = true
     scrubAudio(e.offsetX / settings.pixelsPerSecond)
@@ -122,29 +122,32 @@ export default class PlayHead extends Vue {
   }
 
   getSelectionLeft() {
-    return Math.min(eventStore.userState.timeSelection.start || 0, eventStore.userState.timeSelection.end || 0)
+    return Math.min(eventStore.userState.timeSpanSelection.start || 0, eventStore.userState.timeSpanSelection.end || 0)
   }
 
   getSelectionLength() {
-    return Math.abs((eventStore.userState.timeSelection.end || 0) - (eventStore.userState.timeSelection.start || 0))
+    return Math.abs(
+      (eventStore.userState.timeSpanSelection.end || 0) -
+      (eventStore.userState.timeSpanSelection.start || 0)
+    )
   }
 
   startSelection(e: MouseEvent) {
     deselectEvents()
     this.inFront = true
-    eventStore.userState.timeSelection.start = e.offsetX / settings.pixelsPerSecond
+    eventStore.userState.timeSpanSelection.start = e.offsetX / settings.pixelsPerSecond
     document.addEventListener('mousemove', this.dragSelection)
     document.addEventListener('mouseup', this.endSelection)
   }
 
   dragSelection(e: MouseEvent) {
     // console.log(e.offsetX / settings.pixelsPerSecond, e)
-    eventStore.userState.timeSelection.end = e.offsetX / settings.pixelsPerSecond
+    eventStore.userState.timeSpanSelection.end = e.offsetX / settings.pixelsPerSecond
   }
 
   endSelection(e: MouseEvent) {
     this.inFront = false
-    eventStore.userState.timeSelection.end = e.offsetX / settings.pixelsPerSecond
+    eventStore.userState.timeSpanSelection.end = e.offsetX / settings.pixelsPerSecond
     document.removeEventListener('mousemove', this.dragSelection)
     document.removeEventListener('mouseup', this.endSelection)
   }

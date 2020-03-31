@@ -129,7 +129,7 @@ export const eventStore = {
     viewingTranscriptEvent: null as LocalTranscriptEvent|null,
     editingTranscriptEvent: null as LocalTranscriptEvent|null,
     viewingAudioEvent: null as LocalTranscriptEvent|null,
-    timeSelection: {
+    timeSpanSelection: {
       start: null as null|number,
       end: null as null|number
     }
@@ -157,9 +157,9 @@ export function tokenTypeFromToken(token: string) {
   }
 }
 
-export function timeSelectionIsEmpty() {
-  return eventStore.userState.timeSelection.start === null &&
-    eventStore.userState.timeSelection.end === null
+export function timeSpanSelectionIsEmpty() {
+  return eventStore.userState.timeSpanSelection.start === null &&
+    eventStore.userState.timeSpanSelection.end === null
 }
 
 export async function exportEventAudio(eventIds: number[]) {
@@ -285,6 +285,10 @@ export function selectSearchResult(r: SearchResult) {
   scrollToAudioEvent(r.event)
   scrollToTranscriptEvent(r.event)
   selectEvent(r.event)
+}
+
+export function scrollToAudioTime(t: number) {
+  eventBus.$emit('scrollToAudioTime', t)
 }
 
 export function scrollToAudioEvent(e: LocalTranscriptEvent) {
@@ -1285,6 +1289,12 @@ export function getSelectedEvents(): LocalTranscriptEvent[] {
 
 export function getSelectedEvent(): LocalTranscriptEvent|undefined {
   return _.find(eventStore.events, (e) => e.eventId === eventStore.selectedEventIds[0])
+}
+
+export function toSeconds(time: string): number {
+  const a = time.split(':') // split it at the colons
+  // minutes are worth 60 seconds. Hours are worth 60 minutes.
+  return (+a[0]) * 60 * 60 + (+a[1] || 0) * 60 + (+a[2] || 0)
 }
 
 export function toTime(time: number, decimalPlaces = 0): string {

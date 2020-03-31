@@ -83,30 +83,28 @@
                   </v-subheader>
                   <template v-for="(transcript) in filteredTranscriptList">
                     <v-divider :key="'dk' + transcript.pk" />
-                    <transition-group :key="'ts'+ transcript.pk">
-                      <v-list-tile
-                        :key="transcript.pk" 
-                        :disabled="loadingTranscriptId !== null"
-                        @click="loadRemoteTranscript(transcript)">
-                        <v-list-tile-avatar>
-                          <v-progress-circular
-                            class="mb-2"
-                            size="20"
-                            width="2"
-                            v-if="loadingTranscriptId === transcript.pk"
-                            indeterminate />
-                          <v-icon color="grey" v-else>cloud_queue</v-icon>
-                        </v-list-tile-avatar>
-                        <v-list-tile-content>
-                          <v-list-tile-title>
-                            {{ transcript.n }}
-                          </v-list-tile-title>
-                          <v-list-tile-sub-title>
-                            {{ transcript.ut }}
-                          </v-list-tile-sub-title>
-                        </v-list-tile-content>
-                      </v-list-tile>
-                    </transition-group>
+                    <v-list-tile
+                      :key="transcript.pk" 
+                      :disabled="loadingTranscriptId !== null"
+                      @click="loadRemoteTranscript(transcript)">
+                      <v-list-tile-avatar>
+                        <v-progress-circular
+                          class="mb-2"
+                          size="20"
+                          width="2"
+                          v-if="loadingTranscriptId === transcript.pk"
+                          indeterminate />
+                        <v-icon color="grey" v-else>cloud_queue</v-icon>
+                      </v-list-tile-avatar>
+                      <v-list-tile-content>
+                        <v-list-tile-title>
+                          {{ transcript.n }}
+                        </v-list-tile-title>
+                        <v-list-tile-sub-title>
+                          {{ transcript.ut }}
+                        </v-list-tile-sub-title>
+                      </v-list-tile-content>
+                    </v-list-tile>
                   </template>
                   <v-list-tile class="text-xs-center" v-if="filteredTranscriptList.length === 0">
                     <span class="caption">

@@ -1,5 +1,12 @@
 <template>
   <div :style="{minHeight: height}" :class="['playerbar', settings.darkMode && 'theme--dark']">
+    <v-dialog
+      @keydown.esc="showTimePicker = false"
+      lazy
+      max-width="700"
+      v-model="showTimePicker">
+      <time-picker v-if="showTimePicker === true" @close="showTimePicker = false" />
+    </v-dialog>
     <v-layout row>
       <v-flex xs4 text-xs-right>
         <player-bar-button @click="playStart" :size="height">
@@ -17,11 +24,11 @@
         xs4
         align-content-center>
         <player-bar-button @click="playPause" :size="height">
-          <v-icon v-if="eventStore.isPaused && timeSelectionIsEmpty()">play_arrow</v-icon>
-          <v-icon v-if="eventStore.isPaused && !timeSelectionIsEmpty()">mdi-play-outline</v-icon>
+          <v-icon v-if="eventStore.isPaused && timeSpanSelectionIsEmpty()">play_arrow</v-icon>
+          <v-icon v-if="eventStore.isPaused && !timeSpanSelectionIsEmpty()">mdi-play-outline</v-icon>
           <v-icon v-if="!eventStore.isPaused">pause</v-icon>
         </player-bar-button>
-        <div ref="currentTime" class="current-time"></div>
+        <div @click="showTimePicker = true" ref="currentTime" class="current-time"></div>
       </v-flex>
       <v-flex xs4>
         <v-layout>
@@ -36,6 +43,7 @@
           <v-flex text-xs-right>
             <v-spacer />
             <v-menu
+              lazy
               :close-on-content-click="false"
               nudge-top="50"
               min-width="310"
@@ -66,6 +74,7 @@
               </div>
             </v-menu>
             <v-menu
+              lazy
               :close-on-content-click="false"
               nudge-top="50"
               min-width="310"
@@ -107,9 +116,11 @@ import settings, {
 import audio from '../service/audio'
 import eventBus from '../service/event-bus'
 import PlayerBarButton from './PlayerBarButton.vue'
+import TimePicker from './TimePicker.vue'
 import {
   eventStore,
   toTime,
+  toSeconds,
   playAllFrom,
   pause,
   getSelectedEvents,
@@ -117,13 +128,16 @@ import {
   playEventsStart,
   playEventsEnd,
   playRange,
-  timeSelectionIsEmpty
+  timeSpanSelectionIsEmpty,
+  scrollToAudioTime,
+  scrubAudio
 } from '../store/transcript'
 import { requestFrameAsync, isCmdOrCtrl } from '../util/index'
 
 @Component({
   components: {
-    PlayerBarButton
+    PlayerBarButton,
+    TimePicker
   }
 })
 export default class PlayerBar extends Vue {
@@ -137,7 +151,8 @@ export default class PlayerBar extends Vue {
   setPlaybackVolume = setPlaybackVolume
   settings = settings
   toTime = toTime
-  timeSelectionIsEmpty = timeSelectionIsEmpty
+  timeSpanSelectionIsEmpty = timeSpanSelectionIsEmpty
+  showTimePicker = false
 
   cachedVolume = settings.playbackVolume
   cachedSpeed = .5
@@ -163,8 +178,8 @@ export default class PlayerBar extends Vue {
   playPause(e: Event) {
     if (eventStore.isPaused === true) {
       const es = getSelectedEvents()
-      if (!timeSelectionIsEmpty()) {
-        playRange(eventStore.userState.timeSelection.start || 0, eventStore.userState.timeSelection.end || 0)
+      if (!timeSpanSelectionIsEmpty()) {
+        playRange(eventStore.userState.timeSpanSelection.start || 0, eventStore.userState.timeSpanSelection.end || 0)
       } else if (es.length > 0) {
         playEvents(es)
       } else {
@@ -231,17 +246,9 @@ export default class PlayerBar extends Vue {
 </style>
 
 <style lang="stylus" scoped>
-// .display-area
-//   background white
-//   &.theme--dark
-//     background rgba(0,0,0,.3)
 
 .playerbar
   z-index 3
-  // position sticky
-  // left 0
-  // right 0
-  // bottom 0
   text-align center
   background #efefef
   &.theme--dark

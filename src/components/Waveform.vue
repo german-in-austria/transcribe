@@ -40,7 +40,7 @@
             width: i + 1 < amountDrawSegments ? drawWidth + 'px' : 'auto',
             height: height + 'px'
           }">
-          <div class="wave-form-placeholder" />
+          <div :style="{marginTop: height / 2 + 'px'}" class="wave-form-placeholder" />
         </div>
         <slot />
         <div
@@ -100,7 +100,7 @@
       </v-flex>
       <v-flex>
         <scroll-lock-button
-          style="margin-top: 20px;"
+          style="margin-top: 10px;"
           :value="settings.lockScroll"
           @input="handleScrollLockToggle"
         />
@@ -191,6 +191,7 @@ export default class Waveform extends Vue {
   mounted() {
     EventBus.$on('scrollTranscript', this.scrollLockedScroll)
     EventBus.$on('scrollToAudioEvent', this.scrollToSegment)
+    EventBus.$on('scrollToAudioTime', this.scrollToSecond)
     this.initWithAudio()
   }
 
@@ -834,6 +835,11 @@ export default class Waveform extends Vue {
 
 select
   background #303030
+
+.wave-form-placeholder
+  height 1px
+  width 100%
+  border-top 1px dashed grey
 
 .waveform-outer
   .scrollbar

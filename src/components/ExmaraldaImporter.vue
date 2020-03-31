@@ -96,19 +96,16 @@
                 settings.darkMode === true && 'theme--dark'
               ]">
                 <v-flex class="pl-3" xs1>
-                  <v-tooltip z-index="999" top>
-                    <v-checkbox
-                      slot="activator"
-                      color="white"
-                      hide-details
-                      class="mt-0"
-                      @change="updateAllSelections"
-                      :indeterminate="isAnythingOrAllSelected === null"
-                      :input-value="isAnythingOrAllSelected"
-                    />
-                    <span v-if="isAnythingOrAllSelected === true">select none</span>
-                    <span v-else>select all</span>
-                  </v-tooltip>
+                  <v-checkbox
+                    slot="activator"
+                    color="white"
+                    hide-details
+                    :title="isAnythingOrAllSelected === true ? 'select none' : 'select all'"
+                    class="mt-0"
+                    @change="updateAllSelections"
+                    :indeterminate="isAnythingOrAllSelected === null"
+                    :input-value="isAnythingOrAllSelected"
+                  />
                 </v-flex>
                 <v-flex class="grey--text caption pt-2" xs4>
                   From Exmaralda File
