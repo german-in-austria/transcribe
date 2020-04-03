@@ -683,7 +683,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   pointer-events none
 
 .locked-token
-  border-bottom 3px solid red
+  border-bottom 3px solid green
 
 // in the light theme, the text inside of the
 // indicator should be in front and white.
