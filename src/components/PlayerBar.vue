@@ -241,6 +241,10 @@ export default class PlayerBar extends Vue {
     display inline-block
     width 155px
     margin 0 auto
+    cursor default
+    border-radius 13px
+    &:hover
+      background rgba(255,255,255,.1)
     span:nth-last-child(-n+4)
       opacity .5
 </style>
