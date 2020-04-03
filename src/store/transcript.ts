@@ -354,32 +354,6 @@ export function speakerEventHasErrors(event: LocalTranscriptEvent): boolean {
   return !sentences.every(s => sentenceRules.every(r => r(s)))
 }
 
-function updateSpeakerTokenOrderStartingAt(speakerId: number, startAtIndex = 0, add: number) {
-  eachFrom(eventStore.events, startAtIndex, (e) => {
-    if (e.speakerEvents[speakerId] !== undefined) {
-      const tokens = e.speakerEvents[speakerId].tokens
-      if (tokens.length > 0) {
-        return {
-          ...e,
-          speakerEvents: {
-            ...e.speakerEvents,
-            [speakerId]: {
-              ...e.speakerEvents[speakerId],
-              tokens: tokens.map(t => {
-                return { ...t, order: t.order + add }
-              })
-            }
-          }
-        }
-      } else {
-        return e
-      }
-    } else {
-      return e
-    }
-  })
-}
-
 export function getFirstTokenOrder(e: LocalTranscriptEvent, speakerId: string): number {
   const speakerEvent = e.speakerEvents[speakerId]
   if (speakerEvent) {
@@ -491,18 +465,16 @@ export function updateSpeakerEvent(
   const tokens = event.speakerEvents[speakerId].tokens
   const eventIndex = findEventIndexById(event.eventId)
   const oldEvent = eventStore.events[eventIndex]
-  const isNew = oldEvent.speakerEvents[speakerId] === undefined
   // tslint:disable-next-line:max-line-length
   const deletedSpeakerId = !hasTokens(event.speakerEvents[speakerId]) && !hasEventTiers(event.speakerEvents[speakerId]) ? speakerId : undefined
-  console.log({deletedSpeakerId})
-  const tokenCountDifference = isNew ? tokens.length : tokens.length - oldEvent.speakerEvents[speakerId].tokens.length
   const speakerEvents = _({
     // merge the new speaker
     ...oldEvent.speakerEvents,
     [speakerId] : {
       speakerEventId: event.eventId,
       speakerEventTiers: event.speakerEvents[speakerId].speakerEventTiers || {},
-      tokens
+      // update order, from 0 to token length
+      tokens: tokens.map((t, i) => ({ ...t, order: i}))
     }
   })
   // remove deleted speaker events
@@ -542,11 +514,6 @@ export function updateSpeakerEvent(
     setFirstTokenFragmentOf(eventIndex, speakerId, undefined)
   }
 
-  // update token order if the length has changed
-  if (tokenCountDifference !== 0) {
-    updateSpeakerTokenOrderStartingAt(speakerId, eventIndex, tokenCountDifference)
-  }
-  // console.log('after update', clone(eventStore.events[eventIndex]), eventStore.events[eventIndex])
   return {
     id: _.uniqueId(),
     time: new Date(),
