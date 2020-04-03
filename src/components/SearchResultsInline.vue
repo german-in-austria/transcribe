@@ -58,8 +58,9 @@ export default class SearchResults extends Vue {
   settings = settings
 
   handleDoubleClick(ev: MouseEvent) {
-    const eventId = ev.toElement.getAttribute('data-event-id')
-    if (eventId !== null) {
+    const el = ev.target as HTMLElement
+    const eventId = el.getAttribute('data-event-id')
+    if (eventId !== null && el !== null) {
       const i = findEventIndexById(Number(eventId))
       const e = eventStore.events[i]
       playEvent(e)
@@ -67,11 +68,12 @@ export default class SearchResults extends Vue {
   }
 
   handleResultMouseOver(ev: MouseEvent) {
-    const eventId = ev.toElement.getAttribute('data-event-id')
+    const el = ev.target as HTMLElement
+    const eventId = el.getAttribute('data-event-id')
     if (eventId !== null) {
       const i = findEventIndexById(Number(eventId))
       const e = eventStore.events[i]
-      const rect = ev.toElement.getBoundingClientRect()
+      const rect = el.getBoundingClientRect()
       this.menuX = rect.left
       this.menuY = rect.top
       this.hoveredEvent = e
@@ -83,7 +85,8 @@ export default class SearchResults extends Vue {
   }
 
   handleResultClick(ev: MouseEvent) {
-    const eventId = ev.toElement.getAttribute('data-event-id')
+    const el = ev.target as HTMLElement
+    const eventId = el.getAttribute('data-event-id')
     if (eventId !== null) {
       const i = findEventIndexById(Number(eventId))
       const e = eventStore.events[i]
