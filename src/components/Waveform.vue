@@ -847,11 +847,6 @@ select
     z-index 1
     width 100%
     height 60px
-    transition opacity .25s
-    opacity 0
-  &:hover
-    .scrollbar
-      opacity 1
 
 input[type=range]
   -webkit-appearance none
