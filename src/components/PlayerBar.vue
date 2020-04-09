@@ -28,7 +28,10 @@
           <v-icon v-if="eventStore.isPaused && !timeSpanSelectionIsEmpty()">mdi-play-outline</v-icon>
           <v-icon v-if="!eventStore.isPaused">pause</v-icon>
         </player-bar-button>
-        <div @click="showTimePicker = true" ref="currentTime" class="current-time"></div>
+        <div
+          @click="showTimePicker = false"
+          ref="currentTime"
+          class="current-time"></div>
       </v-flex>
       <v-flex xs4>
         <v-layout>

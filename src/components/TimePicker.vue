@@ -44,11 +44,14 @@ export default class TimePicker extends Vue {
       r.focus()
     }
   }
+  // FIXME: this seems to screw up scrolling afterwards
   jumpToTime(time: string) {
     deselectEvents()
     const t = toSeconds(time)
-    scrollToAudioTime(t)
-    scrubAudio(t)
+    requestAnimationFrame(() => {
+      scrollToAudioTime(t)
+      scrubAudio(t)
+    })
   }
 
 }
