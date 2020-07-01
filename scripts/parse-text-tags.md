@@ -7,7 +7,7 @@ TODO: delete tags that have been converted.
 ```SQL
 -- Table Definition ----------------------------------------------
 
-CREATE TABLE event_tier_test (
+CREATE TABLE event_tier (
     id SERIAL PRIMARY KEY,
     text character varying(511),
     "ID_Inf_id" integer REFERENCES "PersonenDB_tbl_informanten"(id) DEFERRABLE INITIALLY DEFERRED,
@@ -28,22 +28,21 @@ CREATE TABLE import.tag_translation_msyn (
     newtagset character varying(511)
 );
 
-
--- find the duplicates through event_tier_test? answer: nope
+-- find the duplicates through event_tier? answer: nope
 --SELECT *
 --FROM (
 --  SELECT
 --    array_agg(DISTINCT event.id) as events,
---    array_agg(event_tier_test.text),
---    array_agg(event_tier_test."ID_Inf_id"),
+--    array_agg(event_tier.text),
+--    array_agg(event_tier."ID_Inf_id"),
 --    array_agg(DISTINCT transcript.name),
 --    start_time,
 --    tier.transcript_id_id
 --  FROM event
---  JOIN event_tier_test
+--  JOIN event_tier
 --    ON event_id_id = event.id
 --  JOIN tier
---    ON tier.id = event_tier_test.tier_id_id
+--    ON tier.id = event_tier.tier_id_id
 --  JOIN transcript
 --    ON tier.transcript_id_id = transcript.id
 --  GROUP BY (start_time, end_time, tier.transcript_id_id)
@@ -51,9 +50,27 @@ CREATE TABLE import.tag_translation_msyn (
 --WHERE array_length(f.events, 1) > 1
 --;
 
+-- merge old event_tier into current event_tier
+CREATE UNIQUE INDEX "tier_constraint" ON "public"."event_tier"("ID_Inf_id","event_id_id","tier_id_id");
+INSERT INTO event_tier (
+  id,
+  text,
+  "ID_Inf_id",
+  event_id_id,
+  tier_id_id
+) (
+  SELECT id, text, "ID_Inf_id", event_id_id, tier_id_id FROM event_tier
+) ON CONFLICT DO NOTHING;
+DROP INDEX "public"."tier_constraint";
+
+-- to double-check:
+select id
+from event_tier
+except
+select id
+from event_tier;
 
 -- to fix the duplicate event (speaker_event) situation by combining them
--- CAREFUL: this is based on token information and updates both event tiers and tokens.
 WITH overlapping_events as (
   SELECT
     unnest(events) as event_id,
@@ -86,7 +103,7 @@ updated_tokens as (
   RETURNING *
 ),
 updated_event_tiers as (
-  UPDATE event_tier_test
+  UPDATE event_tier
   SET event_id_id = a.correct_event_id
   FROM (
     SELECT
@@ -95,7 +112,7 @@ updated_event_tiers as (
     FROM overlapping_events
     WHERE event_id != (events)[1]
   ) a
-  WHERE event_tier_test.event_id_id = old_event_id
+  WHERE event_tier.event_id_id = old_event_id
 )
 select * from updated_tokens;
 
@@ -121,7 +138,7 @@ deleted_answers as (
 SELECT 1;
 
 -- translate the msyn tags in-place (in event_tiers)
-UPDATE event_tier_test
+UPDATE event_tier
 SET text = tags
 FROM (
   SELECT
@@ -135,11 +152,11 @@ FROM (
         text,
         event_id_id,
         tier_id_id,
-        event_tier_test.id AS tier_event_id,
+        event_tier.id AS tier_event_id,
         "ID_Inf_id" as inf_id
-      FROM event_tier_test
+      FROM event_tier
       JOIN tier ti
-        ON ti.id = event_tier_test.tier_id_id
+        ON ti.id = event_tier.tier_id_id
       WHERE ti.tier_name = 'msyn'
         AND TRIM(text) != ''
     ) t
@@ -149,12 +166,12 @@ FROM (
     AND newtagset != text
   ) g
 ) f
-WHERE event_tier_test.id = f.tier_event_id
-  AND event_tier_test."ID_Inf_id" = f.inf_id
+WHERE event_tier.id = f.tier_event_id
+  AND event_tier."ID_Inf_id" = f.inf_id
 RETURNING *;
 
 -- translate the phon.anno tags in-place (in event_tiers)
-UPDATE event_tier_test
+UPDATE event_tier
 SET text = tags
 FROM (
   SELECT
@@ -168,11 +185,11 @@ FROM (
         TRIM((regexp_split_to_table(text, E'\,\\s?'))) as text,
         event_id_id,
         tier_id_id,
-        event_tier_test.id AS tier_event_id,
+        event_tier.id AS tier_event_id,
         "ID_Inf_id" as inf_id
-      FROM event_tier_test
+      FROM event_tier
       JOIN tier
-        ON tier.id = event_tier_test.tier_id_id
+        ON tier.id = event_tier.tier_id_id
       WHERE tier.tier_name = 'phon.anno'
          OR tier.tier_name = 'phon_anno'
         AND TRIM(text) != ''
@@ -184,18 +201,18 @@ FROM (
   ) g
   GROUP BY (tier_event_id, g.inf_id)
 ) f
-WHERE event_tier_test.id = f.tier_event_id
-  AND event_tier_test."ID_Inf_id" = f.inf_id;
+WHERE event_tier.id = f.tier_event_id
+  AND event_tier."ID_Inf_id" = f.inf_id;
 
 -- find event tiers that don’t start with "[",
 -- i. e. they could not be converted
 SELECT *
-FROM event_tier_test
+FROM event_tier
 JOIN tier
-  ON tier.id = event_tier_test.tier_id_id
+  ON tier.id = event_tier.tier_id_id
 WHERE (tier.tier_name = 'phon.anno'
    OR tier.tier_name = 'phon_anno'
---   OR tier.tier_name = 'msyn'
+   OR tier.tier_name = 'msyn'
    )
   AND text not like '[%'
   AND TRIM(text) != '';
@@ -278,11 +295,11 @@ WITH parsed_tags as (
           TRIM((regexp_split_to_table(text, E'\\]\,?\\s+\\['))) as text,
           event_id_id,
           tier_id_id,
-          event_tier_test.id AS tier_event_id,
+          event_tier.id AS tier_event_id,
           "ID_Inf_id" as inf_id
-        FROM event_tier_test
+        FROM event_tier
         JOIN tier
-          ON tier.id = event_tier_test.tier_id_id
+          ON tier.id = event_tier.tier_id_id
         WHERE
           (
               tier.tier_name = 'phon.anno' OR tier.tier_name = 'phon_anno'
@@ -293,12 +310,12 @@ WITH parsed_tags as (
       ) AS innerSelectTag
     ) AS f
   ) AS b
-  -- get only the ones that have no NULLs in the array.
---  WHERE array_length(array_remove(parsed_tag, NULL), 1) = array_length(parsed_tag, 1)
-  WHERE array_length(array_remove(parsed_tag, NULL), 1) != array_length(parsed_tag, 1)
-  OR tag_ebene IS NULL
+  -- get only the tagsets that have no NULLs (no unparsable tags) in the array.
+  WHERE array_length(array_remove(parsed_tag, NULL), 1) = array_length(parsed_tag, 1)
+--  WHERE array_length(array_remove(parsed_tag, NULL), 1) != array_length(parsed_tag, 1)
+--  OR tag_ebene IS NULL
   -- and the ones where we could identify a "tag_ebene"
---    AND tag_ebene is not null
+    AND tag_ebene is not null
 )
 -- HERE COME THE UPSERTS AND INSERTS:
 --,
@@ -318,41 +335,41 @@ WITH parsed_tags as (
 --  )
 --  returning  id, id_von_token_id, id_bis_token_id
 --)
---,
---antworten as (
---  INSERT INTO "KorpusDB_tbl_antworten"(
---    "von_Inf_id",
---    "Kommentar",
---    "Reihung",
---    ist_gewaehlt,
---    ist_nat,
---    ist_bfl,
---    kontrolliert,
---    veroeffentlichung,
---    ist_token_id,
---    ist_tokenset_id
---   ) (
---    SELECT DISTINCT ON (tag_set_index)
---      inf_id,
---      '[IMPORTED]',
---      answer_order,
---      false,
---      true,
---      false,
---      false,
---      false,
---      CASE WHEN first_token = last_token THEN first_token ELSE NULL END,
---      CASE WHEN first_token != last_token THEN (
---        SELECT id
---          FROM tokenset
---          WHERE id_von_token_id = first_token
---          AND id_bis_token_id = last_token
---          LIMIT 1
---      ) ELSE NULL END
---    FROM parsed_tags
---  )
---  RETURNING 1
---)
+,
+antworten as (
+  INSERT INTO "KorpusDB_tbl_antworten"(
+    "von_Inf_id",
+    "Kommentar",
+    "Reihung",
+    ist_gewaehlt,
+    ist_nat,
+    ist_bfl,
+    kontrolliert,
+    veroeffentlichung,
+    ist_token_id,
+    ist_tokenset_id
+   ) (
+    SELECT DISTINCT ON (tag_set_index)
+      inf_id,
+      '[IMPORTED]',
+      answer_order,
+      false,
+      true,
+      false,
+      false,
+      false,
+      CASE WHEN first_token = last_token THEN first_token ELSE NULL END,
+      CASE WHEN first_token != last_token THEN (
+        SELECT id
+          FROM tokenset
+          WHERE id_von_token_id = first_token
+          AND id_bis_token_id = last_token
+          LIMIT 1
+      ) ELSE NULL END
+    FROM parsed_tags
+  )
+  RETURNING 1
+)
 --,
 --antworttags as (
 --  INSERT INTO "KorpusDB_tbl_antwortentags"(
@@ -387,32 +404,33 @@ WITH parsed_tags as (
 --)
 --,
 --marked_imported as (
---  UPDATE event_tier_test
+--  UPDATE event_tier
 --  SET imported = 1
---  WHERE event_tier_test.id IN (
+--  WHERE event_tier.id IN (
 --    SELECT tier_event_id FROM parsed_tags
 --  )
 --)
---SELECT 1
-SELECT
-  transcript.name as transkript,
-  token.ortho as ortho_token,
-  event.start_time,
-  "PersonenDB_tbl_informanten".inf_sigle,
-  parsed_tags.text,
-  parsed_tags.parsed_tag,
-  "KorpusDB_tbl_tagebene"."Name" as tag_ebene
-  FROM parsed_tags
-  LEFT JOIN "KorpusDB_tbl_tagebene"
-    on "KorpusDB_tbl_tagebene".id = parsed_tags.tag_ebene
-  LEFT JOIN token
-    on token.id = parsed_tags.first_token
-  join transcript
-    on token.transcript_id_id = transcript.id
-  LEFT join event
-    on event.id = parsed_tags.event_id_id
-  LEFT join "PersonenDB_tbl_informanten"
-    on parsed_tags.inf_id = "PersonenDB_tbl_informanten".id
-  ORDER BY (transcript.name, event.start_time)
+SELECT 1
+--SELECT
+--  transcript.name as transkript,
+--  token.ortho as ortho_token,
+--  event.start_time,
+--  "PersonenDB_tbl_informanten".inf_sigle,
+--  parsed_tags.text,
+--  parsed_tags.parsed_tag,
+--  "KorpusDB_tbl_tagebene"."Name" as tag_ebene
+--  FROM parsed_tags
+--  LEFT JOIN "KorpusDB_tbl_tagebene"
+--    on "KorpusDB_tbl_tagebene".id = parsed_tags.tag_ebene
+--  LEFT JOIN token
+--    on token.id = parsed_tags.first_token
+--  join transcript
+--    on token.transcript_id_id = transcript.id
+--  LEFT join event
+--    on event.id = parsed_tags.event_id_id
+--  LEFT join "PersonenDB_tbl_informanten"
+--    on parsed_tags.inf_id = "PersonenDB_tbl_informanten".id
+--  ORDER BY (transcript.name, event.start_time)
 ;
+
 ```
