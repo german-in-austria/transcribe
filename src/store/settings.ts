@@ -1,11 +1,11 @@
+import _ from 'lodash'
+import Vue from 'vue'
+import localForage from 'localforage'
+
 import { makeGradient, Color } from '../lib/gradient'
 import { setNumberInBounds, platform } from '../util'
 import { KeyboardShortcuts, keyboardShortcuts, KeyboardAction } from '../service/keyboard'
-import localForage from 'localforage'
-import _ from 'lodash'
-
 import { eventStore } from './transcript'
-import Vue from 'vue'
 
 export interface TokenTypePresetBase {
   name: string
