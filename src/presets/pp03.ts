@@ -1,7 +1,15 @@
 import { ProjectPreset } from '.'
 
 export const PP03: ProjectPreset = {
-  tokenizer: (s) => s.split(''),
+  tokenizer: (s) => {
+    return s
+      .split('.').join(' .')
+      .split(', ').join(' , ')
+      .split('-').join('_ _')
+      .split('? ').join(' ? ')
+      .split(' ')
+      .filter(t => t !== '')
+  },
   tokenTypes: [
     {
       type: 'single',

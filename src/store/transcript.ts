@@ -226,17 +226,6 @@ export function loadAudioFromFile(f: File|Uint8Array): Promise<HTMLAudioElement>
   })
 }
 
-// This needs to be part of the project settings
-export function tokenize(s: string): string[] {
-  return s
-    .split('.').join(' .')
-    .split(', ').join(' , ')
-    .split('-').join('_ _')
-    .split('? ').join(' ? ')
-    .split(' ')
-    .filter(t => t !== '')
-}
-
 export function isTokenTier(tier: string): tier is TokenTierType {
   return ['ortho', 'text', 'phon'].indexOf(tier) > -1
 }

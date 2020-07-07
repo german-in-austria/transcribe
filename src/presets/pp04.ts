@@ -2,8 +2,14 @@
 import { ProjectPreset } from '.'
 
 export const PP04: ProjectPreset = {
-  tokenizer: (s: string) => {
-    return s.split(' ')
+  tokenizer: (s) => {
+    return s
+      .split('.').join(' .')
+      .split(', ').join(' , ')
+      .split('-').join('_ _')
+      .split('? ').join(' ? ')
+      .split(' ')
+      .filter(t => t !== '')
   },
   tokenTypes: [
     {
