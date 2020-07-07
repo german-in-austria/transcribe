@@ -114,7 +114,8 @@ import * as _ from 'lodash'
 import eventBus from '../service/event-bus'
 import * as history from '../store/history'
 import { createMediaFragmentUrl } from '../service/audio'
-import settings, { tokenTypesPresets } from '../store/settings'
+import settings from '../store/settings'
+import presets from '../presets'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import HighlightRange from './helper/HighlightRange.vue'
 import Checkbox from './helper/Checkbox.vue'
@@ -245,7 +246,7 @@ export default class Search extends Vue {
         const tokenIndex = getTokenIndexByCharacterOffset(res.event.speakerEvents[res.speakerId].tokens, res.offset)
         // tslint:disable-next-line:max-line-length
         const token = res.event.speakerEvents[res.speakerId].tokens[tokenIndex].tiers[res.tierId as TokenTierType] || { type: null, text: '' }
-        const t = tokenTypesPresets[settings.tokenTypesPreset].find(tt => tt.id === token.type)
+        const t = presets[settings.projectPreset].tokenTypes.find(tt => tt.id === token.type)
         if (t !== undefined) {
           tokenType = t.name
         }

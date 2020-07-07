@@ -6,28 +6,7 @@ import { makeGradient, Color } from '../lib/gradient'
 import { setNumberInBounds, platform } from '../util'
 import { KeyboardShortcuts, keyboardShortcuts, KeyboardAction } from '../service/keyboard'
 import { eventStore } from './transcript'
-
-export interface TokenTypePresetBase {
-  name: string
-  color: string
-  id: number
-}
-
-type TokenTypePresetName = 'PP03'|'dissDB'|'PP04'
-
-export type TokenTypesPreset = {
-  [name in TokenTypePresetName]: Array<TokenTypesPresetGroup | TokenTypesPresetSingle>;
-}
-
-export interface TokenTypesPresetSingle extends TokenTypePresetBase {
-  type: 'single'
-  regex: RegExp
-}
-
-export interface TokenTypesPresetGroup extends TokenTypePresetBase {
-  type: 'group'
-  bracketSymbols: [ RegExp, RegExp ]
-}
+import { ProjectPresets } from 'presets'
 
 type JSONValue = string | number | boolean | null | JSONObject | JSONArray
 
@@ -75,7 +54,7 @@ export interface Settings {
   skipInterval: number
   spectrogramColors: Color[]
   spectrogramGradient: number[][]
-  tokenTypesPreset: keyof TokenTypesPreset
+  projectPreset: keyof ProjectPresets
   useMonoWaveForm: boolean
   waveFormColors: string[]
   playEventOnAppend: boolean
@@ -85,182 +64,6 @@ export interface Settings {
     unknownTokenTypes: boolean
     eventOverlaps: boolean
   }
-}
-
-export const tokenTypesPresets: TokenTypesPreset = {
-  PP04: [
-    {
-      type: 'group',
-      name: 'anonymized',
-      bracketSymbols: [
-        /(\[([a-zA-ZÜüÄäÖöß'\?]+))/u,
-        /(.+\](N|NZ|O|OP|OA|OS|P|Z))/,
-      ],
-      color: '#880000',
-      id: 10
-    },
-    {
-      type: 'group',
-      name: 'incomprehensible',
-      bracketSymbols: [
-        /(\(([a-zA-ZÜüÄäÖöß'\?]+))/u,
-        /((.+)\))/u
-      ],
-      color: '#ccc',
-      id: 7
-    },
-    {
-      type: 'group',
-      name: 'non-verbal',
-      bracketSymbols: [
-        /\(\((.+)|\[(.+)/u,
-        /(.+)\)\)|(.+)\]/u
-      ],
-      color: '#008800',
-      id: 5
-    }
-  ],
-  PP03: [
-    {
-      type: 'single',
-      name: 'segments-unclear',
-      regex: /(\*)([a-zA-ZÜüÄäÖöß']+)(\*)/,
-      color: '#6B6B6B',
-      id: 9
-    },
-    {
-      type: 'single',
-      name: 'untransferable-lexics',
-      regex: /(_)([a-zA-ZÜüÄäÖöß']+)(_)/,
-      color: '#FFAF3C',
-      id: 8
-    },
-    {
-      type: 'single',
-      name: 'interrupted',
-      regex: /([a-zA-ZÜüÄäÖöß']+\/$)|(\/[a-zA-ZÜüÄäÖöß']+$)/u,
-      color: '#6699CC',
-      id: 6
-    },
-    {
-      type: 'single',
-      name: 'pause',
-      regex: /\(\((([a-zA-ZÜüÄäÖöß']+)|(\d+(,\d)?s|))\)\)/u,
-      color: '#6B6B6B',
-      id: 3
-    },
-    {
-      type: 'group',
-      name: 'incomprehensible',
-      bracketSymbols: [
-        /(\(([a-zA-ZÜüÄäÖöß'\?]+))/u,
-        /((.+)\))/u
-      ],
-      color: '#ccc',
-      id: 7
-    },
-    {
-      type: 'group',
-      name: 'anonymized',
-      bracketSymbols: [
-        /(\[([a-zA-ZÜüÄäÖöß'\?]+))/u,
-        /(.+\](N|O|Z|S))/,
-      ],
-      color: '#880000',
-      id: 10
-    },
-    {
-      type: 'single',
-      name: 'other',
-      regex: /\{([a-zA-ZÜüÄäÖöß']+)\}/u,
-      color: '#880000',
-      id: 4
-    },
-    {
-      type: 'single',
-      name: 'delimiter',
-      regex: /^(\/)?(\?|\.|\,|!)"?$/,
-      color: '#1717FB',
-      id: 2
-    },
-    {
-      type: 'single',
-      name: 'word',
-      regex: /^([a-zA-ZÜüÄäÖöß'"\-]+$)/u,
-      color: 'transparent',
-      id: 1
-    },
-  ],
-  dissDB: [
-    {
-      type: 'single',
-      name: 'pause',
-      regex: /\[[\s\S]{1,}s\]/u,
-      color: '#6B6B6B',
-      id: 3
-    },
-    {
-      type: 'group',
-      name: 'non-verbal',
-      bracketSymbols: [
-        /\(\((.+)|\[(.+)/u,
-        /(.+)\)\)|(.+)\]/u
-      ],
-      color: '#008800',
-      id: 5
-    },
-    {
-      type: 'single',
-      name: 'delimiter',
-      regex: /^(\?|\.|\,|!)"?/,
-      color: '#1717FB',
-      id: 2
-    },
-    {
-      type: 'single',
-      name: 'interrupted',
-      regex: /([a-zA-ZÜüÄäÖöß]+\/)/u,
-      color: '#6699CC',
-      id: 6
-    },
-    {
-      type: 'single',
-      name: 'contraction',
-      regex: /_[a-zA-ZÜüÄäÖöß]+|[a-zA-ZÜüÄäÖöß]+_/,
-      color: '#d47d0f',
-      id: 8
-    },
-    {
-      type: 'group',
-      name: 'proper-name',
-      bracketSymbols: [
-        /(\{(.+))/u,
-        /(\{?(.+)\})/u
-      ],
-      color: '#880000',
-      id: 4
-    },
-    {
-      type: 'group',
-      name: 'incomprehensible',
-      // regex: /\((.+)\)/u,
-      bracketSymbols: [
-        /\((.+)/u,
-        /\(?(.+)\)/u
-        // /(\(([a-zA-ZÜüÄäÖöß\?]+))/u,
-        // /(\(?[a-zA-ZÜüÄäÖöß]+\))/u
-      ],
-      color: '#6f6f6f',
-      id: 7
-    },
-    {
-      type: 'single',
-      name: 'word',
-      regex: /^[a-zA-ZÜüÄäÖöß]+/u,
-      color: 'transparent',
-      id: 1
-    },
-  ],
 }
 
 const spectrogramColors = [
@@ -436,7 +239,7 @@ const settings: Settings = {
   skipInterval: 1,
   spectrogramColors: spectrogramPresets[1].colors,
   spectrogramGradient: makeGradient(spectrogramPresets[1].colors),
-  tokenTypesPreset: 'PP03',
+  projectPreset: 'PP03',
   useMonoWaveForm: false,
   waveFormColors: [ '#fb7676', '#6699CC' ],
   playEventOnAppend: true,
@@ -506,7 +309,5 @@ function stringifySettings(s: Settings): string {
   }
   return JSON.stringify(serializedSettings)
 }
-
-// (window as any)._settings = settings
 
 export default settings

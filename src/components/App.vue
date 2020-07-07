@@ -236,9 +236,9 @@ export default class App extends Vue {
   // FIXME: this is insanely hacky.
   async updateTokenTypePreset() {
     if (settings.backEndUrl !== null && settings.backEndUrl.includes('dioedb')) {
-      settings.tokenTypesPreset = 'PP03'
+      settings.projectPreset = 'PP03'
     } else if (settings.backEndUrl !== null && settings.backEndUrl.includes('dissdb')) {
-      settings.tokenTypesPreset = 'dissDB'
+      settings.projectPreset = 'dissDB'
     }
   }
 

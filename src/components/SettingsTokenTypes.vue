@@ -25,13 +25,13 @@
       <v-flex>
         <v-select
           label="Preset"
-          v-model="settings.tokenTypesPreset"
-          :items="tokenTypesPresetNames">
+          v-model="settings.projectPreset"
+          :items="projectPresetNames">
         </v-select>
       </v-flex>
     </v-layout>
     <v-layout
-      v-for="(type, i) in tokenTypesPresets[settings.tokenTypesPreset]"
+      v-for="(type, i) in presets[settings.projectPreset].tokenTypes"
       :key="type.name"
       class="ml-3 pt-2"
       row>
@@ -90,9 +90,11 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import settings, { tokenTypesPresets } from '../store/settings'
 import { Chrome as ColorPicker } from 'vue-color'
 import _ from 'lodash'
+
+import settings from '../store/settings'
+import presets from '../presets'
 
 @Component({
   components: {
@@ -102,7 +104,7 @@ import _ from 'lodash'
 export default class SettingsTokenTypes extends Vue {
 
   settings = settings
-  tokenTypesPresets = tokenTypesPresets
+  presets = presets
 
   isValidRegEx(e: string) {
     try {
@@ -113,8 +115,8 @@ export default class SettingsTokenTypes extends Vue {
     }
   }
 
-  get tokenTypesPresetNames(): string[] {
-    return _.map(this.tokenTypesPresets, (p, name) => name)
+  get projectPresetNames(): string[] {
+    return _.map(this.presets, (p, name) => name)
   }
 
   updateRegEx(...args: any[]) {

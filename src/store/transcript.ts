@@ -6,7 +6,8 @@ import {
   clone,
   fileToUint8ArrayAndName
 } from '../util'
-import settings, { tokenTypesPresets } from '../store/settings'
+import settings from '../store/settings'
+import presets from '../presets'
 import { HistoryEventAction } from './history'
 import eventBus from '../service/event-bus'
 import { collectTokensViaOffsets } from '../service/copy-paste'
@@ -143,7 +144,7 @@ export const eventStore = {
 (window as any).eventStore = eventStore;
 
 export function tokenTypeFromToken(token: string) {
-  const type = _(tokenTypesPresets[settings.tokenTypesPreset]).find((tt) => {
+  const type = _(presets[settings.projectPreset].tokenTypes).find((tt) => {
     return tt.type === 'single' && tt.regex.test(token.replace('=', ''))
   })
   if (type !== undefined) {
@@ -225,6 +226,7 @@ export function loadAudioFromFile(f: File|Uint8Array): Promise<HTMLAudioElement>
   })
 }
 
+// This needs to be part of the project settings
 export function tokenize(s: string): string[] {
   return s
     .split('.').join(' .')
