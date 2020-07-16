@@ -55,7 +55,7 @@
     "kaitai-struct": "^0.8.0-SNAPSHOT.11",
     "list-diff2": "^0.1.4",
     "localforage": "^1.7.3",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.19",
     "peaks.js": "^0.9.7",
     "promise-worker": "^2.0.0",
     "promise-worker-transferable": "^1.0.4",
