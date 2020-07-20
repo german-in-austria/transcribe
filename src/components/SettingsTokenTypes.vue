@@ -12,7 +12,7 @@
         <v-list-tile-sub-title>E.g. <code>token.</code> becomes <code>token .</code></v-list-tile-sub-title>
       </v-list-tile-content>
       <v-list-tile-action>
-        <v-switch v-model="settings.autoCorrectDelimiterSpace" />
+        <v-switch v-model="presets[settings.projectPreset].autoCorrectDelimiterSpace" />
       </v-list-tile-action>
     </v-list-tile>
     <v-layout class="settings-header">

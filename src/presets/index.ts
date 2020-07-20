@@ -12,6 +12,7 @@ export type ProjectPresets = {
 export interface ProjectPreset {
   tokenizer: (utterance: string) => string[]
   tokenTypes: Array<TokenTypesPresetGroup | TokenTypesPresetSingle>
+  autoCorrectDelimiterSpace: boolean
 }
 
 export interface TokenTypePresetBase {

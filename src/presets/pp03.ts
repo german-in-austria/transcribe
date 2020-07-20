@@ -1,6 +1,7 @@
 import { ProjectPreset } from '.'
 
 export const PP03: ProjectPreset = {
+  autoCorrectDelimiterSpace: true,
   tokenizer: (s) => {
     return s
       .split('.').join(' .')
