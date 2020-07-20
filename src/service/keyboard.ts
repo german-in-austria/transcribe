@@ -336,7 +336,9 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         eventStore.userState.timeSpanSelection.start !== null &&
         eventStore.userState.timeSpanSelection.end !== null
       ) {
-        const length = Math.abs(eventStore.userState.timeSpanSelection.start - eventStore.userState.timeSpanSelection.end)
+        const length = Math.abs(
+          eventStore.userState.timeSpanSelection.start - eventStore.userState.timeSpanSelection.end
+        )
         const speakerId = e.getAttribute('data-speaker-id')
         const eventId = e.getAttribute('data-event-id')
         if (speakerId !== null && eventId !== null) {
