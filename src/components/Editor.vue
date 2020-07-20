@@ -305,10 +305,10 @@ export default class Editor extends Vue {
     if (ev !== undefined) {
       if (isCmdOrCtrl(e)) {
         addEventsToSelection([ev])
-      } else if (e.shiftKey === true) {
-        selectEventRange(ev)
       } else {
-        selectEvents([ ev ])
+        if (!isEventSelected(ev.eventId)) {
+          selectEvents([ ev ])
+        }
       }
     }
     this.menuX = e.x
