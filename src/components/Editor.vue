@@ -8,17 +8,14 @@
         <div style="opacity: .7; font-size: small">{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
       </v-flex>
       <v-flex xs4 class="text-xs-right">
-        <!-- <search-simple style="display: inline-block" /> -->
         <div style="display: inline-block">
-          <v-tooltip transition="none" bottom>
-            <span>Settings</span>
-          </v-tooltip>
           <v-menu
+            lazy
             :disabled="eventStore.status === 'loading' || isSaving"
             open-on-hover
             min-width="150"
             nudge-bottom="10"
-            transition="none"
+            :transition="false"
             offset-y>
             <v-btn
               slot="activator"
@@ -51,18 +48,6 @@
               </v-list-tile>
             </v-list>
           </v-menu>
-          <!-- <v-tooltip transition="none" bottom>
-            <v-btn
-              slot="activator"
-              @click.stop="() => settings.showDrawer = !settings.showDrawer"
-              icon flat>
-              <v-badge color="error" overlap :value="errors.length > 0">
-                <span slot="badge">{{ errors.length }}</span>
-                <v-icon>mdi-tools</v-icon>
-              </v-badge>
-            </v-btn>
-            <span>History & Errors</span>
-          </v-tooltip> -->
         </div>
       </v-flex>
     </v-toolbar>
@@ -89,7 +74,7 @@
         <v-menu
           min-width="150"
           lazy
-          transition="none"
+          :transition="false"
           v-model="showMenu"
           :position-x="menuX"
           :position-y="menuY"
@@ -165,9 +150,9 @@
             class="error-overview"
             :style="{ left: `${ error.startTime / eventStore.audioElement.duration * 100}%` }" />
         </div>
-        <!-- <div class="search-overview-container">
+        <div class="search-overview-container">
           <search-results-inline />
-        </div> -->
+        </div>
       </div>
     </wave-form>
     <drop-file @update="loadAudioFromFile" class="fill-height" v-else>
@@ -187,7 +172,7 @@ import waveForm from './Waveform.vue'
 import settingsView from './Settings.vue'
 import spectrogram from './Spectrogram.vue'
 // import searchSimple from './SearchSimple.vue'
-// import searchResultsInline from './SearchResultsInline.vue'
+import searchResultsInline from './SearchResultsInline.vue'
 import transcriptEditor from './TranscriptEditor.vue'
 import playHead from './PlayHead.vue'
 import dropFile from './DropFile.vue'
@@ -248,7 +233,7 @@ import eventBus from '../service/event-bus'
     spectrogram,
     playHead,
     // searchSimple,
-    // searchResultsInline,
+    searchResultsInline,
     dropFile,
     playerBar
   }
@@ -320,10 +305,10 @@ export default class Editor extends Vue {
     if (ev !== undefined) {
       if (isCmdOrCtrl(e)) {
         addEventsToSelection([ev])
-      } else if (e.shiftKey === true) {
-        selectEventRange(ev)
       } else {
-        selectEvents([ ev ])
+        if (!isEventSelected(ev.eventId)) {
+          selectEvents([ ev ])
+        }
       }
     }
     this.menuX = e.x

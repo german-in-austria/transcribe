@@ -13,7 +13,6 @@ import {
   makeTierId,
   makeTokenId,
   timeFromSeconds,
-  tokenize,
   TokenTierType,
   tokenTypeFromToken,
   makeEventTierId
@@ -21,6 +20,8 @@ import {
 
 import * as parseXML from '@rgrove/parse-xml'
 import { padEnd } from '../util/index'
+import settings from '../store/settings'
+import presets from '../presets'
 
 interface BasicNode {
   attributes: object
@@ -131,7 +132,7 @@ function getTierToken(
     if (event === undefined || event.text === undefined || event.text === null) {
       return ''
     } else {
-      return tokenize(event.text)[tokenIndex] || ''
+      return presets[settings.projectPreset].tokenizer(event.text)[tokenIndex] || ''
     }
   }
 }
@@ -225,7 +226,7 @@ export function importableToServerTranscript(
                 }
               } else {
                 const cleanText = autoFixExmaraldaText(text)
-                const eventTokenIds = _(tokenize(cleanText))
+                const eventTokenIds = _(presets[settings.projectPreset].tokenizer(cleanText))
                   .filter(t => t !== '')
                   .map((t, tokenIndex): number => {
                     const fragmentOf = tokenIndex === 0 ? fragmentStartTokenId : undefined

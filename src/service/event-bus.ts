@@ -6,6 +6,7 @@ export type BusEvent =
   'scrollTranscript'|
   'scrollToTranscriptEvent'|
   'scrollToAudioEvent'|
+  'scrollToAudioTime'|
   'updateWaveformScrollbar'|
   'playAudio'|
   'pauseAudio'|

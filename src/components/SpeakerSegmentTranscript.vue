@@ -83,7 +83,8 @@
 
 import contenteditableDirective from 'vue-contenteditable-directive'
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import settings, { tokenTypesPresets } from '../store/settings'
+import settings from '../store/settings'
+import presets from '../presets'
 
 import {
   clone,
@@ -166,7 +167,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   onBlurEvent() {
     eventStore.userState.editingTranscriptEvent = null
     this.focused = false
-    if (settings.autoCorrectDelimiterSpace === true) {
+    if (presets[settings.projectPreset].autoCorrectDelimiterSpace === true) {
       if (this.event.speakerEvents[this.speaker] !== undefined) {
         const text = this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ')
         const replacedText = text.replace(/\b(\/?[\.|\?|\,|\!])\B/g, ' $1')
@@ -403,7 +404,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   colorFromTokenType(id: number): string {
-    const c = tokenTypesPresets[settings.tokenTypesPreset].find(tt => tt.id === id)
+    const c = presets[settings.projectPreset].tokenTypes.find(tt => tt.id === id)
     if (c) {
       return c.color
     } else {
@@ -683,7 +684,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   pointer-events none
 
 .locked-token
-  border-bottom 3px solid red
+  border-bottom 3px solid green
 
 // in the light theme, the text inside of the
 // indicator should be in front and white.

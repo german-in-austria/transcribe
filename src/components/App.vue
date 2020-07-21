@@ -248,12 +248,12 @@ export default class App extends Vue {
     }
   }
 
-  // FIXME: very hacky.
-  async updateTokenTypePreset(url: string) {
-    if (url !== null && url.includes('dioedb')) {
-      settings.tokenTypesPreset = 'dioeDB'
-    } else if (url !== null && url.includes('dissdb')) {
-      settings.tokenTypesPreset = 'dissDB'
+  // FIXME: this is insanely hacky.
+  async updateTokenTypePreset() {
+    if (settings.backEndUrl !== null && settings.backEndUrl.includes('dioedb')) {
+      // settings.projectPreset = 'PP03'
+    } else if (settings.backEndUrl !== null && settings.backEndUrl.includes('dissdb')) {
+      settings.projectPreset = 'dissDB'
     }
   }
 

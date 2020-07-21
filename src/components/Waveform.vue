@@ -40,7 +40,7 @@
             width: i + 1 < amountDrawSegments ? drawWidth + 'px' : 'auto',
             height: height + 'px'
           }">
-          <div class="wave-form-placeholder" />
+          <div :style="{marginTop: height / 2 + 'px'}" class="wave-form-placeholder" />
         </div>
         <slot />
         <div
@@ -100,7 +100,7 @@
       </v-flex>
       <v-flex>
         <scroll-lock-button
-          style="margin-top: 20px;"
+          style="margin-top: 10px;"
           :value="settings.lockScroll"
           @input="handleScrollLockToggle"
         />
@@ -192,6 +192,7 @@ export default class Waveform extends Vue {
   mounted() {
     EventBus.$on('scrollTranscript', this.scrollLockedScroll)
     EventBus.$on('scrollToAudioEvent', this.scrollToSegment)
+    EventBus.$on('scrollToAudioTime', this.scrollToSecond)
     this.initWithAudio()
   }
 
@@ -260,14 +261,20 @@ export default class Waveform extends Vue {
     const el = (this.$el as HTMLElement).querySelector('.wave-form-inner')
     const c = this.$refs.svgContainer
     if (el instanceof HTMLElement && c instanceof HTMLElement) {
-      this.hideSegments = true
-      this.hideSecondMarkers = true
-      this.temporaryZoomOrigin = e.x + c.scrollLeft
-      this.temporaryPixelsPerSecond = Math.round(util.setNumberInBounds(
-        this.temporaryPixelsPerSecond - e.deltaY,
-        minPixelsPerSecond,
-        maxPixelsPerSecond
-      ))
+      // scale X (width)
+      if (e.shiftKey === false) {
+        this.hideSegments = true
+        this.hideSecondMarkers = true
+        this.temporaryZoomOrigin = e.x + c.scrollLeft
+        this.temporaryPixelsPerSecond = Math.round(util.setNumberInBounds(
+          this.temporaryPixelsPerSecond - e.deltaY,
+          minPixelsPerSecond,
+          maxPixelsPerSecond
+        ))
+      // scale Y (height)
+      } else {
+        this.scaleFactorY = util.setNumberInBounds(this.scaleFactorY - (e.deltaY * 0.1), .1, 3)
+      }
     }
   }
 
@@ -367,12 +374,9 @@ export default class Waveform extends Vue {
   }
 
   async getVisibleEvents(l: number, r: number, es = eventStore.events): Promise<LocalTranscriptEvent[]> {
-    const ves = _(es)
+    return es
       .filter(s => (s.endTime >= l && s.startTime <= r))
-      .sortBy('startTime')
-      .value()
-    await util.requestFrameAsync()
-    return ves
+      .sort((a, b) => a.startTime - b.startTime)
   }
 
   async updateSecondsMarkers() {
@@ -503,6 +507,7 @@ export default class Waveform extends Vue {
     }
   }
 
+  // TODO: this is an obvious candidate for abstraction
   scrollToSecondSmooth(t: number) {
     const el = this.$refs.svgContainer
     const animationDuration = .25
@@ -828,17 +833,17 @@ export default class Waveform extends Vue {
 select
   background #303030
 
+.wave-form-placeholder
+  height 1px
+  width 100%
+  border-top 1px dashed grey
+
 .waveform-outer
   .scrollbar
     position absolute
     z-index 1
     width 100%
     height 60px
-    transition opacity .25s
-    opacity 0
-  &:hover
-    .scrollbar
-      opacity 1
 
 input[type=range]
   -webkit-appearance none

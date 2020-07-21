@@ -6,8 +6,9 @@
       v-for="(speaker, i) in eventStore.metadata.speakers"
       class="speaker">
       <v-menu
+        lazy
         close-delay="500"
-        transition="fade-transition"
+        :transition="false"
         right
         offset-x
         nudge-right="12"

@@ -3,3 +3,4 @@ dist/*
 static/test-files/
 /data
 credentials*
+.nova

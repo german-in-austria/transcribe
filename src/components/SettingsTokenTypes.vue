@@ -12,7 +12,7 @@
         <v-list-tile-sub-title>E.g. <code>token.</code> becomes <code>token .</code></v-list-tile-sub-title>
       </v-list-tile-content>
       <v-list-tile-action>
-        <v-switch v-model="settings.autoCorrectDelimiterSpace" />
+        <v-switch v-model="presets[settings.projectPreset].autoCorrectDelimiterSpace" />
       </v-list-tile-action>
     </v-list-tile>
     <v-layout class="settings-header">
@@ -21,10 +21,19 @@
         <v-divider />
       </v-flex>
     </v-layout>
+    <v-layout row class="ml-4 mr-5 pr-1 pt-3">
+      <v-flex>
+        <v-select
+          label="Preset"
+          v-model="settings.projectPreset"
+          :items="projectPresetNames">
+        </v-select>
+      </v-flex>
+    </v-layout>
     <v-layout
-      v-for="(type, i) in tokenTypesPresets[settings.tokenTypesPreset]"
+      v-for="(type, i) in presets[settings.projectPreset].tokenTypes"
       :key="type.name"
-      class="ml-3 pt-3"
+      class="ml-3 pt-2"
       row>
       <v-flex xs1>
         <v-menu
@@ -44,10 +53,11 @@
         </v-menu>
       </v-flex>
       <v-flex xs5>
-        <v-text-field label="Name" :value="type.name" />
+        <v-text-field disabled label="Name" :value="type.name" />
       </v-flex>
       <v-flex xs5 v-if="type.type === 'single'">
         <v-text-field
+          disabled
           :rules="[ !isValidRegEx(type.regex.toString()) && 'Invalid Regular Expression' ]"
           @input="(e) => updateRegEx(i, e)"
           label="Regular Expression"
@@ -57,6 +67,7 @@
       <v-flex xs5 v-if="type.type === 'group'">
         <div>
           <v-text-field
+            disabled
             :rules="[ !isValidRegEx(type.bracketSymbols[0].toString()) && 'Invalid Regular Expression' ]"
             @input="(e) => updateBracket(i, e, 0)"
             label="Left Bracket"
@@ -65,6 +76,7 @@
         </div>
         <div>
           <v-text-field
+            disabled
             :rules="[ !isValidRegEx(type.bracketSymbols[1].toString()) && 'Invalid Regular Expression' ]"
             @input="(e) => updateBracket(i, e, 1)"
             label="Right Bracket"
@@ -78,8 +90,11 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import settings, { tokenTypesPresets } from '../store/settings'
 import { Chrome as ColorPicker } from 'vue-color'
+import _ from 'lodash'
+
+import settings from '../store/settings'
+import presets from '../presets'
 
 @Component({
   components: {
@@ -89,7 +104,7 @@ import { Chrome as ColorPicker } from 'vue-color'
 export default class SettingsTokenTypes extends Vue {
 
   settings = settings
-  tokenTypesPresets = tokenTypesPresets
+  presets = presets
 
   isValidRegEx(e: string) {
     try {
@@ -98,6 +113,10 @@ export default class SettingsTokenTypes extends Vue {
     } catch (e) {
       return false
     }
+  }
+
+  get projectPresetNames(): string[] {
+    return _.map(this.presets, (p, name) => name)
   }
 
   updateRegEx(...args: any[]) {

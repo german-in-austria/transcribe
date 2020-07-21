@@ -40,6 +40,11 @@
                     ref="basicInfoForm"
                     class="pb-5"
                     v-model="basicInfoValid">
+                    <v-select
+                      label="Project Preset"
+                      v-model="settings.projectPreset"
+                      :items="projectPresetNames">
+                    </v-select>
                     <v-text-field 
                       v-model="transcriptName"
                       label="Transcript Name"
@@ -96,19 +101,16 @@
                 settings.darkMode === true && 'theme--dark'
               ]">
                 <v-flex class="pl-3" xs1>
-                  <v-tooltip z-index="999" top>
-                    <v-checkbox
-                      slot="activator"
-                      color="white"
-                      hide-details
-                      class="mt-0"
-                      @change="updateAllSelections"
-                      :indeterminate="isAnythingOrAllSelected === null"
-                      :input-value="isAnythingOrAllSelected"
-                    />
-                    <span v-if="isAnythingOrAllSelected === true">select none</span>
-                    <span v-else>select all</span>
-                  </v-tooltip>
+                  <v-checkbox
+                    slot="activator"
+                    color="white"
+                    hide-details
+                    :title="isAnythingOrAllSelected === true ? 'select none' : 'select all'"
+                    class="mt-0"
+                    @change="updateAllSelections"
+                    :indeterminate="isAnythingOrAllSelected === null"
+                    :input-value="isAnythingOrAllSelected"
+                  />
                 </v-flex>
                 <v-flex class="grey--text caption pt-2" xs4>
                   From Exmaralda File
@@ -352,7 +354,10 @@
 </template>
 <script lang='ts'>
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import _ from 'lodash'
+
 import settings from '../store/settings'
+import presets from '../presets'
 import { resourceAtUrlExists } from '../util'
 import {
   ServerInformant,
@@ -374,7 +379,6 @@ import {
 
 import ExmaraldaTierPreview from './ExmaraldaTierPreview.vue'
 import DropFile from './DropFile.vue'
-import _ from 'lodash'
 
 @Component({
   components: {
@@ -392,6 +396,7 @@ export default class ExmaraldaImporter extends Vue {
   basicInfoValid = false
   tiersValid = false
   settings = settings
+  presets = presets
 
   globalDefaultTier: TokenTierType|null = null
   transcriptName: string|null = this.importable.fileName.replace('.exb', '')
@@ -408,8 +413,12 @@ export default class ExmaraldaImporter extends Vue {
     this.surveys = await getSurveys()
   }
 
+  get projectPresetNames(): string[] {
+    return _.map(this.presets, (p, name) => name)
+  }
+
   isTranscriptNameUnique(n: string|null): boolean {
-    return this.transcripts.findIndex(t => t.n === n) === -1
+    return this.transcripts.find(t => t.n === n) === undefined
   }
 
   updateTierTokenTypeAndGlobalDefault(i: number, t: TokenTierType) {

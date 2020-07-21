@@ -6,7 +6,8 @@ import {
   clone,
   fileToUint8ArrayAndName
 } from '../util'
-import settings, { tokenTypesPresets } from '../store/settings'
+import settings from '../store/settings'
+import presets from '../presets'
 import { HistoryEventAction } from './history'
 import eventBus from '../service/event-bus'
 import { collectTokensViaOffsets } from '../service/copy-paste'
@@ -129,7 +130,7 @@ export const eventStore = {
     viewingTranscriptEvent: null as LocalTranscriptEvent|null,
     editingTranscriptEvent: null as LocalTranscriptEvent|null,
     viewingAudioEvent: null as LocalTranscriptEvent|null,
-    timeSelection: {
+    timeSpanSelection: {
       start: null as null|number,
       end: null as null|number
     }
@@ -143,7 +144,7 @@ export const eventStore = {
 (window as any).eventStore = eventStore;
 
 export function tokenTypeFromToken(token: string) {
-  const type = _(tokenTypesPresets[settings.tokenTypesPreset]).find((tt) => {
+  const type = _(presets[settings.projectPreset].tokenTypes).find((tt) => {
     return tt.type === 'single' && tt.regex.test(token.replace('=', ''))
   })
   if (type !== undefined) {
@@ -157,9 +158,9 @@ export function tokenTypeFromToken(token: string) {
   }
 }
 
-export function timeSelectionIsEmpty() {
-  return eventStore.userState.timeSelection.start === null &&
-    eventStore.userState.timeSelection.end === null
+export function timeSpanSelectionIsEmpty() {
+  return eventStore.userState.timeSpanSelection.start === null &&
+    eventStore.userState.timeSpanSelection.end === null
 }
 
 export async function exportEventAudio(eventIds: number[]) {
@@ -225,16 +226,6 @@ export function loadAudioFromFile(f: File|Uint8Array): Promise<HTMLAudioElement>
   })
 }
 
-export function tokenize(s: string): string[] {
-  return s
-    .split('.').join(' .')
-    .split(', ').join(' , ')
-    .split('-').join('_ _')
-    .split('? ').join(' ? ')
-    .split(' ')
-    .filter(t => t !== '')
-}
-
 export function isTokenTier(tier: string): tier is TokenTierType {
   return ['ortho', 'text', 'phon'].indexOf(tier) > -1
 }
@@ -285,6 +276,10 @@ export function selectSearchResult(r: SearchResult) {
   scrollToAudioEvent(r.event)
   scrollToTranscriptEvent(r.event)
   selectEvent(r.event)
+}
+
+export function scrollToAudioTime(t: number) {
+  eventBus.$emit('scrollToAudioTime', t)
 }
 
 export function scrollToAudioEvent(e: LocalTranscriptEvent) {
@@ -348,32 +343,6 @@ export function speakerEventHasErrors(event: LocalTranscriptEvent): boolean {
   const sentences = sentencesFromEvent(event, eventStore.metadata.defaultTier)
   // not every sentence satisfies every rule.
   return !sentences.every(s => sentenceRules.every(r => r(s)))
-}
-
-function updateSpeakerTokenOrderStartingAt(speakerId: number, startAtIndex = 0, add: number) {
-  eachFrom(eventStore.events, startAtIndex, (e) => {
-    if (e.speakerEvents[speakerId] !== undefined) {
-      const tokens = e.speakerEvents[speakerId].tokens
-      if (tokens.length > 0) {
-        return {
-          ...e,
-          speakerEvents: {
-            ...e.speakerEvents,
-            [speakerId]: {
-              ...e.speakerEvents[speakerId],
-              tokens: tokens.map(t => {
-                return { ...t, order: t.order + add }
-              })
-            }
-          }
-        }
-      } else {
-        return e
-      }
-    } else {
-      return e
-    }
-  })
 }
 
 export function getFirstTokenOrder(e: LocalTranscriptEvent, speakerId: string): number {
@@ -487,18 +456,16 @@ export function updateSpeakerEvent(
   const tokens = event.speakerEvents[speakerId].tokens
   const eventIndex = findEventIndexById(event.eventId)
   const oldEvent = eventStore.events[eventIndex]
-  const isNew = oldEvent.speakerEvents[speakerId] === undefined
   // tslint:disable-next-line:max-line-length
   const deletedSpeakerId = !hasTokens(event.speakerEvents[speakerId]) && !hasEventTiers(event.speakerEvents[speakerId]) ? speakerId : undefined
-  console.log({deletedSpeakerId})
-  const tokenCountDifference = isNew ? tokens.length : tokens.length - oldEvent.speakerEvents[speakerId].tokens.length
   const speakerEvents = _({
     // merge the new speaker
     ...oldEvent.speakerEvents,
     [speakerId] : {
       speakerEventId: event.eventId,
       speakerEventTiers: event.speakerEvents[speakerId].speakerEventTiers || {},
-      tokens
+      // update order, from 0 to token length
+      tokens: tokens.map((t, i) => ({ ...t, order: i}))
     }
   })
   // remove deleted speaker events
@@ -538,11 +505,6 @@ export function updateSpeakerEvent(
     setFirstTokenFragmentOf(eventIndex, speakerId, undefined)
   }
 
-  // update token order if the length has changed
-  if (tokenCountDifference !== 0) {
-    updateSpeakerTokenOrderStartingAt(speakerId, eventIndex, tokenCountDifference)
-  }
-  // console.log('after update', clone(eventStore.events[eventIndex]), eventStore.events[eventIndex])
   return {
     id: _.uniqueId(),
     time: new Date(),
@@ -1281,6 +1243,12 @@ export function getSelectedEvents(): LocalTranscriptEvent[] {
 
 export function getSelectedEvent(): LocalTranscriptEvent|undefined {
   return _.find(eventStore.events, (e) => e.eventId === eventStore.selectedEventIds[0])
+}
+
+export function toSeconds(time: string): number {
+  const a = time.split(':') // split it at the colons
+  // minutes are worth 60 seconds. Hours are worth 60 minutes.
+  return (+a[0]) * 60 * 60 + (+a[1] || 0) * 60 + (+a[2] || 0)
 }
 
 export function toTime(time: number, decimalPlaces = 0): string {

@@ -1,33 +1,12 @@
+import _ from 'lodash'
+import Vue from 'vue'
+import localForage from 'localforage'
+
 import { makeGradient, Color } from '../lib/gradient'
 import { setNumberInBounds, platform } from '../util'
 import { KeyboardShortcuts, keyboardShortcuts, KeyboardAction } from '../service/keyboard'
-import localForage from 'localforage'
-import _ from 'lodash'
-
 import { eventStore } from './transcript'
-import Vue from 'vue'
-
-export interface TokenTypePresetBase {
-  name: string
-  color: string
-  id: number
-}
-
-type TokenTypePresetName = 'dioeDB'|'dissDB'
-
-export type TokenTypesPreset = {
-  [name in TokenTypePresetName]: Array<TokenTypesPresetGroup | TokenTypesPresetSingle>;
-}
-
-export interface TokenTypesPresetSingle extends TokenTypePresetBase {
-  type: 'single'
-  regex: RegExp
-}
-
-export interface TokenTypesPresetGroup extends TokenTypePresetBase {
-  type: 'group'
-  bracketSymbols: [ RegExp, RegExp ]
-}
+import { ProjectPresets } from 'presets'
 
 type JSONValue = string | number | boolean | null | JSONObject | JSONArray
 
@@ -52,7 +31,6 @@ export type SidebarItem = null|'edit'|'history'|'warnings'|'search'|'bookmarks'
 export interface Settings {
   backEndUrl: string|null
   activeSidebarItem: SidebarItem
-  autoCorrectDelimiterSpace: boolean
   showSettings: boolean
   darkMode: boolean
   drawerWidth: number
@@ -74,7 +52,7 @@ export interface Settings {
   skipInterval: number
   spectrogramColors: Color[]
   spectrogramGradient: number[][]
-  tokenTypesPreset: keyof TokenTypesPreset
+  projectPreset: keyof ProjectPresets
   useMonoWaveForm: boolean
   waveFormColors: string[]
   playEventOnAppend: boolean
@@ -84,150 +62,6 @@ export interface Settings {
     unknownTokenTypes: boolean
     eventOverlaps: boolean
   }
-}
-
-export const tokenTypesPresets: TokenTypesPreset = {
-  dioeDB: [
-    {
-      type: 'single',
-      name: 'segments-unclear',
-      regex: /(\*)([a-zA-ZÜüÄäÖöß']+)(\*)/,
-      color: '#6B6B6B',
-      id: 9
-    },
-    {
-      type: 'single',
-      name: 'untransferable-lexics',
-      regex: /(_)([a-zA-ZÜüÄäÖöß']+)(_)/,
-      color: '#FFAF3C',
-      id: 8
-    },
-    {
-      type: 'single',
-      name: 'interrupted',
-      regex: /([a-zA-ZÜüÄäÖöß']+\/$)|(\/[a-zA-ZÜüÄäÖöß']+$)/u,
-      color: '#6699CC',
-      id: 6
-    },
-    {
-      type: 'single',
-      name: 'pause',
-      regex: /\(\((([a-zA-ZÜüÄäÖöß']+)|(\d+(,\d)?s|))\)\)/u,
-      color: '#6B6B6B',
-      id: 3
-    },
-    {
-      type: 'group',
-      name: 'incomprehensible',
-      bracketSymbols: [
-        /(\(([a-zA-ZÜüÄäÖöß'\?]+))/u,
-        /((.+)\))/u
-      ],
-      color: '#ccc',
-      id: 7
-    },
-    {
-      type: 'group',
-      name: 'anonymized',
-      bracketSymbols: [
-        /(\[([a-zA-ZÜüÄäÖöß'\?]+))/u,
-        /(.+\](N|O|Z|S))/,
-      ],
-      color: '#880000',
-      id: 10
-    },
-    {
-      type: 'single',
-      name: 'other',
-      regex: /\{([a-zA-ZÜüÄäÖöß']+)\}/u,
-      color: '#880000',
-      id: 4
-    },
-    {
-      type: 'single',
-      name: 'delimiter',
-      regex: /^(\/)?(\?|\.|\,|!)"?$/,
-      color: '#1717FB',
-      id: 2
-    },
-    {
-      type: 'single',
-      name: 'word',
-      regex: /^([a-zA-ZÜüÄäÖöß'"\-]+$)/u,
-      color: 'transparent',
-      id: 1
-    },
-  ],
-  dissDB: [
-    {
-      type: 'single',
-      name: 'pause',
-      regex: /\[[\s\S]{1,}s\]/u,
-      color: '#6B6B6B',
-      id: 3
-    },
-    {
-      type: 'group',
-      name: 'non-verbal',
-      bracketSymbols: [
-        /\(\((.+)|\[(.+)/u,
-        /(.+)\)\)|(.+)\]/u
-      ],
-      color: '#008800',
-      id: 5
-    },
-    {
-      type: 'single',
-      name: 'delimiter',
-      regex: /^(\?|\.|\,|!)"?/,
-      color: '#1717FB',
-      id: 2
-    },
-    {
-      type: 'single',
-      name: 'interrupted',
-      regex: /([a-zA-ZÜüÄäÖöß]+\/)/u,
-      color: '#6699CC',
-      id: 6
-    },
-    {
-      type: 'single',
-      name: 'contraction',
-      regex: /_[a-zA-ZÜüÄäÖöß]+|[a-zA-ZÜüÄäÖöß]+_/,
-      color: '#d47d0f',
-      id: 8
-    },
-    {
-      type: 'group',
-      name: 'proper-name',
-      bracketSymbols: [
-        /(\{(.+))/u,
-        /(\{?(.+)\})/u
-      ],
-      color: '#880000',
-      id: 4
-    },
-    {
-      type: 'group',
-      name: 'incomprehensible',
-      // regex: /\((.+)\)/u,
-      bracketSymbols: [
-        /\((.+)/u,
-        /\(?(.+)\)/u
-        // /(\(([a-zA-ZÜüÄäÖöß\?]+))/u,
-        // /(\(?[a-zA-ZÜüÄäÖöß]+\))/u
-      ],
-      color: '#6f6f6f',
-      id: 7
-    },
-    {
-      type: 'single',
-      name: 'word',
-      regex: /^[a-zA-ZÜüÄäÖöß]+/u,
-      color: 'transparent',
-      id: 1
-    },
-  ],
 }
 
 const spectrogramColors = [
@@ -380,7 +214,6 @@ export function setPixelsPerSecond(newVal: number) {
 const settings: Settings = {
   backEndUrl: localStorage.getItem('backEndUrl') || null,
   activeSidebarItem: 'edit',
-  autoCorrectDelimiterSpace: true,
   showSettings: false,
   darkMode: false,
   drawerWidth: 350,
@@ -402,7 +235,7 @@ const settings: Settings = {
   skipInterval: 1,
   spectrogramColors: spectrogramPresets[1].colors,
   spectrogramGradient: makeGradient(spectrogramPresets[1].colors),
-  tokenTypesPreset: 'dioeDB',
+  projectPreset: 'PP03',
   useMonoWaveForm: false,
   waveFormColors: [ '#fb7676', '#6699CC' ],
   playEventOnAppend: true,

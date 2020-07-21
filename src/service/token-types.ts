@@ -1,6 +1,8 @@
-import { LocalTranscriptEvent, TokenTierType, LocalTranscriptToken, LocalTranscriptSpeakers } from '../store/transcript'
-import settings, { TokenTypesPresetGroup, tokenTypesPresets } from '../store/settings'
 import _ from 'lodash'
+
+import { LocalTranscriptEvent, TokenTierType, LocalTranscriptToken } from '../store/transcript'
+import settings from '../store/settings'
+import presets, { TokenTypesPresetGroup } from '../presets'
 
 // tslint:disable-next-line:max-line-length
 function iterateTokensBySpeakers(
@@ -33,7 +35,7 @@ export function computeTokenTypesForEvents(
         currentBracketGroup = null
       }
     } else {
-      const type = tokenTypesPresets[settings.tokenTypesPreset].find((tt) => {
+      const type = presets[settings.projectPreset].tokenTypes.find((tt) => {
         if (tt.type === 'single') {
           return tt.regex.test(cleanText)
         } else {
