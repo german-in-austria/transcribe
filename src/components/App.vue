@@ -41,7 +41,7 @@
             ></v-combobox>
           </v-flex>
           <div v-if="settings.backEndUrl !== null && loggedIn === false">
-            Please <a :href="`${ settings.backEndUrl }/login/`" target="_blank">login</a> and <a @click="loadTranscriptList">refresh</a>
+            Please <a :href="`${ settings.backEndUrl }/login/`" target="_blank">login</a> and <a @click="loadTranscriptList(settings.backEndUrl)">refresh</a>
           </div>
           <v-progress-circular
             indeterminate
@@ -218,26 +218,33 @@ export default class App extends Vue {
   errorMessage: string|null = null
   isLoadingBackendUrl = false
 
+  @Watch('settings.backEndUrl', { immediate: true })
+  async onUpdateBackEndUrl(url: string|null) {
+    if (url !== null) {
+      this.connectToBackend(url)
+    }
+  }
+
   async connectToBackend(url: string) {
     this.isLoadingBackendUrl = true
     settings.backEndUrl = url
-    this.updateTokenTypePreset(url)
+    this.updateTokenTypePreset()
     await this.loadTranscriptList(url)
     this.isLoadingBackendUrl = false
-    // TODO: dynamic via ENV
-    socket.connectToSocket('http://localhost:3000')
-    socket.onMessage(console.log)
-    socket.onMessage((m) => {
-      if (m.type === 'list_open_transcripts' && this.transcriptList !== null) {
-        this.transcriptList = this.transcriptList.map(t => {
-          return {
-            ...t,
-            users: m.transcripts.filter(ts => ts.transcript_id === t.pk).map(ts => ts.user.name),
-            locked: m.transcripts.some(ts => ts.transcript_id === t.pk && ts.app === 'anno')
-          }
-        })
-      }
-    })
+    if (process.env.UPDATE_SERVER !== undefined) {
+      socket.connectToSocket(process.env.UPDATE_SERVER)
+      socket.onMessage((m) => {
+        if (m.type === 'list_open_transcripts' && this.transcriptList !== null) {
+          this.transcriptList = this.transcriptList.map(t => {
+            return {
+              ...t,
+              users: m.transcripts.filter(ts => ts.transcript_id === t.pk).map(ts => ts.user.name),
+              locked: m.transcripts.some(ts => ts.transcript_id === t.pk && ts.app === 'anno')
+            }
+          })
+        }
+      })
+    }
   }
 
   onDropFile(e: DragEvent) {
@@ -254,12 +261,6 @@ export default class App extends Vue {
       // settings.projectPreset = 'PP03'
     } else if (settings.backEndUrl !== null && settings.backEndUrl.includes('dissdb')) {
       settings.projectPreset = 'dissDB'
-    }
-  }
-
-  async mounted() {
-    if (settings.backEndUrl !== null) {
-      this.connectToBackend(settings.backEndUrl)
     }
   }
 
@@ -399,6 +400,7 @@ export default class App extends Vue {
 
   async loadRemoteTranscript(t: ServerTranscriptListItem) {
     // TODO: ugly
+    console.log({t})
     this.loadingTranscriptId = t.pk
     const y = document.createElement('audio')
     socket.sendMessage({
@@ -408,7 +410,7 @@ export default class App extends Vue {
     })
     socket.onMessage(m => {
       if (m.type === 'transcript_action' && m.transcript_id === t.pk) {
-        handleRemotePeerEvent(m.action)
+        // handleRemotePeerEvent(m.action)
       }
     })
     getTranscript(t.pk, (progress, events) => {
