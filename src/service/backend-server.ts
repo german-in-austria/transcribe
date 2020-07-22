@@ -222,7 +222,7 @@ export function getAudioUrlFromServerNames(name: string|undefined, path: string|
     console.log({cleanPath, cleanPathWithSlashes})
     // add .ogg if necessary
     const cleanName = name.endsWith('.ogg') ? (name) : (name + '.ogg')
-    return `${ settings.backEndUrl }/private-media${cleanPathWithSlashes}${cleanName}`
+    return `${ settings.backEndUrl }/private-media${ cleanPathWithSlashes }${ cleanName }`
   }
 }
 

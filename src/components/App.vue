@@ -234,6 +234,8 @@ export default class App extends Vue {
   }
 
   // FIXME: this is insanely hacky.
+  // the way to do it would be to store the project part (PP) in the
+  // db alongside the transcript
   async updateTokenTypePreset() {
     if (settings.backEndUrl !== null && settings.backEndUrl.includes('dioedb')) {
       // settings.projectPreset = 'PP03'
