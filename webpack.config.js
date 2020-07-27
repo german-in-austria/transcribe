@@ -115,8 +115,9 @@ module.exports = {
 };
 // process.env.NODE_ENV = 'development'
 console.log('process.env.NODE_ENV',process.env.NODE_ENV)
-if(process.env.NODE_ENV === 'development' || prcoess.env.NODE_ENV === undefined){
+if(process.env.NODE_ENV === 'development'){
   require('dotenv').config({ path : './env-dev.env' })
+  console.log('process.env.UDPATE_SERVER', process.env.UPDATE_SERVER)
   module.exports.plugins = (module.exports.plugins || []).concat([
     new webpack.DefinePlugin({
       'process.env' : _(process.env).mapValues((v) => {

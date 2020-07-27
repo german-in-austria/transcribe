@@ -231,8 +231,9 @@ export default class App extends Vue {
     this.updateTokenTypePreset()
     await this.loadTranscriptList(url)
     this.isLoadingBackendUrl = false
+    console.log('connect to backend', url, 'update server', process.env.UPDATE_SERVER)
     if (process.env.UPDATE_SERVER !== undefined) {
-      socket.connectToSocket(process.env.UPDATE_SERVER)
+      socket.connectToSocket('https://dioedb.dioe.at')
       socket.onMessage((m) => {
         if (m.type === 'list_open_transcripts' && this.transcriptList !== null) {
           this.transcriptList = this.transcriptList.map(t => {
