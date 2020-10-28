@@ -1,0 +1,24 @@
+@font-face {
+  font-family: 'HKGrotesk';
+  font-style: normal;
+  font-weight: 300;
+  src: url('/fonts/hk-regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'HKGrotesk';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/hk-medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'HKGrotesk';
+  font-style: normal;
+  font-weight: 600;
+  src: url('/fonts/hk-medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'HKGrotesk';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/hk-bold.woff2') format('woff2');
+}

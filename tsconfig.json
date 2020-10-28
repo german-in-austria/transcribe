@@ -1,0 +1,48 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "module": "esnext",
+    "strict": true,
+    "jsx": "preserve",
+    "importHelpers": true,
+    "moduleResolution": "node",
+    "experimentalDecorators": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "types": [
+      "webrtc",
+      "webpack-env",
+      "mocha",
+      "chai"
+    ],
+    "typeRoots": [
+      "node_modules/@types",
+      "manual_typings"
+    ],
+    "paths": {
+      "@/*": [
+        "src/*"
+      ],
+      "lodash/*": [
+        "node_modules/@types/lodash-es/*"
+      ]
+    },
+    "lib": [
+      "esnext",
+      "dom",
+      "dom.iterable",
+      "scripthost"
+    ]
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "./src/lib/dioe-real-time-server",
+    "./src/**/wasm"
+  ]
+}

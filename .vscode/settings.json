@@ -1,0 +1,33 @@
+{
+  "cSpell.words": [
+    "Antworten",
+    "Contenteditable",
+    "Diffable",
+    "Exmaralda",
+    "Greyscale",
+    "Grotesk",
+    "JUMPTOSTATE",
+    "Kuerzel",
+    "Pastable",
+    "Scrollbar",
+    "Serializable",
+    "Transkript",
+    "anonymized",
+    "comparator",
+    "dioe",
+    "diss",
+    "dissdb",
+    "einzelerhebung",
+    "einzelerhebungen",
+    "insertable",
+    "localforage",
+    "peerjs",
+    "undoable",
+    "upsert",
+    "wasm",
+    "weiblich"
+  ],
+  "search.exclude": {
+    "**/dist": true
+  }
+}
