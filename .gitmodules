@@ -1,3 +1,6 @@
 [submodule "src/lib/dioe-real-time-server"]
 	path = src/lib/dioe-real-time-server
 	url = https://github.com/german-in-austria/dioe-real-time-server.git
+[submodule "src/lib/tagsystemVUE"]
+	path = src/lib/tagsystemVUE
+	url = https://github.com/german-in-austria/tagsystemVUE.git
