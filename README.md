@@ -24,7 +24,7 @@ or
 
 `docker build -t transcribe . && docker run transcribe -p 8080:80`
 
-If you want to connect to a remote backend 
+If you want to connect to a remote back end that requires HTTPS-enabled clients, use `sudo npm run dev` to run it on port 443.
 
 ## Spin-Offs (Work-In-Progress)
 
