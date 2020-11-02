@@ -1,20 +1,16 @@
-
-if (process.env.NODE_ENV !== 'production') {
-  require('dotenv').config({
-    path : './env-dev.env'
-  })
-};
-
 import * as express from 'express'
 import cookieSession from 'cookie-session'
 import * as compression from 'compression'
 import * as path from 'path'
-import * as peer from 'peer'
-const app = express()
 import { readFileSync } from 'fs'
-const index = readFileSync('./dist/index.html', 'utf8')
 
-const p = peer.ExpressPeerServer
+const app = express()
+
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config({
+    path: './env-dev.env'
+  })
+}
 
 // This app runs behind an
 // application load balancer
