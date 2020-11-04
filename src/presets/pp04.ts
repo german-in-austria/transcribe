@@ -6,7 +6,11 @@ export const PP04: ProjectPreset = {
   tokenizer: (s) => {
     return s
       .split('_').join('_ _')
-      .split(',').join(' , ')
+      .split('. ').join(' . ')
+      .split('- ').join(' - ')
+      .split('; ').join(' ; ')
+      .split(', ').join(' , ')
+      .split('? ').join(' ? ')
       .split(' ')
       .filter(t => t !== '')
   },
