@@ -526,25 +526,25 @@ export default class ExmaraldaImporter extends Vue {
       .map(t => t.token_tier_type)
 
     return [
-        {
-          text: 'orthographic',
-          value: 'ortho',
-          description: 'standard orthographic transcript',
-          disabled: selectedTiersForSpeaker.indexOf('ortho') > -1 || this.globalDefaultTier === 'ortho'
-        },
-        {
-          text: 'eye dialect',
-          value: 'text',
-          description: 'phonetic transcription\n using the latin alphabet',
-          disabled: selectedTiersForSpeaker.indexOf('text') > -1 || this.globalDefaultTier === 'text'
-        },
-        {
-          text: 'phonetic',
-          value: 'phon',
-          description: 'actual phonetic transcription',
-          disabled: selectedTiersForSpeaker.indexOf('phon') > -1 || this.globalDefaultTier === 'phon'
-        }
-      ]
+      {
+        text: 'orthographic',
+        value: 'ortho',
+        description: 'standard orthographic transcript',
+        disabled: selectedTiersForSpeaker.indexOf('ortho') > -1 || this.globalDefaultTier === 'ortho'
+      },
+      {
+        text: 'eye dialect',
+        value: 'text',
+        description: 'phonetic transcription\n using the latin alphabet',
+        disabled: selectedTiersForSpeaker.indexOf('text') > -1 || this.globalDefaultTier === 'text'
+      },
+      {
+        text: 'phonetic',
+        value: 'phon',
+        description: 'actual phonetic transcription',
+        disabled: selectedTiersForSpeaker.indexOf('phon') > -1 || this.globalDefaultTier === 'phon'
+      }
+    ]
   }
 
   get speakersWithMissingDefaultTier(): SpeakerTierImportable[] {
