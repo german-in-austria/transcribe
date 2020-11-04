@@ -181,7 +181,6 @@ import {
   LocalTranscriptEvent,
   addEventsToSelection,
   deleteSelectedEvents,
-  deselectEvents,
   eventStore,
   exportEventAudio,
   findEventAt,
@@ -192,20 +191,15 @@ import {
   playEvent,
   scrollToAudioEvent,
   scrollToTranscriptEvent,
-  selectEventRange,
   selectEvents,
-  selectNextEvent,
-  selectPreviousEvent,
-  splitEvent,
+  splitEvent
 } from '../store/transcript'
 
-import { saveChangesToServer, serverTranscript } from '../service/backend-server'
+import { saveChangesToServer } from '../service/backend-server'
 import { handleGlobalShortcut } from '../service/keyboard'
 
 import {
-  requestFrameAsync,
-  isCmdOrCtrl,
-  platform
+  isCmdOrCtrl
 } from '../util'
 
 import {
