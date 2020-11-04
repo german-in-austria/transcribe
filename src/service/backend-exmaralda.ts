@@ -5,7 +5,7 @@ import {
   ServerToken,
   ServerInformant,
   ServerTranscript,
-  ServerTranscriptInformants,
+  ServerTranscriptInformants
 } from '../service/backend-server'
 
 import {
@@ -117,11 +117,11 @@ function getTokenTypeId(t: string): number {
 }
 
 function getTierToken(
-    speakerTiers: SpeakerTierImportable[],
-    tierType: TokenTierType,
-    tierEvent: TierEvent,
-    tokenIndex: number,
-  ): string {
+  speakerTiers: SpeakerTierImportable[],
+  tierType: TokenTierType,
+  tierEvent: TierEvent,
+  tokenIndex: number,
+): string {
   const tier = _(speakerTiers).find(t => t.select_for_import === true && t.token_tier_type === tierType)
   // this speaker does not have this type of token tier
   if (tier === undefined) {
@@ -199,19 +199,17 @@ export function importableToServerTranscript(
             console.error('No speaker specified', { speakerTier })
             throw new Error('No speaker specified')
           } else {
-            let fragmentStartTokenId: number|undefined;
+            let fragmentStartTokenId: number|undefined
             return _(speakerTier.events).map((e, eventIndex): ServerEvent => {
-
               if (!e.text) {
                 console.log('e.text is empty: ', e)
               }
-              const eventId = eventTimeline[e.startTime + '__' + e.endTime] || makeEventId()
+              const eventId = eventTimeline[e.startTime + '__' + e.endTime] || makeEventId()
               const text = e.text || ''
 
               // create event tiers (free text tiers)
               if (speakerTier.to_tier_type === 'freeText') {
-
-                const tierName = speakerTier.to_tier_name || speakerTier.to_tier_type || 'untitled'
+                const tierName = speakerTier.to_tier_name || speakerTier.to_tier_type || 'untitled'
                 const existingTier = _(tiers).map((t, k) => ({ ...t, id: k })).find(t => t.tier_name === tierName)
                 const tierId = existingTier !== undefined ? existingTier.id : makeTierId()
 
@@ -290,7 +288,7 @@ export function importableToServerTranscript(
               }
             }).value()
           }
-      }).value()
+        }).value()
     })
     .flatten()
     .flatten()
@@ -377,18 +375,19 @@ export default function parseTree(xmlTree: BasicNode, fileName: string): ParsedE
           speakers: tiersBySpeakers,
           speakerTiers: _(tiersBySpeakers)
             .reduce((m, el, i, l) => {
-              return m.concat(_(el).map(v => ({
-                speaker_name: i,
-                select_for_import: false,
-                to_speaker: null,
-                to_tier_type: null,
-                to_tier_name: null,
-                token_tier_type: null,
-                ...v
-              }))
-              .sortBy((st) => st.display_name)
-              .value())
-          }, [] as any[])
+              return m.concat(_(el)
+                .map(v => ({
+                  speaker_name: i,
+                  select_for_import: false,
+                  to_speaker: null,
+                  to_tier_type: null,
+                  to_tier_name: null,
+                  token_tier_type: null,
+                  ...v
+                }))
+                .sortBy((st) => st.display_name)
+                .value())
+            }, [] as any[])
         }
       } else {
         throw new Error('cannot parse xml')
