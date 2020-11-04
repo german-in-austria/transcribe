@@ -13,6 +13,7 @@ export interface ProjectPreset {
   tokenizer: (utterance: string) => string[]
   tokenTypes: Array<TokenTypesPresetGroup | TokenTypesPresetSingle>
   autoCorrectDelimiterSpace: boolean
+  autoCorrectDelimiterSpaceRegex: RegExp
 }
 
 export interface TokenTypePresetBase {

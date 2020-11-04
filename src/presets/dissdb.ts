@@ -2,6 +2,7 @@ import { ProjectPreset } from '.'
 
 export const dissDB: ProjectPreset = {
   autoCorrectDelimiterSpace: true,
+  autoCorrectDelimiterSpaceRegex: /\b(\/?[\.|\?|\,|\!])\B/g,
   tokenizer: (s) => {
     return s
       .split('.').join(' .')

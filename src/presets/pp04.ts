@@ -3,6 +3,7 @@ import { ProjectPreset } from '.'
 
 export const PP04: ProjectPreset = {
   autoCorrectDelimiterSpace: false,
+  autoCorrectDelimiterSpaceRegex: /\b(\/?[\.|\?|\;|\-|\,|\!])\B/g,
   tokenizer: (s) => {
     return s
       .split('_').join('_ _')
@@ -72,7 +73,7 @@ export const PP04: ProjectPreset = {
     {
       type: 'single',
       name: 'delimiter',
-      regex: /^(\/)?(\?|\,|!)"?$/,
+      regex: /^(\/)?(\?|\,|-|!|;|\.)"?$/,
       color: '#1717FB',
       id: 2
     },
