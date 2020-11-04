@@ -45,7 +45,10 @@ module.exports = {
     'quotes': 'warn',
     '@typescript-eslint/no-inferrable-types': 'warn',
     'no-new': 'off',
-    'quote-props': 'off'
+    'quote-props': 'off',
+    '@typescript-eslint/member-delimiter-style': 'off',
+    '@typescript-eslint/camelcase': 'off',
+    'computed-property-spacing': 'off'
   },
   overrides: [
     {
