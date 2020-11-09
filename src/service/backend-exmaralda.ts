@@ -294,7 +294,6 @@ export function importableToServerTranscript(
     .flatten()
     .value()
 
-  console.log({events})
 
   return {
     aTiers: tiers,
