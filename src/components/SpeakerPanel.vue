@@ -4,7 +4,7 @@
       lazy
       :transition="false"
       scrollable
-      style="max-width: 600px"
+      max-width="700px"
       v-model="showSpeakerTierEditModal">
       <v-card>
         <v-card-title>Speakers and Tiers</v-card-title>

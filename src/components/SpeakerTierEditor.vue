@@ -11,6 +11,7 @@
       item-text="Audiofile"
       return-object
       two-line
+      class="mx-3"
       :items="surveys || []">
       <template slot="item" slot-scope="item">
         <v-list-tile-content>
@@ -26,7 +27,7 @@
         </v-list-tile-action-text>
       </template>
     </v-autocomplete>
-    <v-list dense navigation>
+    <v-list dense>
       <v-subheader>Tiers</v-subheader>
       <v-list-tile :key="tier.id" v-for="tier in eventTiers">
         <v-list-tile-content>
@@ -34,6 +35,20 @@
             {{ tier.name }} {{ tier.id }}
           </v-list-tile-title>
         </v-list-tile-content>
+      </v-list-tile>
+      <v-text-field solo placeholder="Add a new tier…" />
+    </v-list>
+    <v-list dense>
+      <v-subheader>Speakers</v-subheader>
+      <v-list-tile :key="speaker.k" v-for="speaker in speakers">
+        <v-list-tile-content>
+          <v-list-tile-title>
+            {{ speaker.ka }}
+          </v-list-tile-title>
+        </v-list-tile-content>
+        <v-list-tile-action>
+          <v-btn icon small><v-icon>close</v-icon></v-btn>
+        </v-list-tile-action>
       </v-list-tile>
     </v-list>
   </div>
@@ -72,6 +87,7 @@ export default class SpeakerTierEditor extends Vue {
   get eventTiers(): LocalTranscriptTier[] {
     return this.tiers.filter(t => t.type === 'freeText')
   }
+
 }
 </script>
 <style lang="scss" scoped>
