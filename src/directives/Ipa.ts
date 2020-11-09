@@ -9,15 +9,6 @@ overlayInstance.$mount()
 // append it to the body once.
 document.body.appendChild(overlayInstance.$el)
 
-interface Bindings {
-  value: {
-    show?: boolean
-    directionV?: 'bottom'|'top'
-    directionH?: 'left'|'right'
-    maxWidth?: number
-  }
-}
-
 export default {
   bind(el: HTMLElement, bindings: DirectiveBinding) {
     if (bindings.value.show !== false) {
