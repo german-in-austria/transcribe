@@ -37,7 +37,7 @@ export async function generateProjectFile(
   overviewWave: string,
   settings: Settings,
   audioBuffer: Uint8Array,
-  historyActions: HistoryEventAction[],
+  historyActions: HistoryEventAction[]
 ): Promise<Blob> {
   const zip = new JSZip()
   const newServerTranscript = await convertToServerTranscript(eventStore.events)
