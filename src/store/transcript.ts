@@ -192,7 +192,6 @@ export function loadAudioFromUrl(url: string): Promise<HTMLAudioElement> {
       a.removeEventListener('durationchange', listener)
       audio.store.isLocalFile = false
       eventStore.audioElement = a
-      console.log({aDuration: a.duration})
       eventStore.audioMetadata.length = a.duration
       resolve(a)
     })
@@ -204,7 +203,7 @@ export function loadAudioFromFile(f: File|Uint8Array): Promise<HTMLAudioElement>
     let audioUrl = ''
     const a = document.createElement('audio')
     if (f instanceof File) {
-      const { b, n } = await fileToUint8ArrayAndName(f)
+      const { b } = await fileToUint8ArrayAndName(f)
       const blob = new Blob([b], { type: 'audio/ogg' })
       audioUrl = URL.createObjectURL(blob)
       audio.store.uint8Buffer = b
