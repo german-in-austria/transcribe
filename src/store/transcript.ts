@@ -14,7 +14,7 @@ import { collectTokensViaOffsets } from '../service/copy-paste'
 
 import {
   ServerTranscriptInformant,
-  ServerTranscriptTokenTypes,
+  ServerTranscriptTokenTypes
 } from '../service/backend-server'
 
 declare global {
