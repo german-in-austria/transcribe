@@ -30,7 +30,6 @@ module.exports = {
     'space-in-parens': 'warn',
     '@typescript-eslint/no-use-before-define': 'warn',
     'template-curly-spacing': 'warn',
-    'operator-linebreak': 'warn',
     'no-floating-decimal': 'off',
     'comma-dangle': 'warn',
     'no-async-promise-executor': 'warn',
@@ -38,7 +37,6 @@ module.exports = {
     'no-irregular-whitespace': 'warn',
     'no-multiple-empty-lines': 'off',
     '@typescript-eslint/no-empty-interface': 'off',
-    '@typescript-eslint/camelcase': 'warn',
     'space-unary-ops': 'warn',
     'prefer-const': 'warn',
     '@typescript-eslint/no-this-alias': 'off',
@@ -49,7 +47,8 @@ module.exports = {
     '@typescript-eslint/member-delimiter-style': 'off',
     '@typescript-eslint/camelcase': 'off',
     'computed-property-spacing': 'off',
-    'array-bracket-spacing': 'off'
+    'array-bracket-spacing': 'off',
+    'operator-linebreak': 'off'
   },
   overrides: [
     {
