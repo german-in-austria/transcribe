@@ -26,10 +26,7 @@ module.exports = {
   },
   devServer: {
     open: 'Google Chrome',
-    port: '443',
     https: true,
-    host: 'local-transcribe.dioe.at',
-    publicPath: 'https://local-transcribe.dioe.at/',
     writeToDisk: true,
     disableHostCheck: true,
     watchOptions: {
