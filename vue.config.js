@@ -29,6 +29,8 @@ module.exports = {
     https: true,
     writeToDisk: true,
     disableHostCheck: true,
+    host: 'localhost',
+    port: '8080',
     watchOptions: {
       poll: false
     }
