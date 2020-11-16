@@ -82,7 +82,7 @@
             @dblclick="playEvent(item.event)"
             :class="isEventSelected(item.event.eventId) && 'search-result-selected'">
             <v-list-tile-content>
-              <v-list-tile-sub-title class="subtitle">{{ toTime(item.event.startTime) }} - {{ toTime(item.event.endTime) }}</v-list-tile-sub-title>
+              <v-list-tile-sub-title class="subtitle"><b>{{ eventStore.metadata.speakers[item.speakerId].ka }}:</b> {{ toTime(item.event.startTime) }} - {{ toTime(item.event.endTime) }}</v-list-tile-sub-title>
               <highlight-range :text="item.text" :start="item.offset" :end="item.offsetEnd" :truncate="42" />
             </v-list-tile-content>
           </v-list-tile>
@@ -133,30 +133,16 @@ import {
   scrollToTranscriptEvent,
   selectEvent,
   toTime,
-  LocalTranscriptToken,
-  selectSearchResult,
   TokenTierType,
   LocalTranscriptTier,
   SearchResult,
   getSelectedEvent,
-  LocalTranscriptSpeakers,
   getTokenIndexByCharacterOffset,
   getPreviousEvent,
-  getTextFromTokens,
-  findPreviousSpeakerEvent,
-  findNextSpeakerEvent,
   getNextEvent,
   getTextFromTier,
   isTokenTier
 } from '../store/transcript'
-
-function maybe<T>(a: T): T|{} {
-  if (a === undefined) {
-    return {} as T
-  } else {
-    return a
-  }
-}
 
 @Component({
   components: {
@@ -450,6 +436,7 @@ export default class Search extends Vue {
       this.scrollToSearchResult(e)
     }
   }
+
   findNext() {
     const selectedEvent = getSelectedEvent()
     const e = findNextEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults.map(r => r.event))
@@ -459,6 +446,7 @@ export default class Search extends Vue {
       this.goToResult(eventStore.searchResults[0].event)
     }
   }
+
   findPrevious() {
     const selectedEvent = getSelectedEvent()
     const e = findPreviousEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults.map(r => r.event))
