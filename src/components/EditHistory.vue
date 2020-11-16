@@ -77,9 +77,6 @@
               </v-list-tile-sub-title>
             </v-list-tile-content>
             <v-list-tile-action>
-              <!-- <v-btn icon @click="" class="undo-btn">
-                <v-icon>undo</v-icon>
-              </v-btn> -->
             </v-list-tile-action>
           </v-list-tile>
         </template>
@@ -138,7 +135,6 @@ import {
 
 import {
   history,
-  undo,
   jumpToState,
   goToInitialState,
   HistoryEventAction
@@ -156,7 +152,6 @@ export default class EditHistory extends Vue {
   history = history
   toTime = toTime
   playEvent = playEvent
-  undo = undo
   goToInitialState = goToInitialState
   hoveredEvent: HistoryEventAction|null = null
   menuX = 0
