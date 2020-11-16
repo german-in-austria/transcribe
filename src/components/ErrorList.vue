@@ -126,8 +126,8 @@ export default class ErrorList extends Vue {
 
 .event-error
   cursor default
-  &.selected
-    background #ccc
+  &.selected /deep/ .v-list__tile
+    background rgba(0,0,0,.2)
     color white
 
 .sidebar-scrollable .subtitle

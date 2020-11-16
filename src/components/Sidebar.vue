@@ -1,6 +1,6 @@
 <template>
   <v-layout>
-    <v-flex v-if="active" :style="{ borderRight: active ? '1px solid rgba(255,255,255,.3)' : '0' }">
+    <v-flex class="sidebar-content" v-if="active">
       <v-window class="window" v-model="settings.activeSidebarItem" vertical>
         <v-window-item value="edit" class="sidebar-scrollable">
           <actions />
@@ -106,13 +106,8 @@ import _ from 'lodash'
 
 import {
   LocalTranscriptEvent,
-  scrollToAudioEvent,
-  findEventIndexById,
-  scrollToTranscriptEvent,
   eventStore,
-  selectEvent,
-  toTime,
-  sortEvents
+  toTime
 } from '../store/transcript'
 import { history } from '../store/history'
 import settings, { SidebarItem } from '../store/settings'
@@ -175,10 +170,12 @@ export default class Sidebar extends Vue {
   async onErrorSettingsUpdate() {
     this.getErrors()
   }
+
   @Watch('settings.maxEventGap')
   async onGapSettingsUpdate() {
     this.getErrors()
   }
+
   @Watch('eventStore.events')
   async onEventsUpdate(newEvents: LocalTranscriptEvent[]) {
     this.debouncedGetErrors()
@@ -211,12 +208,11 @@ export default class Sidebar extends Vue {
 </script>
 <style lang="stylus">
 .sidebar-btn
-  border-radius 0
   margin 0 !important
   height 55px
-  width 100%
+  width 55px
   &:before
-    border-radius 0
+    border-radius 5px
 
 .window
   width 280px
@@ -236,6 +232,15 @@ export default class Sidebar extends Vue {
     opacity 0
   .tile:hover .undo-btn
     opacity 1
+
+.theme--dark .sidebar-content
+  background #232323
+
+.sidebar-content
+  /deep/ .v-list__tile
+    padding 0 8px
+    margin 0 8px
+    border-radius 5px
 
 .sidebar-picker
   height 100vh

@@ -91,7 +91,7 @@
                 stroke-linecap="round"
                 :x1="i * 10"
                 :x2="i * 10"
-                y1="20"
+                y1="30"
                 y2="40" />
             </svg>
           </div>
