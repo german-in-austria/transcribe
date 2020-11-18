@@ -52,7 +52,7 @@
       </v-flex>
     </v-toolbar>
     <settings-view
-      v-if="settings.showSettings" 
+      v-if="settings.showSettings"
       @close="settings.showSettings = false"
       :show="settings.showSettings" />
     <spectrogram
@@ -155,8 +155,11 @@
         </div>
       </div>
     </wave-form>
-    <drop-file @update="loadAudioFromFile" class="fill-height" v-else>
-    </drop-file>
+    <drop-audio-file
+      v-else
+      format="ogg"
+      @update="loadAudioFromFile"
+    />
     <player-bar />
     <transcript-editor />
   </div>
@@ -164,18 +167,16 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import _ from 'lodash'
 import { saveAs } from 'file-saver'
 
 import playerBar from './PlayerBar.vue'
 import waveForm from './Waveform.vue'
 import settingsView from './Settings.vue'
 import spectrogram from './Spectrogram.vue'
-// import searchSimple from './SearchSimple.vue'
 import searchResultsInline from './SearchResultsInline.vue'
 import transcriptEditor from './TranscriptEditor.vue'
 import playHead from './PlayHead.vue'
-import dropFile from './DropFile.vue'
+import dropAudioFile from './DropAudioFile.vue'
 
 import {
   LocalTranscriptEvent,
@@ -225,9 +226,8 @@ import eventBus from '../service/event-bus'
     settingsView,
     spectrogram,
     playHead,
-    // searchSimple,
     searchResultsInline,
-    dropFile,
+    dropAudioFile,
     playerBar
   }
 })
@@ -370,8 +370,6 @@ export default class Editor extends Vue {
     border 3px solid transparent
     border-radius 9px
     background-clip content-box
-  // &::-webkit-scrollbar-corner
-  // &::-webkit-resizer
 
 .context-menu-list a
   cursor default !important

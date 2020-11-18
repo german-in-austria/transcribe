@@ -10,21 +10,21 @@
       @dragleave="unhighlight"
       @drop.stop.prevent="useAudioFile"
       class="drop-area mb-5">
-      <v-flex v-if="fileName !== null" class="text-xs-center" shrink>
-        <v-icon color="primary" style="opacity: .5; font-size: 4em">audiotrack</v-icon>
-        <p>{{ fileName }}</p>
-        <v-btn @click="resetForm" flat small round>remove</v-btn>
-      </v-flex>
-      <v-flex
-        v-else
-        class="text-xs-center cursor-pointer grey--text"
-        @click="openFileDialog"
-        shrink>
-        <slot>
-          <v-icon color="#666" style="font-size: 4em">open_in_browser</v-icon>
-          <p class="mt-2">drop your audio file here</p>
-        </slot>
-      </v-flex>
+      <slot>
+        <v-flex v-if="fileName !== null" class="text-xs-center" shrink>
+          <v-icon color="primary" style="opacity: .5; font-size: 4em">audiotrack</v-icon>
+          <p>{{ fileName }}</p>
+          <v-btn @click="resetForm" flat small round>remove</v-btn>
+        </v-flex>
+        <v-flex
+          v-if="fileName === null"
+          class="text-xs-center cursor-pointer grey--text"
+          @click="openFileDialog"
+          shrink>
+            <v-icon @dragenter="highlight" color="#666" style="font-size: 4em">open_in_browser</v-icon>
+            <p @dragenter="highlight" class="mt-2">drop your audio file here</p>
+        </v-flex>
+      </slot>
     </v-layout>
   </div>
 </template>
@@ -73,7 +73,7 @@ export default class DropFile extends Vue {
   openFileDialog() {
     const x = document.createElement('input')
     x.type = 'file'
-    x.accept = '.ogg'
+    // x.accept = '.ogg'
     x.addEventListener('change', async (e) => {
       if (x.files !== null) {
         this.file = x.files[0]
@@ -87,8 +87,7 @@ export default class DropFile extends Vue {
 </script>
 <style lang="stylus">
 .drop-area
-  margin 0 auto
-  width 80%
+  margin 0 30px
   min-height 300px
   border-radius 5px
   background rgba(0,0,0,.2)
