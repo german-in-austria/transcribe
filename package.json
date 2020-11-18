@@ -11,6 +11,7 @@
     "dev-server": "nodemon --watch 'server/**/*.ts' --ignore 'server/**/*.spec.ts' --exec 'ts-node' --project server/tsconfig.json server/index.ts"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.9.5",
     "@mdi/font": "^5.8.55",
     "@rgrove/parse-xml": "^2.0.4",
     "@sentry/browser": "^5.27.4",
@@ -57,6 +58,7 @@
     "xlsx": "^0.15.4"
   },
   "devDependencies": {
+    "@ffmpeg/core": "^0.8.4",
     "@sentry/webpack-plugin": "^1.13.0",
     "@types/chai": "^4.2.11",
     "@types/compression": "^1.0.1",
