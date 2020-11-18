@@ -27,7 +27,7 @@ module.exports = {
   devServer: {
     open: 'Google Chrome',
     https: true,
-    writeToDisk: true,
+    // writeToDisk: true,
     disableHostCheck: true,
     host: 'localhost',
     port: '8080',
