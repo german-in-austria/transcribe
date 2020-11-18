@@ -51,15 +51,19 @@
         </div>
       </v-flex>
     </v-toolbar>
+    <transcript-settings
+      v-if="eventStore.userState.showSpeakerTierEditModal"
+      @close="eventStore.userState.showSpeakerTierEditModal = false"
+    />
     <settings-view
       v-if="settings.showSettings"
       @close="settings.showSettings = false"
       :show="settings.showSettings" />
-    <spectrogram
-      v-if="isSpectrogramVisible"
-      @close="isSpectrogramVisible = false"
-      :show="isSpectrogramVisible"
-      :event="spectrogramEvent"
+    <event-inspector
+      v-if="isEventInspectorVisible"
+      @close="isEventInspectorVisible = false"
+      :show="isEventInspectorVisible"
+      :event="inspectedEvent"
     />
     <wave-form
       v-if="eventStore.audioElement.src"
@@ -129,7 +133,7 @@
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
-              @click="showSpectrogram(getSelectedEvent())">
+              @click="showEventInspector(getSelectedEvent())">
               <v-list-tile-content>
                 <v-list-tile-title>Inspect Event…</v-list-tile-title>
               </v-list-tile-content>
@@ -179,12 +183,12 @@ import { saveAs } from 'file-saver'
 import playerBar from './PlayerBar.vue'
 import waveForm from './Waveform.vue'
 import settingsView from './Settings.vue'
-import spectrogram from './Spectrogram.vue'
+import eventInspector from './EventInspector.vue'
 import searchResultsInline from './SearchResultsInline.vue'
 import transcriptEditor from './TranscriptEditor.vue'
 import playHead from './PlayHead.vue'
 import dropAudioFile from './DropAudioFile.vue'
-
+import transcriptSettings from './TranscriptSettings.vue'
 import {
   LocalTranscriptEvent,
   addEventsToSelection,
@@ -213,7 +217,8 @@ import {
 import {
   history,
   undoable,
-  startListening as startUndoListener
+  startListening as startUndoListener,
+  stopListening as stopUndoListener
 } from '../store/history'
 
 import {
@@ -231,7 +236,8 @@ import eventBus from '../service/event-bus'
     waveForm,
     transcriptEditor,
     settingsView,
-    spectrogram,
+    eventInspector,
+    transcriptSettings,
     playHead,
     searchResultsInline,
     dropAudioFile,
@@ -255,8 +261,8 @@ export default class Editor extends Vue {
   scrollTranscriptIndex: number = 0
   scrollTranscriptTime: number = 0
 
-  isSpectrogramVisible = false
-  spectrogramEvent: LocalTranscriptEvent|null = null
+  isEventInspectorVisible = false
+  inspectedEvent: LocalTranscriptEvent|null = null
 
   scrollToTranscriptEvent = scrollToTranscriptEvent
   settings = settings
@@ -283,7 +289,7 @@ export default class Editor extends Vue {
     this.isSaving = true
     const overviewWave = (document.querySelector('.overview-waveform svg') as HTMLElement).innerHTML
     const f = await generateProjectFile(eventStore, overviewWave, settings, audio.store.uint8Buffer, history.actions)
-    saveAs(f, eventStore.metadata.transcriptName! + '.transcript')
+    saveAs(f, (eventStore.metadata.transcriptName || 'unnamed_transcript') + '.transcript')
     this.isSaving = false
   }
 
@@ -324,9 +330,9 @@ export default class Editor extends Vue {
     this.splitEvent(event, splitAt)
   }
 
-  showSpectrogram(e: LocalTranscriptEvent) {
-    this.isSpectrogramVisible = true
-    this.spectrogramEvent = e
+  showEventInspector(e: LocalTranscriptEvent) {
+    this.isEventInspectorVisible = true
+    this.inspectedEvent = e
   }
 
   async splitEvent(e: LocalTranscriptEvent, at: number) {
@@ -347,11 +353,13 @@ export default class Editor extends Vue {
     }
     eventBus.$on('scrollWaveform', this.hideMenu)
     document.addEventListener('keydown', handleGlobalShortcut)
-    console.log({eventStore})
-    console.log({serverTranscript})
+    if (eventStore.status === 'new') {
+      eventStore.userState.showSpeakerTierEditModal = true
+    }
   }
 
   beforeDestroy() {
+    stopUndoListener()
     document.removeEventListener('keydown', handleGlobalShortcut)
   }
 

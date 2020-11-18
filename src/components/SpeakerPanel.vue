@@ -1,27 +1,5 @@
 <template>
   <v-flex :style="theme" class="speaker-panel">
-    <v-dialog
-      lazy
-      :transition="false"
-      scrollable
-      max-width="700px"
-      v-model="eventStore.userState.showSpeakerTierEditModal">
-      <v-card>
-        <v-card-title>Speakers and Tiers</v-card-title>
-        <v-card-text>
-          <speaker-tier-editor
-            :speakers="eventStore.metadata.speakers"
-            :tiers="eventStore.metadata.tiers"
-            @update:tiers="updateTiers"
-            @update:speakers="updateSpeakers"
-          />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn>close</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
     <div
       :style="{height: speakerHeight + 1}"
       :key="i"
@@ -82,27 +60,22 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import settings from '../store/settings'
-import { eventStore, LocalTranscriptTier, LocalTranscriptSpeakers } from '../store/transcript'
+import { eventStore, LocalTranscriptTier } from '../store/transcript'
 
-import SpeakerTierEditor from './SpeakerTierEditor.vue'
-
-@Component({
-  components: {
-    SpeakerTierEditor
-  }
-})
+@Component
 export default class SpeakerPanel extends Vue {
 
   settings = settings
   eventStore = eventStore
   tierHeight = 25
+  isBasicInfoValid = false
 
   get speakerHeight(): string {
     return eventStore.metadata.tiers.filter(t => t.show === true).length * this.tierHeight + 1 + 'px'
   }
 
   get secondaryVisibleTiers(): LocalTranscriptTier[] {
-    return eventStore.metadata.tiers.filter((t, k) => t.id !== eventStore.metadata.defaultTier && t.show === true)
+    return eventStore.metadata.tiers.filter(t => t.id !== eventStore.metadata.defaultTier && t.show === true)
   }
 
   get allExpanded(): boolean {
@@ -117,27 +90,19 @@ export default class SpeakerPanel extends Vue {
     }
   }
 
-  updateTiers(ts: LocalTranscriptTier[]) {
-    console.log(ts)
-  }
-
-  updateSpeakers(ss: LocalTranscriptSpeakers) {
-    console.log(ss)
-  }
-
   openSpeakerAndTierSettings() {
     this.eventStore.userState.showSpeakerTierEditModal = true
   }
 
   expandAll() {
     eventStore.metadata.tiers = eventStore.metadata.tiers.map((t) => {
-      return {...t, show: true}
+      return { ...t, show: true }
     })
   }
 
   collapseAll() {
     eventStore.metadata.tiers = eventStore.metadata.tiers.map((t) => {
-      return {...t, show: t.id === eventStore.metadata.defaultTier}
+      return { ...t, show: t.id === eventStore.metadata.defaultTier }
     })
   }
 

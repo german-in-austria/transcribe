@@ -15,7 +15,7 @@
       <v-container fluid fill-height class="pa-0">
         <exmaralda-importer
           v-if="importableExmaraldaFile !== null"
-          :transcripts="transcriptList"
+          :transcripts="eventStore.transcripts"
           :importable="importableExmaraldaFile"
           @close="importableExmaraldaFile = null"
           @finish="loadImportedTranscript"
@@ -25,7 +25,7 @@
           @drop.stop.prevent="onDropFile"
           v-if="eventStore.status === 'empty'"
           class="max-width pick-transcript-container"
-          :align-center="transcriptList === null"
+          :align-center="eventStore.transcripts === null"
           justify-center
           column>
           <v-flex xs1>
@@ -45,8 +45,8 @@
           </div>
           <v-progress-circular
             indeterminate
-            v-if="transcriptList === null && loggedIn === true && settings.backEndUrl !== null"/>
-            <v-flex v-if="transcriptList !== null">
+            v-if="eventStore.transcripts === null && loggedIn === true && settings.backEndUrl !== null"/>
+            <v-flex v-if="eventStore.transcripts !== null">
               <v-layout justify-center row>
               <v-flex class="pt-5 pl-4 pr-4" xs12 md6>
                 <h1 class="text-xs-center text-light text-uppercase mt-3 mb-4">
@@ -147,7 +147,7 @@ import settings from '../store/settings'
 import {
   eventStore,
   loadAudioFromFile,
-  loadAudioFromUrl,
+  loadAudioFromUrl
 } from '../store/transcript'
 
 import { computeTokenTypesForEvents } from '../service/token-types'
@@ -207,7 +207,6 @@ export default class App extends Vue {
 
   searchTerm = ''
   importingLocalFile = false
-  transcriptList: ServerTranscriptListItem[]|null = null
   loadingTranscriptId: number|null = null
   loggedIn: boolean = false
   importableExmaraldaFile: ParsedExmaraldaXML|null = null
@@ -271,20 +270,20 @@ export default class App extends Vue {
       const res = await getServerTranscripts(url)
       if (res.transcripts !== undefined) {
         this.loggedIn = true
-        this.transcriptList = res.transcripts
+        eventStore.transcripts = res.transcripts
       } else if ((res as any).error === 'login') {
         this.loggedIn = false
       }
     } catch (e) {
       this.loggedIn = false
-      this.transcriptList = null
+      eventStore.transcripts = []
       this.errorMessage = 'could not load transcripts from back end.'
     }
   }
 
   get filteredTranscriptList(): ServerTranscriptListItem[] {
-    if (this.transcriptList !== null) {
-      return this.transcriptList.filter((v, i) => {
+    if (eventStore.transcripts !== null) {
+      return eventStore.transcripts.filter(v => {
         return v.n.toLowerCase().indexOf(this.searchTerm.toLowerCase()) > -1
       })
     } else {

@@ -19,21 +19,25 @@
       ]" />
     <v-autocomplete
       :disabled="surveys === null"
+      :filter="surveyFilter"
+      :item-disabled="(i) => i.id_transcript !== null"
+      :items="surveys || []"
       :loading="surveys === null"
       :rules="[ selectedSurvey === null && 'Select a Survey' ]"
-      label="Survey"
-      v-model="selectedSurvey"
       @input="emitUpdateIfValid"
-      two-line
       item-text="Audiofile"
+      item-value="pk"
+      label="Survey"
       return-object
-      :items="surveys || []">
+      two-line
+      v-model="selectedSurvey">
       <template slot="item" slot-scope="item">
         <v-list-tile-content>
           <v-list-tile-title>
-            {{ item.item.Audiofile }} ({{ item.item.pk }})
+            {{ item.item.Audiofile }} ({{ item.item.pk }}) {{ item.item.id_transcript !== null ? '— Transcript available' : '' }}
           </v-list-tile-title>
           <v-list-tile-sub-title>
+            {{ item.item.OrtString }};
             {{ item.item.FX_Informanten.map(i => `${i.Kuerzel}${ i.Vorname ? ' (' + i.Vorname + ' ' + i.Name + ')' : ''}`).join(', ') }}
           </v-list-tile-sub-title>
         </v-list-tile-content>
@@ -53,10 +57,10 @@ import _ from 'lodash'
 import { clone } from '../util'
 
 @Component
-export default class CreateServerTranscriptForm extends Vue {
+export default class ServerTranscriptInfoForm extends Vue {
 
+  // the validity of the data. for use with v-model
   @Prop({ default: false }) value!: boolean
-  // TODO: maybe fetch here
   @Prop({ default: [] }) transcripts!: ServerTranscriptListItem[]
   @Prop({ default: null }) name!: string|null
   @Prop({ default: null }) survey!: ServerSurvey|null
@@ -80,6 +84,15 @@ export default class CreateServerTranscriptForm extends Vue {
     } else {
       this.$emit('input', false)
     }
+  }
+
+  surveyFilter(item: ServerSurvey, queryText: string): boolean {
+    const l = queryText.toLocaleLowerCase()
+    return (
+      (item.OrtString !== 'None' && item.OrtString.toLocaleLowerCase().includes(l)) ||
+      item.Audiofile.toLocaleLowerCase().includes(l) ||
+      item.Datum.includes(l)
+    )
   }
 
   async mounted() {

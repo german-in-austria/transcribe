@@ -36,7 +36,7 @@
               </div>
               <v-layout>
                 <v-flex xs6 offset-xs3>
-                  <create-server-transcript-form
+                  <server-transcript-info-form
                     v-model="isBasicInfoValid"
                     @update="updateBasicInfo"
                     :transcripts="transcripts"
@@ -339,14 +339,14 @@ import {
 
 import ExmaraldaTierPreview from './ExmaraldaTierPreview.vue'
 import DropFile from './DropFile.vue'
-import CreateServerTranscriptForm from './CreateServerTranscriptForm.vue'
+import ServerTranscriptInfoForm from './ServerTranscriptInfoForm.vue'
 import { ProjectPresetName } from '@/presets'
 
 @Component({
   components: {
     DropFile,
     ExmaraldaTierPreview,
-    CreateServerTranscriptForm
+    ServerTranscriptInfoForm
   }
 })
 export default class ExmaraldaImporter extends Vue {

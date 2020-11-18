@@ -14,6 +14,7 @@ import { collectTokensViaOffsets } from '../service/copy-paste'
 
 import {
   ServerTranscriptInformant,
+  ServerTranscriptListItem,
   ServerTranscriptTokenTypes
 } from '../service/backend-server'
 
@@ -103,6 +104,9 @@ export interface LocalTranscriptTier {
 export type LocalTranscript = LocalTranscriptEvent[]
 
 export const eventStore = {
+
+  transcripts: null as ServerTranscriptListItem[]|null,
+
   events: [] as LocalTranscriptEvent[],
   selectedEventIds: [] as number[],
 

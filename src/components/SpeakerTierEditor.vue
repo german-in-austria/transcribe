@@ -1,34 +1,7 @@
 <template>
   <div>
-    <v-autocomplete
-      :disabled="surveys === null"
-      :loading="surveys === null"
-      :rules="[ selectedSurvey === null && 'Select a Survey' ]"
-      label="Survey"
-      :value="selectedSurvey"
-      @change="selectedSurvey = $event"
-      item-value="pk"
-      item-text="Audiofile"
-      return-object
-      two-line
-      class="mx-3"
-      :items="surveys || []">
-      <template slot="item" slot-scope="item">
-        <v-list-tile-content>
-          <v-list-tile-title>
-            {{ item.item.Audiofile }} ({{ item.item.pk }})
-          </v-list-tile-title>
-          <v-list-tile-sub-title>
-            {{ item.item.FX_Informanten.map(i => `${i.Kuerzel}${ i.Vorname ? ' (' + i.Vorname + ' ' + i.Name + ')' : ''}`).join(', ') }}
-          </v-list-tile-sub-title>
-        </v-list-tile-content>
-        <v-list-tile-action-text class="pl-5">
-          {{ item.item.Datum }}
-        </v-list-tile-action-text>
-      </template>
-    </v-autocomplete>
-    <v-list dense>
-      <v-subheader>Tiers</v-subheader>
+    <v-list subheader dense>
+      <v-subheader class="px-0">Tiers</v-subheader>
       <v-list-tile :key="tier.id" v-for="tier in eventTiers">
         <v-list-tile-content>
           <v-list-tile-title>
@@ -39,7 +12,7 @@
       <v-text-field solo placeholder="Add a new tier…" />
     </v-list>
     <v-list dense>
-      <v-subheader>Speakers</v-subheader>
+      <v-subheader class="px-0">Speakers</v-subheader>
       <v-list-tile :key="speaker.k" v-for="speaker in speakers">
         <v-list-tile-content>
           <v-list-tile-title>

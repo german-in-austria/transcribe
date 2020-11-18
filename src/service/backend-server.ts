@@ -61,10 +61,10 @@ export interface ServerTranscriptSaveRequest extends ServerTranscript {
 }
 
 export interface ServerInformant {
-  weiblich: boolean
+  weiblich?: boolean
   Kuerzel: string
-  Geburtsdatum: string|null
-  Wohnbezirk: number|null
+  Geburtsdatum?: string|null
+  Wohnbezirk?: number|null
   Vorname: string|null
   Kuerzel_anonym: string|null
   Name: string|null
@@ -78,6 +78,8 @@ export interface ServerSurvey {
   Ort: string
   Audiofile: string
   Dateipfad: string
+  OrtString: string
+  id_transcript: number|null
   Datum: string
 }
 
