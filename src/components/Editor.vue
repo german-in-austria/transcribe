@@ -82,28 +82,29 @@
           offset-y>
           <v-list class="context-menu-list" dense>
             <v-list-tile
-              @click="playEvent(getSelectedEvent())">
+              @click="keyboardShortcuts.playPause.action">
               <v-list-tile-content>
                 <v-list-tile-title>Play</v-list-tile-title>
               </v-list-tile-content>
               <v-list-tile-action>
-                ⌘&#9166;
+                {{ displayKeyboardAction(keyboardShortcuts.playPause) }}
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
+              :disabled="keyboardShortcuts.split.disabled()"
               @click="splitEventFromMenu(getSelectedEvent())">
               <v-list-tile-content>
                 <v-list-tile-title>Split</v-list-tile-title>
               </v-list-tile-content>
-              <v-list-tile-action>S</v-list-tile-action>
+              <v-list-tile-action>{{ displayKeyboardAction(keyboardShortcuts.split) }}</v-list-tile-action>
             </v-list-tile>
             <v-list-tile
-              :disabled="eventStore.selectedEventIds.length < 2"
+              :disabled="keyboardShortcuts.joinEvents.disabled()"
               @click="joinEvents(eventStore.selectedEventIds)">
               <v-list-tile-content>
                 <v-list-tile-title>Join</v-list-tile-title>
               </v-list-tile-content>
-              <v-list-tile-action>⌘J</v-list-tile-action>
+              <v-list-tile-action>{{ displayKeyboardAction(keyboardShortcuts.joinEvents) }}</v-list-tile-action>
             </v-list-tile>
             <v-list-tile
               :disabled="eventStore.selectedEventIds.length === 0"
@@ -112,32 +113,38 @@
                 <v-list-tile-title>
                   Export Audio {{
                     eventStore.selectedEventIds.length > 1
-                    ? '(' + eventStore.selectedEventIds.length + ')'
+                    ? '(' + eventStore.selectedEventIds.length + ' Event' + ((eventStore.selectedEventIds.length === 1) ? '' : 's') + ')'
                     : ''
                   }}
                 </v-list-tile-title>
               </v-list-tile-content>
             </v-list-tile>
             <v-list-tile
-              @click="scrollToTranscriptEvent(getSelectedEvent())">
+              @click="keyboardShortcuts.scrollToEvent.action">
               <v-list-tile-content>
                 <v-list-tile-title>Show Transcript</v-list-tile-title>
               </v-list-tile-content>
               <v-list-tile-action>
-                &#9166;
+                {{ displayKeyboardAction(keyboardShortcuts.scrollToEvent) }}
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
               @click="showSpectrogram(getSelectedEvent())">
-              <v-list-tile-title>Inspect Audio…</v-list-tile-title>
+              <v-list-tile-content>
+                <v-list-tile-title>Inspect Event…</v-list-tile-title>
+              </v-list-tile-content>
+              <v-list-tile-action>
+                {{ displayKeyboardAction(keyboardShortcuts.inspectEvent) }}
+              </v-list-tile-action>
             </v-list-tile>
             <v-divider />
             <v-list-tile
-              @click="deleteSelectedEvents">
+              :disabled="keyboardShortcuts.deleteEvents.disabled()"
+              @click="keyboardShortcuts.deleteEvents.action">
               <v-list-tile-content>
                 <v-list-tile-title>Delete</v-list-tile-title>
               </v-list-tile-content>
-              <v-list-tile-action>⌫</v-list-tile-action>
+              <v-list-tile-action>{{ displayKeyboardAction(keyboardShortcuts.deleteEvents) }}</v-list-tile-action>
             </v-list-tile>
           </v-list>
         </v-menu>
@@ -196,8 +203,8 @@ import {
   splitEvent
 } from '../store/transcript'
 
-import { saveChangesToServer } from '../service/backend-server'
-import { handleGlobalShortcut } from '../service/keyboard'
+import { saveChangesToServer, serverTranscript } from '../service/backend-server'
+import { handleGlobalShortcut, keyboardShortcuts, displayKeyboardAction } from '../service/keyboard'
 
 import {
   isCmdOrCtrl
@@ -242,6 +249,8 @@ export default class Editor extends Vue {
   history = history
   loadAudioFromFile = loadAudioFromFile
   exportEventAudio = exportEventAudio
+  keyboardShortcuts = keyboardShortcuts
+  displayKeyboardAction = displayKeyboardAction
 
   scrollTranscriptIndex: number = 0
   scrollTranscriptTime: number = 0
@@ -338,6 +347,8 @@ export default class Editor extends Vue {
     }
     eventBus.$on('scrollWaveform', this.hideMenu)
     document.addEventListener('keydown', handleGlobalShortcut)
+    console.log({eventStore})
+    console.log({serverTranscript})
   }
 
   beforeDestroy() {
