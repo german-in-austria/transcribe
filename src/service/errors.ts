@@ -12,7 +12,7 @@ type UnknownTokenMetadata = null
 
 export interface ErrorEvent {
   error_id: string
-  error_type: 'time_overlap'|'unknown_token'|'event_gap'
+  error_type: 'event_overlap'|'unknown_token'|'event_gap'
   event: LocalTranscriptEvent
   metadata: GapMetadata|OverlapMetadata|UnknownTokenMetadata|null
 }
@@ -26,9 +26,10 @@ export function getErrors(es: LocalTranscriptEvent[]): ErrorEvent[] {
         ? []
         : events.filter((e, i) => {
             return events[i - 1] !== undefined && +e.startTime.toFixed(2) < +events[i - 1].endTime.toFixed(2)
-          }).map(e => ({
+          })
+          .map(e => ({
             error_id: 'overlap_' + e.eventId,
-            error_type: 'time_overlap',
+            error_type: 'event_overlap',
             event: e,
             metadata: null
           } as ErrorEvent))

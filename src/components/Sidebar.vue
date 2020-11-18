@@ -167,18 +167,23 @@ export default class Sidebar extends Vue {
   }
 
   @Watch('settings.showErrors', { deep: true })
-  async onErrorSettingsUpdate() {
+  onErrorSettingsUpdate() {
     this.getErrors()
   }
 
   @Watch('settings.maxEventGap')
-  async onGapSettingsUpdate() {
+  onGapSettingsUpdate() {
     this.getErrors()
   }
 
   @Watch('eventStore.events')
-  async onEventsUpdate(newEvents: LocalTranscriptEvent[]) {
+  onEventsUpdate() {
     this.debouncedGetErrors()
+  }
+
+  @Watch('settings.projectPreset')
+  onPresetUpdate() {
+    this.getErrors()
   }
 
   async getErrors() {

@@ -22,12 +22,12 @@
               selectedError !== null && item.event.eventId === selectedError.event.eventId ? 'selected' : ''
             ]">
             <v-list-tile-avatar>
-              <v-icon v-if="item.error_type === 'time_overlap'">mdi-checkbox-multiple-blank-outline</v-icon>
+              <v-icon v-if="item.error_type === 'event_overlap'">mdi-checkbox-multiple-blank-outline</v-icon>
               <v-icon v-if="item.error_type === 'unknown_token'">mdi-help-rhombus-outline</v-icon>
               <v-icon v-if="item.error_type === 'event_gap'">mdi-arrow-expand-horizontal</v-icon>
             </v-list-tile-avatar>
             <v-list-tile-content>
-              <v-list-tile-title v-if="item.error_type === 'time_overlap'" class="sidebar-title">Time Overlap</v-list-tile-title>
+              <v-list-tile-title v-if="item.error_type === 'event_overlap'" class="sidebar-title">Event Overlap</v-list-tile-title>
               <v-list-tile-title v-if="item.error_type === 'unknown_token'" class="sidebar-title">Unknown Token Type</v-list-tile-title>
               <v-list-tile-title v-if="item.error_type === 'event_gap'" class="sidebar-title">Event Gap</v-list-tile-title>
               <v-list-tile-sub-title class="subtitle">
@@ -52,7 +52,6 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import _ from 'lodash'
 
 import SegmentTranscript from './SegmentTranscript.vue'
 import { RecycleScroller } from 'vue-virtual-scroller'
@@ -62,13 +61,11 @@ import Dropdown from './helper/Dropdown.vue'
 import settings from '../store/settings'
 import { ErrorEvent } from '../service/errors'
 import {
-  LocalTranscriptEvent,
   scrollToAudioEvent,
   findEventIndexById,
   scrollToTranscriptEvent,
   toTime,
-  selectEvent,
-  isEventSelected
+  selectEvent
 } from '../store/transcript'
 
 @Component({
