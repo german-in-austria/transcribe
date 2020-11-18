@@ -284,6 +284,7 @@ export default class Editor extends Vue {
     try {
       eventStore.events = await saveChangesToServer(eventStore.events)
     } catch (e) {
+      alert('Could not save transcript to server.')
       console.log(e)
     } finally {
       this.isSaving = false
