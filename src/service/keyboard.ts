@@ -671,7 +671,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       if (eventStore.isPaused === true) {
         const es = getSelectedEvents()
         if (!timeSpanSelectionIsEmpty()) {
-          playRange(eventStore.userState.timeSpanSelection.start || 0, eventStore.userState.timeSpanSelection.end || 0)
+          playRange(eventStore.userState.timeSpanSelection.start || 0, eventStore.userState.timeSpanSelection.end || 0)
         } else if (es.length > 0) {
           playEvents(es)
         } else {
@@ -740,6 +740,20 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         scrollToAudioEvent(e)
         scrollToTranscriptEvent(e)
       }
+    }
+  },
+  inspectEvent: {
+    greedy: false,
+    showInMenu: true,
+    ignoreInTextField: false,
+    modifier: [ 'ctrlOrCmd' ],
+    key: 'i',
+    name: 'Inspect Event…',
+    description: 'View audio analysis and event details',
+    icon: 'mdi-sine-wave',
+    disabled: () => eventStore.selectedEventIds.length === 0,
+    action: () => {
+      // TODO: put inspectEvent = event in store
     }
   },
   selectAllEvents: {

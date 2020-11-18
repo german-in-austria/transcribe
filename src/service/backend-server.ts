@@ -10,7 +10,7 @@ import {
   LocalTranscriptSpeakerEventTiers,
   TokenTierType
 } from '../store/transcript'
-import { clone, getTextWidth } from '../util/index'
+import { clone, getTextWidth } from '../util'
 import ServerTranscriptDiff from './backend-server-transcript-diff.worker'
 import settings from '../store/settings'
 
@@ -708,7 +708,12 @@ function logServerResponse(req: ServerTranscriptSaveRequest, res: ServerTranscri
 }
 
 // also changes metadata: tiers.
-export async function saveChangesToServer(es: LocalTranscriptEvent[]): Promise<LocalTranscriptEvent[]> {
+export async function saveChangesToServer(
+  es: LocalTranscriptEvent[],
+  surveyId = null,
+  defaultTier = null,
+  name = null
+): Promise<LocalTranscriptEvent[]> {
   // there’s no transcript or no id => throw
   if (serverTranscript === null || serverTranscript.aTranskript === undefined) {
     throw new Error('transcript id is undefined')
@@ -721,7 +726,7 @@ export async function saveChangesToServer(es: LocalTranscriptEvent[]): Promise<L
       // console.log({ serverChanges })
       logServerResponse(t, serverChanges)
       const updatedServerTranscript = updateServerTranscriptWithChanges(serverTranscript, serverChanges)
-      console.log({updatedServerTranscript})
+      console.log({ updatedServerTranscript })
       const updatedLocalTranscript = serverTranscriptToLocal(
         updatedServerTranscript,
         eventStore.metadata.defaultTier || 'text'
@@ -733,9 +738,9 @@ export async function saveChangesToServer(es: LocalTranscriptEvent[]): Promise<L
     } else {
       console.log({ serverTranscript })
       const { transcript_id } = await createEmptyTranscript(
-        serverTranscript.aEinzelErhebung!.pk,
-        serverTranscript.aTranskript.n,
-        serverTranscript.aTranskript.default_tier!
+        surveyId || serverTranscript.aEinzelErhebung!.pk,
+        name || serverTranscript.aTranskript.n,
+        defaultTier || serverTranscript.aTranskript.default_tier!
       )
       console.log('created transcript with id', transcript_id)
       const transcriptWithoutTokensAndEvents = {
