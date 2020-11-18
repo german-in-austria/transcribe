@@ -22,7 +22,7 @@
           <v-tabs-items>
             <v-tab-item>
               <v-list subheader class="pa-4">
-                <v-subheader>Interaction & UI</v-subheader>
+                <v-subheader>Interactions</v-subheader>
                 <v-divider />
                 <v-list-tile>
                   <v-list-tile-title>Mousewheel scrolls horizontally</v-list-tile-title>
