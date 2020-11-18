@@ -46,6 +46,7 @@ module.exports = {
     'quote-props': 'off',
     '@typescript-eslint/member-delimiter-style': 'off',
     '@typescript-eslint/camelcase': 'off',
+    '@typescript-eslint/no-inferrable-types': 'off',
     'computed-property-spacing': 'off',
     'array-bracket-spacing': 'off',
     'operator-linebreak': 'off'
