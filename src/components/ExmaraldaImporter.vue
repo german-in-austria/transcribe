@@ -36,48 +36,13 @@
               </div>
               <v-layout>
                 <v-flex xs6 offset-xs3>
-                  <v-form
-                    ref="basicInfoForm"
-                    class="pb-5"
-                    v-model="basicInfoValid">
-                    <v-select
-                      label="Project Preset"
-                      v-model="settings.projectPreset"
-                      :items="projectPresetNames">
-                    </v-select>
-                    <v-text-field 
-                      v-model="transcriptName"
-                      label="Transcript Name"
-                      :rules="[
-                        (transcriptName === null || transcriptName.trim() === '') && 'Please enter a name for the transcript',
-                        !isTranscriptNameUnique(transcriptName) && 'Name already exists.'
-                      ]" />
-                    <v-autocomplete
-                      :disabled="surveys === null"
-                      :loading="surveys === null"
-                      :rules="[ selectedSurvey === null && 'Select a Survey' ]"
-                      label="Survey"
-                      :value="selectedSurvey"
-                      @change="selectSurvey"
-                      two-line
-                      item-text="Audiofile"
-                      return-object
-                      :items="surveys || []">
-                      <template slot="item" slot-scope="item">
-                        <v-list-tile-content>
-                          <v-list-tile-title>
-                            {{ item.item.Audiofile }} ({{ item.item.pk }})
-                          </v-list-tile-title>
-                          <v-list-tile-sub-title>
-                            {{ item.item.FX_Informanten.map(i => `${i.Kuerzel}${ i.Vorname ? ' (' + i.Vorname + ' ' + i.Name + ')' : ''}`).join(', ') }}
-                          </v-list-tile-sub-title>
-                        </v-list-tile-content>
-                        <v-list-tile-action-text class="pl-5">
-                          {{ item.item.Datum }}
-                        </v-list-tile-action-text>
-                      </template>
-                    </v-autocomplete>
-                  </v-form>
+                  <create-server-transcript-form
+                    v-model="isBasicInfoValid"
+                    @update="updateBasicInfo"
+                    :transcripts="transcripts"
+                    :name="transcriptName"
+                    :survey="selectedSurvey"
+                  />
                 </v-flex>
               </v-layout>
             </v-window-item>
@@ -94,10 +59,7 @@
                 </p>
               </div>
               <v-layout :class="[
-                'pl-3',
-                'pb-2',
-                'pt-2',
-                'table-header',
+                'pl-3 pb-2 pt-2 table-header',
                 settings.darkMode === true && 'theme--dark'
               ]">
                 <v-flex class="pl-3" xs1>
@@ -129,7 +91,7 @@
                 ]"
                 ref="tierForm"
                 lazy-validation
-                v-model="tiersValid">
+                v-model="areTiersValid">
                 <v-layout
                   column
                   v-for="(speakerTier, i) in importable.speakerTiers"
@@ -146,13 +108,13 @@
                     <v-flex xs4 :class="[!speakerTier.select_for_import && 'disabled']">
                       <h4>{{ speakerTier.display_name }} <span class="caption grey--text">— {{ speakerTier.speaker_name }}</span></h4>
                       <v-chip small>
+                        <label>events</label> {{ speakerTier.events.length }}
+                      </v-chip>
+                      <v-chip small>
                         <label>category</label>{{ speakerTier.category }}
                       </v-chip>
                       <v-chip small>
                         <label>type</label> {{ speakerTier.type }}
-                      </v-chip>
-                      <v-chip small>
-                        <label>events</label> {{ speakerTier.events.length }}
                       </v-chip>
                     </v-flex>
                     <v-flex xs2 :class="[!speakerTier.select_for_import && 'disabled']" class="pl-2">
@@ -357,12 +319,10 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import _ from 'lodash'
 
 import settings from '../store/settings'
-import presets from '../presets'
 import { resourceAtUrlExists } from '../util'
 import {
   ServerInformant,
   ServerSurvey,
-  getSurveys,
   ServerTranscriptListItem,
   getAudioUrlFromServerNames
 } from '../service/backend-server'
@@ -379,11 +339,14 @@ import {
 
 import ExmaraldaTierPreview from './ExmaraldaTierPreview.vue'
 import DropFile from './DropFile.vue'
+import CreateServerTranscriptForm from './CreateServerTranscriptForm.vue'
+import { ProjectPresetName } from '@/presets'
 
 @Component({
   components: {
     DropFile,
-    ExmaraldaTierPreview
+    ExmaraldaTierPreview,
+    CreateServerTranscriptForm
   }
 })
 export default class ExmaraldaImporter extends Vue {
@@ -391,12 +354,10 @@ export default class ExmaraldaImporter extends Vue {
   @Prop({ required: true }) importable!: ParsedExmaraldaXML
   @Prop({ default: [] }) transcripts!: ServerTranscriptListItem[]
 
-  surveys: ServerSurvey[]|null = null
   step = 1
-  basicInfoValid = false
-  tiersValid = false
+  isBasicInfoValid = false
+  areTiersValid = false
   settings = settings
-  presets = presets
 
   globalDefaultTier: TokenTierType|null = null
   transcriptName: string|null = this.importable.fileName.replace('.exb', '')
@@ -409,16 +370,10 @@ export default class ExmaraldaImporter extends Vue {
   isAnythingOrAllSelected: boolean|null = false
   visiblePreviewTier: string|null = null
 
-  async mounted() {
-    this.surveys = await getSurveys()
-  }
-
-  get projectPresetNames(): string[] {
-    return _.map(this.presets, (p, name) => name)
-  }
-
-  isTranscriptNameUnique(n: string|null): boolean {
-    return this.transcripts.find(t => t.n === n) === undefined
+  updateBasicInfo(args: { transcriptName: string, selectedSurvey: ServerSurvey, preset: ProjectPresetName}) {
+    this.transcriptName = args.transcriptName
+    this.selectSurvey(args.selectedSurvey)
+    settings.projectPreset = args.preset
   }
 
   updateTierTokenTypeAndGlobalDefault(i: number, t: TokenTierType) {
@@ -450,8 +405,8 @@ export default class ExmaraldaImporter extends Vue {
 
   get canContinue() {
     return (
-      (this.step === 1 && this.basicInfoValid === true && this.surveys !== null) ||
-      (this.step === 2 && this.tiersValid === true && this.isAnythingOrAllSelected !== false) ||
+      (this.step === 1 && this.isBasicInfoValid === true) ||
+      (this.step === 2 && this.areTiersValid === true && this.isAnythingOrAllSelected !== false) ||
       (this.step === 3 && this.audioFileName !== null)
     )
   }
@@ -563,7 +518,7 @@ export default class ExmaraldaImporter extends Vue {
 
   async validateAndNext() {
     if (this.step === 1) {
-      if ((this.$refs.basicInfoForm as any).validate()) {
+      if (this.isBasicInfoValid) {
         this.step = this.step + 1
       }
     } else if (this.step === 2) {
