@@ -129,6 +129,7 @@ export const eventStore = {
     viewingTranscriptEvent: null as LocalTranscriptEvent|null,
     editingTranscriptEvent: null as LocalTranscriptEvent|null,
     viewingAudioEvent: null as LocalTranscriptEvent|null,
+    showSpeakerTierEditModal: false,
     timeSpanSelection: {
       start: null as null|number,
       end: null as null|number
@@ -333,16 +334,6 @@ export function sentencesFromEvent(event: LocalTranscriptEvent, tier: TokenTierT
   }).value()
 }
 
-const sentenceRules: [(text: string) => boolean] = [
-  (text) => !text.includes('  ')
-]
-
-export function speakerEventHasErrors(event: LocalTranscriptEvent): boolean {
-  const sentences = sentencesFromEvent(event, eventStore.metadata.defaultTier)
-  // not every sentence satisfies every rule.
-  return !sentences.every(s => sentenceRules.every(r => r(s)))
-}
-
 export function getFirstTokenOrder(e: LocalTranscriptEvent, speakerId: string): number {
   const speakerEvent = e.speakerEvents[speakerId]
   if (speakerEvent) {
@@ -459,15 +450,14 @@ export function updateSpeakerEvent(
   const speakerEvents = _({
     // merge the new speaker
     ...oldEvent.speakerEvents,
-    [speakerId] : {
+    [ speakerId ]: {
       speakerEventId: event.eventId,
       speakerEventTiers: event.speakerEvents[speakerId].speakerEventTiers || {},
       // update order, from 0 to token length
       tokens: tokens.map((t, i) => ({ ...t, order: i}))
     }
-  })
   // remove deleted speaker events
-  .reduce((m, e, k, l) => {
+  }).reduce((m, e, k) => {
     if (Number(k) !== Number(deletedSpeakerId)) {
       m[k] = e
     }
@@ -475,9 +465,9 @@ export function updateSpeakerEvent(
   }, {} as LocalTranscriptEvent['speakerEvents'])
 
   // create the event
-  const newEvent = clone({...oldEvent, speakerEvents})
+  const newEvent = clone({ ...oldEvent, speakerEvents })
 
-  console.log({newEvent})
+  console.log({ newEvent })
 
   // if it has a fragment marker ("="),
   // mark the first token in the next
@@ -552,11 +542,6 @@ export function findEventOverlaps(e: LocalTranscriptEvent, events = eventStore.e
 
 export function isEventDockedToEvent(...es: LocalTranscriptEvent[]): boolean {
   return sortEvents(es).every((e, i, l) => {
-    // true if it’s either the first event
-    // or the distance to the previous one is smaller than the settings dock interval
-    // if (i !== 0) {
-    //   console.log('distance', e.startTime, e.endTime, e.startTime - l[ i - 1].endTime)
-    // }
     return i === 0 || e.startTime - l[ i - 1].endTime <= settings.eventDockingInterval
   })
 }
@@ -626,7 +611,7 @@ export function moveEventStartTime(e: LocalTranscriptEvent, by: number): History
 
 export function resizeEvent(id: number, startTime: number, endTime: number): HistoryEventAction {
   const i = findEventIndexById(id)
-  return resizeEvents({...eventStore.events[i], startTime, endTime})
+  return resizeEvents({ ...eventStore.events[i], startTime, endTime })
 }
 
 export function insertEvent(e: LocalTranscriptEvent): HistoryEventAction {
@@ -785,7 +770,7 @@ export function shiftCharsAcrossEvents(
       } else {
         return [
           ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, left, text.length),
-          ...targetE.speakerEvents[speakerId] ? targetE.speakerEvents[speakerId].tokens : [],
+          ...targetE.speakerEvents[speakerId] ? targetE.speakerEvents[speakerId].tokens : []
         ]
       }
     })()
@@ -832,7 +817,7 @@ export function splitEvent(event: LocalTranscriptEvent, splitTime: number): Hist
           tokens: splitTokensAtFactor(se.tokens, cutAtProgressFactor)[1]
         }
       }).value()
-    },
+    }
   }
   eventStore.events.splice(i, 1, leftEvent, rightEvent)
   return {
@@ -850,7 +835,7 @@ export function splitEventAtChar(
   speakerId: number,
   start: number,
   end: number
-): HistoryEventAction[]  {
+): HistoryEventAction[] {
   const [ left, right ] = [start, end].sort((a, b) => a - b)
   const i = findEventIndexById(eventId)
   // event exists
@@ -885,7 +870,7 @@ export function splitEventAtChar(
             speakerEventId: newEventId,
             tokens: collectTokensViaOffsets(e.speakerEvents[sid].tokens, left, segmentCharacters)
           })).value()
-        },
+        }
       }
       eventStore.events.splice(i, 1, leftEvent, rightEvent)
       return [{
@@ -1089,13 +1074,9 @@ function getSpeakersFromEvents(es: LocalTranscriptEvent[]): string[] {
     .value()
 }
 
-function getEventById(id: number): LocalTranscriptEvent|undefined {
-  return getEventsByIds([ id ])[0]
-}
-
 function getEventsByIds(ids: number[]): LocalTranscriptEvent[] {
-  return _(eventStore.selectedEventIds)
-    .map((id) => eventStore.events[findEventIndexById(id)])
+  return _(ids)
+    .map(id => eventStore.events[findEventIndexById(id)])
     .compact()
     .sortBy(e => e.startTime)
     .value()
@@ -1128,7 +1109,7 @@ export function joinEvents(eventIds: number[]): HistoryEventAction {
       speakerEvents[speakerId] = {
         speakerEventTiers: _(events).reduce((ts, ev, tn) => {
           if (ev.speakerEvents[speakerId]) {
-            ts = { ...ts,  ...ev.speakerEvents[speakerId].speakerEventTiers}
+            ts = { ...ts, ...ev.speakerEvents[speakerId].speakerEventTiers}
           }
           return ts
         }, {} as LocalTranscriptSpeakerEventTiers),
@@ -1212,9 +1193,9 @@ export function selectEventRange(e: LocalTranscriptEvent) {
       ))
       // move the anchor back to the beginning
       // of the stack.
-      .sortBy(ev => ev.eventId === anchorEvent.eventId ? 0 : 1)
-      .map(ev => ev.eventId)
-      .value()
+        .sortBy(ev => ev.eventId === anchorEvent.eventId ? 0 : 1)
+        .map(ev => ev.eventId)
+        .value()
   }
 }
 

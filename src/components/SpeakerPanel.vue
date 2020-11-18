@@ -5,7 +5,7 @@
       :transition="false"
       scrollable
       max-width="700px"
-      v-model="showSpeakerTierEditModal">
+      v-model="eventStore.userState.showSpeakerTierEditModal">
       <v-card>
         <v-card-title>Speakers and Tiers</v-card-title>
         <v-card-text>
@@ -97,8 +97,6 @@ export default class SpeakerPanel extends Vue {
   eventStore = eventStore
   tierHeight = 25
 
-  showSpeakerTierEditModal = false
-
   get speakerHeight(): string {
     return eventStore.metadata.tiers.filter(t => t.show === true).length * this.tierHeight + 1 + 'px'
   }
@@ -128,7 +126,7 @@ export default class SpeakerPanel extends Vue {
   }
 
   openSpeakerAndTierSettings() {
-    this.showSpeakerTierEditModal = true
+    this.eventStore.userState.showSpeakerTierEditModal = true
   }
 
   expandAll() {

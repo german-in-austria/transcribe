@@ -55,6 +55,9 @@ export interface ServerTranscriptSaveRequest extends ServerTranscript {
     [token_id: string]: SaveRequest<ServerToken>
   }
   aEvents: Array<SaveRequest<ServerEvent>>
+  // aTiers: {
+  //   [tier_id: string]: SaveRequest<ServerTier>
+  // }
 }
 
 export interface ServerInformant {
@@ -261,7 +264,7 @@ export function getMetadataFromServerTranscript(res: ServerTranscript) {
       type: 'freeText',
       name: t.tier_name,
       show: false,
-      id:   tid
+      id: tid
     })).value()) as LocalTranscriptTier[]
   }
   return v
@@ -305,7 +308,7 @@ export async function localTranscriptToServerTranscript(
   const oldT = textEncoder.encode(JSON.stringify(oldServerTranscript)).buffer
   const newT = textEncoder.encode(JSON.stringify(localEvents)).buffer
   const [ tokensAndEventsDiff, newServerTranscript ] = await diffWorker
-    .postMessage({oldT, newT}, [oldT, newT]) as [ServerTranscriptSaveRequest, ServerTranscript]
+    .postMessage({ oldT, newT }, [oldT, newT]) as [ServerTranscriptSaveRequest, ServerTranscript]
   return newServerTranscript
 }
 
@@ -315,8 +318,8 @@ export async function localTranscriptToServerSaveRequest(
   const oldT = textEncoder.encode(JSON.stringify(oldServerTranscript)).buffer
   const newT = textEncoder.encode(JSON.stringify(localEvents)).buffer
   const [
-    tokensAndEventsDiff,
-  ] = await diffWorker.postMessage({oldT, newT}, [oldT, newT]) as [ServerTranscriptSaveRequest, ServerTranscript]
+    tokensAndEventsDiff
+  ] = await diffWorker.postMessage({ oldT, newT }, [oldT, newT]) as [ServerTranscriptSaveRequest, ServerTranscript]
   return {
     ...oldServerTranscript,
     ...tokensAndEventsDiff
@@ -328,7 +331,6 @@ function reverseString(str: string) {
 }
 
 function replaceLastOccurrence(token: string, toReplace: string, replaceWith: string): string {
-  // console.log('replaceLastOccurrence', token, toReplace, replaceWith)
   return reverseString(
     reverseString(token).replace(
       reverseString(toReplace),
@@ -377,7 +379,7 @@ function serverEventTiersSaveResponseToServerEventTiers(speakerEventTiers: Serve
   return _(speakerEventTiers).mapValues((speakerEventTier, speakerId) => {
     return _(speakerEventTier).reduce((m, e, k) => {
       if ((e as any).newStatus !== 'deleted') {
-        m[e.newPk || k] = {
+        m[e.newPk || k] = {
           ti: e.ti,
           t: e.t
         }
@@ -404,7 +406,7 @@ export function serverTokenSaveResponseToServerToken(
 ): ServerToken {
   return {
     e: t.e > 0
-      ? t.e             // it’s an existing event
+      ? t.e // it’s an existing event
       : es[t.e].newPk!, // it’s a new event, use the server-supplied primary key.
     fo: t.fo,
     i: t.i,
@@ -666,16 +668,20 @@ export async function getServerTranscripts(backEndUrl: string): Promise<{transcr
 async function performSaveRequest(id: number, t: ServerTranscriptSaveRequest): Promise<ServerTranscriptSaveResponse> {
   return await (
     await fetch(`${ settings.backEndUrl }/routes/transcript/save/${ id }`, {
-    credentials: 'include',
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(t),
-  })).json() as ServerTranscriptSaveResponse
+      credentials: 'include',
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(t)
+    })).json() as ServerTranscriptSaveResponse
 }
 
+// TODO:
+// only passing the events won’t work, because we also need to
+// diff the tiers and send them to the server.
+// as in `ts: {[tier_id: string]: ServerTier}`
 export async function convertToServerTranscript(es: LocalTranscriptEvent[]): Promise<ServerTranscript|null> {
   if (serverTranscript !== null) {
     return localTranscriptToServerTranscript(serverTranscript, es)
@@ -704,7 +710,7 @@ function logServerResponse(req: ServerTranscriptSaveRequest, res: ServerTranscri
 // also changes metadata: tiers.
 export async function saveChangesToServer(es: LocalTranscriptEvent[]): Promise<LocalTranscriptEvent[]> {
   // there’s no transcript or no id => throw
-  if ( serverTranscript === null || serverTranscript.aTranskript === undefined ) {
+  if (serverTranscript === null || serverTranscript.aTranskript === undefined) {
     throw new Error('transcript id is undefined')
   } else {
     // it’s already on the server
@@ -818,10 +824,10 @@ export async function getTranscript(
     eventStore.events = appendTranscriptEventChunk(eventStore.events, eventChunk)
     // progress callback with data
     if (onProgress !== undefined) {
-      onProgress(res.aNr / (totalSteps || res.aTmNr || 10), eventStore.events, res)
+      onProgress(res.aNr / (totalSteps || res.aTmNr || 10), eventStore.events, res)
     }
     // get next (recursion) or finish
-    if (res.nNr > res.aNr)  {
+    if (res.nNr > res.aNr) {
       return getTranscript(
         id,
         onProgress,

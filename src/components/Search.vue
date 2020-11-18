@@ -69,7 +69,7 @@
         <v-divider class="mt-3" />
       </div>
     </v-flex>
-    <v-list class="flex pb-0" style="flex: 1 0; overflow: hidden;" dense>
+    <v-list class="flex pb-0 pt-0" style="flex: 1 0; overflow: hidden;" dense>
       <RecycleScroller
         class="scroller"
         ref="resultScroller"

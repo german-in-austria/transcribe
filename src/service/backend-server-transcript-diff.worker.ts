@@ -206,7 +206,6 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
     ) {
       m[id] = {
         ...t,
-        // oldToken: oldTranscript.aTokens[id],
         status: 'update'
       }
     }
@@ -263,6 +262,11 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
         ...eventDeletions,
         ...eventUpdatesAndInserts
       ]
+      // ,
+      // aTiers: {
+      //   ...tierDeletions,
+      //   ...tierUpdatesAndInserts
+      // }
     },
     // NEW, FULL SERVER TRANSCRIPT
     {
