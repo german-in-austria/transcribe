@@ -115,7 +115,7 @@ export function fileToUint8ArrayAndName(f: File): Promise<{ b: Uint8Array, n: st
 
 export function eachFrom<T>(list: T[], startIndex: number, callback: (e: T, i: number) => T): T[] {
   const len = list.length
-  for (let i = startIndex; i < len; i++ ) {
+  for (let i = startIndex; i < len; i++) {
     list[i] = callback(list[i], i)
   }
   return list
@@ -224,10 +224,10 @@ export async function concatUint8ArrayAsync(first: Uint8Array, second: Uint8Arra
   const b1 = first.buffer
   const b2 = second.buffer
   const [ combined, one, two ] = await concatWorker.postMessage({
-      first  : b1,
-      second : b2
-    },
-    [ b1, b2 ]
+    first: b1,
+    second: b2
+  },
+  [ b1, b2 ]
   )
   return [
     new Uint8Array(combined),
