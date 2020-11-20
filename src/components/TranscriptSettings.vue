@@ -3,6 +3,7 @@
     lazy
     :transition="false"
     scrollable
+    persistent
     max-width="700px"
     v-model="eventStore.userState.showSpeakerTierEditModal">
     <v-card>
@@ -11,27 +12,48 @@
       </v-card-title>
       <v-divider />
       <v-card-text>
-        <server-transcript-info-form
-          class="px-4"
-          v-model="isBasicInfoValid"
-          :transcripts="[]"
-          :name="eventStore.metadata.transcriptName"
-          :survey="serverTranscript !== null ? serverTranscript.aEinzelErhebung : null"
-          @update="updateBasicInfos"
-        />
-        <speaker-tier-editor
-          class="px-4"
-          :speakers="eventStore.metadata.speakers"
-          :tiers="eventStore.metadata.tiers"
-          @update:tiers="updateTiers"
-          @update:speakers="updateSpeakers"
-        />
+        <section class="px-4 py-0">
+          <v-subheader class="pa-0">Basic Metadata (required)</v-subheader>
+          <server-transcript-info-form
+            v-model="isBasicInfoValid"
+            :transcripts="[]"
+            :name="eventStore.metadata.transcriptName"
+            :survey="serverTranscript !== null ? serverTranscript.aEinzelErhebung : null"
+            @update="updateBasicInfos"
+          />
+          <v-select
+            label="Default Tier"
+            value="ortho"
+            :items="serverTokenTiers">
+            <template slot="item" slot-scope="item">
+              <v-list-tile-content>
+                <v-list-tile-title>
+                  {{ item.item.text }}
+                </v-list-tile-title>
+              </v-list-tile-content>
+              <v-list-tile-action-text class="pl-5">
+                {{ item.item.description }}
+              </v-list-tile-action-text>
+            </template>
+          </v-select>
+        </section>
+        <v-divider class="mx-2" />
+        <section class="px-4 py-0">
+          <v-subheader class="pa-0">Event Tiers ({{ eventStore.metadata.tiers.length }})</v-subheader>
+          <speaker-tier-editor
+            :speakers="eventStore.metadata.speakers"
+            :tiers="eventStore.metadata.tiers"
+            @update:tiers="updateTiers"
+            @update:speakers="updateSpeakers"
+          />
+        </section>
       </v-card-text>
       <v-divider />
       <v-card-actions class="pa-3">
         <v-spacer />
         <v-btn
           :disabled="!isBasicInfoValid"
+          @click="confirm"
           large
           color="primary"
           class="elevation-0">
@@ -43,12 +65,23 @@
 </template>
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { eventStore, LocalTranscriptTier, LocalTranscriptSpeakers } from '../store/transcript'
+import { eventStore, LocalTranscriptTier, LocalTranscriptSpeakers, loadAudioFromUrl } from '../store/transcript'
 import ServerTranscriptInfoForm from './ServerTranscriptInfoForm.vue'
 import SpeakerTierEditor from './SpeakerTierEditor.vue'
-import { ServerSurvey, getAudioUrlFromServerNames, serverTranscript } from '@/service/backend-server'
+import {
+  ServerSurvey,
+  getAudioUrlFromServerNames,
+  serverTranscript,
+  ServerTranscript,
+  surveyToServerTranscriptSurvey,
+  surveyToServerTranscriptInformants,
+  serverTokenTiers, 
+  mergeServerTranscript,
+  getMetadataFromServerTranscript,
+  serverTranscriptToLocal} from '@/service/backend-server'
 import _ from 'lodash'
 import { resourceAtUrlExists } from '@/util'
+import { computeTokenTypesForEvents } from '@/service/token-types'
 
 @Component({
   components: {
@@ -61,18 +94,17 @@ export default class TranscriptSettings extends Vue {
   eventStore = eventStore
   isBasicInfoValid = false
   serverTranscript = serverTranscript
-
-  mounted() {
-    
-  }
+  eventTiers = []
+  serverTokenTiers = serverTokenTiers
+  basicInfos: any = {}
 
   async updateBasicInfos(args: { transcriptName: string, selectedSurvey: ServerSurvey, preset: string}) {
+    this.basicInfos = args
     eventStore.metadata.transcriptName = args.transcriptName
     eventStore.metadata.speakers = _(args.selectedSurvey.FX_Informanten)
       .keyBy('pk')
-      .mapValues(i => ({ k: i.Kuerzel, ka: i.Kuerzel_anonym!, searchInSpeaker: true }))
+      .mapValues(i => ({ k: i.Kuerzel, ka: i.Kuerzel_anonym || '', searchInSpeaker: true }))
       .value()
-    console.log(eventStore.metadata.speakers)
     const audioFileUrl = getAudioUrlFromServerNames(args.selectedSurvey.Audiofile, args.selectedSurvey.Dateipfad)
     if (audioFileUrl !== null && await resourceAtUrlExists(audioFileUrl)) {
       console.log(audioFileUrl)
@@ -83,12 +115,55 @@ export default class TranscriptSettings extends Vue {
     }
   }
 
-  updateTiers(ts: LocalTranscriptTier[]) {
-    console.log(ts)
+  createBasicServerTranscript(args: { transcriptName: string, selectedSurvey: ServerSurvey, preset: string}): ServerTranscript {
+    return {
+      aNr: 0,
+      nNr: 0,
+      aEinzelErhebung: surveyToServerTranscriptSurvey(args.selectedSurvey),
+      aInformanten: surveyToServerTranscriptInformants(args.selectedSurvey),
+      aTiers: {
+        'test': {
+          tier_name: 'test'
+        }
+      },
+      aTokens: {},
+      aEvents: [],
+      aTranskript: {
+        default_tier: 'text',
+        n: args.transcriptName,
+        pk: -1,
+        ut: 'now'
+      }
+    }
   }
 
-  updateSpeakers(ss: LocalTranscriptSpeakers) {
-    console.log(ss)
+  async confirm() {
+    if (this.isBasicInfoValid) {
+      const st = this.createBasicServerTranscript(this.basicInfos)
+      mergeServerTranscript(st)
+      eventStore.metadata = getMetadataFromServerTranscript(st)
+      const events = serverTranscriptToLocal(st, eventStore.metadata.defaultTier)
+      eventStore.events = computeTokenTypesForEvents(
+        events,
+        eventStore.metadata.defaultTier || 'text',
+        _(eventStore.metadata.speakers).map((s, k) => k).value()
+      )
+      const audioFileUrl = getAudioUrlFromServerNames(this.basicInfos.selectedSurvey.Audiofile, this.basicInfos.selectedSurvey.Dateipfad)
+      if (audioFileUrl !== null) {
+        await loadAudioFromUrl(audioFileUrl)
+        eventStore.userState.showSpeakerTierEditModal = false
+      } else {
+        throw new Error('no audio file found')
+      }
+    }
+  }
+
+  updateSpeakers() {
+    console.log('')
+  }
+
+  updateTiers(ts: LocalTranscriptTier[]) {
+    this.eventStore.metadata.tiers = ts
   }
 }
 </script>

@@ -1,7 +1,6 @@
 <template>
   <v-form
     ref="basicInfoForm"
-    class="pb-5"
     v-model="isBasicInfoValid">
     <v-select
       label="Project Preset"
@@ -9,14 +8,6 @@
       v-model="settings.projectPreset"
       :items="projectPresetNames">
     </v-select>
-    <v-text-field
-      v-model="transcriptName"
-      @input="emitUpdateIfValid"
-      label="Transcript Name"
-      :rules="[
-        (transcriptName === null || transcriptName.trim() === '') && 'Please enter a name for the transcript',
-        !isTranscriptNameUnique(transcriptName) && 'Name already exists.'
-      ]" />
     <v-autocomplete
       :disabled="surveys === null"
       :filter="surveyFilter"
@@ -46,6 +37,14 @@
         </v-list-tile-action-text>
       </template>
     </v-autocomplete>
+    <v-text-field
+      v-model="transcriptName"
+      @input="emitUpdateIfValid"
+      label="Transcript Name"
+      :rules="[
+        (transcriptName === null || transcriptName.trim() === '') && 'Please enter a name for the transcript',
+        !isTranscriptNameUnique(transcriptName) && 'Name already exists.'
+      ]" />
   </v-form>
 </template>
 <script lang="ts">
