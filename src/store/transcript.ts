@@ -113,6 +113,7 @@ export const eventStore = {
   selectedSearchResult: null as SearchResult|null,
   searchResults: [] as SearchResult[],
   searchTerm: '',
+  inspectedEvent: null as LocalTranscriptEvent|null,
 
   isPaused: true as boolean,
   currentTime: 0,
@@ -636,6 +637,36 @@ export function insertEvent(e: LocalTranscriptEvent): HistoryEventAction {
   }
 }
 
+export function prependEmptyEventAt(t: number): HistoryEventAction|undefined {
+  const eventAt = findEventAt(t)
+  // can’t insert event when theres already one there, so just select it.
+  if (eventAt !== undefined) {
+    selectEvent(eventAt)
+  } else {
+    const prev = findPreviousEventAt(t)
+    if (prev !== undefined) {
+      return addEvent(Math.max(t - 2, prev.endTime), 2)
+    } else {
+      return addEvent(t, 2)
+    }
+  }
+}
+
+export function appendEmptyEventAt(t: number): HistoryEventAction|undefined {
+  const eventAt = findEventAt(t)
+  // can’t insert event when theres already one there, so just select it.
+  if (eventAt !== undefined) {
+    selectEvent(eventAt)
+  } else {
+    const next = findNextEventAt(t)
+    if (next !== undefined) {
+      return addEvent(t, Math.min(2, next.startTime - t))
+    } else {
+      return addEvent(t, 2)
+    }
+  }
+}
+
 export function appendEmptyEventAfter(e: LocalTranscriptEvent|undefined): HistoryEventAction|undefined {
   // an event is selected
   if (e !== undefined) {
@@ -682,7 +713,6 @@ export function addEvent(atTime: number, length = 1): HistoryEventAction {
   }
   if (nextEvent !== undefined) {
     const i = findEventIndexById(nextEvent.eventId)
-    // console.log({i})
     eventStore.events.splice(i, 0, newEvent)
   } else {
     eventStore.events.push(newEvent)

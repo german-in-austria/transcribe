@@ -40,7 +40,9 @@ import {
   playEventsStart,
   playEventsEnd,
   timeSpanSelectionIsEmpty,
-  playRange
+  playRange,
+  appendEmptyEventAt,
+  prependEmptyEventAt
 } from '../store/transcript'
 
 import { saveChangesToServer } from '../service/backend-server'
@@ -370,11 +372,11 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Append Event',
     disabled: () => false,
     action: async () => {
-      const event = getFocusedEvent() || getSelectedEvent()
+      const selectedEvent = getFocusedEvent() || getSelectedEvent()
       const speaker = getFocusedSpeaker()
-      if (event !== undefined) {
-        const newEs = undoable(appendEmptyEventAfter(event))
-        const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent(1, event) ])
+      if (selectedEvent !== undefined) {
+        const newEs = undoable(appendEmptyEventAfter(selectedEvent))
+        const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent(1, selectedEvent) ])
         if (es.length > 0 && es[0] !== undefined) {
           scrollToTranscriptEvent(es[0], {
             focusSpeaker: speaker,
@@ -388,6 +390,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
             playEvents(es)
           }
         }
+      } else {
+        appendEmptyEventAt(eventStore.currentTime)
       }
     }
   },
@@ -420,6 +424,8 @@ export const keyboardShortcuts: KeyboardShortcuts = {
             playEvents(es)
           }
         }
+      } else {
+        prependEmptyEventAt(eventStore.currentTime)
       }
     }
   },
