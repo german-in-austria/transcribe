@@ -5,6 +5,7 @@
     scrollable
     @input="$event === false && $emit('close')"
     :value="show"
+    class="event-inspector"
     style="height: 90%"
     max-width="100%">
     <v-card class="spectrogram-main pt-3" style="background: rgb(10, 10, 10);">

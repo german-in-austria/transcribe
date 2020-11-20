@@ -60,10 +60,10 @@
       @close="settings.showSettings = false"
       :show="settings.showSettings" />
     <event-inspector
-      v-if="isEventInspectorVisible"
-      @close="isEventInspectorVisible = false"
-      :show="isEventInspectorVisible"
-      :event="inspectedEvent"
+      v-if="eventStore.inspectedEvent !== null"
+      :show="eventStore.inspectedEvent !== null"
+      @close="eventStore.inspectedEvent = null"
+      :event="eventStore.inspectedEvent"
     />
     <wave-form
       v-if="eventStore.audioElement.src"
@@ -261,9 +261,6 @@ export default class Editor extends Vue {
   scrollTranscriptIndex: number = 0
   scrollTranscriptTime: number = 0
 
-  isEventInspectorVisible = false
-  inspectedEvent: LocalTranscriptEvent|null = null
-
   scrollToTranscriptEvent = scrollToTranscriptEvent
   settings = settings
   showSearch = false
@@ -331,8 +328,7 @@ export default class Editor extends Vue {
   }
 
   showEventInspector(e: LocalTranscriptEvent) {
-    this.isEventInspectorVisible = true
-    this.inspectedEvent = e
+    eventStore.inspectedEvent = e
   }
 
   async splitEvent(e: LocalTranscriptEvent, at: number) {
