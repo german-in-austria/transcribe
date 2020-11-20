@@ -9,7 +9,7 @@
         v-for="(speakerTier, i) in speakersWithMissingDefaultTier"
         :key="i"
         v-model="showMissingDefaultTierError">
-        Default Tier missing for speaker {{ speakerTier.to_speaker !== null ? speakerTier.to_speaker.Kuerzel : '' }}
+        Default Tier missing for speaker {{ speakerTier.toSpeaker !== null ? speakerTier.toSpeaker.Kuerzel : '' }}
       </v-snackbar>
     </div>
     <v-dialog
@@ -39,6 +39,7 @@
                   <server-transcript-info-form
                     v-model="isBasicInfoValid"
                     @update="updateBasicInfo"
+                    class="pb-5"
                     :transcripts="transcripts"
                     :name="transcriptName"
                     :survey="selectedSurvey"
@@ -102,11 +103,11 @@
                       <v-checkbox
                         class="pt-0"
                         @change="updateIsEverythingSelected"
-                        v-model="speakerTier.select_for_import"
+                        v-model="speakerTier.selectForImport"
                       />
                     </v-flex>
-                    <v-flex xs4 :class="[!speakerTier.select_for_import && 'disabled']">
-                      <h4>{{ speakerTier.display_name }} <span class="caption grey--text">— {{ speakerTier.speaker_name }}</span></h4>
+                    <v-flex xs4 :class="[!speakerTier.selectForImport && 'disabled']">
+                      <h4>{{ speakerTier.display_name }} <span class="caption grey--text">— {{ speakerTier.speakerName }}</span></h4>
                       <v-chip small>
                         <label>events</label> {{ speakerTier.events.length }}
                       </v-chip>
@@ -117,12 +118,12 @@
                         <label>type</label> {{ speakerTier.type }}
                       </v-chip>
                     </v-flex>
-                    <v-flex xs2 :class="[!speakerTier.select_for_import && 'disabled']" class="pl-2">
+                    <v-flex xs2 :class="[!speakerTier.selectForImport && 'disabled']" class="pl-2">
                       <v-select
-                        :rules="[ speakerTier.select_for_import && speakerTier.to_speaker === null && 'Select a Speaker' ]"
+                        :rules="[ speakerTier.selectForImport && speakerTier.toSpeaker === null && 'Select a Speaker' ]"
                         dense
                         label="Speaker"
-                        v-model="speakerTier.to_speaker"
+                        v-model="speakerTier.toSpeaker"
                         return-object
                         item-value="pk"
                         item-text="Kuerzel"
@@ -139,15 +140,15 @@
                         </template>
                       </v-select>
                     </v-flex>
-                    <v-flex xs2 :class="[ !speakerTier.select_for_import && 'disabled' ]" class="pl-2">
+                    <v-flex xs2 :class="[ !speakerTier.selectForImport && 'disabled' ]" class="pl-2">
                       <v-select
                         label="Tier Type"
-                        :value="speakerTier.to_tier_type"
+                        :value="speakerTier.toTierType"
                         @input="(e) => updateTierType(speakerTier, e, i)"
-                        :disabled="speakerTier.to_speaker === null"
+                        :disabled="speakerTier.toSpeaker === null"
                         :rules="[
-                          speakerTier.select_for_import === true &&
-                          speakerTier.to_tier_type === null &&
+                          speakerTier.selectForImport === true &&
+                          speakerTier.toTierType === null &&
                           'Select a Type'
                           ,
                           isDuplicateDefaultTierForSpeaker(speakerTier) &&
@@ -156,7 +157,7 @@
                         :items="[{
                           text: 'default',
                           value: 'default',
-                          disabled: isDefaultTierSelectedForSpeaker(speakerTier.to_speaker),
+                          disabled: isDefaultTierSelectedForSpeaker(speakerTier.toSpeaker),
                           description: 'the base transcript'
                         }, {
                           text: 'token data',
@@ -181,24 +182,24 @@
                       </v-select>
                     </v-flex>
                     <v-flex xs2
-                      :class="[ !speakerTier.select_for_import && 'disabled', 'pl-2', 'pr-2' ]">
+                      :class="[ !speakerTier.selectForImport && 'disabled', 'pl-2', 'pr-2' ]">
                       <!-- select which type of transcript the token tier it is -->
                       <!-- placeholder -->
                       <v-select
-                        v-if="speakerTier.to_tier_type === null"
+                        v-if="speakerTier.toTierType === null"
                         :items="[]"
                         disabled
                         label="Transcript Type"
                       />
                       <!-- default tiers -->
                       <v-select
-                        v-if="speakerTier.to_tier_type === 'default'"
-                        :disabled="speakerTier.to_tier_type === null"
+                        v-if="speakerTier.toTierType === 'default'"
+                        :disabled="speakerTier.toTierType === null"
                         label="Transcript Type"
                         dense
                         :value="globalDefaultTier"
                         @input="(e) => updateTierTokenTypeAndGlobalDefault(i, e)"
-                        :items="tokenTiersAvailable(speakerTier.to_speaker)">
+                        :items="tokenTiersAvailable(speakerTier.toSpeaker)">
                         <template slot="item" slot-scope="item">
                           <v-list-tile-content>
                             <v-list-tile-title>
@@ -212,16 +213,16 @@
                       </v-select>
                       <!-- token metadata -->
                       <v-select
-                        v-if="speakerTier.to_tier_type === 'tokenized'"
+                        v-if="speakerTier.toTierType === 'tokenized'"
                         label="Transcript Type"
                         dense
-                        v-model="speakerTier.token_tier_type"
+                        v-model="speakerTier.tokenTierType"
                         :rules="[
-                          speakerTier.select_for_import &&
-                          speakerTier.token_tier_type == null &&
+                          speakerTier.selectForImport &&
+                          speakerTier.tokenTierType == null &&
                           'Select a Transcript Type'
                         ]"
-                        :items="tokenTiersAvailable(speakerTier.to_speaker)">
+                        :items="tokenTiersAvailable(speakerTier.toSpeaker)">
                         <template slot="item" slot-scope="item">
                           <v-list-tile-content>
                             <v-list-tile-title>
@@ -235,12 +236,12 @@
                       </v-select>
                       <!-- tier name for free text tiers -->
                       <v-text-field
-                        v-if="speakerTier.to_tier_type === 'freeText'"
+                        v-if="speakerTier.toTierType === 'freeText'"
                         validate-on-blur
                         label="Tier Name"
-                        :disabled="speakerTier.to_tier_type === null"
-                        v-model="speakerTier.to_tier_name"
-                        :rules="[ speakerTier.select_for_import && !speakerTier.to_tier_name && 'Specify a name' ]"
+                        :disabled="speakerTier.toTierType === null"
+                        v-model="speakerTier.toTierName"
+                        :rules="[ speakerTier.selectForImport && !speakerTier.toTierName && 'Specify a name' ]"
                       />
                     </v-flex>
                     <v-flex xs1>
@@ -324,7 +325,8 @@ import {
   ServerInformant,
   ServerSurvey,
   ServerTranscriptListItem,
-  getAudioUrlFromServerNames
+  getAudioUrlFromServerNames,
+  serverTokenTiers
 } from '../service/backend-server'
 
 import {
@@ -422,91 +424,74 @@ export default class ExmaraldaImporter extends Vue {
     }
   }
 
-  getSelectedDefaultTierForSpeaker(to_speaker: ServerInformant): SpeakerTierImportable[] {
+  getSelectedDefaultTierForSpeaker(toSpeaker: ServerInformant): SpeakerTierImportable[] {
     return this.importable.speakerTiers.filter(t => {
       return (
-        t.to_speaker !== null &&
-        t.to_speaker.pk === to_speaker.pk &&
-        t.to_tier_type === 'default' &&
-        t.select_for_import === true
+        t.toSpeaker !== null &&
+        t.toSpeaker.pk === toSpeaker.pk &&
+        t.toTierType === 'default' &&
+        t.selectForImport === true
       )
     })
   }
 
-  isDefaultTierSelectedForSpeaker(to_speaker: ServerInformant|null): boolean {
-    return to_speaker !== null && this.getSelectedDefaultTierForSpeaker(to_speaker).length === 1
+  isDefaultTierSelectedForSpeaker(toSpeaker: ServerInformant|null): boolean {
+    return toSpeaker !== null && this.getSelectedDefaultTierForSpeaker(toSpeaker).length === 1
   }
 
-  speakerHasDuplicateDefaultTiers(to_speaker: ServerInformant): boolean {
-    return this.getSelectedDefaultTierForSpeaker(to_speaker).length > 1
+  speakerHasDuplicateDefaultTiers(toSpeaker: ServerInformant): boolean {
+    return this.getSelectedDefaultTierForSpeaker(toSpeaker).length > 1
   }
 
   updateTierType(
     speakerTier: SpeakerTierImportable,
-    to_tier_type: SpeakerTierImportable['to_tier_type'],
+    toTierType: SpeakerTierImportable['toTierType'],
     i: number
   ) {
-    this.importable.speakerTiers[i].to_tier_type = to_tier_type
+    this.importable.speakerTiers[i].toTierType = toTierType
   }
 
   isDuplicateDefaultTierForSpeaker(speakerTier: SpeakerTierImportable): boolean {
     if (
-      speakerTier.select_for_import === false ||
-      speakerTier.to_tier_type === 'default' ||
-      speakerTier.to_speaker === null
+      speakerTier.selectForImport === false ||
+      speakerTier.toTierType === 'default' ||
+      speakerTier.toSpeaker === null
     ) {
       return false
     } else {
-      return this.speakerHasDuplicateDefaultTiers(speakerTier.to_speaker)
+      return this.speakerHasDuplicateDefaultTiers(speakerTier.toSpeaker)
     }
   }
 
   updateAllSelections(v: boolean) {
     this.importable.speakerTiers = this.importable.speakerTiers.map((t) => {
-      return { ...t, select_for_import: v }
+      return { ...t, selectForImport: v }
     })
     this.updateIsEverythingSelected()
   }
 
-  // FIXME: to_speaker can be null
-  tokenTiersAvailable(to_speaker: ServerInformant) {
+  // FIXME: toSpeaker can be null
+  tokenTiersAvailable(toSpeaker: ServerInformant) {
 
     const selectedTiersForSpeaker = this.importable.speakerTiers
       .filter(t =>
-        t.select_for_import === true &&
-        (t.to_tier_type === 'tokenized' || t.to_tier_type === 'default') &&
-        t.to_speaker !== null &&
-        t.to_speaker.pk === to_speaker.pk
+        t.selectForImport === true &&
+        (t.toTierType === 'tokenized' || t.toTierType === 'default') &&
+        t.toSpeaker !== null &&
+        t.toSpeaker.pk === toSpeaker.pk
       )
-      .map(t => t.token_tier_type)
+      .map(t => t.tokenTierType)
 
-    return [
-      {
-        text: 'orthographic',
-        value: 'ortho',
-        description: 'standard orthographic transcript',
-        disabled: selectedTiersForSpeaker.indexOf('ortho') > -1 || this.globalDefaultTier === 'ortho'
-      },
-      {
-        text: 'eye dialect',
-        value: 'text',
-        description: 'phonetic transcription\n using the latin alphabet',
-        disabled: selectedTiersForSpeaker.indexOf('text') > -1 || this.globalDefaultTier === 'text'
-      },
-      {
-        text: 'phonetic',
-        value: 'phon',
-        description: 'actual phonetic transcription',
-        disabled: selectedTiersForSpeaker.indexOf('phon') > -1 || this.globalDefaultTier === 'phon'
-      }
-    ]
+    return serverTokenTiers.map(stt => {
+      return { ...stt, disabled: selectedTiersForSpeaker.indexOf(stt.value) > -1 || this.globalDefaultTier === stt.value }
+    })
   }
 
   get speakersWithMissingDefaultTier(): SpeakerTierImportable[] {
     return _(this.importable.speakerTiers)
-      .filter(t => t.select_for_import === true && t.to_speaker !== null)
-      .groupBy(st => st.to_speaker!.pk)
-      .filter(tiersBySpeaker => tiersBySpeaker.filter(t => t.to_tier_type === 'default').length !== 1)
+      .filter(t => t.selectForImport === true && t.toSpeaker !== null)
+      .groupBy(st => st.toSpeaker!.pk)
+      .filter(tiersBySpeaker => tiersBySpeaker.filter(t => t.toTierType === 'default').length !== 1)
       .toArray()
       .flatten()
       .value()
@@ -551,11 +536,11 @@ export default class ExmaraldaImporter extends Vue {
   }
 
   updateIsEverythingSelected() {
-    const every = _(this.importable.speakerTiers).every(t => t.select_for_import)
+    const every = _(this.importable.speakerTiers).every(t => t.selectForImport)
     if (every) {
       this.isAnythingOrAllSelected = true
     } else {
-      const some = _(this.importable.speakerTiers).some(t => t.select_for_import)
+      const some = _(this.importable.speakerTiers).some(t => t.selectForImport)
       if (some) {
         this.isAnythingOrAllSelected = null
       } else {

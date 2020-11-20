@@ -16,6 +16,34 @@ import settings from '../store/settings'
 
 type ServerTranscriptId = number
 
+interface ServerTokenTier {
+  text: string
+  value: TokenTierType
+  description: string
+  disabled: boolean
+}
+
+export const serverTokenTiers: ServerTokenTier[] = [
+  {
+    text: 'orthographic',
+    value: 'ortho',
+    description: 'standard orthographic transcript',
+    disabled: false
+  },
+  {
+    text: 'eye dialect',
+    value: 'text',
+    description: 'phonetic transcription\n using the latin alphabet',
+    disabled: false
+  },
+  {
+    text: 'phonetic',
+    value: 'phon',
+    description: 'actual phonetic transcription',
+    disabled: false
+  }
+]
+
 export interface ServerTranscriptListItem {
   pk: number
   ut: string
@@ -124,6 +152,15 @@ export interface ServerTier {
   tier_name: string
 }
 
+export interface ServerTranscriptSurvey {
+  af: string
+  d: string
+  dp: string
+  e: number
+  pk: number
+  trId: number
+}
+
 export interface ServerTranscript {
   aAntworten?: {
     [answer_id: string]: ServerAnswer|ServerAnswerSet
@@ -137,14 +174,7 @@ export interface ServerTranscript {
   aTokens: {
     [token_id: string]: ServerToken
   }
-  aEinzelErhebung?: {
-    af: string
-    d: string
-    dp: string
-    e: number
-    pk: number
-    trId: number
-  }
+  aEinzelErhebung?: ServerTranscriptSurvey
   aInformanten?: ServerTranscriptInformants
   aTranskript?: {
     default_tier?: TokenTierType|null
@@ -209,6 +239,27 @@ const diffWorker = new PromiseWorker(new ServerTranscriptDiff())
 const textEncoder = new TextEncoder()
 
 export let serverTranscript: ServerTranscript|null = null
+
+export function surveyToServerTranscriptSurvey(s: ServerSurvey, transcriptId = -1): ServerTranscriptSurvey {
+  return {
+    af: s.Audiofile,
+    d: s.Datum,
+    dp: s.Dateipfad,
+    e: s.ID_Erh,
+    pk: s.pk,
+    trId: transcriptId
+  }
+}
+
+export function surveyToServerTranscriptInformants(s: ServerSurvey): ServerTranscriptInformants {
+  return s.FX_Informanten.reduce((m, e) => {
+    m[e.pk] = {
+      k: e.Kuerzel,
+      ka: e.Kuerzel_anonym || ''
+    }
+    return m
+  }, {} as ServerTranscriptInformants)
+}
 
 export function getAudioUrlFromServerNames(name: string|undefined, path: string|undefined): string|null {
   if (path === undefined || name === undefined) {

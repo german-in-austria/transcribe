@@ -38,6 +38,7 @@ import { Vue, Component, Prop, Watch, Provide } from 'vue-property-decorator'
 import ResizeEvent from './helper/ResizeEvent.vue'
 import { undoable } from '../store/history'
 import settings from '../store/settings'
+// import { morph } from 'quasar'
 
 import {
   playEvent,
@@ -48,7 +49,6 @@ import {
   selectOrDeselectEvent,
   selectEventRange,
   isEventSelected,
-  selectPreviousEvent,
   scrollToTranscriptEvent
 } from '../store/transcript'
 
@@ -90,6 +90,22 @@ export default class SegmentBox extends Vue {
   get width(): number {
     return (Number(this.event.endTime) - Number(this.event.startTime)) * settings.pixelsPerSecond
   }
+
+  // morph() {
+  //   morph({
+  //     from: '#segment-box-' + this.event.eventId,
+  //     style: 'z-index: 2002; position: fixed;',
+  //     to: '.event-inspector .v-dialog',
+  //     onToggle: () => {
+  //       console.log('yo')
+  //       eventStore.inspectedEvent = this.event
+  //     },
+  //     duration: 2000,
+  //     hideFromClone: true,
+
+  //     tween: true
+  //   })
+  // }
 
   onResizeEnd(e: any) {
     const startTime = e.current.left / settings.pixelsPerSecond

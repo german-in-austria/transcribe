@@ -5,7 +5,8 @@ import {
   ServerToken,
   ServerInformant,
   ServerTranscript,
-  ServerTranscriptInformants
+  surveyToServerTranscriptSurvey,
+  surveyToServerTranscriptInformants
 } from '../service/backend-server'
 
 import {
@@ -81,12 +82,12 @@ interface Tier {
 }
 
 export interface SpeakerTierImportable extends Tier {
-  speaker_name: string
-  select_for_import: boolean
-  to_tier_type: 'tokenized'|'freeText'|'default'|null
-  to_speaker: ServerInformant|null
-  to_tier_name: string|null
-  token_tier_type: TokenTierType
+  speakerName: string
+  selectForImport: boolean
+  toTierType: 'tokenized'|'freeText'|'default'|null
+  toSpeaker: ServerInformant|null
+  toTierName: string|null
+  tokenTierType: TokenTierType
 }
 
 interface Tiers {
@@ -120,16 +121,16 @@ function getTierToken(
   speakerTiers: SpeakerTierImportable[],
   tierType: TokenTierType,
   tierEvent: TierEvent,
-  tokenIndex: number,
+  tokenIndex: number
 ): string {
-  const tier = _(speakerTiers).find(t => t.select_for_import === true && t.token_tier_type === tierType)
+  const tier = _(speakerTiers).find(t => t.selectForImport === true && t.tokenTierType === tierType)
   // this speaker does not have this type of token tier
   if (tier === undefined) {
     return ''
   } else {
     const event = _(tier.events).find(e => e.startTime === tierEvent.startTime)
     // this event does not exist in this token tier.
-    if (event === undefined || event.text === undefined || event.text === null) {
+    if (event === undefined || event.text === undefined || event.text === null) {
       return ''
     } else {
       return presets[settings.projectPreset].tokenizer(event.text)[tokenIndex] || ''
@@ -159,17 +160,17 @@ export function importableToServerTranscript(
   importable: ParsedExmaraldaXML,
   name: string,
   selectedSurvey: ServerSurvey,
-  defaultTier: TokenTierType,
+  defaultTier: TokenTierType
 ): ServerTranscript {
 
   const tiersBySpeakers = _(importable.speakerTiers)
-    .filter(st => st.select_for_import === true)
+    .filter(st => st.selectForImport === true)
     .map(st => {
-      return st.to_tier_type === 'default'
-        ? {...st, token_tier_type: defaultTier}
+      return st.toTierType === 'default'
+        ? {...st, tokenTierType: defaultTier}
         : st
     })
-    .groupBy(st => st.to_speaker!.pk)
+    .groupBy(st => st.toSpeaker!.pk)
     .value()
 
   const tokens: _.Dictionary<ServerToken> = {}
@@ -192,10 +193,10 @@ export function importableToServerTranscript(
       // console.log({speakerTiers})
       return _(speakerTiers)
         // only the default tier and free text (event_tier) tiers
-        .filter(st => st.to_tier_type === 'default' || st.to_tier_type === 'freeText')
+        .filter(st => st.toTierType === 'default' || st.toTierType === 'freeText')
         .map(speakerTier => {
           let tokenOrder = 0
-          if (speakerTier.to_speaker === null) {
+          if (speakerTier.toSpeaker === null) {
             console.error('No speaker specified', { speakerTier })
             throw new Error('No speaker specified')
           } else {
@@ -208,8 +209,8 @@ export function importableToServerTranscript(
               const text = e.text || ''
 
               // create event tiers (free text tiers)
-              if (speakerTier.to_tier_type === 'freeText') {
-                const tierName = speakerTier.to_tier_name || speakerTier.to_tier_type || 'untitled'
+              if (speakerTier.toTierType === 'freeText') {
+                const tierName = speakerTier.toTierName || speakerTier.toTierType || 'untitled'
                 const existingTier = _(tiers).map((t, k) => ({ ...t, id: k })).find(t => t.tier_name === tierName)
                 const tierId = existingTier !== undefined ? existingTier.id : makeTierId()
 
@@ -226,7 +227,7 @@ export function importableToServerTranscript(
                   l: 0 as 0,
                   tid: {},
                   event_tiers: {
-                    [speakerTier.to_speaker!.pk] : {
+                    [speakerTier.toSpeaker!.pk] : {
                       [makeEventTierId()]: {
                         t: e.text || '',
                         ti: Number(tierId)
@@ -242,19 +243,19 @@ export function importableToServerTranscript(
                     const fragmentOf = tokenIndex === 0 ? fragmentStartTokenId : undefined
                     const tokenId = makeTokenId()
                     const token: ServerToken = {
-                      t: speakerTier.token_tier_type === 'text'
+                      t: speakerTier.tokenTierType === 'text'
                         ? t
                         : getTierToken(speakerTiers, 'text', e, tokenIndex),
-                      o: speakerTier.token_tier_type === 'ortho'
+                      o: speakerTier.tokenTierType === 'ortho'
                         ? t
                         : getTierToken(speakerTiers, 'ortho', e, tokenIndex),
-                      p: speakerTier.token_tier_type === 'phon'
+                      p: speakerTier.tokenTierType === 'phon'
                         ? t
                         : getTierToken(speakerTiers, 'phon', e, tokenIndex),
                       to: '',
                       tr: tokenOrder++,
                       e: eventId,
-                      i: speakerTier.to_speaker!.pk,
+                      i: speakerTier.toSpeaker!.pk,
                       s: 0,
                       sr: 0,
                       fo: fragmentOf,
@@ -281,7 +282,7 @@ export function importableToServerTranscript(
                   s: padEnd(timeFromSeconds(Number(e.startTime)), 14, '0'),
                   l: 0,
                   tid: {
-                    [ speakerTier.to_speaker!.pk ]: eventTokenIds
+                    [ speakerTier.toSpeaker!.pk ]: eventTokenIds
                   },
                   event_tiers: {}
                 }
@@ -297,21 +298,8 @@ export function importableToServerTranscript(
 
   return {
     aTiers: tiers,
-    aEinzelErhebung: {
-      af: selectedSurvey.Audiofile,
-      d: selectedSurvey.Datum,
-      dp: selectedSurvey.Dateipfad,
-      e: selectedSurvey.ID_Erh,
-      pk: selectedSurvey.pk,
-      trId: -1
-    },
-    aInformanten: _(selectedSurvey.FX_Informanten).reduce((m, e, i, l) => {
-      m[e.pk] = {
-        k: e.Kuerzel,
-        ka: e.Kuerzel_anonym || ''
-      }
-      return m
-    }, {} as ServerTranscriptInformants),
+    aEinzelErhebung: surveyToServerTranscriptSurvey(selectedSurvey),
+    aInformanten: surveyToServerTranscriptInformants(selectedSurvey),
     aTokens: tokens,
     aEvents: events,
     aTranskript: {
@@ -376,12 +364,12 @@ export default function parseTree(xmlTree: BasicNode, fileName: string): ParsedE
             .reduce((m, el, i, l) => {
               return m.concat(_(el)
                 .map(v => ({
-                  speaker_name: i,
-                  select_for_import: false,
-                  to_speaker: null,
-                  to_tier_type: null,
-                  to_tier_name: null,
-                  token_tier_type: null,
+                  speakerName: i,
+                  selectForImport: false,
+                  toSpeaker: null,
+                  toTierType: null,
+                  toTierName: null,
+                  tokenTierType: null,
                   ...v
                 }))
                 .sortBy((st) => st.display_name)
