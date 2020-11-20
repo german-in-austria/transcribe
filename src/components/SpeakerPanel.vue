@@ -45,12 +45,12 @@
             </v-list-tile-content>
           </v-list-tile>
           <v-divider />
-          <v-list-tile @click="openSpeakerAndTierSettings">
+          <!-- <v-list-tile @click="openSpeakerAndTierSettings">
             <v-list-tile-avatar />
             <v-list-tile-content>
               <v-list-tile-title>Edit Speakers and Tiers…</v-list-tile-title>
             </v-list-tile-content>
-          </v-list-tile>
+          </v-list-tile> -->
         </v-list>
       </v-menu>
     </div>
