@@ -7,7 +7,7 @@
     "build": "vue-cli-service build",
     "test:unit": "vue-cli-service test:unit",
     "lint": "vue-cli-service lint",
-    "start": "ts-node server/index.ts",
+    "start": "ts-node -P server/tsconfig.json server/index.ts",
     "dev-server": "nodemon --watch 'server/**/*.ts' --ignore 'server/**/*.spec.ts' --exec 'ts-node' --project server/tsconfig.json server/index.ts"
   },
   "dependencies": {
@@ -41,7 +41,7 @@
     "register-service-worker": "^1.7.1",
     "simple-promise-queue": "^0.1.7",
     "socket.io-client": "^2.3.0",
-    "ts-node": "^8.5.4",
+    "ts-node": "^9.0.0",
     "util": "^0.12.3",
     "uuid": "^3.3.3",
     "vue": "^2.6.12",
@@ -69,7 +69,7 @@
     "@types/lodash": "^4.14.165",
     "@types/lodash-es": "^4.17.3",
     "@types/mocha": "^5.2.4",
-    "@types/node": "^8.0.58",
+    "@types/node": "^8.10.66",
     "@types/peerjs": "0.0.30",
     "@types/uuid": "^3.4.5",
     "@types/webrtc": "0.0.23",

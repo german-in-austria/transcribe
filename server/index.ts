@@ -1,8 +1,8 @@
-import * as express from 'express'
-import cookieSession from 'cookie-session'
-import * as compression from 'compression'
-import * as path from 'path'
-import { readFileSync } from 'fs'
+const express = require('express')
+// const cookieSession = require('cookie-session')
+const compression = require('compression')
+const path = require('path')
+// import { readFileSync } from 'fs'
 
 const app = express()
 
@@ -21,7 +21,7 @@ app.enable('trust proxy')
 
 // redirect to https if it’s a
 // http call.
-app.use((request, response, next) => {
+app.use((request: any, response: any, next: any) => {
   const host = request.headers.host
   const protocol = request.protocol
   if (process.env.NODE_ENV === 'production' && protocol === 'http') {
