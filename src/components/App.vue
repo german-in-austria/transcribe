@@ -56,12 +56,12 @@
                   <v-flex class="pr-1" xs6>
                     <v-btn
                       :loading="importingLocalFile" @click="openFileDialog" class="mb-2 elevation-0" style="height: 40px;" block>
-                      Open/Import File
+                      Open/Import File…
                     </v-btn>
                   </v-flex>
                   <v-flex class="pl-1" xs6>
                     <v-btn @click="newTranscript" class="mb-2 elevation-0" style="height: 40px;" block>
-                      New File
+                      New Transcript…
                     </v-btn>
                   </v-flex>
                 </v-layout>
