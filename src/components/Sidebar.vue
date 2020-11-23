@@ -35,7 +35,7 @@
               {{ keyboardShortcuts.showEditMenu.icon }}
             </v-icon>
           </v-btn>
-          <v-btn 
+          <v-btn
             v-ripple="false"
             :title="'History (' + displayKeyboardAction(keyboardShortcuts.showHistory) + ')'"
             icon
@@ -246,6 +246,8 @@ export default class Sidebar extends Vue {
     padding 0 8px
     margin 0 8px
     border-radius 5px
+  /deep/ .v-list__tile__avatar
+    min-width 42px
 
 .sidebar-picker
   height 100vh
