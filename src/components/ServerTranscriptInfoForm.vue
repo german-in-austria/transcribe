@@ -15,7 +15,7 @@
       :items="surveys || []"
       :loading="surveys === null"
       :rules="[ selectedSurvey === null && 'Select a Survey' ]"
-      @input="emitUpdateIfValid"
+      @input="onUpdateSurvey"
       item-text="Audiofile"
       item-value="pk"
       label="Survey"
@@ -71,8 +71,16 @@ export default class ServerTranscriptInfoForm extends Vue {
   surveys: ServerSurvey[]|null = null
   selectedSurvey = clone(this.survey)
 
-  async emitUpdateIfValid() {
+  async onUpdateSurvey() {
     await this.$nextTick()
+    if (this.selectedSurvey !== null && (this.transcriptName === null || this.transcriptName === '')) {
+      this.transcriptName = this.selectedSurvey.Audiofile.replace('.ogg', '')
+      await this.$nextTick()
+    }
+    this.emitUpdateIfValid()
+  }
+
+  async emitUpdateIfValid() {
     if (this.isBasicInfoValid) {
       this.$emit('update', {
         transcriptName: this.transcriptName,
