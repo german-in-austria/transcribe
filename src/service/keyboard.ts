@@ -1,8 +1,8 @@
 
 import _ from 'lodash'
 
-import { undoable, history, undo } from '../store/history'
-import { platform, requestFrameAsync } from '../util'
+import { undoable, history } from '../store/history'
+import { platform } from '../util'
 import Vue from 'vue'
 import {
   focusSelectedEventElement,
@@ -58,6 +58,7 @@ export interface KeyboardAction {
   modifier: KeyboardModifier[]
   // some shortcuts can’t work in text fields
   ignoreInTextField: boolean
+  group: string
   disabled: () => boolean
   key: KeyboardEvent['key']
   name: string
@@ -222,6 +223,7 @@ export function displayKeyboardAction(a: KeyboardAction): string {
 
 export const keyboardShortcuts: KeyboardShortcuts = {
   split: {
+    group: 'Editing',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: true,
@@ -246,6 +248,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   splitAtChar: {
+    group: 'Editing',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
@@ -272,6 +275,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   shiftCharsRight: {
+    group: 'Editing',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
@@ -295,6 +299,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   shiftCharsLeft: {
+    group: 'Editing',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
@@ -319,6 +324,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   insertPause: {
+    group: 'Editing',
     greedy: true,
     showInMenu: true,
     ignoreInTextField: false,
@@ -362,6 +368,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   appendEvent: {
+    group: 'Editing',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
@@ -391,11 +398,26 @@ export const keyboardShortcuts: KeyboardShortcuts = {
           }
         }
       } else {
-        appendEmptyEventAt(eventStore.currentTime)
+        const action = appendEmptyEventAt(eventStore.currentTime)
+        if (action !== undefined && action.after[0] !== undefined) {
+          const e = action.after[0]
+          scrollToTranscriptEvent(e, {
+            focusSpeaker: speaker,
+            animate: false,
+            focusTier: null,
+            focusRight: false
+          })
+          scrollToAudioEvent(e)
+          selectEvent(e)
+          if (settings.playEventOnAppend) {
+            playEvents([ e ])
+          }
+        }
       }
     }
   },
   prependEvent: {
+    group: 'Editing',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
@@ -425,11 +447,26 @@ export const keyboardShortcuts: KeyboardShortcuts = {
           }
         }
       } else {
-        prependEmptyEventAt(eventStore.currentTime)
+        const action = prependEmptyEventAt(eventStore.currentTime)
+        if (action !== undefined && action.after[0] !== undefined) {
+          const e = action.after[0]
+          scrollToTranscriptEvent(e, {
+            focusSpeaker: speaker,
+            animate: false,
+            focusTier: null,
+            focusRight: false
+          })
+          scrollToAudioEvent(e)
+          selectEvent(e)
+          if (settings.playEventOnAppend) {
+            playEvents([ e ])
+          }
+        }
       }
     }
   },
   deleteEvents: {
+    group: 'Editing',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: true,
@@ -445,6 +482,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   joinEvents: {
+    group: 'Editing',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
@@ -461,6 +499,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   moveEventStartLeft: {
+    group: 'Editing',
     greedy: true,
     showInMenu: true,
     ignoreInTextField: false,
@@ -479,6 +518,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   moveEventStartRight: {
+    group: 'Editing',
     greedy: true,
     showInMenu: true,
     ignoreInTextField: false,
@@ -497,6 +537,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   moveEventEndRight: {
+    group: 'Editing',
     greedy: true,
     showInMenu: true,
     ignoreInTextField: false,
@@ -515,6 +556,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   moveEventEndLeft: {
+    group: 'Editing',
     greedy: true,
     showInMenu: true,
     ignoreInTextField: false,
@@ -533,12 +575,13 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   showEditMenu: {
+    group: 'Navigation',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
     modifier: ['ctrlOrCmd'],
     key: 'e',
-    name: 'Edit Menu',
+    name: 'Show Edit Menu',
     description: 'Show the editing Options',
     icon: 'edit',
     disabled: () => false,
@@ -552,12 +595,13 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     },
   },
   showHistory: {
+    group: 'Navigation',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
     modifier: ['ctrlOrCmd', 'shift'],
     key: 'h',
-    name: 'History',
+    name: 'Show History',
     description: 'Show the history',
     icon: 'history',
     disabled: () => false,
@@ -571,12 +615,13 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     },
   },
   showWarnings: {
+    group: 'Navigation',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
     modifier: ['ctrlOrCmd', 'shift'],
     key: 'e',
-    name: 'Warnings',
+    name: 'Show Warnings',
     description: 'Show Warnings in the Sidebar',
     icon: 'mdi-alert-outline',
     disabled: () => false,
@@ -590,6 +635,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     },
   },
   showBookmarks: {
+    group: 'Navigation',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
@@ -609,12 +655,13 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   showSearch: {
+    group: 'Navigation',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
     modifier: ['ctrlOrCmd'],
     key: 'f',
-    name: 'Search',
+    name: 'Show Search',
     description: 'Focus the Search Field',
     icon: 'mdi-magnify',
     disabled: () => false,
@@ -630,6 +677,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   selectPreviousEvent: {
+    group: 'Selection',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: true,
@@ -647,6 +695,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   selectNextEvent: {
+    group: 'Selection',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: true,
@@ -664,6 +713,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   playPause: {
+    group: 'Playback',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
@@ -689,6 +739,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   playFirstSecondOfEvent: {
+    group: 'Playback',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
@@ -710,6 +761,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   playLastSecondOfEvent: {
+    group: 'Playback',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
@@ -731,6 +783,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   scrollToEvent: {
+    group: 'Navigation',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: true,
@@ -749,6 +802,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     }
   },
   inspectEvent: {
+    group: 'Navigation',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
@@ -759,10 +813,14 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     icon: 'mdi-sine-wave',
     disabled: () => eventStore.selectedEventIds.length === 0,
     action: () => {
-      // TODO: put inspectEvent = event in store
+      const selectedEvent = getSelectedEvent()
+      if (selectedEvent !== undefined) {
+        eventStore.inspectedEvent = selectedEvent
+      }
     }
   },
   selectAllEvents: {
+    group: 'Selection',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: true,
@@ -770,13 +828,14 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     key: 'a',
     name: 'Select All',
     description: 'Selects all Events',
-    icon: null,
+    icon: 'mdi-checkbox-marked-circle-outline',
     disabled: () => false,
     action: () => {
       eventStore.selectedEventIds = eventStore.events.map(e => e.eventId)
     }
   },
   selectNone: {
+    group: 'Selection',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
@@ -784,14 +843,15 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     key: 'd',
     name: 'Select none',
     description: 'Selects no Events',
-    icon: null,
-    disabled: () => false,
+    icon: 'mdi-checkbox-blank-circle-outline',
+    disabled: () => eventStore.selectedEventIds.length === 0,
     action: () => {
       deselectEvents()
       eventStore.userState.timeSpanSelection = { start: null, end: null }
     }
   },
   saveTranscript: {
+    group: 'File',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
