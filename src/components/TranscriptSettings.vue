@@ -23,7 +23,7 @@
           />
           <v-select
             label="Default Tier"
-            value="ortho"
+            v-model="defaultTier"
             :items="serverTokenTiers">
             <template slot="item" slot-scope="item">
               <v-list-tile-content>
@@ -65,7 +65,7 @@
 </template>
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { eventStore, LocalTranscriptTier, LocalTranscriptSpeakers, loadAudioFromUrl } from '../store/transcript'
+import { eventStore, LocalTranscriptTier, loadAudioFromUrl, TokenTierType } from '../store/transcript'
 import ServerTranscriptInfoForm from './ServerTranscriptInfoForm.vue'
 import SpeakerTierEditor from './SpeakerTierEditor.vue'
 import {
@@ -75,12 +75,12 @@ import {
   ServerTranscript,
   surveyToServerTranscriptSurvey,
   surveyToServerTranscriptInformants,
-  serverTokenTiers, 
+  serverTokenTiers,
   mergeServerTranscript,
   getMetadataFromServerTranscript,
-  serverTranscriptToLocal} from '@/service/backend-server'
+  serverTranscriptToLocal
+} from '@/service/backend-server'
 import _ from 'lodash'
-import { resourceAtUrlExists } from '@/util'
 import { computeTokenTypesForEvents } from '@/service/token-types'
 
 @Component({
@@ -97,6 +97,7 @@ export default class TranscriptSettings extends Vue {
   eventTiers = []
   serverTokenTiers = serverTokenTiers
   basicInfos: any = {}
+  defaultTier: TokenTierType = 'ortho'
 
   async updateBasicInfos(args: { transcriptName: string, selectedSurvey: ServerSurvey, preset: string}) {
     this.basicInfos = args
@@ -105,14 +106,6 @@ export default class TranscriptSettings extends Vue {
       .keyBy('pk')
       .mapValues(i => ({ k: i.Kuerzel, ka: i.Kuerzel_anonym || '', searchInSpeaker: true }))
       .value()
-    const audioFileUrl = getAudioUrlFromServerNames(args.selectedSurvey.Audiofile, args.selectedSurvey.Dateipfad)
-    if (audioFileUrl !== null && await resourceAtUrlExists(audioFileUrl)) {
-      console.log(audioFileUrl)
-      // this.audioFileName = survey.Audiofile + '.ogg'
-      // this.audioFileUrl = audioFileUrl
-    } else {
-      // not found.
-    }
   }
 
   createBasicServerTranscript(args: { transcriptName: string, selectedSurvey: ServerSurvey, preset: string}): ServerTranscript {
@@ -121,15 +114,14 @@ export default class TranscriptSettings extends Vue {
       nNr: 0,
       aEinzelErhebung: surveyToServerTranscriptSurvey(args.selectedSurvey),
       aInformanten: surveyToServerTranscriptInformants(args.selectedSurvey),
-      aTiers: {
-        'test': {
-          tier_name: 'test'
-        }
-      },
+      aTiers: eventStore.metadata.tiers.reduce((m, e) => {
+        m[e.id] = { tier_name: e.name }
+        return m
+      }, {} as ServerTranscript['aTiers']),
       aTokens: {},
       aEvents: [],
       aTranskript: {
-        default_tier: 'text',
+        default_tier: this.defaultTier,
         n: args.transcriptName,
         pk: -1,
         ut: 'now'
