@@ -17,19 +17,22 @@ interface FileReaderEventTarget extends EventTarget {
 const textWidthCanvas = document.createElement('canvas')
 const textWidthContext = textWidthCanvas.getContext('2d')
 
-export async function resourceAtUrlExists(url: string): Promise<boolean> {
-  try {
-    await fetch(url, {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        Range: `bytes=0-${ 100 * 1024 }`
+export function resourceAtUrlExists(url: string): Promise<boolean> {
+  return fetch(url, {
+    method: 'GET',
+    credentials: 'include',
+    headers: {
+      Range: `bytes=0-${ 100 * 1024 }`
+    }
+  })
+    .catch(e => false)
+    .then(e => {
+      if (e instanceof Response && e.ok === true) {
+        return true
+      } else {
+        return false
       }
     })
-    return true
-  } catch (e) {
-    return false
-  }
 }
 
 export function getTextWidth(text: string, fontSize: number, fontFace: string) {

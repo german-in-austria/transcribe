@@ -82,6 +82,7 @@ import {
 } from '@/service/backend-server'
 import _ from 'lodash'
 import { computeTokenTypesForEvents } from '@/service/token-types'
+import { resourceAtUrlExists } from '@/util'
 
 @Component({
   components: {
@@ -141,12 +142,10 @@ export default class TranscriptSettings extends Vue {
         _(eventStore.metadata.speakers).map((s, k) => k).value()
       )
       const audioFileUrl = getAudioUrlFromServerNames(this.basicInfos.selectedSurvey.Audiofile, this.basicInfos.selectedSurvey.Dateipfad)
-      if (audioFileUrl !== null) {
+      if (audioFileUrl !== null && (await resourceAtUrlExists(audioFileUrl))) {
         await loadAudioFromUrl(audioFileUrl)
-        eventStore.userState.showSpeakerTierEditModal = false
-      } else {
-        throw new Error('no audio file found')
       }
+      eventStore.userState.showSpeakerTierEditModal = false
     }
   }
 
