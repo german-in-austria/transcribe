@@ -93,13 +93,23 @@ export interface SearchResult {
   event: LocalTranscriptEvent
 }
 
-export interface LocalTranscriptTier {
-  searchInTier: boolean
-  type: 'token'|'freeText'
+interface LocalTranscriptTierBasic {
   name: string
+  searchInTier: boolean
   show: boolean
+}
+
+interface LocalTranscriptTierToken extends LocalTranscriptTierBasic {
+  type: 'token'
   id: TokenTierType
 }
+
+interface LocalTranscriptTierEvent extends LocalTranscriptTierBasic {
+  type: 'freeText'
+  id: string
+}
+
+export type LocalTranscriptTier = LocalTranscriptTierEvent|LocalTranscriptTierToken
 
 export type LocalTranscript = LocalTranscriptEvent[]
 
@@ -690,7 +700,6 @@ export function appendEmptyEventAfter(e: LocalTranscriptEvent|undefined): Histor
 export function prependEmptyEventBefore(e: LocalTranscriptEvent|undefined): HistoryEventAction|undefined {
   if (e !== undefined) {
     const prev = findPreviousEventAt(e.endTime)
-    console.log({ prev })
     if (prev !== undefined) {
       if (isEventDockedToEvent(prev, e)) {
         return undefined
@@ -971,9 +980,9 @@ export function deleteEventById(id: number) {
 export function timeToSeconds(time: string) {
   const chunks = _.map(time.split(':'), Number)
   return (
-      chunks[0] * 60 * 60 // hours
-    + chunks[1] * 60      // minutes
-    + chunks[2]           // seconds
+    chunks[0] * 60 * 60 // hours
+    + chunks[1] * 60 // minutes
+    + chunks[2] // seconds
   )
 }
 

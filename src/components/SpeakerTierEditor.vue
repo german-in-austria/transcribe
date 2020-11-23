@@ -39,8 +39,7 @@
 </template>
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { LocalTranscriptTier, LocalTranscriptSpeakers } from '../store/transcript'
-import { ServerSurvey, getSurveys } from '../service/backend-server'
+import { LocalTranscriptTier, LocalTranscriptSpeakers, makeEventTierId } from '../store/transcript'
 import _ from 'lodash'
 
 @Component
@@ -50,7 +49,6 @@ export default class SpeakerTierEditor extends Vue {
   @Prop({ default: [] }) tiers!: LocalTranscriptTier[]
 
   enteringTierName = ''
-  surveys: ServerSurvey[]|null = null
 
   get speakersLength() {
     return _(this.speakers).size()
@@ -67,7 +65,7 @@ export default class SpeakerTierEditor extends Vue {
   tierFromName(name: string): LocalTranscriptTier {
     return {
       name,
-      id: 'text',
+      id: String(makeEventTierId()),
       type: 'freeText',
       show: true,
       searchInTier: true
@@ -84,10 +82,6 @@ export default class SpeakerTierEditor extends Vue {
   async removeTier(index: number) {
     await this.$nextTick()
     this.$emit('update:tiers', this.tiers.filter((t, i) => i !== index))
-  }
-
-  async mounted() {
-    this.surveys = await getSurveys()
   }
 
   get eventTiers(): LocalTranscriptTier[] {
