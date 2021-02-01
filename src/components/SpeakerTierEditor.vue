@@ -25,7 +25,7 @@
       v-model="enteringTierName"
       placeholder="Enter name for event tier (e. g. MSYN, Comment, etc.)">
       <template v-slot:append>
-        <v-btn :disabled="!isValidTierName(enteringTierName)" small class="elevation-0">add</v-btn>
+        <v-btn @click="addTier" :disabled="!isValidTierName(enteringTierName)" small class="elevation-0">add</v-btn>
       </template>
     </v-text-field>
     <v-subheader class="px-0">Speakers ({{ speakersLength }})</v-subheader>

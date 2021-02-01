@@ -1,21 +1,29 @@
-
---- Delete Transcripts
-
---- do cascade tokens.
---- first delete events (because they are not associated to transcripts)
-delete from event where event.id in (
-  Select distinct token.event_id_id from transcript tr
-  join token
-  on token.transcript_id_id = tr.id
-  where name in (
-    '0213_NECK_alt_f_INT_Vers32',
-    '0230_TARR_jungII_m_BDE_INT_Vers9',
-    '0230_TARR_jungII_m_INT_Vers12'
-  )
-);
---- then delete the transcripts and its associated data
-delete from transcript where name in (
-  '0213_NECK_alt_f_INT_Vers32',
-  '0230_TARR_jungII_m_BDE_INT_Vers9',
-  '0230_TARR_jungII_m_INT_Vers12'
-) returning *;
+WITH transcriptsToDelete as (
+	select * from transcript where name in(
+		'4003_GRAG_alt_m_AI',
+		'4103_GRAW_jung_m_AI',
+		'4066_WIENW_alt_m_AI_Teil1'
+	)
+)
+,
+events AS (
+	SELECT DISTINCT
+		token.event_id_id
+	FROM
+		transcript tr
+		JOIN token ON token.transcript_id_id = tr.id
+	WHERE
+		tr.id in (select id from transcriptsToDelete)
+)
+,
+deletedTokens as (
+	delete FROM token WHERE event_id_id in (select event_id_id from events) RETURNING *
+),
+deletedEvents as (
+	delete from "event" WHERE id in (select event_id_id from events)
+),
+deletedTranscripts as (
+	delete FROM transcript where id in (select id from transcriptsToDelete)
+)
+SELECT * from deletedTokens
+;
