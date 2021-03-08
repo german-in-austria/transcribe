@@ -1,6 +1,10 @@
 <template>
   <div
     v-if="ready && aKeys.length > 0"
+    :class="[
+      'ipa-overlay',
+      $vuetify.dark && 'dark-theme'
+    ]"
     :style="{
       top: top + 'px',
       left: left + 'px',
@@ -265,12 +269,15 @@ export default class IpaOverlay extends Vue {
   z-index 99
   max-height 150px
   overflow-y auto
-  background rgba(240,240,240,.5)
+  background rgba(240,240,240,.9)
   border 1px solid #ddd
   color #333
   border-radius 4px
-  backdrop-filter blur(20px)
   font-family sans-serif
+
+.dark-theme.ipa-overlay
+  background rgba(30, 30, 30, .9)
+  color white
 
 .ipa-btn
   display: inline-block
