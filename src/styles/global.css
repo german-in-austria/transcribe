@@ -151,7 +151,7 @@ nav.v-toolbar[data-booted=true]{
   box-shadow: 0 5px 30px rgba(0,0,0,.2);
 }
 
-@supports (backdrop-filter: blur(30px)) {
+/* @supports (backdrop-filter: blur(30px)) {
   .v-menu__content,
   .blur-background {
     background: transparent !important;
@@ -162,7 +162,7 @@ nav.v-toolbar[data-booted=true]{
   .v-menu__content .v-list.theme--dark {
     background: rgba(20,20,20,.6) !important;
   }
-}
+} */
 
 .v-menu__content .avatar i.v-icon,
 .context-menu .avatar i.v-icon{
