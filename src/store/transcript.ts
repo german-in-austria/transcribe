@@ -459,17 +459,17 @@ export function updateSpeakerEvent(
 ): HistoryEventAction {
   const tokens = event.speakerEvents[speakerId].tokens
   const eventIndex = findEventIndexById(event.eventId)
-  const oldEvent = eventStore.events[eventIndex]
+  const oldEvent = eventStore.events[eventIndex] || {}
   // tslint:disable-next-line:max-line-length
   const deletedSpeakerId = !hasTokens(event.speakerEvents[speakerId]) && !hasEventTiers(event.speakerEvents[speakerId]) ? speakerId : undefined
   const speakerEvents = _({
     // merge the new speaker
-    ...oldEvent.speakerEvents,
+    ...oldEvent.speakerEvents || undefined,
     [ speakerId ]: {
       speakerEventId: event.eventId,
       speakerEventTiers: event.speakerEvents[speakerId].speakerEventTiers || {},
       // update order, from 0 to token length
-      tokens: tokens.map((t, i) => ({ ...t, order: i}))
+      tokens: tokens.map((t, i) => ({ ...t, order: i }))
     }
   // remove deleted speaker events
   }).reduce((m, e, k) => {

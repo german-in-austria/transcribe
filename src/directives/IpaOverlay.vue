@@ -86,6 +86,7 @@ export default class IpaOverlay extends Vue {
     '.': ['̩', '̥', '̝', '̞'],
     '?': ['?', 'ʔ']
   }
+
   aKeys: Array<{k: string, a: string[]}> = []
   aElement: HTMLElement|HTMLInputElement|null = null
   ready = false

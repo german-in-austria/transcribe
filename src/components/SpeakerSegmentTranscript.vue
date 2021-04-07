@@ -228,24 +228,30 @@ export default class SpeakerSegmentTranscript extends Vue {
   focusPreviousFrom(e: KeyboardEvent, tier: TokenTierType) {
     e.preventDefault()
     const i = findEventIndexById(this.event.eventId)
-    scrollToTranscriptEvent(
-      eventStore.events[i > 0 ? i - 1 : 0],
-      {
-        animate: true,
-        focusSpeaker: this.speaker,
-        focusTier: tier,
-        focusRight: true
-      }
-    )
+    const prevE = eventStore.events[i > 0 ? i - 1 : 0]
+    if (prevE !== undefined) {
+      scrollToTranscriptEvent(
+        prevE,
+        {
+          animate: true,
+          focusSpeaker: this.speaker,
+          focusTier: tier,
+          focusRight: true
+        }
+      )
+    }
   }
 
   focusNextFrom(e: KeyboardEvent, tier: TokenTierType) {
     e.preventDefault()
     const i = findEventIndexById(this.event.eventId)
-    scrollToTranscriptEvent(
-      eventStore.events[i > -1 ? i + 1 : 0],
-      { animate: true, focusSpeaker: this.speaker, focusTier: tier, focusRight: false }
-    )
+    const nextE = eventStore.events[i > -1 ? i + 1 : 0]
+    if (nextE !== undefined) {
+      scrollToTranscriptEvent(
+        nextE,
+        { animate: true, focusSpeaker: this.speaker, focusTier: tier, focusRight: false }
+      )
+    }
   }
 
   @Watch('event', { deep: true })
