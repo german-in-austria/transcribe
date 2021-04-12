@@ -50,6 +50,12 @@
       </v-card-text>
       <v-divider />
       <v-card-actions class="pa-3">
+        <v-btn
+          large
+          class="elevation-0"
+          @click="$emit('close')">
+          Cancel
+        </v-btn>
         <v-spacer />
         <v-btn
           :disabled="!isBasicInfoValid"
