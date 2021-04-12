@@ -55,8 +55,7 @@ export default class DropAudioFile extends Vue {
   async onSelectAudioFile(f: File) {
     console.log({ f })
     if (f.type === 'audio/ogg') {
-      const data = await f.arrayBuffer()
-      loadAudioFromFile(new Uint8Array(data))
+      loadAudioFromFile(f)
     } else {
       const ffmpeg = createFFmpeg({ logger: this.processLog, corePath: 'ffmpeg/ffmpeg-core.js' })
       const { name } = f
