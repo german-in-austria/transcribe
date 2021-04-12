@@ -55,8 +55,11 @@ export default class DropFile extends Vue {
   }
 
   useAudioFile(e: DragEvent) {
-    if (e instanceof DragEvent && e.dataTransfer !== null) {
-      // console.log(e.dataTransfer.files[0], e.dataTransfer.items[0], e.dataTransfer.types[0])
+    if (
+      e instanceof DragEvent &&
+      e.dataTransfer !== null &&
+      e.dataTransfer.files[0] !== undefined
+    ) {
       this.unhighlight(e)
       this.file = e.dataTransfer.files[0]
       this.fileName = this.file.name
