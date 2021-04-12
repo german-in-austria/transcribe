@@ -6,7 +6,7 @@
         <v-progress-linear class="loader" indeterminate />
       </div>
       <div v-else>
-        <div class="caption text-xs-center">Converting file…</div>
+        <div class="caption text-xs-center">Converting File to OGG/Vorbis …</div>
         <v-progress-linear class="loader" :value="time / duration * 100" />
         <div class="caption text-xs-center">{{ toTime((duration - time) / speed) }} left <span class="grey--text">(&times;{{ speed }})</span></div>
       </div>
@@ -54,27 +54,19 @@ export default class DropAudioFile extends Vue {
 
   async onSelectAudioFile(f: File) {
     console.log({ f })
-    const ffmpeg = createFFmpeg({ logger: this.processLog, corePath: 'ffmpeg/ffmpeg-core.js' })
-    const { name } = f
-    this.loadingFFMpeg = true
-    await ffmpeg.load()
-    ffmpeg.FS('writeFile', name, await fetchFile(f))
-    await ffmpeg.run('-i', name, 'output.ogg')
-    const data = ffmpeg.FS('readFile', 'output.ogg') as Uint8Array
-    loadAudioFromFile(data)
-    // registerJob('converting wav to ogg', () => {
-    //   return
-    // })
-    // setInterval(() => {
-    //   // larger than 3 MB
-    //   if (data.byteLength > 3 * 1024 * 1024) {
-    //     // URL.revokeObjectURL(this.currentObjectUrl)
-    //     // this.currentObjectUrl = URL.createObjectURL(new Blob([ data ]))
-    //     // eventStore.audioElement.src = this.currentObjectUrl
-    //     // loadAudioFromFile(data)
-    //   }
-    // }, 5000)
-    // saveAs(new Blob([data.buffer], { type: 'audio/ogg' }))
+    if (f.type === 'audio/ogg') {
+      const data = await f.arrayBuffer()
+      loadAudioFromFile(new Uint8Array(data))
+    } else {
+      const ffmpeg = createFFmpeg({ logger: this.processLog, corePath: 'ffmpeg/ffmpeg-core.js' })
+      const { name } = f
+      this.loadingFFMpeg = true
+      await ffmpeg.load()
+      ffmpeg.FS('writeFile', name, await fetchFile(f))
+      await ffmpeg.run('-i', name, 'output.ogg')
+      const data = ffmpeg.FS('readFile', 'output.ogg') as Uint8Array
+      loadAudioFromFile(data)
+    }
   }
 
   mounted() {
