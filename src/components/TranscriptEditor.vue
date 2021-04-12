@@ -1,5 +1,8 @@
 <template>
-  <v-layout class="transcript-editor-outer" style="height: auto">
+  <v-layout
+    v-if="transcriptHasSpeakers"
+    class="transcript-editor-outer"
+    style="height: auto">
     <speaker-panel />
     <v-flex ref="outer" @scroll="handleNativeScroll" class="tracks-outer pt-2">
       <div
@@ -25,6 +28,13 @@
         :update-on="['scrollTranscript', 'scrollToTranscriptEvent']" />
     </v-flex>
   </v-layout>
+  <v-layout class="text-center" v-else>
+    <v-btn
+      @click="eventStore.userState.showSpeakerTierEditModal = true"
+      class="elevation-0 text-lowercase ma-auto mt-5 white--text"
+      color="grey darken-2"
+      small>Set up Survey or add Speaker(s)</v-btn>
+  </v-layout>
 </template>
 
 <script lang="ts">
@@ -43,10 +53,9 @@ import {
   LocalTranscriptEvent,
   isEventSelected,
   findEventIndexById,
-  findEventAt,
   findEventIndexAt
 } from '../store/transcript'
-import { requestFrameAsync, clone, getTextWidth } from '../util'
+import { getTextWidth } from '../util'
 
 const defaultLimit = 20
 
@@ -68,6 +77,10 @@ export default class TranscriptEditor extends Vue {
   throttledRenderer = _.throttle(this.updateList, 100)
   isEventSelected = isEventSelected
 
+  get transcriptHasSpeakers(): boolean {
+    return Object.values(this.eventStore.metadata.speakers).length > 0
+  }
+
   setInnerLeft(l: number) {
     this.innerLeft = l
     requestAnimationFrame(() => {
@@ -76,6 +89,7 @@ export default class TranscriptEditor extends Vue {
   }
 
   getEventRange(start: number, end: number): LocalTranscriptEvent[] {
+    // this is a very hot code path, so we optimize and don’t use .filter.
     const r = []
     for (let i = 0; i <= end - start; i++) {
       if (eventStore.events[start + i] !== undefined) {
@@ -83,7 +97,6 @@ export default class TranscriptEditor extends Vue {
       }
     }
     return r
-    // return eventStore.events.filter((e, i) => i >= start && i <= end)
   }
 
   // tslint:disable-next-line:max-line-length
