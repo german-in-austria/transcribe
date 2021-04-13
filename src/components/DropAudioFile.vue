@@ -67,9 +67,6 @@ export default class DropAudioFile extends Vue {
       loadAudioFromFile(data)
     }
   }
-
-  mounted() {
-  }
 }
 </script>
 <style lang="stylus" scoped>
