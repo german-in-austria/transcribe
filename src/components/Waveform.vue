@@ -216,7 +216,7 @@ export default class Waveform extends Vue {
 
   @Watch('eventStore.events')
   async onEventsChange(newEs: LocalTranscriptEvent[]) {
-    this.visibleEvents = await this.getVisibleEvents(boundLeft, boundRight, newEs)
+    this.visibleEvents = this.getVisibleEvents(boundLeft, boundRight, newEs)
   }
 
   async cacheOverviewWaveform() {
@@ -360,7 +360,7 @@ export default class Waveform extends Vue {
     const scrollFactorRight = (l + cw) / w
     boundLeft = eventStore.audioElement.duration * (scrollFactorLeft - segmentBufferPercent)
     boundRight = eventStore.audioElement.duration * (scrollFactorRight + segmentBufferPercent)
-    const ves = await this.getVisibleEvents(boundLeft, boundRight)
+    const ves = this.getVisibleEvents(boundLeft, boundRight, eventStore.events)
     this.visibleEvents = ves
     // if we didn’t do that, the elements that are re-rendered
     // (because of the above call) would lose focus, causing the
@@ -372,7 +372,7 @@ export default class Waveform extends Vue {
     }
   }
 
-  async getVisibleEvents(l: number, r: number, es = eventStore.events): Promise<LocalTranscriptEvent[]> {
+  getVisibleEvents(l: number, r: number, es: LocalTranscriptEvent[]): LocalTranscriptEvent[] {
     return es
       .filter(s => (s.endTime >= l && s.startTime <= r))
       .sort((a, b) => a.startTime - b.startTime)
