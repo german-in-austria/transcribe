@@ -143,6 +143,7 @@ import {
   getTextFromTier,
   isTokenTier
 } from '../store/transcript'
+import { indexOfMany } from '@/util'
 
 @Component({
   components: {
@@ -279,7 +280,167 @@ export default class Search extends Vue {
     }
   }
 
+  createTokenSearchIndex(
+    tierId: TokenTierType,
+    speaker: string,
+    es: LocalTranscriptEvent[],
+    lowercase: boolean
+  ): { text: string, ranges: Array<{ event: LocalTranscriptEvent, start: number, text: string, end: number }> } {
+    const ranges: Array<{ event: LocalTranscriptEvent, start: number, end: number, text: string }> = []
+    let currentStart = 0
+    let text = ''
+    for (const e of es) {
+      if (e.speakerEvents[speaker] !== undefined) {
+        // generate event text
+        let et = ''
+        for (const t of (e.speakerEvents[speaker]).tokens) {
+          const tt = t.tiers[tierId].text
+          if (tt.length > 0) {
+            const hasFragementMarker = tt.endsWith('=')
+            if (hasFragementMarker) {
+              et += tt.replace('=', '')
+            } else {
+              et += tt + ' '
+            }
+          }
+        }
+        // generate ranges.
+        if (et.length > 0) {
+          ranges.push({
+            event: e,
+            start: currentStart,
+            end: currentStart + et.length,
+            text: et
+          })
+          // update char range counter.
+          currentStart = currentStart + et.length
+          // update text
+          text += et
+        }
+      }
+    }
+    if (lowercase) {
+      text = text.toLowerCase()
+    }
+    // const text = es
+    //   .filter(e => e.speakerEvents[speaker] !== undefined)
+    //   .map(e => {
+    //     const et = (e.speakerEvents[speaker]).tokens
+    //       .map(t => {
+    //         return lowercase ? t.tiers[tierId].text.toLowerCase() : t.tiers[tierId].text
+    //       })
+    //       .filter(t => t.length > 0)
+    //       .join(' ')
+
+    //     if (et.length > 0) {
+    //       // SIDE EFFECT: generate ranges.
+    //       ranges.push({
+    //         event: e,
+    //         start: currentStart,
+    //         end: currentStart + et.length,
+    //         text: et
+    //       })
+    //       // SIDE EFFECT: update char range counter.
+    //       currentStart = currentStart + et.length + 1
+    //     }
+    //     return et
+    //   })
+    //   .filter(e => e.length > 0)
+    //   .join(' ')
+    return { text, ranges }
+  }
+
+  findOffsetInRanges(
+    start: number,
+    end: number,
+    ranges: Array<{ start: number, end: number, event: LocalTranscriptEvent, text: string}>
+  ): Array<{text: string, event: LocalTranscriptEvent}> {
+    const results: Array<{text: string, event: LocalTranscriptEvent}> = []
+    _.each(ranges, (range) => {
+      if (
+        // it’s the first
+        (start >= range.start && start <= range.end) ||
+        // it’s the last
+        (end >= range.start && end <= range.end) ||
+        // it’s in the middle
+        (start <= range.start && end >= range.end)
+      ) {
+        results.push({
+          event: range.event,
+          text: range.text
+        })
+      }
+      // optimization: break after the last one was found.
+      if (end <= range.end) {
+        return false
+      }
+    })
+    return results
+  }
+
   searchEvents(
+    term: string,
+    es: LocalTranscriptEvent[],
+    speakerIds: string[],
+    tiers: LocalTranscriptTier[]
+  ): SearchResult[] {
+    this.searchResultEventCounter = 0
+    let regex: RegExp|null = null
+    try {
+      regex = new RegExp(term)
+    } catch (e) {
+      // it failed.
+    }
+    return speakerIds
+      .map(speaker => {
+        return tiers.map(tier => {
+          if (tier.type === 'token') {
+            const searchIndex = this.createTokenSearchIndex(tier.id, speaker, es, !this.caseSensitive)
+            return indexOfMany(term, searchIndex.text).map(match => {
+              const events = this.findOffsetInRanges(match, match + term.length, searchIndex.ranges)
+              return {
+                inEvents: events,
+                speaker,
+                tier
+              }
+            })
+          } else {
+            return null as any
+          }
+        })
+      })
+      .flat(3)
+      .filter(t => t !== null)
+      .map((t, i) => {
+        const combined = t.inEvents.map((e: any) => e.text).join(' ')
+        return {
+          resultId: i,
+          offset: combined.indexOf(term),
+          offsetEnd: combined.indexOf(term) + term.length,
+          text: combined,
+          speakerId: t.speaker,
+          tierId: t.tier,
+          event: t.inEvents[0].event
+        }
+      })
+    // for (const speaker of speakerIds) {
+    //   for (const tier of tiers) {
+    //     if (tier.type === 'token') {
+    //       const searchIndex = this.createTokenSearchIndex(tier.id, speaker, es, !this.caseSensitive)
+    //       console.log(speaker, tier.name, { searchIndex })
+    //       const matches = indexOfMany(term, searchIndex.text).map(match => {
+    //         return this.findOffsetInRanges(match, match + term.length, searchIndex.ranges)
+    //       })
+    //       console.log(matches)
+    //     }
+    //     // else {
+    //     //   const searchIndex = createEventSearchIndex(tier.id, speaker, es)
+    //     // }
+    //   }
+    // return []
+  }
+
+  searchEventsOld(
     term: string,
     es: LocalTranscriptEvent[],
     speakerIds: string[],
@@ -295,6 +456,7 @@ export default class Search extends Vue {
     } catch (e) {
       // it failed.
     }
+    // return this.getResults(regex || term, es, tiers, speakerIds)
     const r = es.reduce((res, e, i) => {
       let index = -1
       let offsetEnd = -1
