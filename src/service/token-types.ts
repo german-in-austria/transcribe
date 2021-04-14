@@ -1,5 +1,3 @@
-import _ from 'lodash'
-
 import { LocalTranscriptEvent, TokenTierType, LocalTranscriptToken } from '../store/transcript'
 import settings from '../store/settings'
 import presets, { TokenTypesPresetGroup } from '../presets'

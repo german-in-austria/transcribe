@@ -174,13 +174,13 @@ export function padEnd(string: string, targetLength: number, padString: string) 
   targetLength = targetLength >> 0
   padString = String((typeof padString !== 'undefined' ? padString : ' '))
   if (string.length > targetLength) {
-      return String(string)
+    return String(string)
   } else {
-      targetLength = targetLength - string.length;
-      if (targetLength > padString.length) {
-          padString += padString.repeat(targetLength / padString.length)
-      }
-      return String(string) + padString.slice(0, targetLength)
+    targetLength = targetLength - string.length
+    if (targetLength > padString.length) {
+      padString += padString.repeat(targetLength / padString.length)
+    }
+    return String(string) + padString.slice(0, targetLength)
   }
 }
 
@@ -221,6 +221,28 @@ export function range(start: number, end: number) {
     a.push(i)
   }
   return a
+}
+
+export function indexOfMany(needle: string, hay: string): number[] {
+  let lastMatch
+  const result = []
+
+  if ((lastMatch = hay.indexOf(needle)) >= 0) {
+    result.push(lastMatch)
+    while ((lastMatch = hay.indexOf(needle, lastMatch + needle.length)) >= 0) {
+      result.push(lastMatch)
+    }
+  }
+  return result
+}
+
+export function replaceLast(token: string, toReplace: string, replaceWith: string): string {
+  const n = token.lastIndexOf(toReplace)
+  if (n !== -1) {
+    return token.substring(0, n) + replaceWith + token.substr(n + replaceWith.length)
+  } else {
+    return token
+  }
 }
 
 export async function concatUint8ArrayAsync(first: Uint8Array, second: Uint8Array): Promise<Uint8Array[]> {

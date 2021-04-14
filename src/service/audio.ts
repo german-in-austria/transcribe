@@ -560,7 +560,7 @@ async function getAudioMetadata(url: string): Promise<AudioMetaData> {
         credentials: 'include',
         method: 'HEAD'
       })).headers.get('Content-Length')
-      const bufferFirstSlice   = await chunk.arrayBuffer()
+      const bufferFirstSlice = await chunk.arrayBuffer()
       const { headers, pages } = await audio.getOggIndexAsync(bufferFirstSlice)
       metadata = {
         url,
@@ -646,17 +646,16 @@ async function downloadAudioStream({
 }
 
 async function downloadAndDecodeAudioStream({
-    url,
-    chunkSize = 2048 * 1024,
-    onStart,
-    onProgress
-  }: {
-    url: string,
-    chunkSize?: number,
-    onStart: (metadata: AudioMetaData|null) => any,
-    onProgress?: (chunk: AudioBuffer, from: number, to: number) => any
-  }
-) {
+  url,
+  chunkSize = 2048 * 1024,
+  onStart,
+  onProgress
+}: {
+  url: string,
+  chunkSize?: number,
+  onStart: (metadata: AudioMetaData|null) => any,
+  onProgress?: (chunk: AudioBuffer, from: number, to: number) => any
+}) {
   return new Promise(async (resolve, reject) => {
     metadata = await getAudioMetadata(url)
     fetch(url, { credentials: 'include' }).then(async (res) => {
