@@ -1,16 +1,19 @@
 <template>
   <div :class="['search-results-container', settings.darkMode === true && 'theme--dark']">
-    <div
-      @mouseover="handleResultMouseOver"
-      @mouseout="handleResultMouseOut"
-      @click="handleResultClick"
-      @dblclick="handleDoubleClick"
-      class="search-results-outer"
-      ref="resultContainer"
-    />
+    <canvas
+      @mousemove="onMouseMove"
+      @mouseout="hoveredEvent = null"
+      @click.prevent.stop="onClick"
+      height="10"
+      :class="[
+        'my-canvas',
+        this.squares.length > 0 && 'active'
+      ]"
+      ref="myCanvas" />
     <v-menu
       absolute
       lazy
+      :close-on-click="false"
       top
       nudge-top="5"
       :position-x="menuX"
@@ -31,17 +34,18 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SegmentTranscript from './SegmentTranscript.vue'
 import {
   eventStore,
-  isEventSelected,
   selectEvent,
   scrollToAudioEvent,
   scrollToTranscriptEvent,
-  findEventIndexById,
-  playEvent,
-  LocalTranscriptEvent,
-  selectSearchResult
+  LocalTranscriptEvent
 } from '../store/transcript'
 import settings from '../store/settings'
-import _ from 'lodash'
+
+interface Square {
+  event: LocalTranscriptEvent
+  left: number
+  right: number
+}
 
 @Component({
   components: {
@@ -54,122 +58,72 @@ export default class SearchResults extends Vue {
   menuY = 0
   hoveredEvent: LocalTranscriptEvent|null = null
   eventStore = eventStore
-  isEventSelected = isEventSelected
   settings = settings
+  context: null|CanvasRenderingContext2D = null
+  squares: Square[] = []
 
-  handleDoubleClick(ev: MouseEvent) {
-    const el = ev.target as HTMLElement
-    const eventId = el.getAttribute('data-event-id')
-    if (eventId !== null && el !== null) {
-      const i = findEventIndexById(Number(eventId))
-      const e = eventStore.events[i]
-      playEvent(e)
+  mounted() {
+    this.context = (this.$refs.myCanvas as HTMLCanvasElement).getContext('2d')
+  }
+
+  getSquaresAtPosition(x: number): Square[] {
+    return this.squares.filter((s) => x >= s.left && x <= s.right)
+  }
+
+  onClick() {
+    if (this.hoveredEvent !== null) {
+      scrollToAudioEvent(this.hoveredEvent)
+      scrollToTranscriptEvent(this.hoveredEvent)
+      selectEvent(this.hoveredEvent)
     }
   }
 
-  handleResultMouseOver(ev: MouseEvent) {
-    const el = ev.target as HTMLElement
-    const eventId = el.getAttribute('data-event-id')
-    if (eventId !== null) {
-      const i = findEventIndexById(Number(eventId))
-      const e = eventStore.events[i]
-      const rect = el.getBoundingClientRect()
-      this.menuX = rect.left
-      this.menuY = rect.top
-      this.hoveredEvent = e
+  onMouseMove(e: MouseEvent) {
+    const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const squares = this.getSquaresAtPosition(x)
+    if (squares.length > 0) {
+      this.menuX = squares[0].left
+      this.menuY = rect.y
+      this.hoveredEvent = squares[0].event
     }
   }
 
-  handleResultMouseOut() {
-    this.hoveredEvent = null
-  }
-
-  handleResultClick(ev: MouseEvent) {
-    const el = ev.target as HTMLElement
-    const eventId = el.getAttribute('data-event-id')
-    if (eventId !== null) {
-      const i = findEventIndexById(Number(eventId))
-      const e = eventStore.events[i]
-      scrollToAudioEvent(e)
-      scrollToTranscriptEvent(e)
-      selectEvent(e)
-    }
-  }
-
-  getPercentageOffset(t: number) {
-    return t / eventStore.audioElement.duration * 100
-  }
-
-  @Watch('eventStore.selectedSearchResult')
-  onSelectedSearchResultChange() {
-    if (eventStore.selectedSearchResult !== null && eventStore.searchResults.length > 0) {
-      const c = this.$refs.resultContainer
-      if (c instanceof HTMLElement) {
-        const oldRes = c.querySelector('.result-selected')
-        if (oldRes) {
-          oldRes.classList.remove('result-selected')
-        }
-        const res = c.querySelector(`[data-event-id="${ eventStore.selectedSearchResult.event.eventId }"]`)
-        if (res) {
-          res.classList.add('result-selected')
-        }
+  drawResults() {
+    this.squares = []
+    if (this.context !== null) {
+      const width = this.$el.clientWidth
+      const duration = eventStore.audioElement.duration
+      // setting the width clears the canvas.
+      this.context.canvas.width = width
+      // batched drawing setup
+      this.context.beginPath()
+      this.context.fillStyle = 'yellow'
+      for (const r of eventStore.searchResults) {
+        const left = (((r.event.startTime / duration) * width) + .5) | 0
+        // draw the rectangle
+        this.context.rect(left, 0, 3, 10)
+        this.squares.push({
+          event: r.event,
+          left: left,
+          right: left + 3
+        })
       }
+      this.context.fill()
     }
   }
 
   @Watch('eventStore.searchResults')
   onResultsChange() {
-    const t = eventStore.searchTerm
-    const c = this.$refs.resultContainer
-    const resHtml = eventStore.searchResults.map((r, i, l) => {
-      const left = this.getPercentageOffset(r.event.startTime)
-      return `<div
-        data-event-id="${r.event.eventId}"
-        class="result-overview"
-        style="left: ${ left }%">
-      </div>`
-    })
-    if (c instanceof Element) {
-      c.classList.add('loading')
-      c.innerHTML = ''
-      const resHtmlChunked = _.chunk(resHtml, 50)
-      const step = (remainingChunks: string[][]) => {
-        // this should check search terms
-        if (remainingChunks.length > 0 && eventStore.searchTerm === t) {
-          const partHtml = remainingChunks[0].join('')
-          c.insertAdjacentHTML('beforeend', partHtml)
-          requestAnimationFrame(() => step(_.tail(remainingChunks)))
-        } else {
-          c.classList.remove('loading')
-        }
-      }
-      step(resHtmlChunked)
-    }
+    this.drawResults()
   }
 }
 </script>
 <style lang="stylus">
 .search-results-container
   position relative
-  .search-results-outer
-    transition .3s opacity
-    &.loading
-      opacity .2
-  .result-overview
-    width 7px
-    height 14px
-    position absolute
-    border-radius 0
-    top 0
-    border-left 1px solid cornflowerblue
-    opacity .5
-    &.result-selected, &:hover
-      z-index 1
-      opacity 1
-      border-left-color #fb7676
-    &.result-selected
-      width 1px
-      border-width 2px
-      box-shadow 0 0 30px white
-
+.my-canvas
+  border-radius 3px
+  &.active
+    background rgba(255,255,255,.1)
 </style>
