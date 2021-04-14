@@ -3,22 +3,23 @@
     <v-flex class="sidebar-content" v-if="active">
       <v-window class="window" v-model="settings.activeSidebarItem" vertical>
         <v-window-item value="edit" class="sidebar-scrollable">
-          <actions />
+          <!-- we always put the extra "if" here, because otherwise the component stays active even if invisible -->
+          <actions v-if="settings.activeSidebarItem === 'edit'" />
         </v-window-item>
         <v-window-item value="history" class="sidebar-scrollable">
-          <edit-history v-if="history.actions.length > 0" />
+          <edit-history v-if="settings.activeSidebarItem === 'history' && history.actions.length > 0" />
           <div v-else class="text-xs-center grey--text mt-4">
             <small>Edits will appear here.</small>
           </div>
         </v-window-item>
         <v-window-item value="warnings" class="sidebar-scrollable">
-          <error-list :errors="errors"/>
+          <error-list v-if="settings.activeSidebarItem === 'warnings'" :errors="errors"/>
         </v-window-item>
         <v-window-item value="search" class="sidebar-scrollable">
-          <search />
+          <search v-if="settings.activeSidebarItem === 'search'" />
         </v-window-item>
         <v-window-item value="bookmarks" class="sidebar-scrollable">
-          <bookmarks />
+          <bookmarks v-if="settings.activeSidebarItem === 'bookmarks'" />
         </v-window-item>
       </v-window>
     </v-flex>
