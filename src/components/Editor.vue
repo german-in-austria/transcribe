@@ -84,7 +84,7 @@
           :position-y="menuY"
           absolute
           offset-y>
-          <v-list class="context-menu-list" dense>
+          <v-list v-if="showMenu" class="context-menu-list" dense>
             <v-list-tile
               @click="keyboardShortcuts.playPause.action">
               <v-list-tile-content>
