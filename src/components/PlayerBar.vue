@@ -207,12 +207,14 @@ export default class PlayerBar extends Vue {
     }
   }
 
-  updateTimeDisplay(seconds: number, e: HTMLElement) {
-    const newT = toTime(seconds, 3)
-    e.innerHTML = newT.split('').reduce((m, d) => {
-      m += `<span>${d}</span>\n`
-      return m
-    }, '' as string)
+  updateTimeDisplay(seconds: number, e: HTMLElement|undefined) {
+    if (e !== undefined) {
+      const newT = toTime(seconds, 3)
+      e.innerHTML = newT.split('').reduce((m, d) => {
+        m += `<span>${d}</span>\n`
+        return m
+      }, '' as string)
+    }
   }
 
   onChangeTime(t: number) {
