@@ -23,7 +23,7 @@
           :disabled="sc.disabled ? sc.disabled() : false"
           v-show="sc.showInMenu === true"
           :key="k">
-          <v-list-tile-avatar>
+          <v-list-tile-avatar class="action-icon-outer">
             <v-icon class="tool-icon">{{ sc.icon }}</v-icon>
           </v-list-tile-avatar>
           <v-list-tile-content>
@@ -31,7 +31,7 @@
               {{ sc.name }}
             </v-list-tile-title>
           </v-list-tile-content>
-          <v-list-tile-action>
+          <v-list-tile-action class="keyboard-shortcut">
             {{ displayKeyboardAction(sc) }}
           </v-list-tile-action>
         </v-list-tile>
@@ -56,6 +56,10 @@ export default class Actions extends Vue {
 }
 </script>
 <style lang="stylus" scoped>
+.action-icon-outer
+  min-width 40px
 .tool-icon
-  font-size 18px !important
+  font-size 15px !important
+.keyboard-shortcut
+  opacity .7
 </style>
