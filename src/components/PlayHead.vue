@@ -17,13 +17,17 @@
       }"
     />
     <div
-      v-if="eventStore.userState.timeSpanSelection.start !== null && eventStore.userState.timeSpanSelection.end !== null"
+      v-if="
+        eventStore.userState.timeSpanSelection.start !== null &&
+        eventStore.userState.timeSpanSelection.end !== null"
       :style="{
         left: getSelectionLeft() * settings.pixelsPerSecond + 'px',
         width: getSelectionLength() * settings.pixelsPerSecond + 'px'
       }"
       class="selection">
-      <div class="selection-length">{{ getSelectionLength().toFixed(2) }} sec</div>
+      <div class="selection-length">
+        {{ getSelectionLength().toFixed(2) }} sec
+      </div>
     </div>
   </div>
 </template>
