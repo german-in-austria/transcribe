@@ -29,17 +29,18 @@
             :id="`speaker_event_tier_${speaker}__${tier.id}`"
             :data-speaker-id="speaker"
             :data-event-id="event.eventId"
+            :is-focused="focusedTier === tier.id"
             @keydown.enter.exact.prevent="viewAndSelectAudioEvent(event)"
             @input="(e) => { debouncedUpdateTokenTier(e.target.textContent, tier.id, i) }"
             @blur="onBlurEvent"
-            @focus="onFocusEvent" />
+            @focus="onFocusEvent(tier.id)" />
           <span v-else class="secondary-token-tier-text" />
         </span>
       </span>
     </div>
     <contenteditable
       @blur="onBlurEvent"
-      @focus="onFocusEvent"
+      @focus="onFocusEvent(defaultTier)"
       @input="(e) => updateDefaultTier(e.target.textContent)"
       @keydown.tab.shift.exact="focusPreviousFrom($event, defaultTier)"
       @keydown.tab.exact="focusNextFrom($event, defaultTier)"
@@ -51,6 +52,7 @@
       @paste.prevent="pasteTokens"
       :id="`speaker_event_tier_${speaker}__${defaultTier}`"
       :value="segmentText"
+      :is-focused="focusedTier === defaultTier"
       :style="textStyle"
       :data-speaker-id="speaker"
       :data-event-id="event.eventId"
@@ -73,7 +75,7 @@
         @keydown.enter.exact.prevent="viewAndSelectAudioEvent(event)"
         @keydown.tab.exact="focusNextFrom($event, tier.id)"
         @blur="(e) => { updateEventTier(e.target.textContent, tier.id); onBlurEvent() }"
-        @focus="onFocusEvent"
+        @focus="onFocusEvent(tier.id)"
         />
     </div>
   </div>
@@ -143,6 +145,8 @@ export default class SpeakerSegmentTranscript extends Vue {
   debouncedUpdateEventTier = _.debounce(this.updateEventTier, 300)
   debouncedCommitEvent = _.debounce(this.commitEvent, 300)
 
+  focusedTier: string|null = null
+
   mounted() {
     // tslint:disable-next-line:max-line-length
     eventBus.$on('updateSpeakerEventText', this.updateTextFromEventBus)
@@ -161,6 +165,7 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   onBlurEvent() {
     eventStore.userState.editingTranscriptEvent = null
+    this.focusedTier = null
     this.focused = false
     if (presets[settings.projectPreset].autoCorrectDelimiterSpace === true) {
       if (this.event.speakerEvents[this.speaker] !== undefined) {
@@ -171,12 +176,13 @@ export default class SpeakerSegmentTranscript extends Vue {
     }
   }
 
-  onFocusEvent() {
+  onFocusEvent(tier: string|null) {
     eventStore.userState.editingTranscriptEvent = this.event
     selectEvent(this.event)
     if (settings.lockScroll === true) {
       scrollToAudioEvent(this.event)
     }
+    this.focusedTier = tier
     this.focused = true
   }
 
