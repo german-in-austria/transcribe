@@ -4,14 +4,22 @@ import { ProjectPreset } from '.'
 export const PP04: ProjectPreset = {
   autoCorrectDelimiterSpace: false,
   autoCorrectDelimiterSpaceRegex: /\b(\/?[\.|\?|\;|\-|\,|\!])\B/g,
+  importTransformer: (tierText, tierType) => {
+    if (tierType === 'default') {
+      // replace "="’s at the start of an event with "#"’s
+      return tierText.replace(/^=/u, '#')
+    } else {
+      return tierText
+    }
+  },
   tokenizer: (s) => {
     return s
-      .split('_').join('_ _')
-      .split('. ').join(' . ')
-      .split('- ').join(' - ')
-      .split('; ').join(' ; ')
-      .split(', ').join(' , ')
-      .split('? ').join(' ? ')
+      .replaceAll('_', '_ _')
+      .replaceAll('. ', ' . ')
+      .replaceAll('- ', ' - ')
+      .replaceAll('; ', ' ; ')
+      .replaceAll(', ', ' , ')
+      .replaceAll('? ', ' ? ')
       .split(' ')
       .filter(t => t !== '')
   },
@@ -85,6 +93,6 @@ export const PP04: ProjectPreset = {
       regex: /^([a-zA-ZÜüÄäÖöß\.;:-]+$)/u,
       color: 'transparent',
       id: 1
-    },
+    }
   ]
 }

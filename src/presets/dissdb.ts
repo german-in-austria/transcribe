@@ -5,10 +5,10 @@ export const dissDB: ProjectPreset = {
   autoCorrectDelimiterSpaceRegex: /\b(\/?[\.|\?|\,|\!])\B/g,
   tokenizer: (s) => {
     return s
-      .split('.').join(' .')
-      .split(', ').join(' , ')
-      .split('-').join('_ _')
-      .split('? ').join(' ? ')
+      .replaceAll('.', ' .')
+      .replaceAll(', ', ' , ')
+      .replaceAll('-', '_ _')
+      .replaceAll('? ', ' ? ')
       .split(' ')
       .filter(t => t !== '')
   },

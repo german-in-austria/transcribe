@@ -11,6 +11,7 @@ export type ProjectPresets = {
 
 export interface ProjectPreset {
   tokenizer: (utterance: string) => string[]
+  importTransformer?: (utterance: string, tierType: 'tokenized'|'freeText'|'default'|null) => string
   tokenTypes: Array<TokenTypesPresetGroup | TokenTypesPresetSingle>
   autoCorrectDelimiterSpace: boolean
   autoCorrectDelimiterSpaceRegex: RegExp
