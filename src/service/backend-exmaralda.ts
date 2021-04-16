@@ -138,10 +138,12 @@ function getTierToken(
   }
 }
 
-function autoFixExmaraldaText(text: string): string {
-  return text
-    // remove the space before canceled expressions
-    .split(' /').join('/')
+function autoFixExmaraldaText(text: string, tierType: 'tokenized'|'freeText'|'default'|null): string {
+  if (presets[settings.projectPreset].importTransformer !== undefined) {
+    return presets[settings.projectPreset].importTransformer!(text, tierType).replaceAll(' /', '/')
+  }
+  // remove the space before canceled expressions
+  return text.replaceAll(' /', '/')
 }
 
 function isFragmentedEventStart(text: string|null): boolean {
@@ -167,7 +169,7 @@ export function importableToServerTranscript(
     .filter(st => st.selectForImport === true)
     .map(st => {
       return st.toTierType === 'default'
-        ? {...st, tokenTierType: defaultTier}
+        ? { ...st, tokenTierType: defaultTier }
         : st
     })
     .groupBy(st => st.toSpeaker!.pk)
@@ -184,7 +186,7 @@ export function importableToServerTranscript(
         .keyBy(e => e.startTime + '__' + e.endTime)
         .mapValues(makeEventId)
         .value()
-      m = {...m, es}
+      m = { ...m, es }
       return m
     }, {} as any)
     .value()
@@ -235,8 +237,9 @@ export function importableToServerTranscript(
                     }
                   }
                 }
+              // create default tiers
               } else {
-                const cleanText = autoFixExmaraldaText(text)
+                const cleanText = autoFixExmaraldaText(text, speakerTier.toTierType)
                 const eventTokenIds = _(presets[settings.projectPreset].tokenizer(cleanText))
                   .filter(t => t !== '')
                   .map((t, tokenIndex): number => {
