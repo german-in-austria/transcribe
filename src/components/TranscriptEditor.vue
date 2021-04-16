@@ -239,7 +239,10 @@ export default class TranscriptEditor extends Vue {
   updateList(leftToRight: boolean, timesCalled = 0) {
     if (leftToRight) {
       // SCROLL LEFT TO RIGHT
-      if (this.innerLeft <= -1500 && this.currentIndex + defaultLimit + 1 < this.eventStore.events.length) {
+      if (
+        this.innerLeft <= -1500 &&
+        this.currentIndex + defaultLimit + 1 < this.eventStore.events.length
+      ) {
         const removedEvent = eventStore.events[this.currentIndex]
         const removedEventWidth = this.getEventWidth(removedEvent)
         this.setInnerLeft(this.innerLeft + removedEventWidth)
@@ -250,7 +253,10 @@ export default class TranscriptEditor extends Vue {
       }
     } else {
       // SCROLL RIGHT TO LEFT
-      if (this.innerLeft >= -200 && this.currentIndex > 0) {
+      if (
+        this.innerLeft >= -200 &&
+        this.currentIndex > 0
+      ) {
         const addedEvent = eventStore.events[this.currentIndex - 1]
         const addedEventWidth = this.getEventWidth(addedEvent)
         this.setInnerLeft(this.innerLeft - addedEventWidth)
