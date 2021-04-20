@@ -19,7 +19,7 @@ export const PP04: ProjectPreset = {
       .replaceAll('- ', ' - ')
       .replaceAll('; ', ' ; ')
       .replaceAll(', ', ' , ')
-      .replaceAll('? ', ' ? ')
+      .replace(/\?(\s|$)/g, ' ? ')
       .split(' ')
       .filter(t => t !== '')
   },
@@ -35,7 +35,7 @@ export const PP04: ProjectPreset = {
       type: 'group',
       name: 'incomprehensible',
       bracketSymbols: [
-        /(\(([a-zA-ZÜüÄäÖöß'\?]+))/u,
+        /(\(([#a-zA-ZÜüÄäÖöß'\?]+))/u,
         /((.+)\))/u
       ],
       color: '#ccc',
@@ -45,7 +45,7 @@ export const PP04: ProjectPreset = {
       type: 'group',
       name: 'anonymized',
       bracketSymbols: [
-        /(\[([a-zA-ZÜüÄäÖöß\.;:-]+))/u,
+        /(\[([#a-zA-ZÜüÄäÖöß\.;:-]+))/u,
         /(.+\](N|NZ|O|OP|OA|OS|P|Z))/,
       ],
       color: '#880000',
@@ -74,7 +74,7 @@ export const PP04: ProjectPreset = {
     {
       type: 'single',
       name: 'contraction',
-      regex: /_[a-zA-ZÜüÄäÖöß\.;:-]+|[a-zA-ZÜüÄäÖöß\.;:-]+_/,
+      regex: /_[#a-zA-ZÜüÄäÖöß\.;:-]+|[a-zA-ZÜüÄäÖöß\.;:-]+_/,
       color: '#d47d0f',
       id: 8
     },
@@ -90,7 +90,7 @@ export const PP04: ProjectPreset = {
     {
       type: 'single',
       name: 'word',
-      regex: /^([a-zA-ZÜüÄäÖöß\.;:-]+$)/u,
+      regex: /^([#a-zA-ZÜüÄäÖöß\.;:-]+$)/u,
       color: 'transparent',
       id: 1
     }
