@@ -85,7 +85,7 @@ export default class ServerTranscriptInfoForm extends Vue {
       this.$emit('update', {
         transcriptName: this.transcriptName,
         selectedSurvey: this.selectedSurvey,
-        preset: this.settings.projectPreset
+        projectPreset: this.settings.projectPreset
       })
       this.$emit('input', true)
     } else {
