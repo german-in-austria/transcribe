@@ -27,7 +27,7 @@
             <v-list-tile-avatar>
             </v-list-tile-avatar>
             <v-list-tile-content>
-              <v-list-tile-title v-if="!allExpanded">Expand all</v-list-tile-title>
+              <v-list-tile-title v-if="!areAllExpanded">Expand all</v-list-tile-title>
               <v-list-tile-title v-else>Collapse all</v-list-tile-title>
             </v-list-tile-content>
           </v-list-tile>
@@ -45,12 +45,12 @@
             </v-list-tile-content>
           </v-list-tile>
           <v-divider />
-          <!-- <v-list-tile @click="openSpeakerAndTierSettings">
+          <v-list-tile @click="openSpeakerAndTierSettings">
             <v-list-tile-avatar />
             <v-list-tile-content>
               <v-list-tile-title>Edit Speakers and Tiers…</v-list-tile-title>
             </v-list-tile-content>
-          </v-list-tile> -->
+          </v-list-tile>
         </v-list>
       </v-menu>
     </div>
@@ -78,12 +78,12 @@ export default class SpeakerPanel extends Vue {
     return eventStore.metadata.tiers.filter(t => t.id !== eventStore.metadata.defaultTier && t.show === true)
   }
 
-  get allExpanded(): boolean {
+  get areAllExpanded(): boolean {
     return eventStore.metadata.tiers.every(t => t.id === eventStore.metadata.defaultTier || t.show === true)
   }
 
   expandOrCollapse() {
-    if (this.allExpanded) {
+    if (this.areAllExpanded) {
       return this.collapseAll()
     } else {
       return this.expandAll()
