@@ -10,7 +10,12 @@
       hide-details
       v-model="tier.name">
       <template v-slot:append>
-        <v-btn @click="removeTier(i)" icon class="elevation-0"><v-icon>close</v-icon></v-btn>
+        <v-btn
+          @click="removeEventTier(tier.id)"
+          icon
+          class="elevation-0">
+          <v-icon>close</v-icon>
+        </v-btn>
       </template>
     </v-text-field>
     <v-text-field
@@ -25,11 +30,19 @@
       v-model="enteringTierName"
       placeholder="Enter name for event tier (e. g. MSYN, Comment, etc.)">
       <template v-slot:append>
-        <v-btn @click="addTier" :disabled="!isValidTierName(enteringTierName)" small class="elevation-0">add</v-btn>
+        <v-btn
+          @click="addTier"
+          :disabled="!isValidTierName(enteringTierName)"
+          small
+          class="elevation-0">
+          add
+        </v-btn>
       </template>
     </v-text-field>
     <v-subheader class="px-0">Speakers ({{ speakersLength }})</v-subheader>
-    <v-chip :key="speaker.k" v-for="speaker in speakers">
+    <v-chip
+      v-for="(speaker, k) in speakers"
+      :key="k">
       <v-avatar class="mr-0">
         <v-icon>account_circle</v-icon>
       </v-avatar>
@@ -79,9 +92,8 @@ export default class SpeakerTierEditor extends Vue {
     }
   }
 
-  async removeTier(index: number) {
-    await this.$nextTick()
-    this.$emit('update:tiers', this.tiers.filter((t, i) => i !== index))
+  async removeEventTier(id: string) {
+    this.$emit('update:tiers', this.tiers.filter(t => !(t.type === 'freeText' && t.id === id)))
   }
 
   get eventTiers(): LocalTranscriptTier[] {
