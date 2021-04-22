@@ -1,5 +1,5 @@
 import {
-  LocalTranscript,
+  LocalTranscriptEvent,
   LocalTranscriptToken,
   TokenTierType
 } from '../store/transcript'
@@ -61,7 +61,7 @@ function replaceLastOccurrence(token: string, toReplace: string, replaceWith: st
 function getTokenTextWithFragments(
   t: LocalTranscriptToken,
   speakerId: string,
-  es: LocalTranscript,
+  es: LocalTranscriptEvent[],
   defaultTier: TokenTierType
 ): string {
   const event = es.find((e) => {
@@ -132,7 +132,7 @@ function markEventTierUpdateStatus(newEvent: ServerEvent, oldEvent: ServerEvent)
 registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTransferList: (...args: any[]) => any): [ServerTranscriptSaveRequest, ServerTranscript] => {
   const { oldT, newT } = message
   const oldTranscript = JSON.parse(textDecoder.decode(oldT)) as ServerTranscript
-  const localTranscript = JSON.parse(textDecoder.decode(newT)) as LocalTranscript
+  const localTranscript = JSON.parse(textDecoder.decode(newT)) as LocalTranscriptEvent[]
   const defaultTier = oldTranscript.aTranskript!.default_tier || 'text'
 
   const newServerEvents: ServerEvent[] = []
@@ -180,10 +180,14 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
           fo: t.fragmentOf || undefined
         }
         // it is the last token and has a fragment marker
-        if (i + 1 === tokens.length && tokenHasFragment(token.t)) {
-          console.log('tokenHasFragment', token)
-          token.t = getTokenTextWithFragments(t, speakerId, localTranscript, defaultTier)
-          console.log('tokenTextWithFragments', token.t)
+        if (i + 1 === tokens.length) {
+          if (defaultTier === 'text' && tokenHasFragment(token.t)) {
+            token.t = getTokenTextWithFragments(t, speakerId, localTranscript, defaultTier)
+          } else if (defaultTier === 'ortho' && token.o !== undefined && tokenHasFragment(token.o)) {
+            token.o = getTokenTextWithFragments(t, speakerId, localTranscript, defaultTier)
+          } else {
+            // "phon" fragments are not supported.
+          }
         }
         m[t.id] = token
       })
