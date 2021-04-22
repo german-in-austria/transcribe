@@ -90,7 +90,7 @@
                 <v-list-tile-title>Play</v-list-tile-title>
               </v-list-tile-content>
               <v-list-tile-action>
-                {{ displayKeyboardAction(keyboardShortcuts.playPause) }}
+                <keyboard-shortcut :value="keyboardShortcuts.playPause" />
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
@@ -99,7 +99,9 @@
               <v-list-tile-content>
                 <v-list-tile-title>Split</v-list-tile-title>
               </v-list-tile-content>
-              <v-list-tile-action>{{ displayKeyboardAction(keyboardShortcuts.split) }}</v-list-tile-action>
+              <v-list-tile-action>
+                <keyboard-shortcut :value="keyboardShortcuts.split" />
+              </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
               :disabled="keyboardShortcuts.joinEvents.disabled()"
@@ -107,7 +109,9 @@
               <v-list-tile-content>
                 <v-list-tile-title>Join</v-list-tile-title>
               </v-list-tile-content>
-              <v-list-tile-action>{{ displayKeyboardAction(keyboardShortcuts.joinEvents) }}</v-list-tile-action>
+              <v-list-tile-action>
+                <keyboard-shortcut :value="keyboardShortcuts.joinEvents" />
+              </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
               :disabled="eventStore.selectedEventIds.length === 0"
@@ -128,7 +132,7 @@
                 <v-list-tile-title>Show Transcript</v-list-tile-title>
               </v-list-tile-content>
               <v-list-tile-action>
-                {{ displayKeyboardAction(keyboardShortcuts.scrollToEvent) }}
+                <keyboard-shortcut :value="keyboardShortcuts.scrollToEvent" />
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
@@ -137,7 +141,7 @@
                 <v-list-tile-title>Inspect Event…</v-list-tile-title>
               </v-list-tile-content>
               <v-list-tile-action>
-                {{ displayKeyboardAction(keyboardShortcuts.inspectEvent) }}
+                <keyboard-shortcut :value="keyboardShortcuts.inspectEvent" />
               </v-list-tile-action>
             </v-list-tile>
             <v-divider />
@@ -147,7 +151,9 @@
               <v-list-tile-content>
                 <v-list-tile-title>Delete</v-list-tile-title>
               </v-list-tile-content>
-              <v-list-tile-action>{{ displayKeyboardAction(keyboardShortcuts.deleteEvents) }}</v-list-tile-action>
+              <v-list-tile-action>
+                <keyboard-shortcut :value="keyboardShortcuts.deleteEvents" />
+              </v-list-tile-action>
             </v-list-tile>
           </v-list>
         </v-menu>
@@ -188,6 +194,8 @@ import transcriptEditor from './TranscriptEditor.vue'
 import playHead from './PlayHead.vue'
 import dropAudioFile from './DropAudioFile.vue'
 import transcriptSettings from './TranscriptSettings.vue'
+import KeyboardShortcut from './helper/KeyboardShortcut.vue'
+
 import {
   LocalTranscriptEvent,
   addEventsToSelection,
@@ -240,7 +248,8 @@ import eventBus from '../service/event-bus'
     playHead,
     searchResultsInline,
     dropAudioFile,
-    playerBar
+    playerBar,
+    KeyboardShortcut
   }
 })
 
