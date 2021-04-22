@@ -32,9 +32,7 @@
             icon
             @click="clickTab('edit')"
             class="mb-2 sidebar-btn">
-            <v-icon :color="settings.activeSidebarItem === 'edit' ? 'blue' : ''">
-              {{ keyboardShortcuts.showEditMenu.icon }}
-            </v-icon>
+            <f-icon :value="keyboardShortcuts.showEditMenu.icon" :color="settings.activeSidebarItem === 'edit' ? 'blue' : ''" />
           </v-btn>
           <v-btn
             v-ripple="false"
@@ -42,9 +40,7 @@
             icon
             @click="clickTab('history')"
             class="mb-2 sidebar-btn">
-            <v-icon :color="settings.activeSidebarItem === 'history' ? 'blue' : ''">
-              {{ keyboardShortcuts.showHistory.icon }}
-            </v-icon>
+            <f-icon :value="keyboardShortcuts.showHistory.icon" :color="settings.activeSidebarItem === 'history' ? 'blue' : ''" />
           </v-btn>
           <v-btn
             v-ripple="false"
@@ -55,10 +51,9 @@
             <v-badge
               :value="errors.length > 0"
               :color="settings.activeSidebarItem === 'warnings' ? 'blue' : 'grey'">
-              <v-icon
-                :color="settings.activeSidebarItem === 'warnings' ? 'blue' : ''">
-                {{ keyboardShortcuts.showWarnings.icon }}
-              </v-icon>
+              <f-icon
+                :value="keyboardShortcuts.showWarnings.icon"
+                :color="settings.activeSidebarItem === 'warnings' ? 'blue' : ''" />
               <span slot="badge">
                 {{ errors.length < 100 ? errors.length : '99+' }}
               </span>
@@ -70,9 +65,7 @@
             icon
             @click="clickTab('search')"
             class="mb-2 sidebar-btn">
-            <v-icon :color="settings.activeSidebarItem === 'search' ? 'blue' : ''">
-              {{ keyboardShortcuts.showSearch.icon }}
-            </v-icon>
+            <f-icon :color="settings.activeSidebarItem === 'search' ? 'blue' : ''" :value="keyboardShortcuts.showSearch.icon" />
           </v-btn>
           <v-btn
             v-ripple="false"
@@ -80,9 +73,7 @@
             icon
             @click="clickTab('bookmarks')"
             class="mb-2 sidebar-btn">
-            <v-icon :color="settings.activeSidebarItem === 'bookmarks' ? 'blue' : ''">
-              {{ keyboardShortcuts.showBookmarks.icon }}
-            </v-icon>
+            <f-icon :color="settings.activeSidebarItem === 'bookmarks' ? 'blue' : ''" :value="keyboardShortcuts.showBookmarks.icon" />
           </v-btn>
         </v-flex>
         <v-flex xs1>
@@ -93,7 +84,7 @@
             @click.stop="settings.showSettings = true"
             icon
             flat>
-            <v-icon>settings</v-icon>
+            <f-icon value="settings" />
           </v-btn>
         </v-flex>
       </v-layout>
@@ -106,7 +97,6 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import _ from 'lodash'
 
 import {
-  LocalTranscriptEvent,
   eventStore,
   toTime
 } from '../store/transcript'

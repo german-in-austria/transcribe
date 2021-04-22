@@ -24,7 +24,7 @@
           v-show="sc.showInMenu === true"
           :key="k">
           <v-list-tile-avatar>
-            <v-icon class="tool-icon">{{ sc.icon }}</v-icon>
+            <f-icon class="tool-icon" :dark="$vuetify.dark" :value="sc.icon" />
           </v-list-tile-avatar>
           <v-list-tile-content>
             <v-list-tile-title>

@@ -2,7 +2,7 @@
   <div class="fill-height">
     <v-toolbar class="elevation-0" fixed app>
       <v-flex xs4>
-        <v-btn icon @click="reload"><v-icon>chevron_left</v-icon></v-btn>
+        <v-btn icon @click="reload"><f-icon value="chevron_left" /></v-btn>
       </v-flex>
       <v-flex xs4 class="text-xs-center">
         <div style="opacity: .7; font-size: small">{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
@@ -14,7 +14,6 @@
             :disabled="eventStore.status === 'loading' || isSaving"
             open-on-hover
             min-width="150"
-            nudge-bottom="10"
             :transition="false"
             offset-y>
             <v-btn
@@ -23,7 +22,7 @@
               :loading="eventStore.status === 'loading' || isSaving"
               :disabled="eventStore.status === 'loading' || isSaving"
               icon flat>
-              <v-icon>save_alt</v-icon>
+              <f-icon value="save_alt" />
               <template v-slot:loader>
                 <v-progress-circular
                   :color="settings.darkMode ? '#fff' : '#333'"

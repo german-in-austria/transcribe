@@ -10,10 +10,10 @@
     <v-layout row>
       <v-flex xs4 text-xs-right>
         <player-bar-button @click="playStart" :size="height">
-          <v-icon>mdi-contain-start</v-icon>
+          <f-icon value="mdi-contain-start" />
         </player-bar-button>
         <player-bar-button @click="playEnd" :size="height">
-          <v-icon>mdi-contain-end</v-icon>
+          <f-icon value="mdi-contain-end" />
         </player-bar-button>
       </v-flex>
       <v-flex
@@ -24,9 +24,9 @@
         xs4
         align-content-center>
         <player-bar-button @click="playPause" :size="height">
-          <v-icon v-if="eventStore.isPaused && timeSpanSelectionIsEmpty()">play_arrow</v-icon>
-          <v-icon v-if="eventStore.isPaused && !timeSpanSelectionIsEmpty()">mdi-play-outline</v-icon>
-          <v-icon v-if="!eventStore.isPaused">pause</v-icon>
+          <f-icon v-if="eventStore.isPaused && timeSpanSelectionIsEmpty()" value="play_arrow" />
+          <f-icon v-if="eventStore.isPaused && !timeSpanSelectionIsEmpty()" value="mdi-play-outline" />
+          <f-icon v-if="!eventStore.isPaused" value="pause" />
         </player-bar-button>
         <div
           @click="showTimePicker = false"
@@ -37,10 +37,10 @@
         <v-layout>
           <v-flex text-xs-left>
             <player-bar-button :size="height">
-              <v-icon>mdi-replay</v-icon>
+              <f-icon value="mdi-replay" />
             </player-bar-button>
             <player-bar-button :size="height">
-              <v-icon class="mirror">mdi-replay</v-icon>
+              <f-icon value="mdi-replay" class="mirror" />
             </player-bar-button>
           </v-flex>
           <v-flex text-xs-right>
@@ -53,18 +53,10 @@
               open-on-hover
               top>
               <player-bar-button @click="toggleVolumeOnOff" slot="activator" :size="height">
-                <v-icon v-if="settings.playbackVolume === 0">
-                  mdi-volume-variant-off
-                </v-icon>
-                <v-icon v-else-if="settings.playbackVolume <= .33">
-                  mdi-volume-low
-                </v-icon>
-                <v-icon v-else-if="settings.playbackVolume > .33 && settings.playbackVolume <= .66">
-                  mdi-volume-medium
-                </v-icon>
-                <v-icon v-else-if="settings.playbackVolume > .66">
-                  mdi-volume-high
-                </v-icon>
+                <f-icon value="mdi-volume-variant-off" v-if="settings.playbackVolume === 0" />
+                <f-icon value="mdi-volume-low" v-else-if="settings.playbackVolume <= .33" />
+                <f-icon value="mdi-volume-medium" v-else-if="settings.playbackVolume > .33 && settings.playbackVolume <= .66" />
+                <f-icon value="mdi-volume-high" v-else-if="settings.playbackVolume > .66" />
               </player-bar-button>
               <div class="pl-4 pr-4">
                 <v-slider
@@ -84,9 +76,9 @@
               open-on-hover
               top>
               <player-bar-button @click="toggleSpeed" slot="activator" :size="height">
-                <v-icon v-if="settings.playbackSpeed <= .33">mdi-speedometer-slow</v-icon>
-                <v-icon v-if="settings.playbackSpeed > .33 && settings.playbackSpeed <= .66">mdi-speedometer-medium</v-icon>
-                <v-icon v-if="settings.playbackSpeed > .66">mdi-speedometer</v-icon>
+                <f-icon v-if="settings.playbackSpeed <= .33" value="mdi-speedometer-slow" />
+                <f-icon v-if="settings.playbackSpeed > .33 && settings.playbackSpeed <= .66" value="mdi-speedometer-medium" />
+                <f-icon v-if="settings.playbackSpeed > .66" value="mdi-speedometer" />
               </player-bar-button>
               <div class="pl-4 pr-4">
                 <v-slider
