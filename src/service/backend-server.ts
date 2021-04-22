@@ -454,14 +454,36 @@ export function serverEventSaveResponseToServerEvent(e: ServerEventSaveResponse)
 }
 
 export function serverTokenSaveResponseToServerToken(
-  t: SaveResponse<ServerToken>,
-  es: _.Dictionary<SaveResponse<ServerEvent>>
+  t: SaveResponse<ServerToken>, // the token
+  es: _.Dictionary<SaveResponse<ServerEvent>>, // the new/updated events by key
+  tcs: _.Dictionary<SaveResponse<ServerToken>> // the new/updated tokens by key
 ): ServerToken {
   return {
-    e: t.e > 0
-      ? t.e // it’s an existing event
-      : es[t.e].newPk!, // it’s a new event, use the server-supplied primary key.
-    fo: t.fo,
+    // event ID
+    e: (() => {
+      if (t.e > 0) {
+        // it’s an existing event
+        return t.e
+      } else {
+        // it’s a new event, use the server-supplied primary key.
+        return es[t.e].newPk!
+      }
+    })(),
+    // fragmentOf ID
+    fo: (() => {
+      // it has a fragment-of marker
+      if (t.fo !== undefined) {
+        // it refers to an existing token
+        if (t.fo > 0) {
+          return t.fo
+        // it refers to a new token => use the new key.
+        } else {
+          return tcs[t.fo].newPk
+        }
+      } else {
+        return undefined
+      }
+    })(),
     i: t.i,
     o: t.o,
     p: t.p,
@@ -485,9 +507,9 @@ function mergeTokenChanges(
     if (t.newStatus === 'deleted') {
       delete tokens[id]
     } else if (t.newStatus === 'inserted') {
-      tokens[t.newPk!] = serverTokenSaveResponseToServerToken(t, keyedEvents)
+      tokens[t.newPk!] = serverTokenSaveResponseToServerToken(t, keyedEvents, tcs)
     } else if (t.newStatus === 'updated') {
-      tokens[id] = serverTokenSaveResponseToServerToken(t, keyedEvents)
+      tokens[id] = serverTokenSaveResponseToServerToken(t, keyedEvents, tcs)
     }
   })
   return tokens
@@ -558,7 +580,7 @@ export function updateServerTranscriptWithChanges(st: ServerTranscript, ss: Serv
   }
 }
 
-function maybeAddFragments(base: string, next?: string) {
+function maybeReplaceFragments(base: string, next?: string) {
   if (next !== undefined && next !== '') {
     const res = replaceLastOccurrence(base, next, '=')
     console.log('added fragment', base, next, res)
@@ -614,16 +636,20 @@ export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenT
                   // width: getTextWidth(s.aTokens[tokenId].o!, 14, 'HKGrotesk'),
                   tiers: {
                     text: {
-                      text: maybeAddFragments(
+                      text: maybeReplaceFragments(
                         s.aTokens[tokenId].t,
-                        nextFragmentOfId !== undefined ? s.aTokens[nextFragmentOfId].t : ''
+                        nextFragmentOfId !== undefined
+                          ? s.aTokens[nextFragmentOfId].t
+                          : ''
                       ),
                       type: defaultTier === 'text' ? s.aTokens[tokenId].tt : null
                     },
                     ortho: {
-                      text: maybeAddFragments(
+                      text: maybeReplaceFragments(
                         s.aTokens[tokenId].o || '',
-                        nextFragmentOfId !== undefined ? s.aTokens[nextFragmentOfId].o : ''
+                        nextFragmentOfId !== undefined
+                          ? s.aTokens[nextFragmentOfId].o
+                          : ''
                       ),
                       type: defaultTier === 'ortho' ? s.aTokens[tokenId].tt : null
                     },
