@@ -625,50 +625,50 @@ export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenT
               }, {} as LocalTranscriptSpeakerEventTiers),
               speakerEventId: se.pk,
               // generate token tiers
-              tokens: _.map(se.tid[speakerKey] || [], (tokenId) => {
-                if (s.aTokens[tokenId] === undefined) {
-                  console.log('not found', tokenId, se)
-                }
-                // find out if this token is part of a fragmented token, and get id.
-                const nextFragmentOfId = findNextFragmentOfId(tokenId, speakerKey, Array.from(lG), iG, s.aTokens)
-                return {
-                  id: tokenId,
-                  fragmentOf: s.aTokens[tokenId].fo || null,
-                  sentenceId: s.aTokens[tokenId].s || null,
-                  order: s.aTokens[tokenId].tr,
-                  // TODO:
-                  // calculate the width ahead of time
-                  // and use that for virtual scrolling
-                  // width: getTextWidth(s.aTokens[tokenId].o!, 14, 'HKGrotesk'),
-                  tiers: {
-                    text: {
-                      // replace the adjunct fragments with "="
-                      text: maybeReplaceFragments(
-                        s.aTokens[tokenId].t,
-                        nextFragmentOfId !== undefined
-                          ? s.aTokens[nextFragmentOfId].t
-                          : ''
-                      ),
-                      type: defaultTier === 'text' ? s.aTokens[tokenId].tt : null
-                    },
-                    ortho: {
-                      // replace the adjunct fragments with "="
-                      text: maybeReplaceFragments(
-                        s.aTokens[tokenId].o || '',
-                        nextFragmentOfId !== undefined
-                          ? s.aTokens[nextFragmentOfId].o
-                          : ''
-                      ),
-                      type: defaultTier === 'ortho' ? s.aTokens[tokenId].tt : null
-                    },
-                    phon: {
-                      // don’t do that for phon. there are no fragments here.
-                      text: s.aTokens[tokenId].p !== undefined ? s.aTokens[tokenId].p as string : '',
-                      type: defaultTier === 'phon' ? s.aTokens[tokenId].tt : null
+              tokens: (se.tid[speakerKey] || [])
+                // remove tokens that have a bad reference.
+                .filter(tokenId => s.aTokens[tokenId] !== undefined)
+                .map((tokenId) => {
+                  // find out if this token is part of a fragmented token, and get id.
+                  const nextFragmentOfId = findNextFragmentOfId(tokenId, speakerKey, Array.from(lG), iG, s.aTokens)
+                  return {
+                    id: tokenId,
+                    fragmentOf: s.aTokens[tokenId].fo || null,
+                    sentenceId: s.aTokens[tokenId].s || null,
+                    order: s.aTokens[tokenId].tr,
+                    // TODO:
+                    // calculate the width ahead of time
+                    // and use that for virtual scrolling
+                    // width: getTextWidth(s.aTokens[tokenId].o!, 14, 'HKGrotesk'),
+                    tiers: {
+                      text: {
+                        // replace the adjunct fragments with "="
+                        text: maybeReplaceFragments(
+                          s.aTokens[tokenId].t,
+                          nextFragmentOfId !== undefined
+                            ? s.aTokens[nextFragmentOfId].t
+                            : ''
+                        ),
+                        type: defaultTier === 'text' ? s.aTokens[tokenId].tt : null
+                      },
+                      ortho: {
+                        // replace the adjunct fragments with "="
+                        text: maybeReplaceFragments(
+                          s.aTokens[tokenId].o || '',
+                          nextFragmentOfId !== undefined
+                            ? s.aTokens[nextFragmentOfId].o
+                            : ''
+                        ),
+                        type: defaultTier === 'ortho' ? s.aTokens[tokenId].tt : null
+                      },
+                      phon: {
+                        // don’t do that for phon. there are no fragments here.
+                        text: s.aTokens[tokenId].p !== undefined ? s.aTokens[tokenId].p as string : '',
+                        type: defaultTier === 'phon' ? s.aTokens[tokenId].tt : null
+                      }
                     }
                   }
-                }
-              })
+                })
             }
           })
           return m
