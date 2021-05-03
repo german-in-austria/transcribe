@@ -2,7 +2,7 @@
   <div class="fill-height">
     <v-toolbar class="elevation-0" fixed app>
       <v-flex xs4>
-        <v-btn icon @click="reload"><v-icon>chevron_left</v-icon></v-btn>
+        <v-btn icon @click="reload"><f-icon value="chevron_left" /></v-btn>
       </v-flex>
       <v-flex xs4 class="text-xs-center">
         <div style="opacity: .7; font-size: small">{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
@@ -14,7 +14,6 @@
             :disabled="eventStore.status === 'loading' || isSaving"
             open-on-hover
             min-width="150"
-            nudge-bottom="10"
             :transition="false"
             offset-y>
             <v-btn
@@ -23,7 +22,7 @@
               :loading="eventStore.status === 'loading' || isSaving"
               :disabled="eventStore.status === 'loading' || isSaving"
               icon flat>
-              <v-icon>save_alt</v-icon>
+              <f-icon value="save_alt" />
               <template v-slot:loader>
                 <v-progress-circular
                   :color="settings.darkMode ? '#fff' : '#333'"
@@ -91,7 +90,7 @@
                 <v-list-tile-title>Play</v-list-tile-title>
               </v-list-tile-content>
               <v-list-tile-action>
-                {{ displayKeyboardAction(keyboardShortcuts.playPause) }}
+                <keyboard-shortcut :value="keyboardShortcuts.playPause" />
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
@@ -100,7 +99,9 @@
               <v-list-tile-content>
                 <v-list-tile-title>Split</v-list-tile-title>
               </v-list-tile-content>
-              <v-list-tile-action>{{ displayKeyboardAction(keyboardShortcuts.split) }}</v-list-tile-action>
+              <v-list-tile-action>
+                <keyboard-shortcut :value="keyboardShortcuts.split" />
+              </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
               :disabled="keyboardShortcuts.joinEvents.disabled()"
@@ -108,7 +109,9 @@
               <v-list-tile-content>
                 <v-list-tile-title>Join</v-list-tile-title>
               </v-list-tile-content>
-              <v-list-tile-action>{{ displayKeyboardAction(keyboardShortcuts.joinEvents) }}</v-list-tile-action>
+              <v-list-tile-action>
+                <keyboard-shortcut :value="keyboardShortcuts.joinEvents" />
+              </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
               :disabled="eventStore.selectedEventIds.length === 0"
@@ -129,7 +132,7 @@
                 <v-list-tile-title>Show Transcript</v-list-tile-title>
               </v-list-tile-content>
               <v-list-tile-action>
-                {{ displayKeyboardAction(keyboardShortcuts.scrollToEvent) }}
+                <keyboard-shortcut :value="keyboardShortcuts.scrollToEvent" />
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
@@ -138,7 +141,7 @@
                 <v-list-tile-title>Inspect Event…</v-list-tile-title>
               </v-list-tile-content>
               <v-list-tile-action>
-                {{ displayKeyboardAction(keyboardShortcuts.inspectEvent) }}
+                <keyboard-shortcut :value="keyboardShortcuts.inspectEvent" />
               </v-list-tile-action>
             </v-list-tile>
             <v-divider />
@@ -148,7 +151,9 @@
               <v-list-tile-content>
                 <v-list-tile-title>Delete</v-list-tile-title>
               </v-list-tile-content>
-              <v-list-tile-action>{{ displayKeyboardAction(keyboardShortcuts.deleteEvents) }}</v-list-tile-action>
+              <v-list-tile-action>
+                <keyboard-shortcut :value="keyboardShortcuts.deleteEvents" />
+              </v-list-tile-action>
             </v-list-tile>
           </v-list>
         </v-menu>
@@ -189,6 +194,8 @@ import transcriptEditor from './TranscriptEditor.vue'
 import playHead from './PlayHead.vue'
 import dropAudioFile from './DropAudioFile.vue'
 import transcriptSettings from './TranscriptSettings.vue'
+import KeyboardShortcut from './helper/KeyboardShortcut.vue'
+
 import {
   LocalTranscriptEvent,
   addEventsToSelection,
@@ -241,7 +248,8 @@ import eventBus from '../service/event-bus'
     playHead,
     searchResultsInline,
     dropAudioFile,
-    playerBar
+    playerBar,
+    KeyboardShortcut
   }
 })
 

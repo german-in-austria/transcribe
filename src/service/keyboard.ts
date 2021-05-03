@@ -211,6 +211,14 @@ export async function handleGlobalShortcut(e: KeyboardEvent) {
   })
 }
 
+export function convertKey(a: KeyboardEvent['key']): string {
+  return keyMap[a] === undefined ? '' : keyMap[a].displayName
+}
+
+export function convertModifier(a: KeyboardModifier[]): string[] {
+  return a.map(m => keyMap[m] === undefined ? '' : keyMap[m].displayName)
+}
+
 export function displayKeyboardAction(a: KeyboardAction): string {
   return a.modifier
     // resolve modifier

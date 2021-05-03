@@ -83,14 +83,14 @@
                       :disabled="loadingTranscriptId !== null || transcript.locked === true"
                       @click="loadRemoteTranscript(transcript)">
                       <v-list-tile-avatar>
-                        <v-icon v-if="transcript.locked">lock</v-icon>
+                        <f-icon v-if="transcript.locked" value="lock" />
                         <v-progress-circular
                           class="mb-2"
                           size="20"
                           width="2"
                           v-else-if="loadingTranscriptId === transcript.pk"
                           indeterminate />
-                        <v-icon color="grey" v-else>cloud_queue</v-icon>
+                        <f-icon style="opacity: .5" value="cloud_queue" v-else />
                       </v-list-tile-avatar>
                       <v-list-tile-content>
                         <v-list-tile-title>

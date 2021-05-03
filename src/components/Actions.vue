@@ -23,8 +23,8 @@
           :disabled="sc.disabled ? sc.disabled() : false"
           v-show="sc.showInMenu === true"
           :key="k">
-          <v-list-tile-avatar>
-            <v-icon class="tool-icon">{{ sc.icon }}</v-icon>
+          <v-list-tile-avatar style="min-width: 42px">
+            <f-icon class="tool-icon" :dark="$vuetify.dark" :value="sc.icon" />
           </v-list-tile-avatar>
           <v-list-tile-content>
             <v-list-tile-title>
@@ -32,7 +32,7 @@
             </v-list-tile-title>
           </v-list-tile-content>
           <v-list-tile-action>
-            {{ displayKeyboardAction(sc) }}
+            <keyboard-shortcut style="opacity: .8" :value="sc" />
           </v-list-tile-action>
         </v-list-tile>
       </v-list-group>
@@ -42,10 +42,15 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import { displayKeyboardAction, KeyboardAction } from '../service/keyboard'
+import KeyboardShortcut from '@/components/helper/KeyboardShortcut.vue'
 import settings from '../store/settings'
 import _ from 'lodash'
 
-@Component
+@Component({
+  components: {
+    KeyboardShortcut
+  }
+})
 export default class Actions extends Vue {
   settings = settings
   displayKeyboardAction = displayKeyboardAction

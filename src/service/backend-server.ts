@@ -468,14 +468,36 @@ export function serverEventSaveResponseToServerEvent(e: ServerEventSaveResponse)
 }
 
 export function serverTokenSaveResponseToServerToken(
-  t: SaveResponse<ServerToken>,
-  es: _.Dictionary<SaveResponse<ServerEvent>>
+  t: SaveResponse<ServerToken>, // the token
+  es: _.Dictionary<SaveResponse<ServerEvent>>, // the new/updated events by key
+  tcs: _.Dictionary<SaveResponse<ServerToken>> // the new/updated tokens by key
 ): ServerToken {
   return {
-    e: t.e > 0
-      ? t.e // it’s an existing event
-      : es[t.e].newPk!, // it’s a new event, use the server-supplied primary key.
-    fo: t.fo,
+    // event ID
+    e: (() => {
+      if (t.e > 0) {
+        // it’s an existing event
+        return t.e
+      } else {
+        // it’s a new event, use the server-supplied primary key.
+        return es[t.e].newPk!
+      }
+    })(),
+    // fragmentOf ID
+    fo: (() => {
+      // it has a fragment-of marker
+      if (t.fo !== undefined) {
+        // it refers to an existing token
+        if (t.fo > 0) {
+          return t.fo
+        // it refers to a new token => use the new key.
+        } else {
+          return tcs[t.fo].newPk
+        }
+      } else {
+        return undefined
+      }
+    })(),
     i: t.i,
     o: t.o,
     p: t.p,
@@ -499,9 +521,9 @@ function mergeTokenChanges(
     if (t.newStatus === 'deleted') {
       delete tokens[id]
     } else if (t.newStatus === 'inserted') {
-      tokens[t.newPk!] = serverTokenSaveResponseToServerToken(t, keyedEvents)
+      tokens[t.newPk!] = serverTokenSaveResponseToServerToken(t, keyedEvents, tcs)
     } else if (t.newStatus === 'updated') {
-      tokens[id] = serverTokenSaveResponseToServerToken(t, keyedEvents)
+      tokens[id] = serverTokenSaveResponseToServerToken(t, keyedEvents, tcs)
     }
   })
   return tokens
@@ -572,7 +594,7 @@ export function updateServerTranscriptWithChanges(st: ServerTranscript, ss: Serv
   }
 }
 
-function maybeAddFragments(base: string, next?: string) {
+function maybeReplaceFragments(base: string, next?: string) {
   if (next !== undefined && next !== '') {
     const res = replaceLastOccurrence(base, next, '=')
     console.log('added fragment', base, next, res)
@@ -594,64 +616,73 @@ export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenT
     // generate unified local events
     .map((eG: ServerEvent[], iG, lG) => {
       return {
+        // start and end time and id are based on the first unified event.
         eventId: eG[0].pk,
         startTime: timeToSeconds(eG[0].s),
         endTime: timeToSeconds(eG[0].e),
         speakerEvents: _.reduce(eG, (m, se) => {
-          // here we iterate over the speakers who have tokens,
-          // in order to generate the speaker events.
-          // this is a mistake however, because it speakers who only have event_tiers and no tokens.
-          _.each(se.tid, (tokenIds, speakerKey) => {
+          // get speakers who have either tokens or entries in event tiers in this group
+          const speakers = Object.keys({ ...se.tid, ...se.event_tiers })
+          _.each(speakers, (speakerKey) => {
+            // generate a speaker event for each speaker
             m[speakerKey] = {
+              // generate event tiers
               speakerEventTiers: _(eG).reduce((ts, e) => {
-                _(e.event_tiers[speakerKey]).each((t, tierEventId) => {
+                _(e.event_tiers[speakerKey] || []).each((t, tierEventId) => {
                   ts[t.ti] = {
                     id: tierEventId,
                     type: 'freeText',
                     text: t.t
                   }
-                  // why return in an each?
-                  return ts[t.ti]
                 })
                 return ts
               }, {} as LocalTranscriptSpeakerEventTiers),
               speakerEventId: se.pk,
-              tokens: _.map(tokenIds, (tokenId) => {
-                if (s.aTokens[tokenId] === undefined) {
-                  console.log('not found', tokenId, se)
-                }
-                const nextFragmentOfId = findNextFragmentOfId(tokenId, speakerKey, Array.from(lG), iG, s.aTokens)
-                return {
-                  id: tokenId,
-                  fragmentOf: s.aTokens[tokenId].fo || null,
-                  sentenceId: s.aTokens[tokenId].s || null,
-                  order: s.aTokens[tokenId].tr,
-                  // TODO: proposal:
-                  // calculate the width ahead of time
-                  // and use that for virtual scrolling
-                  // width: getTextWidth(s.aTokens[tokenId].o!, 14, 'HKGrotesk'),
-                  tiers: {
-                    text: {
-                      text: maybeAddFragments(
-                        s.aTokens[tokenId].t,
-                        nextFragmentOfId !== undefined ? s.aTokens[nextFragmentOfId].t : ''
-                      ),
-                      type: defaultTier === 'text' ? s.aTokens[tokenId].tt : null
-                    },
-                    ortho: {
-                      text: maybeAddFragments(
-                        s.aTokens[tokenId].o || '',
-                        nextFragmentOfId !== undefined ? s.aTokens[nextFragmentOfId].o : ''
-                      ),
-                      type: defaultTier === 'ortho' ? s.aTokens[tokenId].tt : null
-                    },
-                    phon: {
-                      text: s.aTokens[tokenId].p !== undefined ? s.aTokens[tokenId].p as string : '',
-                      type: defaultTier === 'phon' ? s.aTokens[tokenId].tt : null
+              // generate token tiers
+              tokens: (se.tid[speakerKey] || [])
+                // remove tokens that have a bad reference.
+                .filter(tokenId => s.aTokens[tokenId] !== undefined)
+                .map((tokenId) => {
+                  // find out if this token is part of a fragmented token, and get id.
+                  const nextFragmentOfId = findNextFragmentOfId(tokenId, speakerKey, Array.from(lG), iG, s.aTokens)
+                  return {
+                    id: tokenId,
+                    fragmentOf: s.aTokens[tokenId].fo || null,
+                    sentenceId: s.aTokens[tokenId].s || null,
+                    order: s.aTokens[tokenId].tr,
+                    // TODO:
+                    // calculate the width ahead of time
+                    // and use that for virtual scrolling
+                    // width: getTextWidth(s.aTokens[tokenId].o!, 14, 'HKGrotesk'),
+                    tiers: {
+                      text: {
+                        // replace the adjunct fragments with "="
+                        text: maybeReplaceFragments(
+                          s.aTokens[tokenId].t,
+                          nextFragmentOfId !== undefined
+                            ? s.aTokens[nextFragmentOfId].t
+                            : ''
+                        ),
+                        type: defaultTier === 'text' ? s.aTokens[tokenId].tt : null
+                      },
+                      ortho: {
+                        // replace the adjunct fragments with "="
+                        text: maybeReplaceFragments(
+                          s.aTokens[tokenId].o || '',
+                          nextFragmentOfId !== undefined
+                            ? s.aTokens[nextFragmentOfId].o
+                            : ''
+                        ),
+                        type: defaultTier === 'ortho' ? s.aTokens[tokenId].tt : null
+                      },
+                      phon: {
+                        // don’t do that for phon. there are no fragments here.
+                        text: s.aTokens[tokenId].p !== undefined ? s.aTokens[tokenId].p as string : '',
+                        type: defaultTier === 'phon' ? s.aTokens[tokenId].tt : null
+                      }
                     }
                   }
-                }
-              })
+                })
             }
           })
           return m
@@ -851,7 +882,7 @@ function appendTranscriptEventChunk(a: LocalTranscriptEvent[], b: LocalTranscrip
       lastOfPrevious.startTime === firstOfNext.startTime &&
       lastOfPrevious.endTime === firstOfNext.endTime
     ) {
-      // merge
+      // merge the event
       const mergedEvent: LocalTranscriptEvent = {
         ...lastOfPrevious,
         speakerEvents: {
@@ -887,7 +918,7 @@ export async function getTranscript(
     // merge the chunk
     mergeServerTranscript(res)
 
-    // when it’s the first page, get it’s metadata
+    // when it’s the first page, get its metadata
     if (res.aNr === 0) {
       eventStore.metadata = getMetadataFromServerTranscript(res)
     }

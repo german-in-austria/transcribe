@@ -1,5 +1,6 @@
 import Vue from 'vue'
 import Main from './components/Main.vue'
+import fIcon from './components/helper/FIcon.vue'
 import router from './router'
 import * as fontLoader from 'webfontloader'
 import Vuetify from 'vuetify'
@@ -23,6 +24,9 @@ Vue.use(Vuetify, {
   iconfont: 'mdi'
 })
 Vue.use(VueRouter)
+
+// a replacement for the rather slow v-icon component.
+Vue.component('f-icon', fIcon)
 
 // load webfonts asynchronously
 if (window) {
