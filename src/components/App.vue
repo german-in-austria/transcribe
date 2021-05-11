@@ -67,6 +67,7 @@
                 </v-layout>
                 <v-text-field
                   solo
+                  flat
                   v-model="searchTerm"
                   placeholder="search…"
                   hide-details

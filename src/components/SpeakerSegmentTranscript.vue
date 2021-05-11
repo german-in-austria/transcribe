@@ -6,6 +6,7 @@
       settings.darkMode === false && 'theme--light'
     ]">
     <div :class="['token-display', 'segment-text']">
+      <span v-if="localTokens.length === 0" class="token" />
       <span
         class="token"
         v-for="(token, i) in localTokens"
@@ -62,7 +63,7 @@
       :style="{ height: tierHeight + 1 + 'px' }"
       :class="['secondary-free-text-tier', settings.darkMode === true && 'theme--dark']">
       <span
-        v-if="localTokens.length && tier.type === 'freeText'"
+        v-if="tier.type === 'freeText'"
         v-text="getTierFreeTextText(tier.id)"
         contenteditable="true"
         :id="`speaker_event_tier_${speaker}__${tier.id}`"
@@ -137,7 +138,6 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   settings = settings
   playEvent = playEvent
-  updateSpeakerEvent = updateSpeakerEvent
 
   debouncedUpdateTokenTier = _.debounce(this.updateTokenTier, 300)
   debouncedUpdateEventTier = _.debounce(this.updateEventTier, 300)
@@ -152,7 +152,7 @@ export default class SpeakerSegmentTranscript extends Vue {
     eventBus.$off('updateSpeakerEventText', this.updateTextFromEventBus)
   }
 
-  updateTextFromEventBus({eventId, speakerId, text}: { eventId: string, speakerId: string, text: string }) {
+  updateTextFromEventBus({ eventId, speakerId, text }: { eventId: string, speakerId: string, text: string }) {
     if (Number(eventId) === this.event.eventId && speakerId === this.speaker) {
       this.segmentText = text.replace(/\s/g, ' ')
       this.updateDefaultTier(this.segmentText)
@@ -405,7 +405,13 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   colorFromTokenType(id: number): string {
-    const c = presets[settings.projectPreset].tokenTypes.find(tt => tt.id === id)
+    const c = presets[settings.projectPreset].tokenTypes.concat({
+      name: 'placeholder',
+      type: 'single',
+      regex: /⦿/,
+      color: 'grey',
+      id: -2
+    }).find(tt => tt.id === id)
     if (c) {
       return c.color
     } else {
@@ -422,7 +428,8 @@ export default class SpeakerSegmentTranscript extends Vue {
           ...this.localEvent.speakerEvents[this.speaker],
           tokens: this.localTokens
         }
-      }}
+      }
+    }
     if (!isEqualDeep(this.localEvent, oldEvent)) {
       undoable(updateSpeakerEvent(newEvent, Number(this.speaker)))
       this.updateAllTokenTypes(newEvent)
@@ -453,7 +460,7 @@ export default class SpeakerSegmentTranscript extends Vue {
         [ this.speaker ]: {
           ...this.localEvent.speakerEvents[this.speaker],
           speakerEventTiers: {
-            ...this.localEvent.speakerEvents[this.speaker].speakerEventTiers,
+            ...(this.localEvent.speakerEvents[this.speaker] || {}).speakerEventTiers,
             [ tierId ]: {
               id: String(makeEventTierId()),
               type: 'freeText',
@@ -489,6 +496,10 @@ export default class SpeakerSegmentTranscript extends Vue {
       }
     } else if (this.isValidTierEventText(cleanText)) {
       // create
+      if (this.localTokens.length === 0) {
+        // if there are no tokens, put the placeholder.
+        this.updateLocalTokens(settings.placeholderToken)
+      }
       this.createEventTier(cleanText, tierId)
       this.commitEvent()
     }

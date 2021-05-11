@@ -154,9 +154,7 @@ export const eventStore = {
   status: 'empty' as 'empty'|'loading'|'finished'|'new',
   playAllFrom: null as number|null,
   audioElement: document.createElement('audio')
-};
-
-(window as any).eventStore = eventStore;
+}
 
 export function tokenTypeFromToken(token: string) {
   const type = _(presets[settings.projectPreset].tokenTypes).find((tt) => {
@@ -164,6 +162,12 @@ export function tokenTypeFromToken(token: string) {
   })
   if (type !== undefined) {
     return type
+  } else if (token === settings.placeholderToken) {
+    return {
+      name: 'placeholder',
+      color: 'grey',
+      id: -2
+    }
   } else {
     return {
       name: 'error',

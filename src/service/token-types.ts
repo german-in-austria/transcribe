@@ -27,11 +27,15 @@ export function computeTokenTypesForEvents(
   let currentBracketGroup: TokenTypesPresetGroup|null = null
   const newEs = iterateTokensBySpeakers(es, speakerIds, (t) => {
     const cleanText = t.tiers[defaultTier].text.replace('=', '')
+    // we’re currently in an open group, so we’re
+    // looking for closing brackets
     if (currentBracketGroup !== null) {
       t.tiers[defaultTier].type = currentBracketGroup.id
       if (currentBracketGroup.bracketSymbols[1].test(cleanText)) {
         currentBracketGroup = null
       }
+    // we’re not, so we’re either looking
+    // for single tokens or for opening brackets
     } else {
       const type = presets[settings.projectPreset].tokenTypes.find((tt) => {
         if (tt.type === 'single') {
@@ -48,8 +52,13 @@ export function computeTokenTypesForEvents(
           }
         }
       })
-      if (type === undefined) {
+      // it’s the placeholder token
+      if (cleanText === settings.placeholderToken) {
+        t.tiers[defaultTier].type = -2
+      // its type could not be identified
+      } else if (type === undefined) {
         t.tiers[defaultTier].type = -1
+      // its type was found.
       } else {
         t.tiers[defaultTier].type = type.id
       }
