@@ -266,8 +266,7 @@ export function importableToServerTranscript(
                     }
                     // if it’s a fragment, add it to the fragment starting token.
                     if (fragmentOf !== undefined) {
-                      tokens[fragmentOf].o = tokens[fragmentOf].o
-                      + getTierToken(speakerTiers, defaultTier, e, 0)
+                      tokens[fragmentOf].o = tokens[fragmentOf].o + getTierToken(speakerTiers, defaultTier, e, 0)
                     }
                     tokens[tokenId] = token
                     return tokenId
@@ -320,11 +319,12 @@ export default function parseTree(xmlTree: BasicNode, fileName: string): ParsedE
 
   if (xmlTree.children && xmlTree.children[0] && xmlTree.children[0].children) {
     const basicBody = _(xmlTree.children[0].children).find({ name: 'basic-body' })
+
     if (basicBody !== undefined) {
       const commonTimeline = _(basicBody.children).find({ name: 'common-timeline' })
       const tiers = _(basicBody.children).filter(t => t.name === 'tier').value() as TierNode[]
-      if (commonTimeline !== undefined) {
 
+      if (commonTimeline !== undefined) {
         const commonTimelineByTli = _(commonTimeline.children)
           .filter((t): t is TliNode => t.name === 'tli')
           .keyBy(t => t.attributes.id)

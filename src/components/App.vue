@@ -148,7 +148,8 @@ import settings from '../store/settings'
 import {
   eventStore,
   loadAudioFromFile,
-  loadAudioFromUrl
+  loadAudioFromUrl,
+  insertPlaceholderTokens
 } from '../store/transcript'
 
 import { computeTokenTypesForEvents } from '../service/token-types'
@@ -334,16 +335,25 @@ export default class App extends Vue {
   }
 
   async loadLocalTranscript(t: ServerTranscript, audioData: File|Uint8Array|null, audioUrl?: string): Promise<string> {
+    // update the UI state
     this.importingLocalFile = false
     this.loadingTranscriptId = null
+    // update the state in the server transcript module
     mergeServerTranscript(t)
+    // get the metadata
     eventStore.metadata = getMetadataFromServerTranscript(t)
-    const events = serverTranscriptToLocal(t, eventStore.metadata.defaultTier || 'text')
+    const defaultTier = eventStore.metadata.defaultTier || 'text'
+    // convert the transcript
+    const events = serverTranscriptToLocal(t, defaultTier)
+    // compute all types
     eventStore.events = computeTokenTypesForEvents(
       events,
       eventStore.metadata.defaultTier || 'text',
       _(eventStore.metadata.speakers).map((s, k) => k).value()
     )
+    // insert placeholders where necessary
+    eventStore.events = insertPlaceholderTokens(eventStore.events, defaultTier)
+    // get audio url
     if (audioData !== null) {
       const audioElement = await loadAudioFromFile(audioData)
       eventStore.status = 'finished'
