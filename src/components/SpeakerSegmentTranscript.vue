@@ -637,6 +637,7 @@ export default class SpeakerSegmentTranscript extends Vue {
     color #333
     &.theme--dark
       background #3e3e3e
+      color #ccc
     &:empty
       background #eee
       &.theme--dark
