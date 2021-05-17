@@ -372,10 +372,10 @@ export default class ExmaraldaImporter extends Vue {
   isAnythingOrAllSelected: boolean|null = false
   visiblePreviewTier: string|null = null
 
-  updateBasicInfo(args: { transcriptName: string, selectedSurvey: ServerSurvey, preset: ProjectPresetName}) {
+  updateBasicInfo(args: { transcriptName: string, selectedSurvey: ServerSurvey, projectPreset: ProjectPresetName}) {
     this.transcriptName = args.transcriptName
     this.selectSurvey(args.selectedSurvey)
-    settings.projectPreset = args.preset
+    settings.projectPreset = args.projectPreset
   }
 
   updateTierTokenTypeAndGlobalDefault(i: number, t: TokenTierType) {
