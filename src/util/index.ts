@@ -149,9 +149,9 @@ export function platform(): 'windows'|'mac'|'linux' {
   }
 }
 
-export async function asyncForEach<T>(array: T[], callback: (e: T, i: number, l: T[]) => void) {
+export async function asyncForEach<T>(array: T[], callback: (e: T, i: number, l: T[]) => Promise<void>) {
   for (let index = 0; index < array.length; index++) {
-    await callback(array[index], index, array);
+    await callback(array[index], index, array)
   }
 }
 
@@ -166,7 +166,7 @@ export function easeInOutQuad(t: number, b: number, c: number, d: number): numbe
     return c / 2 * t * t + b
   }
   t--
-  return -c / 2 * ( t * ( t - 2 ) - 1) + b
+  return -c / 2 * (t * (t - 2) - 1) + b
 }
 
 export function padEnd(string: string, targetLength: number, padString: string) {

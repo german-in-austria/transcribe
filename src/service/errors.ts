@@ -25,8 +25,8 @@ export function getErrors(es: LocalTranscriptEvent[]): ErrorEvent[] {
       settings.showErrors.eventOverlaps === false
         ? []
         : events.filter((e, i) => {
-            return events[i - 1] !== undefined && +e.startTime.toFixed(2) < +events[i - 1].endTime.toFixed(2)
-          })
+          return events[i - 1] !== undefined && +e.startTime.toFixed(2) < +events[i - 1].endTime.toFixed(2)
+        })
           .map(e => ({
             error_id: 'overlap_' + e.eventId,
             error_type: 'event_overlap',
@@ -37,24 +37,24 @@ export function getErrors(es: LocalTranscriptEvent[]): ErrorEvent[] {
     // find events with unknown types
     .concat(
       settings.showErrors.unknownTokenTypes === false
-      ? []
-      : events.filter((e) => {
+        ? []
+        : events.filter((e) => {
           return _(e.speakerEvents).some((se) => {
             return _(se.tokens).some((t) => t.tiers[eventStore.metadata.defaultTier].type === -1)
           })
         })
-        .map(e => ({
-          error_id: 'unknown_' + e.eventId,
-          error_type: 'unknown_token',
-          event: e,
-          metadata: null
-        } as ErrorEvent))
+          .map(e => ({
+            error_id: 'unknown_' + e.eventId,
+            error_type: 'unknown_token',
+            event: e,
+            metadata: null
+          } as ErrorEvent))
     )
     // find gaps
     .concat(
       settings.showErrors.eventGaps === false
-      ? []
-      : es.reduce((m, e, i, l) => {
+        ? []
+        : es.reduce((m, e, i, l) => {
           const gap = l[i + 1] !== undefined ? l[i + 1].startTime - e.endTime : 0
           if (gap > settings.maxEventGap) {
             m.push({

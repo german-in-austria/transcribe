@@ -154,9 +154,7 @@ export const eventStore = {
   status: 'empty' as 'empty'|'loading'|'finished'|'new',
   playAllFrom: null as number|null,
   audioElement: document.createElement('audio')
-};
-
-(window as any).eventStore = eventStore;
+}
 
 export function tokenTypeFromToken(token: string) {
   const type = _(presets[settings.projectPreset].tokenTypes).find((tt) => {
@@ -164,6 +162,12 @@ export function tokenTypeFromToken(token: string) {
   })
   if (type !== undefined) {
     return type
+  } else if (token === settings.placeholderToken) {
+    return {
+      name: 'placeholder',
+      color: 'grey',
+      id: -2
+    }
   } else {
     return {
       name: 'error',
@@ -1139,6 +1143,72 @@ export function findEventGaps(es: LocalTranscriptEvent[], maxGap = .1): Array<{ 
     }
     return m
   }, [] as Array<{ duration: number, start: number, end: number }>)
+}
+
+export function updateTokenOrder(es: LocalTranscriptEvent[]): LocalTranscriptEvent[] {
+  let tr = 0
+  return es.map(e => {
+    return {
+      ...e,
+      speakerEvents: _.mapValues(e.speakerEvents, (se) => {
+        return {
+          ...se,
+          tokens: se.tokens.map(t => {
+            return {
+              ...t,
+              order: tr++
+            }
+          })
+        }
+      })
+    }
+  })
+}
+
+export function insertPlaceholderTokens(es: LocalTranscriptEvent[], defaultTier: TokenTierType): LocalTranscriptEvent[] {
+  const newEs = es.map((e) => {
+    return {
+      ...e,
+      speakerEvents: _.mapValues(e.speakerEvents, (se) => {
+        return {
+          ...se,
+          tokens: ((): LocalTranscriptToken[] => {
+            if (se.tokens.length === 0 && Object.keys(se.speakerEventTiers).length > 0) {
+              return [
+                {
+                  fragmentOf: null,
+                  id: makeTokenId(),
+                  order: -1, // this gets updated later on
+                  sentenceId: null,
+                  tiers: {
+                    ortho: {
+                      text: '',
+                      type: null
+                    },
+                    phon: {
+                      text: '',
+                      type: null
+                    },
+                    text: {
+                      text: '',
+                      type: null
+                    },
+                    [ defaultTier ]: {
+                      text: settings.placeholderToken,
+                      type: -2
+                    }
+                  }
+                }
+              ]
+            } else {
+              return se.tokens
+            }
+          })()
+        }
+      })
+    }
+  })
+  return updateTokenOrder(newEs)
 }
 
 export function joinEvents(eventIds: number[]): HistoryEventAction {

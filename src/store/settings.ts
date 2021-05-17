@@ -56,6 +56,7 @@ export interface Settings {
   useMonoWaveForm: boolean
   waveFormColors: string[]
   playEventOnAppend: boolean
+  placeholderToken: string
   scrollSpeed: 1
   showErrors: {
     eventGaps: boolean
@@ -238,6 +239,7 @@ const settings: Settings = {
   projectPreset: 'PP03',
   useMonoWaveForm: false,
   waveFormColors: [ '#fb7676', '#6699CC' ],
+  placeholderToken: '⦿',
   playEventOnAppend: true,
   scrollSpeed: 1,
   showErrors: {
