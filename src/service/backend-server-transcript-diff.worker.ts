@@ -77,7 +77,7 @@ function getTokenTextWithFragments(
     if (tokenHasFragment(newText)) {
       console.log('newText', newText, nextToken)
       // tslint:disable-next-line:max-line-length
-      return newText.replace('=', '') + getTokenTextWithFragments(nextToken, speakerId, es, defaultTier)
+      return t.tiers[defaultTier].text.replace('=', '') + getTokenTextWithFragments(nextToken, speakerId, es, defaultTier)
     } else {
       return newText
     }
