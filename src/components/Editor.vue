@@ -155,6 +155,11 @@
                 <keyboard-shortcut :value="keyboardShortcuts.deleteEvents" />
               </v-list-tile-action>
             </v-list-tile>
+            <v-list-tile @click="transcribeEvent">
+              <v-list-tile-content>
+                <v-list-tile-title>Auto-Transcribe Event</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
           </v-list>
         </v-menu>
       </div>
@@ -211,11 +216,13 @@ import {
   scrollToAudioEvent,
   scrollToTranscriptEvent,
   selectEvents,
-  splitEvent
+  splitEvent,
+  getTextFromTokens
 } from '../store/transcript'
 
 import { saveChangesToServer, serverTranscript } from '../service/backend-server'
 import { handleGlobalShortcut, keyboardShortcuts, displayKeyboardAction } from '../service/keyboard'
+import kaldiService from '../service/kaldi/kaldiService'
 
 import {
   isCmdOrCtrl
@@ -296,6 +303,26 @@ export default class Editor extends Vue {
     const f = await generateProjectFile(eventStore, overviewWave, settings, audio.store.uint8Buffer, history.actions)
     saveAs(f, (eventStore.metadata.transcriptName || 'unnamed_transcript') + '.transcript')
     this.isSaving = false
+  }
+
+  async transcribeEvent() {
+    const e = getSelectedEvent()
+    if (e !== undefined) {
+      const buffer = await audio.decodeBufferTimeSlice(e.startTime, e.endTime, audio.store.uint8Buffer.buffer)
+      const result = await kaldiService.transcribeAudio(
+        window.location.origin + '/kaldi-models/german.zip',
+        buffer,
+        (status: string) => {
+          if (status === 'DOWNLOADING_MODEL') {
+            console.log('loading model…')
+          } else if (status === 'INITIALIZING_MODEL') {
+            console.log('init…')
+          } else {
+            console.log(status)
+          }
+        }
+      )
+    }
   }
 
   async saveToServer() {

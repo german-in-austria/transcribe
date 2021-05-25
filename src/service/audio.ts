@@ -332,7 +332,7 @@ async function drawSpectrogramAsync(
   return [canvas, f]
 }
 
-function sumChannels(first: Float32Array, second: Float32Array): Float32Array {
+export function sumChannels(first: Float32Array, second: Float32Array): Float32Array {
   const sum = new Float32Array(first.length)
   first.forEach((v: number, i: number) => {
     sum[i] = v + second[i]

@@ -23,6 +23,24 @@ module.exports = {
         }
       ]
     })
+    config.module.rules.unshift(
+      {
+        test: /workers\/.*\.js$/,
+        loader: 'worker-loader',
+        options: {
+          filename: '[name].[contenthash].js'
+        }
+      }
+    )
+    config.module.rules.unshift({
+      test: /\.wasm$/,
+      type: 'javascript/auto',
+      loader: 'file-loader',
+      options: {
+        publicPath: '',
+        name: '[name].[hash].[ext]'
+      }
+    })
   },
   devServer: {
     open: 'Google Chrome',
