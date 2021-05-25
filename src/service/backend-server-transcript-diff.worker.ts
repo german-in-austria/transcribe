@@ -64,17 +64,20 @@ function getTokenTextWithFragments(
   es: LocalTranscriptEvent[],
   defaultTier: TokenTierType
 ): string {
+  // find the event that should come immediately after
   const event = es.find((e) => {
     return e.speakerEvents[speakerId] !== undefined &&
     e.speakerEvents[speakerId].tokens[0] !== undefined &&
-    e.speakerEvents[speakerId].tokens[0].fragmentOf === t.id
+    e.speakerEvents[speakerId].tokens[0].fragmentOf === t.id &&
+    e.speakerEvents[speakerId].tokens[0].id !== t.id
   })
   if (event !== undefined) {
     const nextToken = event.speakerEvents[speakerId].tokens[0]
     const newText = replaceLastOccurrence(t.tiers[defaultTier].text, '=', nextToken.tiers[defaultTier].text)
     if (tokenHasFragment(newText)) {
+      console.log('newText', newText, nextToken)
       // tslint:disable-next-line:max-line-length
-      return t.tiers[defaultTier].text.replace('=', '') + getTokenTextWithFragments(nextToken, speakerId, es, defaultTier)
+      return newText.replace('=', '') + getTokenTextWithFragments(nextToken, speakerId, es, defaultTier)
     } else {
       return newText
     }
