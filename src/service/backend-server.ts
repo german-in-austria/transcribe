@@ -289,7 +289,10 @@ export function getMetadataFromServerTranscript(res: ServerTranscript) {
     tokenTypes: res.aTokenTypes!,
     transcriptName: res.aTranskript!.n,
     defaultTier,
-    audioUrl: getAudioUrlFromServerNames(res.aEinzelErhebung!.af, res.aEinzelErhebung!.dp),
+    audioUrl: getAudioUrlFromServerNames(
+      res.aEinzelErhebung ? res.aEinzelErhebung.af : undefined,
+      res.aEinzelErhebung ? res.aEinzelErhebung.dp : undefined
+    ),
     tiers: [
       {
         searchInTier: true,
@@ -681,15 +684,19 @@ export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenT
 }
 
 export async function getSurveys(): Promise<ServerSurvey[]> {
-  const x = await (await fetch(`${ settings.backEndUrl }/routes/einzelerhebungen`, {
-    credentials: 'include',
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    }
-  })).json()
-  return x.einzelerhebungen
+  if (settings.backEndUrl !== null) {
+    const x = await (await fetch(`${ settings.backEndUrl }/routes/einzelerhebungen`, {
+      credentials: 'include',
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    })).json()
+    return x.einzelerhebungen
+  } else {
+    return []
+  }
 }
 
 export async function createEmptyTranscript(

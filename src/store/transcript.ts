@@ -339,6 +339,10 @@ export function makeEventTierId() {
   return Number(_.uniqueId()) * -1
 }
 
+export function makeSpeakerId() {
+  return Number(_.uniqueId()) * -1
+}
+
 export function sortEvents(es: LocalTranscriptEvent[]): LocalTranscriptEvent[] {
   return _.sortBy(es, (e) => e.startTime)
 }

@@ -49,7 +49,8 @@ module.exports = {
     '@typescript-eslint/no-inferrable-types': 'off',
     'computed-property-spacing': 'off',
     'array-bracket-spacing': 'off',
-    'operator-linebreak': 'off'
+    'operator-linebreak': 'off',
+    'template-curly-spacing': 'off'
   },
   overrides: [
     {
