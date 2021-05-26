@@ -30,24 +30,31 @@
           column>
           <v-flex xs1>
             <v-combobox
-              style="width: 300px; margin: 20px auto 0 auto"
               @change="connectToBackend"
               :loading="isLoadingBackendUrl"
               :error-messages="this.errorMessage !==  null ? [ this.errorMessage ] : []"
               auto-select-first
+              solo
+              flat
               v-model="settings.backEndUrl"
               :items="backEndUrls"
+              :return-object="false"
+              dense
               label="Select a Back End"
             ></v-combobox>
           </v-flex>
-          <div v-if="settings.backEndUrl !== null && loggedIn === false">
+          <div
+            v-if="settings.backEndUrl !== null && loggedIn === false"
+            class="text-xs-center"
+          >
             Please <a :href="`${ settings.backEndUrl }/login/`" target="_blank">login</a> and <a @click="loadTranscriptList(settings.backEndUrl)">refresh</a>
           </div>
           <v-progress-circular
             indeterminate
-            v-if="eventStore.transcripts === null && loggedIn === true && settings.backEndUrl !== null"/>
-            <v-flex v-if="eventStore.transcripts !== null">
-              <v-layout justify-center row>
+            v-if="eventStore.transcripts === null && loggedIn === true && settings.backEndUrl !== null"
+          />
+          <v-flex v-if="eventStore.transcripts !== null">
+            <v-layout justify-center row>
               <v-flex class="pt-5 pl-4 pr-4" xs12 md6>
                 <h1 class="text-xs-center text-light text-uppercase mt-3 mb-4">
                   Transcribe
@@ -56,12 +63,12 @@
                   <v-flex class="pr-1" xs6>
                     <v-btn
                       :loading="importingLocalFile" @click="openFileDialog" class="mb-2 elevation-0" style="height: 40px;" block>
-                      Open/Import File…
+                      Open/Import File …
                     </v-btn>
                   </v-flex>
                   <v-flex class="pl-1" xs6>
                     <v-btn @click="newTranscript" class="mb-2 elevation-0" style="height: 40px;" block>
-                      New Transcript…
+                      New Transcript …
                     </v-btn>
                   </v-flex>
                 </v-layout>
@@ -69,13 +76,16 @@
                   solo
                   flat
                   v-model="searchTerm"
-                  placeholder="search…"
+                  placeholder="Search …"
                   hide-details
                   prepend-inner-icon="search"
                   autofocus />
                 <v-list two-line style="background: transparent">
-                  <v-subheader>
+                  <v-subheader v-if="settings.backEndUrl !== null">
                     Server Transcripts
+                  </v-subheader>
+                  <v-subheader v-else>
+                    Local Transcripts
                   </v-subheader>
                   <template v-for="(transcript) in filteredTranscriptList">
                     <v-divider :key="'dk' + transcript.pk" />
@@ -108,11 +118,9 @@
                       </v-list-tile-action>
                     </v-list-tile>
                   </template>
-                  <v-list-tile class="text-xs-center" v-if="filteredTranscriptList.length === 0">
-                    <span class="caption">
-                      no matching transcripts found
-                    </span>
-                  </v-list-tile>
+                  <div class="caption text-xs-center grey--text" v-if="filteredTranscriptList.length === 0">
+                    no matching transcripts found
+                  </div>
                 </v-list>
               </v-flex>
             </v-layout>
@@ -200,11 +208,30 @@ export default class App extends Vue {
   settings = settings
 
   backEndUrls = [
-    'https://dioedb.dioe.at',
-    'https://dissdb.dioe.at',
-    'https://dissdb-test.dioe.at',
-    'http://localhost:8000',
-    'https://dioedb.demo.dioe.at'
+    {
+      text: '(None)',
+      value: null
+    },
+    {
+      text: 'dioedb.dioe.at',
+      value: 'https://dioedb.dioe.at'
+    },
+    {
+      text: 'dissdb.dioe.at',
+      value: 'https://dissdb.dioe.at'
+    },
+    {
+      text: 'dissdb-test.dioe.at',
+      value: 'https://dissdb-test.dioe.at'
+    },
+    {
+      text: 'localhost:8000 (development)',
+      value: 'http://localhost:8000',
+    },
+    {
+      text: 'dioedb.demo.dioe.at',
+      value: 'https://dioedb.demo.dioe.at'
+    }
   ]
 
   searchTerm = ''
@@ -219,10 +246,16 @@ export default class App extends Vue {
   async onUpdateBackEndUrl(url: string|null) {
     if (url !== null) {
       this.connectToBackend(url)
+    } else {
+      this.useLocalTranscripts()
     }
   }
 
-  async connectToBackend(url: string) {
+  useLocalTranscripts() {
+    eventStore.transcripts = []
+  }
+
+  async connectToBackend(url: string|null) {
     this.isLoadingBackendUrl = true
     settings.backEndUrl = url
     this.updateTokenTypePreset()
@@ -266,20 +299,24 @@ export default class App extends Vue {
     }
   }
 
-  async loadTranscriptList(url: string) {
-    try {
-      this.errorMessage = null
-      const res = await getServerTranscripts(url)
-      if (res.transcripts !== undefined) {
-        this.loggedIn = true
-        eventStore.transcripts = res.transcripts
-      } else if ((res as any).error === 'login') {
+  async loadTranscriptList(url: string|null) {
+    if (url === null) {
+
+    } else {
+      try {
+        this.errorMessage = null
+        const res = await getServerTranscripts(url)
+        if (res.transcripts !== undefined) {
+          this.loggedIn = true
+          eventStore.transcripts = res.transcripts
+        } else if ((res as any).error === 'login') {
+          this.loggedIn = false
+        }
+      } catch (e) {
         this.loggedIn = false
+        eventStore.transcripts = []
+        this.errorMessage = 'could not load transcripts from back end.'
       }
-    } catch (e) {
-      this.loggedIn = false
-      eventStore.transcripts = []
-      this.errorMessage = 'could not load transcripts from back end.'
     }
   }
 
