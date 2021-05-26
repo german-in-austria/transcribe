@@ -155,7 +155,7 @@
                 <keyboard-shortcut :value="keyboardShortcuts.deleteEvents" />
               </v-list-tile-action>
             </v-list-tile>
-            <v-list-tile @click="transcribeEvent">
+            <v-list-tile @click="transcribeEvent(getSelectedEvent())">
               <v-list-tile-content>
                 <v-list-tile-title>Auto-Transcribe Event</v-list-tile-title>
               </v-list-tile-content>
@@ -305,8 +305,7 @@ export default class Editor extends Vue {
     this.isSaving = false
   }
 
-  async transcribeEvent() {
-    const e = getSelectedEvent()
+  async transcribeEvent(e?: LocalTranscriptEvent) {
     if (e !== undefined) {
       const buffer = await audio.decodeBufferTimeSlice(e.startTime, e.endTime, audio.store.uint8Buffer.buffer)
       const result = await kaldiService.transcribeAudio(
@@ -362,8 +361,10 @@ export default class Editor extends Vue {
     this.splitEvent(event, splitAt)
   }
 
-  showEventInspector(e: LocalTranscriptEvent) {
-    eventStore.inspectedEvent = e
+  showEventInspector(e?: LocalTranscriptEvent) {
+    if (e !== undefined) {
+      eventStore.inspectedEvent = e
+    }
   }
 
   async splitEvent(e: LocalTranscriptEvent, at: number) {

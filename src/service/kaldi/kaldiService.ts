@@ -11,7 +11,7 @@ const resampleHandler = new ResamplerHandler()
 type KaldiServiceStatus = 'DOWNLOADING_MODEL'|'INITIALIZING_MODEL'
 
 export default {
-  async transcribeAudio(modelUrl: string, buffer: AudioBuffer, cb: (status: KaldiServiceStatus) => any): Promise<any> {
+  async transcribeAudio(modelUrl: string, buffer: AudioBuffer, cb: (status: KaldiServiceStatus) => any): Promise<string> {
     if (models[modelUrl] === undefined) {
       console.log('downloading model…')
       models[modelUrl] = await trackedDownload(modelUrl, console.log)
@@ -27,7 +27,8 @@ export default {
     const audioData = sumChannels(buffer.getChannelData(0), buffer.getChannelData(1))
     const y = await resampleHandler.resample(audioData)
     const x = await asrHandler.process(y)
-    console.log({x, y})
+    await asrHandler.reset()
+    return x.text
     // asrHandler.
     // const resampledAudio = resampleAudio(audioData, 4096)
   }
