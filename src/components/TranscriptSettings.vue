@@ -42,8 +42,8 @@
           <v-subheader class="pa-0">Event Tiers ({{ eventStore.metadata.tiers.length }})</v-subheader>
           <speaker-tier-editor
             :speakers="eventStore.metadata.speakers"
-            :tiers="eventStore.metadata.tiers"
-            @update:tiers="updateTiers"
+            :tiers="tiers"
+            @update:tiers="tiers = $event"
             @update:speakers="updateSpeakers"
           />
         </section>
@@ -84,12 +84,20 @@ import {
   serverTokenTiers,
   mergeServerTranscript,
   getMetadataFromServerTranscript,
-  serverTranscriptToLocal
+  serverTranscriptToLocal,
+  serverTranscriptSurveyToSurvey
 } from '@/service/backend-server'
 import _ from 'lodash'
 import { computeTokenTypesForEvents } from '@/service/token-types'
-import { resourceAtUrlExists } from '@/util'
+import { resourceAtUrlExists, clone } from '@/util'
+import { ProjectPresetName } from '@/presets'
 import settings from '../store/settings'
+
+interface BasicInfos {
+  transcriptName: string|null
+  selectedSurvey: ServerSurvey|null
+  projectPreset: ProjectPresetName|null
+}
 
 @Component({
   components: {
@@ -100,14 +108,20 @@ import settings from '../store/settings'
 export default class TranscriptSettings extends Vue {
 
   eventStore = eventStore
-  isBasicInfoValid = false
+  isBasicInfoValid = true
   serverTranscript = serverTranscript
-  eventTiers = []
   serverTokenTiers = serverTokenTiers
-  basicInfos: any = {}
   defaultTier: TokenTierType = 'ortho'
+  tiers: LocalTranscriptTier[] = clone(eventStore.metadata.tiers)
+  basicInfos: BasicInfos = {
+    transcriptName: eventStore.metadata.transcriptName,
+    selectedSurvey: serverTranscript?.aEinzelErhebung
+      ? serverTranscriptSurveyToSurvey(serverTranscript?.aEinzelErhebung)
+      : null,
+    projectPreset: settings.projectPreset
+  }
 
-  updateBasicInfos(args: { transcriptName: string, selectedSurvey: ServerSurvey, preset: string}) {
+  async updateBasicInfos(args: BasicInfos) {
     this.basicInfos = args
     eventStore.metadata.transcriptName = args.transcriptName
     if (args.selectedSurvey !== null) {
@@ -118,46 +132,63 @@ export default class TranscriptSettings extends Vue {
     }
   }
 
-  createBasicServerTranscript(args: { transcriptName: string, selectedSurvey: ServerSurvey|null, preset: string}): ServerTranscript {
-    return {
-      aNr: 0,
-      nNr: 0,
-      aEinzelErhebung: args.selectedSurvey === null ? undefined : surveyToServerTranscriptSurvey(args.selectedSurvey),
-      aInformanten: args.selectedSurvey === null
-        ? eventStore.metadata.speakers
-        : surveyToServerTranscriptInformants(args.selectedSurvey),
-      aTiers: eventStore.metadata.tiers.reduce((m, e) => {
-        m[e.id] = { tier_name: e.name }
-        return m
-      }, {} as ServerTranscript['aTiers']),
-      aTokens: {},
-      aEvents: [],
-      aTranskript: {
-        default_tier: this.defaultTier,
-        n: args.transcriptName,
-        pk: -1,
-        ut: 'now'
+  createBasicServerTranscript(args: BasicInfos): ServerTranscript|null {
+    if (args.selectedSurvey !== null && args.transcriptName !== null) {
+      return {
+        aNr: 0,
+        nNr: 0,
+        aEinzelErhebung: args.selectedSurvey === null ? undefined : surveyToServerTranscriptSurvey(args.selectedSurvey),
+        aInformanten: args.selectedSurvey === null
+          ? eventStore.metadata.speakers
+          : surveyToServerTranscriptInformants(args.selectedSurvey),
+        aTiers: eventStore.metadata.tiers.reduce((m, e) => {
+          m[e.id] = { tier_name: e.name }
+          return m
+        }, {} as ServerTranscript['aTiers']),
+        aTokens: {},
+        aEvents: [],
+        aTranskript: {
+          default_tier: this.defaultTier,
+          n: args.transcriptName,
+          pk: -1,
+          ut: 'now'
+        }
       }
+    } else {
+      return null
     }
   }
 
   async confirm() {
-    if (this.isBasicInfoValid) {
-      console.log(this.basicInfos)
-      const st = this.createBasicServerTranscript(this.basicInfos)
-      mergeServerTranscript(st)
-      console.log({st})
-      eventStore.metadata = getMetadataFromServerTranscript(st)
-      const events = serverTranscriptToLocal(st, eventStore.metadata.defaultTier)
-      eventStore.events = computeTokenTypesForEvents(
-        events,
-        eventStore.metadata.defaultTier || 'text',
-        _(eventStore.metadata.speakers).map((s, k) => k).value()
-      )
-      if (this.basicInfos.selectedSurvey !== null) {
-        const audioFileUrl = getAudioUrlFromServerNames(this.basicInfos.selectedSurvey.Audiofile, this.basicInfos.selectedSurvey.Dateipfad)
-        if (audioFileUrl !== null && (await resourceAtUrlExists(audioFileUrl))) {
-          await loadAudioFromUrl(audioFileUrl)
+    if (
+      this.basicInfos !== null &&
+      this.isBasicInfoValid
+    ) {
+      this.eventStore.metadata.tiers = this.tiers
+      this.eventStore.metadata.transcriptName = this.basicInfos.transcriptName
+      // this.eventStore.metadata.speakers = this.speakers
+      // it’s a new transcript
+      if (
+        this.serverTranscript?.aTranskript?.pk === undefined &&
+        this.basicInfos.selectedSurvey !== null
+      ) {
+        const st = this.createBasicServerTranscript(this.basicInfos)
+        if (st !== null) {
+          mergeServerTranscript(st)
+          eventStore.metadata = getMetadataFromServerTranscript(st)
+          const events = serverTranscriptToLocal(st, eventStore.metadata.defaultTier)
+          eventStore.events = computeTokenTypesForEvents(
+            events,
+            eventStore.metadata.defaultTier || 'text',
+            _(eventStore.metadata.speakers).map((s, k) => k).value()
+          )
+          const audioFileUrl = getAudioUrlFromServerNames(
+            this.basicInfos.selectedSurvey.Audiofile,
+            this.basicInfos.selectedSurvey.Dateipfad
+          )
+          if (audioFileUrl !== null && (await resourceAtUrlExists(audioFileUrl))) {
+            await loadAudioFromUrl(audioFileUrl)
+          }
         }
       }
       eventStore.userState.showSpeakerTierEditModal = false
@@ -168,9 +199,6 @@ export default class TranscriptSettings extends Vue {
     this.eventStore.metadata.speakers = ss
   }
 
-  updateTiers(ts: LocalTranscriptTier[]) {
-    this.eventStore.metadata.tiers = ts
-  }
 }
 </script>
 <style lang="stylus" scoped>

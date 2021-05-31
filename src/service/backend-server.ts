@@ -240,6 +240,20 @@ const textEncoder = new TextEncoder()
 
 export let serverTranscript: ServerTranscript|null = null
 
+export function serverTranscriptSurveyToSurvey(s: ServerTranscriptSurvey, transcriptId?: number): ServerSurvey {
+  return {
+    Audiofile: s.af,
+    Dateipfad: s.dp,
+    Datum: s.d,
+    ID_Erh: s.e,
+    id_transcript: transcriptId === undefined ? s.trId : transcriptId,
+    FX_Informanten: [],
+    Ort: '',
+    OrtString: '',
+    pk: s.pk
+  }
+}
+
 export function surveyToServerTranscriptSurvey(s: ServerSurvey, transcriptId = -1): ServerTranscriptSurvey {
   return {
     af: s.Audiofile,
@@ -551,7 +565,7 @@ function mergeEventChanges(
   })
   // rebuild the token_id (tid) reference in their events
   _(ts)
-    .mapValues((t, k) => ({...t, token_id: Number(k)}))
+    .mapValues((t, k) => ({ ...t, token_id: Number(k) }))
     .groupBy(t => `${t.e}__${t.i}`)
     .each((speakerTokens, speakerEventId) => {
       const [ eventId, speakerId ] = speakerEventId.split('__')
@@ -816,9 +830,9 @@ export async function saveChangesToServer(
     // it’s already on the server
     if (serverTranscript.aTranskript.pk > -1) {
       const t = await localTranscriptToServerSaveRequest(serverTranscript, es)
-      // console.log({ ServerTranscriptSaveRequest: t })
+      console.log({ ServerTranscriptSaveRequest: t })
       const serverChanges = await performSaveRequest(serverTranscript.aTranskript.pk, t)
-      // console.log({ serverChanges })
+      console.log({ serverChanges })
       logServerResponse(t, serverChanges)
       const updatedServerTranscript = updateServerTranscriptWithChanges(serverTranscript, serverChanges)
       console.log({ updatedServerTranscript })
