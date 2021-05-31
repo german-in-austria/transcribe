@@ -50,6 +50,8 @@ import { saveChangesToServer } from '../service/backend-server'
 import eventBus from '../service/event-bus'
 import settings from '../store/settings';
 import { computeTokenTypesForEvents } from './token-types'
+import audio from './audio'
+import kaldiService from './kaldi/kaldiService'
 
 type KeyboardModifier = 'alt'|'shift'|'ctrlOrCmd'
 
@@ -374,6 +376,35 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         }
       }
     }
+  },
+  autoTranscribeEvent: {
+    group: 'Editing',
+    greedy: false,
+    showInMenu: true,
+    ignoreInTextField: false,
+    modifier: [ 'ctrlOrCmd', 'shift' ],
+    key: 'k',
+    description: 'Automatically Transcribe an Audio Segement',
+    icon: 'mdi-text-to-speech',
+    name: 'Auto-Transcribe Event',
+    disabled: () => eventStore.selectedEventIds.length === 0,
+    action: async (ev) => {
+      ev.preventDefault()
+      const e = getSelectedEvent()
+      if (e !== undefined) {
+        const buffer = await audio.decodeBufferTimeSlice(e.startTime, e.endTime, audio.store.uint8Buffer.buffer)
+        const result = await kaldiService.transcribeAudio(
+          window.location.origin + '/kaldi-models/german.zip',
+          buffer,
+          () => null)
+        const cleanResult = result.replaceAll(/\d\.\d\d\s/g, '')
+        eventBus.$emit('updateSpeakerEventText', {
+          eventId: e.eventId,
+          speakerId: Object.keys(eventStore.metadata.speakers)[0],
+          text: cleanResult
+        })
+      }
+    },
   },
   appendEvent: {
     group: 'Editing',
