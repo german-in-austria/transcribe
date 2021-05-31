@@ -1,5 +1,25 @@
 <template>
   <div class="fill-height">
+    <div class="snackbars">
+      <v-snackbar
+        bottom
+        left
+        style="border-radius: 7px"
+        :multi-line="true"
+        :timeout="snackbar.timeout"
+        v-model="snackbar.show">
+        <div style="width: 100%;" class="caption">
+          {{ snackbar.text }}
+          <div>
+            <v-progress-linear style="border-radius: 7px" v-if="snackbar.progressType === 'indeterminate'" indeterminate />
+            <v-progress-linear style="border-radius: 7px" v-else-if="snackbar.progressType === 'determinate'" :value="snackbar.progress" />
+          </div>
+        </div>
+        <v-btn flat @click="snackbar.show = false" tile>
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </v-snackbar>
+    </div>
     <v-toolbar class="elevation-0" fixed app>
       <v-flex xs4>
         <v-btn icon @click="reload"><f-icon value="chevron_left" /></v-btn>
@@ -144,6 +164,14 @@
                 <keyboard-shortcut :value="keyboardShortcuts.inspectEvent" />
               </v-list-tile-action>
             </v-list-tile>
+            <v-list-tile @click="transcribeEvent(getSelectedEvent())">
+              <v-list-tile-content>
+                <v-list-tile-title>Auto-Transcribe Event…</v-list-tile-title>
+              </v-list-tile-content>
+              <v-list-tile-action>
+                <keyboard-shortcut :value="keyboardShortcuts.autoTranscribeEvent" />
+              </v-list-tile-action>
+            </v-list-tile>
             <v-divider />
             <v-list-tile
               :disabled="keyboardShortcuts.deleteEvents.disabled()"
@@ -154,11 +182,6 @@
               <v-list-tile-action>
                 <keyboard-shortcut :value="keyboardShortcuts.deleteEvents" />
               </v-list-tile-action>
-            </v-list-tile>
-            <v-list-tile @click="transcribeEvent(getSelectedEvent())">
-              <v-list-tile-content>
-                <v-list-tile-title>Auto-Transcribe Event</v-list-tile-title>
-              </v-list-tile-content>
             </v-list-tile>
           </v-list>
         </v-menu>
@@ -216,8 +239,7 @@ import {
   scrollToAudioEvent,
   scrollToTranscriptEvent,
   selectEvents,
-  splitEvent,
-  getTextFromTokens
+  splitEvent
 } from '../store/transcript'
 
 import { saveChangesToServer, serverTranscript } from '../service/backend-server'
@@ -273,6 +295,20 @@ export default class Editor extends Vue {
   keyboardShortcuts = keyboardShortcuts
   displayKeyboardAction = displayKeyboardAction
 
+  snackbar: {
+    show: boolean
+    text: string
+    progressType: 'determinate'|'indeterminate'|null,
+    progress: 0,
+    timeout: number|null
+  } = {
+    show: false,
+    text: '',
+    progressType: 'determinate',
+    progress: 0,
+    timeout: null
+  }
+
   scrollTranscriptIndex: number = 0
   scrollTranscriptTime: number = 0
 
@@ -311,16 +347,42 @@ export default class Editor extends Vue {
       const result = await kaldiService.transcribeAudio(
         window.location.origin + '/kaldi-models/german.zip',
         buffer,
-        (status: string) => {
+        (status) => {
           if (status === 'DOWNLOADING_MODEL') {
-            console.log('loading model…')
+            this.snackbar = {
+              text: 'Downloading German Language Model…',
+              show: true,
+              progressType: 'indeterminate',
+              progress: 0,
+              timeout: null
+            }
           } else if (status === 'INITIALIZING_MODEL') {
-            console.log('init…')
-          } else {
-            console.log(status)
+            this.snackbar = {
+              text: 'Initializing Model…',
+              show: true,
+              progressType: 'indeterminate',
+              progress: 0,
+              timeout: null
+            }
+          } else if (status === 'PROCESSING_AUDIO') {
+            this.snackbar = {
+              text: 'Transcribing Audio…',
+              show: true,
+              progressType: null,
+              progress: 0,
+              timeout: 2000
+            }
+          } else if (status === 'DONE') {
+            this.snackbar.show = false
           }
         }
       )
+      const cleanResult = result.replaceAll(/\d\.\d\d\s/g, '')
+      eventBus.$emit('updateSpeakerEventText', {
+        eventId: e.eventId,
+        speakerId: Object.keys(eventStore.metadata.speakers)[0],
+        text: cleanResult
+      })
     }
   }
 
