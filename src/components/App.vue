@@ -34,6 +34,7 @@
               :loading="isLoadingBackendUrl"
               :error-messages="this.errorMessage !==  null ? [ this.errorMessage ] : []"
               auto-select-first
+              style="position: fixed; left: 0; right: 0; z-index: 1"
               solo
               flat
               v-model="settings.backEndUrl"
@@ -41,7 +42,11 @@
               :return-object="false"
               dense
               label="Select a Back End"
-            ></v-combobox>
+            >
+            <template v-slot:prepend-inner>
+              <span class="caption">Transcript Server</span>
+            </template>
+            </v-combobox>
           </v-flex>
           <div
             v-if="settings.backEndUrl !== null && loggedIn === false"
@@ -55,7 +60,7 @@
           />
           <v-flex v-if="eventStore.transcripts !== null">
             <v-layout justify-center row>
-              <v-flex class="pt-5 pl-4 pr-4" xs12 md6>
+              <v-flex class="pt-5 mt-3 pl-4 pr-4" xs12 md6>
                 <h1 class="text-xs-center text-light text-uppercase mt-3 mb-4">
                   Transcribe
                 </h1>
