@@ -150,7 +150,7 @@ onmessage = (msg) => {
         console.log(e);
       })
       .finally(() => {
-        console.log(response);
+        // console.log(response);
         postMessage(response);
       });
   } else {
