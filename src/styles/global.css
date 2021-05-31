@@ -351,3 +351,6 @@ nav.v-toolbar[data-booted=true]{
 .max-width {
   max-width: 100%
 }
+.v-snack__content {
+  border-radius: 7px;
+}
