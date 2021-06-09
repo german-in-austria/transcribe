@@ -23,6 +23,9 @@
       "manual_typings"
     ],
     "paths": {
+      "jszip": [
+        "node_modules/@types/jszip"
+      ],
       "@/*": [
         "src/*"
       ],

@@ -4,5 +4,4 @@ declare module "*.vue" {
 }
 declare module 'webfontloader';
 declare module 'uuid/v4';
-declare module '*';
-
+declare module '*.js'
