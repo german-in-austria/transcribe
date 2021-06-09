@@ -5,7 +5,7 @@ export default class Resampler extends WorkerWrapper {
   constructor() {
     super(new ResamplerWorker());
     // this.streamSource = streamSource;
-    // this.onResampled = onResampled;
+    // this.onResampled = onResampled
 
     // const { context } = this.streamSource;
     // this.processor = context.createScriptProcessor(bufferSize, 1, 1);
@@ -50,8 +50,8 @@ export default class Resampler extends WorkerWrapper {
   }
 
   handleMessage(msg) {
-    super.handleMessage(msg);
-    const { command, value } = msg.data;
-    if (command === 'resample') this.onResampled(value);
+    super.handleMessage(msg)
+    const { command, value } = msg.data
+    // if (command === 'resample') this.onResampled(value)
   }
 }

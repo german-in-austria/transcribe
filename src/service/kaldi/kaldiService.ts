@@ -1,8 +1,7 @@
-import { playBuffer, sumChannels } from "../audio"
-import trackedDownload from './utils/downloadModel'
-import SoxrResampler, {SoxrResamplerTransform, SoxrDatatype} from 'wasm-audio-resampler'
-import AsrHandler from './workerWrappers/asrHandler'
-import ResamplerHandler from './workerWrappers/resamplerHandler'
+import { sumChannels } from "../audio"
+import trackedDownload from './utils/downloadModel.js'
+import AsrHandler from './workerWrappers/asrHandler.js'
+import ResamplerHandler from './workerWrappers/resamplerHandler.js'
 
 const models: {[url: string]: ArrayBuffer} = {}
 

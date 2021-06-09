@@ -3,27 +3,26 @@ import WorkerWrapper from './workerWrapper'
 
 export default class ASR extends WorkerWrapper {
   constructor() {
-    console.log(AsrWorker)
     super(new AsrWorker())
   }
 
   init(modelName, zip) {
-    return this.promisify('init', { modelName, zip });
+    return this.promisify('init', { modelName, zip })
   }
 
   getSampleRate() {
-    return this.promisify('samplerate');
+    return this.promisify('samplerate')
   }
 
   process(pcm) {
-    return this.promisify('process', { pcm });
+    return this.promisify('process', { pcm })
   }
 
   reset(zippedModel) {
-    return this.promisify('reset', { zippedModel });
+    return this.promisify('reset', { zippedModel })
   }
 
   terminate() {
-    return this.promisify('terminate');
+    return this.promisify('terminate')
   }
 }
