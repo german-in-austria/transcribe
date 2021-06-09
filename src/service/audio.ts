@@ -356,7 +356,7 @@ async function drawWavePathAsync(
       return buffer.getChannelData(channel).buffer
     }
   })()
-  const options = textEncoder.encode(JSON.stringify({ width, height, offsetLeft})).buffer
+  const options = textEncoder.encode(JSON.stringify({ width, height, offsetLeft })).buffer
   if (channel === 0) {
     return await waveformWorker1.postMessage({ buffer: buf, options }, [ buf, options ])
   } else {
@@ -443,10 +443,10 @@ async function drawWave(
 
 // tslint:disable-next-line:max-line-length
 async function decodeBufferByteRange(fromByte: number, toByte: number, buffer: ArrayBuffer): Promise<AudioBuffer> {
-  const headerBuffer    = getOggHeaderBuffer(buffer)
-  const contentBuffer   = buffer.slice(fromByte, toByte)
-  const combinedBuffer  = concatBuffer(headerBuffer, contentBuffer)
-  const decodedBuffer   = await audioContext.decodeAudioData(combinedBuffer)
+  const headerBuffer = getOggHeaderBuffer(buffer)
+  const contentBuffer = buffer.slice(fromByte, toByte)
+  const combinedBuffer = concatBuffer(headerBuffer, contentBuffer)
+  const decodedBuffer = await audioContext.decodeAudioData(combinedBuffer)
   return decodedBuffer
 }
 
