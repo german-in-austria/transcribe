@@ -184,7 +184,7 @@ export default class EditHistory extends Vue {
       scrollToAudioEvent(action.after[0])
       scrollToTranscriptEvent(action.after[0])
     }
-    jumpToState(action)
+    jumpToState(action, true)
   }
 
   handleEventMouseOver(ev: MouseEvent, e: HistoryEventAction) {

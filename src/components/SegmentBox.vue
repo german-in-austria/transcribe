@@ -36,7 +36,7 @@
 
 import { Vue, Component, Prop, Watch, Provide } from 'vue-property-decorator'
 import ResizeEvent from './helper/ResizeEvent.vue'
-import { undoable } from '../store/history'
+import { mutation } from '../store/history'
 import settings from '../store/settings'
 // import { morph } from 'quasar'
 
@@ -112,12 +112,12 @@ export default class SegmentBox extends Vue {
     const endTime = e.current.right / settings.pixelsPerSecond
     if (e.next !== null && this.nextEvent !== undefined) {
       const nextStartTime = e.next.left / settings.pixelsPerSecond
-      undoable(resizeEvents({ ...this.event, startTime, endTime }, { ...this.nextEvent, startTime: nextStartTime }))
+      mutation(resizeEvents({ ...this.event, startTime, endTime }, { ...this.nextEvent, startTime: nextStartTime }))
     } else if (e.previous !== null && this.previousEvent !== undefined) {
       const previousEndTime = e.previous.right / settings.pixelsPerSecond
-      undoable(resizeEvents({ ...this.previousEvent, endTime: previousEndTime }, { ...this.event, startTime, endTime }))
+      mutation(resizeEvents({ ...this.previousEvent, endTime: previousEndTime }, { ...this.event, startTime, endTime }))
     } else {
-      undoable(resizeEvents({ ...this.event, startTime, endTime }))
+      mutation(resizeEvents({ ...this.event, startTime, endTime }))
     }
   }
 }

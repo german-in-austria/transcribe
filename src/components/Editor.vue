@@ -49,7 +49,7 @@
                   :size="16"
                   :rotate="-90"
                   :width="2"
-                  :indeterminate="eventStore.transcriptDownloadProgress === 1 || isSaving"
+                  :indeterminate="eventStore.transcriptDownloadProgress === 1 || isSaving"
                   :value="eventStore.transcriptDownloadProgress * 100" />
               </template>
             </v-btn>
@@ -252,7 +252,7 @@ import {
 
 import {
   history,
-  undoable,
+  mutation,
   startListening as startUndoListener,
   stopListening as stopUndoListener
 } from '../store/history'
@@ -264,7 +264,7 @@ import {
 
 import settings from '../store/settings'
 import audio from '../service/audio'
-import { generateProjectFile } from '../service/backend-files'
+import fileService from '../service/disk'
 import eventBus from '../service/event-bus'
 
 @Component({
@@ -326,17 +326,17 @@ export default class Editor extends Vue {
   }
 
   joinEvents(es: number[]) {
-    return undoable(joinEvents(es))
+    return mutation(joinEvents(es))
   }
 
   deleteSelectedEvents() {
-    return undoable(deleteSelectedEvents())
+    return mutation(deleteSelectedEvents())
   }
 
   async exportProject() {
     this.isSaving = true
     const overviewWave = (document.querySelector('.overview-waveform svg') as HTMLElement).innerHTML
-    const f = await generateProjectFile(eventStore, overviewWave, settings, audio.store.uint8Buffer, history.actions)
+    const f = await fileService.generateProjectFile(eventStore, overviewWave, audio.store.uint8Buffer, history.actions)
     saveAs(f, (eventStore.metadata.transcriptName || 'unnamed_transcript') + '.transcript')
     this.isSaving = false
   }
@@ -430,7 +430,7 @@ export default class Editor extends Vue {
   }
 
   async splitEvent(e: LocalTranscriptEvent, at: number) {
-    const [ leftEvent ] = undoable(splitEvent(e, at))
+    const [ leftEvent ] = mutation(splitEvent(e, at))
     if (!(await isWaveformEventVisible(leftEvent))) {
       scrollToAudioEvent(leftEvent)
     }
