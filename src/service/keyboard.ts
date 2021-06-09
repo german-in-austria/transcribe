@@ -1,7 +1,7 @@
 
 import _ from 'lodash'
 
-import { undoable, history } from '../store/history'
+import { mutation, history } from '../store/history'
 import { platform } from '../util'
 import Vue from 'vue'
 import {
@@ -246,11 +246,11 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     action: async () => {
       const eventUnderPlayHead = findEventAt(eventStore.currentTime)
       if (eventUnderPlayHead === undefined) {
-        const es = undoable(addEvent(eventStore.currentTime))
+        const es = mutation(addEvent(eventStore.currentTime))
         selectEvents(es)
       } else {
         const splitAt = eventStore.currentTime - eventUnderPlayHead.startTime
-        const [ leftEvent ] = undoable(splitEvent(eventUnderPlayHead, splitAt))
+        const [ leftEvent ] = mutation(splitEvent(eventUnderPlayHead, splitAt))
         if (!(await isWaveformEventVisible(leftEvent))) {
           scrollToAudioEvent(leftEvent)
         }
@@ -277,7 +277,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         const eventId = e.getAttribute('data-event-id')
         if (speakerId !== null && eventId !== null) {
           // console.log({ speakerId, eventId })
-          undoable(splitEventAtChar(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
+          mutation(splitEventAtChar(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
           // tslint:disable-next-line:max-line-length
           eventStore.events = eventStore.events = computeTokenTypesForEvents(eventStore.events, eventStore.metadata.defaultTier, [ speakerId ])
         }
@@ -303,7 +303,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         const speakerId = e.getAttribute('data-speaker-id')
         const eventId = e.getAttribute('data-event-id')
         if (speakerId !== null && eventId !== null) {
-          undoable(shiftCharsRight(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
+          mutation(shiftCharsRight(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
         }
       }
     }
@@ -327,7 +327,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         const speakerId = e.getAttribute('data-speaker-id')
         const eventId = e.getAttribute('data-event-id')
         if (speakerId !== null && eventId !== null) {
-          undoable(shiftCharsLeft(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
+          mutation(shiftCharsLeft(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
           return false
         }
       }
@@ -421,7 +421,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       const selectedEvent = getFocusedEvent() || getSelectedEvent()
       const speaker = getFocusedSpeaker()
       if (selectedEvent !== undefined) {
-        const newEs = undoable(appendEmptyEventAfter(selectedEvent))
+        const newEs = mutation(appendEmptyEventAfter(selectedEvent))
         const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent(1, selectedEvent) ])
         if (es.length > 0 && es[0] !== undefined) {
           scrollToTranscriptEvent(es[0], {
@@ -470,7 +470,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       const event = getFocusedEvent() || getSelectedEvent()
       const speaker = getFocusedSpeaker()
       if (event !== undefined) {
-        const newEs = undoable(prependEmptyEventBefore(event))
+        const newEs = mutation(prependEmptyEventBefore(event))
         const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent(-1, event) ])
         if (es.length > 0 && es[0] !== undefined) {
           scrollToTranscriptEvent(es[0], {
@@ -516,7 +516,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     icon: 'delete',
     disabled: () => eventStore.selectedEventIds.length === 0,
     action: () => {
-      undoable(deleteSelectedEvents())
+      mutation(deleteSelectedEvents())
       deselectEvents()
     }
   },
@@ -533,7 +533,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     disabled: () => eventStore.selectedEventIds.length < 2,
     action: () => {
       if (eventStore.selectedEventIds.length > 1) {
-        undoable(joinEvents(eventStore.selectedEventIds))
+        mutation(joinEvents(eventStore.selectedEventIds))
       }
     }
   },
@@ -552,7 +552,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       const e = getSelectedEvent()
       if (e !== undefined) {
         const t = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
-        undoable(moveEventStartTime(e, t * -1))
+        mutation(moveEventStartTime(e, t * -1))
       }
     }
   },
@@ -571,7 +571,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       const e = getSelectedEvent()
       if (e !== undefined) {
         const t = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
-        undoable(moveEventStartTime(e, t))
+        mutation(moveEventStartTime(e, t))
       }
     }
   },
@@ -590,7 +590,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       const e = getSelectedEvent()
       if (e !== undefined) {
         const t = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
-        undoable(moveEventEndTime(e, t))
+        mutation(moveEventEndTime(e, t))
       }
     }
   },
@@ -609,7 +609,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       const e = getSelectedEvent()
       if (e !== undefined) {
         const t = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
-        undoable(moveEventEndTime(e, t * -1))
+        mutation(moveEventEndTime(e, t * -1))
       }
     }
   },
