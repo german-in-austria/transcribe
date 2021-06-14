@@ -195,6 +195,7 @@ import playHead from './PlayHead.vue'
 import dropAudioFile from './DropAudioFile.vue'
 import transcriptSettings from './TranscriptSettings.vue'
 import KeyboardShortcut from './helper/KeyboardShortcut.vue'
+import * as Sentry from '@sentry/browser'
 
 import {
   LocalTranscriptEvent,
@@ -304,6 +305,7 @@ export default class Editor extends Vue {
     try {
       eventStore.events = await saveChangesToServer(eventStore.events)
     } catch (e) {
+      Sentry.captureException(e)
       alert('Could not save transcript to server.')
       console.log(e)
     } finally {
