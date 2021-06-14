@@ -4,3 +4,4 @@ static/test-files/
 /data
 credentials*
 .nova
+kaldi-models/
