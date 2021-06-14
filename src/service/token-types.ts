@@ -10,7 +10,10 @@ function iterateTokensBySpeakers(
 ): LocalTranscriptEvent[] {
   speakerIds.forEach((s) => {
     es.forEach(e => {
-      if (e.speakerEvents[s] !== undefined) {
+      if (
+        e.speakerEvents !== undefined &&
+        e.speakerEvents[s] !== undefined
+      ) {
         e.speakerEvents[s].tokens = e.speakerEvents[s].tokens.map(f)
       }
     })

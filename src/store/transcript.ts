@@ -410,7 +410,11 @@ function setFirstTokenFragmentOf(
 ) {
   const event = eventStore.events[eventIndex]
   // console.log('next event', event)
-  if (event !== undefined) {
+  if (
+    event !== undefined &&
+    event.speakerEvents !== undefined &&
+    event.speakerEvents[speakerId] !== undefined
+  ) {
     const speakerEvent = event.speakerEvents[speakerId]
     if (speakerEvent !== undefined) {
       const firstToken = eventStore.events[eventIndex].speakerEvents[speakerId].tokens[0]
