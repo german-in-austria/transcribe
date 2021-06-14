@@ -434,7 +434,7 @@ export default class SpeakerSegmentTranscript extends Vue {
     if (!isEqualDeep(newEvent, oldEvent)) {
       undoable(updateSpeakerEvent(newEvent, Number(this.speaker)))
       this.updateAllTokenTypes(newEvent)
-      console.log('changed:', newEvent, oldEvent, jsdiff.diffJson(oldEvent, newEvent))
+      // console.log('changed:', newEvent, oldEvent)
     } else {
       // nothing to update
     }
