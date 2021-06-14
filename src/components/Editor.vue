@@ -184,6 +184,7 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import { saveAs } from 'file-saver'
+import * as Sentry from '@sentry/browser'
 
 import playerBar from './PlayerBar.vue'
 import waveForm from './Waveform.vue'
@@ -195,7 +196,6 @@ import playHead from './PlayHead.vue'
 import dropAudioFile from './DropAudioFile.vue'
 import transcriptSettings from './TranscriptSettings.vue'
 import KeyboardShortcut from './helper/KeyboardShortcut.vue'
-import * as Sentry from '@sentry/browser'
 
 import {
   LocalTranscriptEvent,
@@ -215,8 +215,15 @@ import {
   splitEvent
 } from '../store/transcript'
 
-import { saveChangesToServer, serverTranscript } from '../service/backend-server'
-import { handleGlobalShortcut, keyboardShortcuts, displayKeyboardAction } from '../service/keyboard'
+import {
+  saveChangesToServer
+} from '../service/backend-server'
+
+import {
+  handleGlobalShortcut,
+  keyboardShortcuts,
+  displayKeyboardAction
+} from '../service/keyboard'
 
 import {
   isCmdOrCtrl
