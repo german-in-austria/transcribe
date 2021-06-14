@@ -211,7 +211,7 @@ export function redo(shouldAutoSave?: boolean): HistoryEventAction|undefined {
   }
 }
 
-const autoSaveTimeout = 2000
+const autoSaveTimeout = 5000
 let debouncer = setTimeout(() => null, 0)
 
 export function triggerDebouncedSaver() {
