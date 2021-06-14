@@ -420,7 +420,8 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   commitEvent() {
-    const oldEvent = findEventIndexById(this.event.eventId)
+    const oldIndex = findEventIndexById(this.event.eventId)
+    const oldEvent = eventStore.events[oldIndex]
     const newEvent: LocalTranscriptEvent = {
       ...this.localEvent,
       speakerEvents: {
@@ -430,9 +431,10 @@ export default class SpeakerSegmentTranscript extends Vue {
         }
       }
     }
-    if (!isEqualDeep(this.localEvent, oldEvent)) {
+    if (!isEqualDeep(newEvent, oldEvent)) {
       undoable(updateSpeakerEvent(newEvent, Number(this.speaker)))
       this.updateAllTokenTypes(newEvent)
+      console.log('changed:', newEvent, oldEvent, jsdiff.diffJson(oldEvent, newEvent))
     } else {
       // nothing to update
     }
