@@ -4,13 +4,17 @@ import fIcon from './components/helper/FIcon.vue'
 import router from './router'
 import * as fontLoader from 'webfontloader'
 import Vuetify from 'vuetify'
-import * as Sentry from '@sentry/browser'
+import * as Sentry from '@sentry/vue'
+import { Integrations } from '@sentry/tracing'
 import VueRouter from 'vue-router'
 import ipaDirectives from './directives/Ipa'
 
 if (process.env.NODE_ENV === 'production') {
   Sentry.init({
-    dsn: 'https://21e0884e7e9744faa9f730caf468bad0@sentry.io/1793743'
+    Vue: Vue,
+    dsn: 'https://21e0884e7e9744faa9f730caf468bad0@sentry.io/1793743',
+    integrations: [new Integrations.BrowserTracing()],
+    logErrors: true
   })
 }
 
