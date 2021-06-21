@@ -63,6 +63,23 @@ export const PP04: ProjectPreset = {
     },
     {
       type: 'group',
+      name: 'non-verbal',
+      bracketSymbols: [
+        /<<(.+)/u,
+        /(.+)>/
+      ],
+      color: '#008800',
+      id: 5
+    },
+    {
+      type: 'single',
+      name: 'non-verbal',
+      color: '#008800',
+      regex: /^>$/u,
+      id: 5
+    },
+    {
+      type: 'group',
       name: 'other',
       bracketSymbols: [
         /\(\(.+[^\)]/u,
