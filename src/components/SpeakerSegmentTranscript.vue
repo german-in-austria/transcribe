@@ -420,7 +420,8 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   commitEvent() {
-    const oldEvent = findEventIndexById(this.event.eventId)
+    const oldIndex = findEventIndexById(this.event.eventId)
+    const oldEvent = eventStore.events[oldIndex]
     const newEvent: LocalTranscriptEvent = {
       ...this.localEvent,
       speakerEvents: {
@@ -430,7 +431,7 @@ export default class SpeakerSegmentTranscript extends Vue {
         }
       }
     }
-    if (!isEqualDeep(this.localEvent, oldEvent)) {
+    if (!isEqualDeep(newEvent, oldEvent)) {
       mutation(updateSpeakerEvent(newEvent, Number(this.speaker)))
       this.updateAllTokenTypes(newEvent)
     } else {

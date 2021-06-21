@@ -212,6 +212,7 @@
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import { saveAs } from 'file-saver'
+import * as Sentry from '@sentry/browser'
 
 import playerBar from './PlayerBar.vue'
 import waveForm from './Waveform.vue'
@@ -392,6 +393,7 @@ export default class Editor extends Vue {
     try {
       eventStore.events = await saveChangesToServer(eventStore.events)
     } catch (e) {
+      Sentry.captureException(e)
       alert('Could not save transcript to server.')
       console.log(e)
     } finally {

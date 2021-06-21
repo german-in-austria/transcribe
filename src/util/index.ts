@@ -196,7 +196,7 @@ export function clone<T>(t: T): T {
   return JSON.parse(JSON.stringify(t))
 }
 
-export function isEqualDeep(one: any, two: any): boolean {
+export function isEqualDeep<T>(one: T, two: T): boolean {
   return JSON.stringify(one) === JSON.stringify(two)
 }
 
