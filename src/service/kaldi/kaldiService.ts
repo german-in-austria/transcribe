@@ -21,12 +21,13 @@ export default {
     const targetSampleRate = await asrHandler.getSampleRate()
     const sampleRate = buffer.sampleRate
     console.log({ targetSampleRate, sampleRate })
-    // convert the PCM format from Float 32 to Int 16
+    // convert the PCM format from Stereo Float 32 to Mono Int 16
     const audioData = sumChannels(buffer.getChannelData(0), buffer.getChannelData(1))
     const y = await resampleHandler.resample(audioData)
     await asrHandler.process(y)
     const x = await asrHandler.reset()
     onUpdate('DONE')
+    console.log('x.text', x.text)
     return x.text
     // asrHandler.
     // const resampledAudio = resampleAudio(audioData, 4096)

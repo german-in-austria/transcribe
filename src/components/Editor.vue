@@ -38,7 +38,7 @@
             offset-y>
             <v-btn
               slot="activator"
-              @click="saveToServer"
+              @click="saveTranscript"
               :loading="eventStore.status === 'loading' || isSaving"
               :disabled="eventStore.status === 'loading' || isSaving"
               icon flat>
@@ -60,7 +60,7 @@
                 </v-list-tile-content>
               </v-list-tile>
               <v-divider />
-              <v-list-tile @click="saveToServer">
+              <v-list-tile @click="saveTranscript">
                 <v-list-tile-content>
                   <v-list-tile-title>Save To Server</v-list-tile-title>
                 </v-list-tile-content>
@@ -387,19 +387,23 @@ export default class Editor extends Vue {
     }
   }
 
-  async saveToServer() {
+  async saveTranscript() {
     // if (this.history.actions.length > 0) {
     this.isSaving = true
-    try {
-      eventStore.events = await saveChangesToServer(eventStore.events)
-    } catch (e) {
-      Sentry.captureException(e)
-      alert('Could not save transcript to server.')
-      console.log(e)
-    } finally {
-      this.isSaving = false
+    if (settings.backEndUrl !== null) {
+      try {
+        eventStore.events = await saveChangesToServer(eventStore.events)
+      } catch (e) {
+        Sentry.captureException(e)
+        alert('Could not save transcript to server.')
+        console.log(e)
+      } finally {
+        this.isSaving = false
+      }
+    } else {
+      await fileService.saveFile()
     }
-    // }
+    this.isSaving = false
   }
 
   async doShowMenu(e: MouseEvent) {

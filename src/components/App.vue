@@ -191,7 +191,7 @@ import {
   getMetadataFromServerTranscript
 } from '../service/backend-server'
 
-import fileService from '../service/disk'
+import Sentry from '@sentry/browser'
 
 import {
   ParsedExmaraldaXML,
@@ -223,7 +223,7 @@ export default class App extends Vue {
 
   backEndUrls = [
     {
-      text: '(None)',
+      text: 'On This Computer',
       value: null
     },
     {
@@ -349,7 +349,7 @@ export default class App extends Vue {
 
   async openProjectFile(f: FileSystemFileHandle) {
     this.importingLocalFile = true
-    const p = await fileService.loadProjectFile(f)
+    const p = await diskService.loadProjectFile(f)
     const audioUrl = await this.loadLocalTranscript(p.serverTranscript, p.audioBuffer)
     this.loadPreviousUserState(p.eventStore, audioUrl, p.overviewSvg, p.historyActions)
   }
@@ -402,7 +402,7 @@ export default class App extends Vue {
     history.autoSaver = async () => {
       console.log('auto saving 123!')
       eventStore.status = 'loading'
-      await fileService.autoSaveFile()
+      await diskService.saveFile()
       eventStore.status = 'finished'
       console.log('auto saving 123! DONE.')
     }

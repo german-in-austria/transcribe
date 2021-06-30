@@ -133,7 +133,7 @@ class FileService {
     }
   }
 
-  async autoSaveFile() {
+  async saveFile() {
     this.zipFile.file('eventStore.json', JSON.stringify(eventStore))
     this.zipFile.file('history.json', JSON.stringify(history.actions))
     console.log('history actions', history.actions)
