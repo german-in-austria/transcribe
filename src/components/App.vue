@@ -215,8 +215,6 @@ import FIcon from './helper/FIcon.vue'
   }
 })
 export default class App extends Vue {
-  // TODO:
-  // @Prop() transcript_id: number|null
 
   eventStore = eventStore
   settings = settings
@@ -459,6 +457,10 @@ export default class App extends Vue {
         this.openProjectFile(t.fileHandle)
       }
     } else {
+      Sentry.setContext('transcript', {
+        name: t.n,
+        id: t.pk
+      })
       this.loadRemoteTranscript(t)
     }
   }
