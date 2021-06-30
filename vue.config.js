@@ -1,4 +1,5 @@
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
+const SentryWebpackPlugin = require('@sentry/webpack-plugin')
 
 module.exports = {
   lintOnSave: false,
@@ -10,6 +11,18 @@ module.exports = {
     if (process.env.NODE_ENV !== 'production') {
       config.plugins.push(new BundleAnalyzerPlugin({
         defaultSizes: 'gzip'
+      }))
+    }
+    if (process.env.NODE_ENV === 'production') {
+      config.plugins.push(new SentryWebpackPlugin({
+        // sentry-cli configuration
+        authToken: process.env.SENTRY_TOKEN,
+        org: 'university-of-vienna-i1',
+        project: 'transcribe',
+        release: process.env.CIRRUS_BUILD_ID || 0,
+        // webpack specific configuration
+        include: './dist',
+        ignore: ['node_modules', 'vue.config.js']
       }))
     }
     config.module.rules.unshift({
