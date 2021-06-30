@@ -191,7 +191,7 @@ import {
   getMetadataFromServerTranscript
 } from '../service/backend-server'
 
-import Sentry from '@sentry/browser'
+import * as Sentry from '@sentry/browser'
 
 import {
   ParsedExmaraldaXML,
