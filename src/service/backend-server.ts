@@ -477,7 +477,7 @@ export function serverTokenSaveResponseToServerToken(
         if (t.fo > 0) {
           return t.fo
         // it refers to a new token => use the new key.
-        } else {
+        } else if (tcs[t.fo] !== undefined) {
           return tcs[t.fo].newPk
         }
       } else {
