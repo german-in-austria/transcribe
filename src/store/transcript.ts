@@ -156,6 +156,7 @@ export const eventStore = {
   audioElement: document.createElement('audio')
 }
 
+
 export function tokenTypeFromToken(token: string) {
   const type = _(presets[settings.projectPreset].tokenTypes).find((tt) => {
     return tt.type === 'single' && tt.regex.test(token.replace('=', ''))
