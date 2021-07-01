@@ -666,8 +666,10 @@ export function prependEmptyEventAt(t: number): HistoryEventAction|undefined {
     selectEvent(eventAt)
   } else {
     const prev = findPreviousEventAt(t)
+    const next = findNextEventAt(t)
     if (prev !== undefined) {
-      return addEvent(Math.max(t - 2, prev.endTime), 2)
+      // console.log(prev)
+      return addEvent(Math.max(t - 2, prev.endTime), next ? Math.min(2, next.startTime - t) : 2)
     } else {
       return addEvent(t, 2)
     }
@@ -724,13 +726,23 @@ export function prependEmptyEventBefore(e: LocalTranscriptEvent|undefined): Hist
   }
 }
 
+export function makeSpeakerEvent(id: number): LocalTranscriptSpeakerEvent {
+  return {
+    speakerEventId: id,
+    speakerEventTiers: {},
+    tokens: []
+  }
+}
+
 export function addEvent(atTime: number, length = 1): HistoryEventAction {
   const nextEvent = findNextEventAt(atTime)
+  const newId = makeEventId()
   const newEvent: LocalTranscriptEvent = {
     startTime: atTime,
     endTime: atTime + length,
-    eventId: makeEventId(),
+    eventId: newId,
     speakerEvents: {}
+    // OR: _.mapValues(eventStore.metadata.speakers, () => makeSpeakerEvent(newId))
   }
   if (nextEvent !== undefined) {
     const i = findEventIndexById(nextEvent.eventId)
@@ -946,12 +958,12 @@ export function splitEventAtChar(
 }
 
 export function findNextEventAt(seconds: number, events = eventStore.events): LocalTranscriptEvent|undefined {
-  return _(events).find((e) => e.startTime >= seconds)
+  return _(events).sortBy(e => e.startTime).find((e) => e.startTime >= seconds)
 }
 
 export function findPreviousEventAt(seconds: number, events = eventStore.events): LocalTranscriptEvent|undefined {
-  const i = _(events).findLastIndex((e) => e.startTime < seconds)
-  return events[i - 1]
+  const i = _(events).sortBy(e => e.startTime).findLastIndex((e) => e.endTime < seconds)
+  return events[i]
 }
 
 export function findEventAt(seconds: number): LocalTranscriptEvent|undefined {
