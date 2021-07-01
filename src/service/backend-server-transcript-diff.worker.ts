@@ -140,30 +140,28 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
 
   const newServerEvents: ServerEvent[] = []
   const newServerTokens = reduce(localTranscript, (m, event) => {
-    mapValues(event.speakerEvents, (speakerEvent, speakerId) => {
-      // events
-      newServerEvents.push({
-        pk: speakerEvent.speakerEventId,
-        s: padEnd(timeFromSeconds(event.startTime), 14, '0'),
-        e: padEnd(timeFromSeconds(event.endTime), 14, '0'),
-        l: 0,
-        tid: {
-          [speakerId]: speakerEvent.tokens.map((t) => t.id)
-        },
-        event_tiers: reduce(event.speakerEvents, (serverSpeakerEventTiers, se, sId) => {
-          const tiers = reduce(se.speakerEventTiers, (serverEventTiers, et, tierId) => {
-            serverEventTiers[et.id] = {
-              ti: Number(tierId),
-              t: et.text,
-            }
-            return serverEventTiers
-          }, {} as ServerEventTiers)
-          if (Object.keys(tiers).length !== 0) {
-            serverSpeakerEventTiers[sId] = tiers
+    // events
+    newServerEvents.push({
+      pk: event.eventId,
+      s: padEnd(timeFromSeconds(event.startTime), 14, '0'),
+      e: padEnd(timeFromSeconds(event.endTime), 14, '0'),
+      l: 0,
+      tid: mapValues(event.speakerEvents, (se) => se.tokens.map(t => t.id)),
+      event_tiers: reduce(event.speakerEvents, (serverSpeakerEventTiers, se, sId) => {
+        const tiers = reduce(se.speakerEventTiers, (serverEventTiers, et, tierId) => {
+          serverEventTiers[et.id] = {
+            ti: Number(tierId),
+            t: et.text,
           }
-          return serverSpeakerEventTiers
-        }, {} as ServerSpeakerEventTiers)
-      })
+          return serverEventTiers
+        }, {} as ServerEventTiers)
+        if (Object.keys(tiers).length !== 0) {
+          serverSpeakerEventTiers[sId] = tiers
+        }
+        return serverSpeakerEventTiers
+      }, {} as ServerSpeakerEventTiers)
+    })
+    mapValues(event.speakerEvents, (speakerEvent, speakerId) => {
       // tokens
       return speakerEvent.tokens.map((t, i, tokens) => {
         const token = {
