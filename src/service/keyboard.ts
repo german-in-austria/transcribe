@@ -68,6 +68,8 @@ export interface KeyboardAction {
   icon: string|null
   action: (e: KeyboardEvent|MouseEvent) => any
   showInMenu: boolean
+  // a class that gets added to the icon element.
+  iconClass?: string
   // defines whether it captures inputs that have
   // more modifier keys than specified.
   // (useful for modifiable shortcuts, e.g. shift for jumps)
@@ -232,6 +234,121 @@ export function displayKeyboardAction(a: KeyboardAction): string {
 }
 
 export const keyboardShortcuts: KeyboardShortcuts = {
+  appendEvent: {
+    group: 'Editing',
+    greedy: false,
+    showInMenu: true,
+    ignoreInTextField: false,
+    modifier: [ 'alt' ],
+    key: '+',
+    description: 'Append an event after the currently selected event.',
+    icon: 'mdi-shape-rectangle-plus',
+    name: 'Append Event',
+    disabled: () => false,
+    action: async () => {
+      const selectedEvent = getFocusedEvent() || getSelectedEvent()
+      const speaker = getFocusedSpeaker()
+      if (selectedEvent !== undefined) {
+        const newEs = mutation(appendEmptyEventAfter(selectedEvent))
+        const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent(1, selectedEvent) ])
+        if (es.length > 0 && es[0] !== undefined) {
+          scrollToTranscriptEvent(es[0], {
+            focusSpeaker: speaker,
+            animate: false,
+            focusTier: null,
+            focusRight: false
+          })
+          scrollToAudioEvent(es[0])
+          selectEvent(es[0])
+          if (settings.playEventOnAppend) {
+            playEvents(es)
+          }
+        }
+      } else {
+        const action = appendEmptyEventAt(eventStore.currentTime)
+        if (action !== undefined && action.after[0] !== undefined) {
+          const e = action.after[0]
+          scrollToTranscriptEvent(e, {
+            focusSpeaker: speaker,
+            animate: false,
+            focusTier: null,
+            focusRight: false
+          })
+          scrollToAudioEvent(e)
+          selectEvent(e)
+          if (settings.playEventOnAppend) {
+            playEvents([ e ])
+          }
+        }
+      }
+    }
+  },
+  prependEvent: {
+    group: 'Editing',
+    greedy: false,
+    showInMenu: true,
+    ignoreInTextField: false,
+    modifier: [ 'alt' ],
+    key: '-',
+    description: 'Prepend an event before the currently selected event.',
+    icon: 'mdi-shape-rectangle-plus',
+    iconClass: 'mirror-horizontal',
+    name: 'Prepend Event',
+    disabled: () => false,
+    action: async () => {
+      const event = getFocusedEvent() || getSelectedEvent()
+      const speaker = getFocusedSpeaker()
+      if (event !== undefined) {
+        const newEs = mutation(prependEmptyEventBefore(event))
+        const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent(-1, event) ])
+        if (es.length > 0 && es[0] !== undefined) {
+          scrollToTranscriptEvent(es[0], {
+            focusSpeaker: speaker,
+            animate: false,
+            focusTier: null,
+            focusRight: false
+          })
+          scrollToAudioEvent(es[0])
+          selectEvent(es[0])
+          if (settings.playEventOnAppend) {
+            playEvents(es)
+          }
+        }
+      } else {
+        const action = prependEmptyEventAt(eventStore.currentTime)
+        if (action !== undefined && action.after[0] !== undefined) {
+          const e = action.after[0]
+          scrollToTranscriptEvent(e, {
+            focusSpeaker: speaker,
+            animate: false,
+            focusTier: null,
+            focusRight: false
+          })
+          scrollToAudioEvent(e)
+          selectEvent(e)
+          if (settings.playEventOnAppend) {
+            playEvents([ e ])
+          }
+        }
+      }
+    }
+  },
+  deleteEvents: {
+    group: 'Editing',
+    greedy: false,
+    showInMenu: true,
+    ignoreInTextField: true,
+    modifier: [],
+    key: 'Backspace',
+    name: 'Delete Events',
+    description: 'Delete selected Events',
+    icon: 'mdi-trash-can-outline',
+    disabled: () => eventStore.selectedEventIds.length === 0,
+    action: () => {
+      mutation(deleteSelectedEvents())
+      deselectEvents()
+    }
+  },
   split: {
     group: 'Editing',
     greedy: false,
@@ -404,120 +521,6 @@ export const keyboardShortcuts: KeyboardShortcuts = {
           text: cleanResult
         })
       }
-    },
-  },
-  appendEvent: {
-    group: 'Editing',
-    greedy: false,
-    showInMenu: true,
-    ignoreInTextField: false,
-    modifier: [ 'alt' ],
-    key: '+',
-    description: 'Append an event after the currently selected event.',
-    icon: 'message',
-    name: 'Append Event',
-    disabled: () => false,
-    action: async () => {
-      const selectedEvent = getFocusedEvent() || getSelectedEvent()
-      const speaker = getFocusedSpeaker()
-      if (selectedEvent !== undefined) {
-        const newEs = mutation(appendEmptyEventAfter(selectedEvent))
-        const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent(1, selectedEvent) ])
-        if (es.length > 0 && es[0] !== undefined) {
-          scrollToTranscriptEvent(es[0], {
-            focusSpeaker: speaker,
-            animate: false,
-            focusTier: null,
-            focusRight: false
-          })
-          scrollToAudioEvent(es[0])
-          selectEvent(es[0])
-          if (settings.playEventOnAppend) {
-            playEvents(es)
-          }
-        }
-      } else {
-        const action = appendEmptyEventAt(eventStore.currentTime)
-        if (action !== undefined && action.after[0] !== undefined) {
-          const e = action.after[0]
-          scrollToTranscriptEvent(e, {
-            focusSpeaker: speaker,
-            animate: false,
-            focusTier: null,
-            focusRight: false
-          })
-          scrollToAudioEvent(e)
-          selectEvent(e)
-          if (settings.playEventOnAppend) {
-            playEvents([ e ])
-          }
-        }
-      }
-    }
-  },
-  prependEvent: {
-    group: 'Editing',
-    greedy: false,
-    showInMenu: true,
-    ignoreInTextField: false,
-    modifier: [ 'alt' ],
-    key: '-',
-    description: 'Prepend an event before the currently selected event.',
-    icon: '',
-    name: 'Prepend Event',
-    disabled: () => false,
-    action: async () => {
-      const event = getFocusedEvent() || getSelectedEvent()
-      const speaker = getFocusedSpeaker()
-      if (event !== undefined) {
-        const newEs = mutation(prependEmptyEventBefore(event))
-        const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent(-1, event) ])
-        if (es.length > 0 && es[0] !== undefined) {
-          scrollToTranscriptEvent(es[0], {
-            focusSpeaker: speaker,
-            animate: false,
-            focusTier: null,
-            focusRight: false
-          })
-          scrollToAudioEvent(es[0])
-          selectEvent(es[0])
-          if (settings.playEventOnAppend) {
-            playEvents(es)
-          }
-        }
-      } else {
-        const action = prependEmptyEventAt(eventStore.currentTime)
-        if (action !== undefined && action.after[0] !== undefined) {
-          const e = action.after[0]
-          scrollToTranscriptEvent(e, {
-            focusSpeaker: speaker,
-            animate: false,
-            focusTier: null,
-            focusRight: false
-          })
-          scrollToAudioEvent(e)
-          selectEvent(e)
-          if (settings.playEventOnAppend) {
-            playEvents([ e ])
-          }
-        }
-      }
-    }
-  },
-  deleteEvents: {
-    group: 'Editing',
-    greedy: false,
-    showInMenu: true,
-    ignoreInTextField: true,
-    modifier: [],
-    key: 'Backspace',
-    name: 'Delete Events',
-    description: 'Delete selected Events',
-    icon: 'delete',
-    disabled: () => eventStore.selectedEventIds.length === 0,
-    action: () => {
-      mutation(deleteSelectedEvents())
-      deselectEvents()
     }
   },
   joinEvents: {
