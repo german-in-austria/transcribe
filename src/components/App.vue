@@ -50,7 +50,7 @@
           </v-flex>
           <div
             v-if="settings.backEndUrl !== null && loggedIn === false"
-            class="text-xs-center"
+            class="text-xs-center mt-5"
           >
             Please <a :href="`${ settings.backEndUrl }/login/`" target="_blank">login</a> and <a @click="loadTranscriptList(settings.backEndUrl)">refresh</a>
           </div>
