@@ -75,7 +75,7 @@ export const PP04: ProjectPreset = {
       type: 'single',
       name: 'non-verbal',
       color: '#008800',
-      regex: /^>$/u,
+      regex: /^(;|,|\.|-)?>$/u,
       id: 5
     },
     {
