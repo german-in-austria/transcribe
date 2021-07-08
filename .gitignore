@@ -5,3 +5,4 @@ static/test-files/
 credentials*
 .nova
 public/kaldi-models/
+design-docs
