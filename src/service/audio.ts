@@ -340,6 +340,17 @@ export function sumChannels(first: Float32Array, second: Float32Array): Float32A
   return sum
 }
 
+function getBuffer(buffer: AudioBuffer, channel: number, mono: boolean) {
+  if (mono === true) {
+    return sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
+  } else {
+    console.time('channel ' + channel)
+    const x = buffer.getChannelData(channel).buffer
+    console.timeEnd('channel ' + channel)
+    return x
+  }
+}
+
 async function drawWavePathAsync(
   buffer: AudioBuffer,
   width: number,
@@ -348,14 +359,7 @@ async function drawWavePathAsync(
   offsetLeft = 0,
   mono = false
 ): Promise<string> {
-  const buf = (() => {
-    // console.log('buffer.duration', buffer.duration)
-    if (mono === true) {
-      return sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
-    } else {
-      return buffer.getChannelData(channel).buffer
-    }
-  })()
+  const buf = getBuffer(buffer, channel, mono)
   const options = textEncoder.encode(JSON.stringify({ width, height, offsetLeft })).buffer
   if (channel === 0) {
     return await waveformWorker1.postMessage({ buffer: buf, options }, [ buf, options ])
