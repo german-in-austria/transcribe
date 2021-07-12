@@ -9,6 +9,7 @@
       :items="projectPresetNames">
     </v-select>
     <v-autocomplete
+      v-if="settings.backEndUrl !== null"
       :disabled="surveys === null"
       :filter="surveyFilter"
       :item-disabled="(i) => i.id_transcript !== null"

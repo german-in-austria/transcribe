@@ -110,7 +110,7 @@ import {
 
 import contenteditable from './helper/Contenteditable.vue'
 import * as copyPaste from '../service/copy-paste'
-import { undoable } from '../store/history'
+import { mutation } from '../store/history'
 import _ from 'lodash'
 import * as jsdiff from 'diff'
 import eventBus from '../service/event-bus'
@@ -432,7 +432,7 @@ export default class SpeakerSegmentTranscript extends Vue {
       }
     }
     if (!isEqualDeep(newEvent, oldEvent)) {
-      undoable(updateSpeakerEvent(newEvent, Number(this.speaker)))
+      mutation(updateSpeakerEvent(newEvent, Number(this.speaker)))
       this.updateAllTokenTypes(newEvent)
     } else {
       // nothing to update

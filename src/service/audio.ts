@@ -332,12 +332,23 @@ async function drawSpectrogramAsync(
   return [canvas, f]
 }
 
-function sumChannels(first: Float32Array, second: Float32Array): Float32Array {
+export function sumChannels(first: Float32Array, second: Float32Array): Float32Array {
   const sum = new Float32Array(first.length)
   first.forEach((v: number, i: number) => {
     sum[i] = v + second[i]
   })
   return sum
+}
+
+function getBuffer(buffer: AudioBuffer, channel: number, mono: boolean) {
+  if (mono === true) {
+    return sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
+  } else {
+    console.time('channel ' + channel)
+    const x = buffer.getChannelData(channel).buffer
+    console.timeEnd('channel ' + channel)
+    return x
+  }
 }
 
 async function drawWavePathAsync(
@@ -348,15 +359,8 @@ async function drawWavePathAsync(
   offsetLeft = 0,
   mono = false
 ): Promise<string> {
-  const buf = (() => {
-    // console.log('buffer.duration', buffer.duration)
-    if (mono === true) {
-      return sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
-    } else {
-      return buffer.getChannelData(channel).buffer
-    }
-  })()
-  const options = textEncoder.encode(JSON.stringify({ width, height, offsetLeft})).buffer
+  const buf = getBuffer(buffer, channel, mono)
+  const options = textEncoder.encode(JSON.stringify({ width, height, offsetLeft })).buffer
   if (channel === 0) {
     return await waveformWorker1.postMessage({ buffer: buf, options }, [ buf, options ])
   } else {
@@ -443,10 +447,10 @@ async function drawWave(
 
 // tslint:disable-next-line:max-line-length
 async function decodeBufferByteRange(fromByte: number, toByte: number, buffer: ArrayBuffer): Promise<AudioBuffer> {
-  const headerBuffer    = getOggHeaderBuffer(buffer)
-  const contentBuffer   = buffer.slice(fromByte, toByte)
-  const combinedBuffer  = concatBuffer(headerBuffer, contentBuffer)
-  const decodedBuffer   = await audioContext.decodeAudioData(combinedBuffer)
+  const headerBuffer = getOggHeaderBuffer(buffer)
+  const contentBuffer = buffer.slice(fromByte, toByte)
+  const combinedBuffer = concatBuffer(headerBuffer, contentBuffer)
+  const decodedBuffer = await audioContext.decodeAudioData(combinedBuffer)
   return decodedBuffer
 }
 

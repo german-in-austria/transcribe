@@ -49,7 +49,7 @@ import {
   toTime
 } from '../store/transcript'
 
-import { undoable } from '../store/history'
+import { mutation } from '../store/history'
 import { getTextWidth } from '../util'
 import settings from '../store/settings'
 
@@ -92,7 +92,7 @@ export default class SegmentTranscript extends Vue {
   }
 
   deleteSelectedEvents() {
-    undoable(deleteSelectedEvents())
+    mutation(deleteSelectedEvents())
   }
 
   getLongestSpeakerText(e: LocalTranscriptEvent): string[]|undefined {

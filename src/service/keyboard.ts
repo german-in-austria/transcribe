@@ -1,7 +1,7 @@
 
 import _ from 'lodash'
 
-import { undoable, history } from '../store/history'
+import { mutation, history } from '../store/history'
 import { platform } from '../util'
 import Vue from 'vue'
 import {
@@ -50,6 +50,8 @@ import { saveChangesToServer } from '../service/backend-server'
 import eventBus from '../service/event-bus'
 import settings from '../store/settings';
 import { computeTokenTypesForEvents } from './token-types'
+import audio from './audio'
+import kaldiService from './kaldi/kaldiService'
 
 type KeyboardModifier = 'alt'|'shift'|'ctrlOrCmd'
 
@@ -66,6 +68,8 @@ export interface KeyboardAction {
   icon: string|null
   action: (e: KeyboardEvent|MouseEvent) => any
   showInMenu: boolean
+  // a class that gets added to the icon element.
+  iconClass?: string
   // defines whether it captures inputs that have
   // more modifier keys than specified.
   // (useful for modifiable shortcuts, e.g. shift for jumps)
@@ -230,6 +234,121 @@ export function displayKeyboardAction(a: KeyboardAction): string {
 }
 
 export const keyboardShortcuts: KeyboardShortcuts = {
+  appendEvent: {
+    group: 'Editing',
+    greedy: false,
+    showInMenu: true,
+    ignoreInTextField: false,
+    modifier: [ 'alt' ],
+    key: '+',
+    description: 'Append an event after the currently selected event.',
+    icon: 'mdi-shape-rectangle-plus',
+    name: 'Append Event',
+    disabled: () => false,
+    action: async () => {
+      const selectedEvent = getFocusedEvent() || getSelectedEvent()
+      const speaker = getFocusedSpeaker()
+      if (selectedEvent !== undefined) {
+        const newEs = mutation(appendEmptyEventAfter(selectedEvent))
+        const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent(1, selectedEvent) ])
+        if (es.length > 0 && es[0] !== undefined) {
+          scrollToTranscriptEvent(es[0], {
+            focusSpeaker: speaker,
+            animate: false,
+            focusTier: null,
+            focusRight: false
+          })
+          scrollToAudioEvent(es[0])
+          selectEvent(es[0])
+          if (settings.playEventOnAppend) {
+            playEvents(es)
+          }
+        }
+      } else {
+        const action = appendEmptyEventAt(eventStore.currentTime)
+        if (action !== undefined && action.after[0] !== undefined) {
+          const e = action.after[0]
+          scrollToTranscriptEvent(e, {
+            focusSpeaker: speaker,
+            animate: false,
+            focusTier: null,
+            focusRight: false
+          })
+          scrollToAudioEvent(e)
+          selectEvent(e)
+          if (settings.playEventOnAppend) {
+            playEvents([ e ])
+          }
+        }
+      }
+    }
+  },
+  prependEvent: {
+    group: 'Editing',
+    greedy: false,
+    showInMenu: true,
+    ignoreInTextField: false,
+    modifier: [ 'alt' ],
+    key: '-',
+    description: 'Prepend an event before the currently selected event.',
+    icon: 'mdi-shape-rectangle-plus',
+    iconClass: 'mirror-horizontal',
+    name: 'Prepend Event',
+    disabled: () => false,
+    action: async () => {
+      const event = getFocusedEvent() || getSelectedEvent()
+      const speaker = getFocusedSpeaker()
+      if (event !== undefined) {
+        const newEs = mutation(prependEmptyEventBefore(event))
+        const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent(-1, event) ])
+        if (es.length > 0 && es[0] !== undefined) {
+          scrollToTranscriptEvent(es[0], {
+            focusSpeaker: speaker,
+            animate: false,
+            focusTier: null,
+            focusRight: false
+          })
+          scrollToAudioEvent(es[0])
+          selectEvent(es[0])
+          if (settings.playEventOnAppend) {
+            playEvents(es)
+          }
+        }
+      } else {
+        const action = prependEmptyEventAt(eventStore.currentTime)
+        if (action !== undefined && action.after[0] !== undefined) {
+          const e = action.after[0]
+          scrollToTranscriptEvent(e, {
+            focusSpeaker: speaker,
+            animate: false,
+            focusTier: null,
+            focusRight: false
+          })
+          scrollToAudioEvent(e)
+          selectEvent(e)
+          if (settings.playEventOnAppend) {
+            playEvents([ e ])
+          }
+        }
+      }
+    }
+  },
+  deleteEvents: {
+    group: 'Editing',
+    greedy: false,
+    showInMenu: true,
+    ignoreInTextField: true,
+    modifier: [],
+    key: 'Backspace',
+    name: 'Delete Events',
+    description: 'Delete selected Events',
+    icon: 'mdi-trash-can-outline',
+    disabled: () => eventStore.selectedEventIds.length === 0,
+    action: () => {
+      mutation(deleteSelectedEvents())
+      deselectEvents()
+    }
+  },
   split: {
     group: 'Editing',
     greedy: false,
@@ -244,11 +363,11 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     action: async () => {
       const eventUnderPlayHead = findEventAt(eventStore.currentTime)
       if (eventUnderPlayHead === undefined) {
-        const es = undoable(addEvent(eventStore.currentTime))
+        const es = mutation(addEvent(eventStore.currentTime))
         selectEvents(es)
       } else {
         const splitAt = eventStore.currentTime - eventUnderPlayHead.startTime
-        const [ leftEvent ] = undoable(splitEvent(eventUnderPlayHead, splitAt))
+        const [ leftEvent ] = mutation(splitEvent(eventUnderPlayHead, splitAt))
         if (!(await isWaveformEventVisible(leftEvent))) {
           scrollToAudioEvent(leftEvent)
         }
@@ -275,7 +394,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         const eventId = e.getAttribute('data-event-id')
         if (speakerId !== null && eventId !== null) {
           // console.log({ speakerId, eventId })
-          undoable(splitEventAtChar(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
+          mutation(splitEventAtChar(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
           // tslint:disable-next-line:max-line-length
           eventStore.events = eventStore.events = computeTokenTypesForEvents(eventStore.events, eventStore.metadata.defaultTier, [ speakerId ])
         }
@@ -301,7 +420,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         const speakerId = e.getAttribute('data-speaker-id')
         const eventId = e.getAttribute('data-event-id')
         if (speakerId !== null && eventId !== null) {
-          undoable(shiftCharsRight(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
+          mutation(shiftCharsRight(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
         }
       }
     }
@@ -325,7 +444,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         const speakerId = e.getAttribute('data-speaker-id')
         const eventId = e.getAttribute('data-event-id')
         if (speakerId !== null && eventId !== null) {
-          undoable(shiftCharsLeft(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
+          mutation(shiftCharsLeft(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
           return false
         }
       }
@@ -375,118 +494,33 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       }
     }
   },
-  appendEvent: {
+  autoTranscribeEvent: {
     group: 'Editing',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
-    modifier: [ 'alt' ],
-    key: '+',
-    description: 'Append an event after the currently selected event.',
-    icon: 'message',
-    name: 'Append Event',
-    disabled: () => false,
-    action: async () => {
-      const selectedEvent = getFocusedEvent() || getSelectedEvent()
-      const speaker = getFocusedSpeaker()
-      if (selectedEvent !== undefined) {
-        const newEs = undoable(appendEmptyEventAfter(selectedEvent))
-        const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent(1, selectedEvent) ])
-        if (es.length > 0 && es[0] !== undefined) {
-          scrollToTranscriptEvent(es[0], {
-            focusSpeaker: speaker,
-            animate: false,
-            focusTier: null,
-            focusRight: false
-          })
-          scrollToAudioEvent(es[0])
-          selectEvent(es[0])
-          if (settings.playEventOnAppend) {
-            playEvents(es)
-          }
-        }
-      } else {
-        const action = appendEmptyEventAt(eventStore.currentTime)
-        if (action !== undefined && action.after[0] !== undefined) {
-          const e = action.after[0]
-          scrollToTranscriptEvent(e, {
-            focusSpeaker: speaker,
-            animate: false,
-            focusTier: null,
-            focusRight: false
-          })
-          scrollToAudioEvent(e)
-          selectEvent(e)
-          if (settings.playEventOnAppend) {
-            playEvents([ e ])
-          }
-        }
-      }
-    }
-  },
-  prependEvent: {
-    group: 'Editing',
-    greedy: false,
-    showInMenu: true,
-    ignoreInTextField: false,
-    modifier: [ 'alt' ],
-    key: '-',
-    description: 'Prepend an event before the currently selected event.',
-    icon: '',
-    name: 'Prepend Event',
-    disabled: () => false,
-    action: async () => {
-      const event = getFocusedEvent() || getSelectedEvent()
-      const speaker = getFocusedSpeaker()
-      if (event !== undefined) {
-        const newEs = undoable(prependEmptyEventBefore(event))
-        const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent(-1, event) ])
-        if (es.length > 0 && es[0] !== undefined) {
-          scrollToTranscriptEvent(es[0], {
-            focusSpeaker: speaker,
-            animate: false,
-            focusTier: null,
-            focusRight: false
-          })
-          scrollToAudioEvent(es[0])
-          selectEvent(es[0])
-          if (settings.playEventOnAppend) {
-            playEvents(es)
-          }
-        }
-      } else {
-        const action = prependEmptyEventAt(eventStore.currentTime)
-        if (action !== undefined && action.after[0] !== undefined) {
-          const e = action.after[0]
-          scrollToTranscriptEvent(e, {
-            focusSpeaker: speaker,
-            animate: false,
-            focusTier: null,
-            focusRight: false
-          })
-          scrollToAudioEvent(e)
-          selectEvent(e)
-          if (settings.playEventOnAppend) {
-            playEvents([ e ])
-          }
-        }
-      }
-    }
-  },
-  deleteEvents: {
-    group: 'Editing',
-    greedy: false,
-    showInMenu: true,
-    ignoreInTextField: true,
-    modifier: [],
-    key: 'Backspace',
-    name: 'Delete Events',
-    description: 'Delete selected Events',
-    icon: 'delete',
+    modifier: [ 'ctrlOrCmd', 'shift' ],
+    key: 'k',
+    description: 'Automatically Transcribe an Audio Segement',
+    icon: 'mdi-text-to-speech',
+    name: 'Auto-Transcribe Event',
     disabled: () => eventStore.selectedEventIds.length === 0,
-    action: () => {
-      undoable(deleteSelectedEvents())
-      deselectEvents()
+    action: async (ev) => {
+      ev.preventDefault()
+      const e = getSelectedEvent()
+      if (e !== undefined) {
+        const buffer = await audio.decodeBufferTimeSlice(e.startTime, e.endTime, audio.store.uint8Buffer.buffer)
+        const result = await kaldiService.transcribeAudio(
+          window.location.origin + '/kaldi-models/german.zip',
+          buffer,
+          () => null)
+        const cleanResult = result.replaceAll(/\d\.\d\d\s/g, '')
+        eventBus.$emit('updateSpeakerEventText', {
+          eventId: e.eventId,
+          speakerId: Object.keys(eventStore.metadata.speakers)[0],
+          text: cleanResult
+        })
+      }
     }
   },
   joinEvents: {
@@ -502,7 +536,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     disabled: () => eventStore.selectedEventIds.length < 2,
     action: () => {
       if (eventStore.selectedEventIds.length > 1) {
-        undoable(joinEvents(eventStore.selectedEventIds))
+        mutation(joinEvents(eventStore.selectedEventIds))
       }
     }
   },
@@ -521,7 +555,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       const e = getSelectedEvent()
       if (e !== undefined) {
         const t = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
-        undoable(moveEventStartTime(e, t * -1))
+        mutation(moveEventStartTime(e, t * -1))
       }
     }
   },
@@ -540,7 +574,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       const e = getSelectedEvent()
       if (e !== undefined) {
         const t = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
-        undoable(moveEventStartTime(e, t))
+        mutation(moveEventStartTime(e, t))
       }
     }
   },
@@ -559,7 +593,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       const e = getSelectedEvent()
       if (e !== undefined) {
         const t = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
-        undoable(moveEventEndTime(e, t))
+        mutation(moveEventEndTime(e, t))
       }
     }
   },
@@ -578,7 +612,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       const e = getSelectedEvent()
       if (e !== undefined) {
         const t = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
-        undoable(moveEventEndTime(e, t * -1))
+        mutation(moveEventEndTime(e, t * -1))
       }
     }
   },

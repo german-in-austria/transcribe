@@ -30,25 +30,37 @@
           column>
           <v-flex xs1>
             <v-combobox
-              style="width: 300px; margin: 20px auto 0 auto"
               @change="connectToBackend"
               :loading="isLoadingBackendUrl"
               :error-messages="this.errorMessage !==  null ? [ this.errorMessage ] : []"
               auto-select-first
+              style="position: fixed; left: 0; right: 0; z-index: 1"
+              solo
+              flat
               v-model="settings.backEndUrl"
               :items="backEndUrls"
+              :return-object="false"
+              dense
               label="Select a Back End"
-            ></v-combobox>
+            >
+            <template v-slot:prepend-inner>
+              <span class="caption">Transcript Server</span>
+            </template>
+            </v-combobox>
           </v-flex>
-          <div v-if="settings.backEndUrl !== null && loggedIn === false">
+          <div
+            v-if="settings.backEndUrl !== null && loggedIn === false"
+            class="text-xs-center mt-5"
+          >
             Please <a :href="`${ settings.backEndUrl }/login/`" target="_blank">login</a> and <a @click="loadTranscriptList(settings.backEndUrl)">refresh</a>
           </div>
           <v-progress-circular
             indeterminate
-            v-if="eventStore.transcripts === null && loggedIn === true && settings.backEndUrl !== null"/>
-            <v-flex v-if="eventStore.transcripts !== null">
-              <v-layout justify-center row>
-              <v-flex class="pt-5 pl-4 pr-4" xs12 md6>
+            v-if="eventStore.transcripts === null && loggedIn === true && settings.backEndUrl !== null"
+          />
+          <v-flex v-if="eventStore.transcripts !== null">
+            <v-layout justify-center row>
+              <v-flex class="pt-5 mt-3 pl-4 pr-4" xs12 md6>
                 <h1 class="text-xs-center text-light text-uppercase mt-3 mb-4">
                   Transcribe
                 </h1>
@@ -56,12 +68,12 @@
                   <v-flex class="pr-1" xs6>
                     <v-btn
                       :loading="importingLocalFile" @click="openFileDialog" class="mb-2 elevation-0" style="height: 40px;" block>
-                      Open/Import File…
+                      Open/Import File …
                     </v-btn>
                   </v-flex>
                   <v-flex class="pl-1" xs6>
-                    <v-btn @click="newTranscript" class="mb-2 elevation-0" style="height: 40px;" block>
-                      New Transcript…
+                    <v-btn @click="initializeEmptyTranscript" class="mb-2 elevation-0" style="height: 40px;" block>
+                      New Transcript …
                     </v-btn>
                   </v-flex>
                 </v-layout>
@@ -69,29 +81,41 @@
                   solo
                   flat
                   v-model="searchTerm"
-                  placeholder="search…"
+                  placeholder="Search …"
                   hide-details
                   prepend-inner-icon="search"
                   autofocus />
                 <v-list two-line style="background: transparent">
-                  <v-subheader>
+                  <v-subheader v-if="settings.backEndUrl !== null">
                     Server Transcripts
+                  </v-subheader>
+                  <v-subheader v-else>
+                    Local Transcripts
                   </v-subheader>
                   <template v-for="(transcript) in filteredTranscriptList">
                     <v-divider :key="'dk' + transcript.pk" />
                     <v-list-tile
                       :key="transcript.pk"
                       :disabled="loadingTranscriptId !== null || transcript.locked === true"
-                      @click="loadRemoteTranscript(transcript)">
+                      @click="openTranscript(transcript)">
                       <v-list-tile-avatar>
                         <f-icon v-if="transcript.locked" value="lock" />
                         <v-progress-circular
+                          v-else-if="loadingTranscriptId === transcript.pk"
                           class="mb-2"
                           size="20"
                           width="2"
-                          v-else-if="loadingTranscriptId === transcript.pk"
                           indeterminate />
-                        <f-icon style="opacity: .5" value="cloud_queue" v-else />
+                        <f-icon
+                          v-else-if="settings.backEndUrl !== null"
+                          value="cloud_queue"
+                          style="opacity: .5"
+                        />
+                        <f-icon
+                          v-else-if="settings.backEndUrl === null"
+                          value="mdi-file-document-outline"
+                          style="opacity: .5"
+                        />
                       </v-list-tile-avatar>
                       <v-list-tile-content>
                         <v-list-tile-title>
@@ -108,11 +132,9 @@
                       </v-list-tile-action>
                     </v-list-tile>
                   </template>
-                  <v-list-tile class="text-xs-center" v-if="filteredTranscriptList.length === 0">
-                    <span class="caption">
-                      no matching transcripts found
-                    </span>
-                  </v-list-tile>
+                  <div class="caption text-xs-center grey--text" v-if="filteredTranscriptList.length === 0">
+                    no matching transcripts found
+                  </div>
                 </v-list>
               </v-flex>
             </v-layout>
@@ -143,6 +165,7 @@ import sidebar from './Sidebar.vue'
 import exmaraldaImporter from './ExmaraldaImporter.vue'
 
 import * as socket from '../service/socket'
+import diskService, { LocalTranscriptListItem } from '../service/disk'
 import settings from '../store/settings'
 
 import {
@@ -165,12 +188,10 @@ import {
   getTranscript,
   mergeServerTranscript,
   serverTranscriptToLocal,
-  getMetadataFromServerTranscript,
+  getMetadataFromServerTranscript
 } from '../service/backend-server'
 
-import {
-  parseProjectFile
-} from '../service/backend-files'
+import * as Sentry from '@sentry/browser'
 
 import {
   ParsedExmaraldaXML,
@@ -182,29 +203,47 @@ import {
   HistoryEventAction,
   handleRemotePeerEvent
 } from '../store/history'
+import FIcon from './helper/FIcon.vue'
 
 @Component({
   components: {
     editor,
     exmaraldaImporter,
     sidebar,
-    playerBar
+    playerBar,
+    FIcon
   }
 })
 export default class App extends Vue {
-
-  // TODO:
-  // @Prop() transcript_id: number|null
 
   eventStore = eventStore
   settings = settings
 
   backEndUrls = [
-    'https://dioedb.dioe.at',
-    'https://dissdb.dioe.at',
-    'https://dissdb-test.dioe.at',
-    'http://localhost:8000',
-    'https://dioedb.demo.dioe.at'
+    {
+      text: 'On This Computer',
+      value: null
+    },
+    {
+      text: 'dioedb.dioe.at',
+      value: 'https://dioedb.dioe.at'
+    },
+    {
+      text: 'dissdb.dioe.at',
+      value: 'https://dissdb.dioe.at'
+    },
+    {
+      text: 'dissdb-test.dioe.at',
+      value: 'https://dissdb-test.dioe.at'
+    },
+    {
+      text: 'localhost:8000 (development)',
+      value: 'http://localhost:8000'
+    },
+    {
+      text: 'dioedb.demo.dioe.at',
+      value: 'https://dioedb.demo.dioe.at'
+    }
   ]
 
   searchTerm = ''
@@ -219,10 +258,16 @@ export default class App extends Vue {
   async onUpdateBackEndUrl(url: string|null) {
     if (url !== null) {
       this.connectToBackend(url)
+    } else {
+      this.useLocalTranscripts()
     }
   }
 
-  async connectToBackend(url: string) {
+  useLocalTranscripts() {
+    eventStore.transcripts = diskService.localTranscripts
+  }
+
+  async connectToBackend(url: string|null) {
     this.isLoadingBackendUrl = true
     settings.backEndUrl = url
     this.updateTokenTypePreset()
@@ -247,10 +292,13 @@ export default class App extends Vue {
     // }
   }
 
-  onDropFile(e: DragEvent) {
+  async onDropFile(e: DragEvent) {
     if (e instanceof DragEvent && e.dataTransfer !== null) {
       if (e.dataTransfer.files !== null && e.dataTransfer.files.length === 1) {
-        this.openFile(e.dataTransfer.files[0])
+        const fh = await e.dataTransfer.items.item(0).getAsFileSystemHandle()
+        if (fh?.kind === 'file') {
+          this.openFile(fh)
+        }
       }
     }
   }
@@ -266,20 +314,24 @@ export default class App extends Vue {
     }
   }
 
-  async loadTranscriptList(url: string) {
-    try {
-      this.errorMessage = null
-      const res = await getServerTranscripts(url)
-      if (res.transcripts !== undefined) {
-        this.loggedIn = true
-        eventStore.transcripts = res.transcripts
-      } else if ((res as any).error === 'login') {
+  async loadTranscriptList(url: string|null) {
+    if (url === null) {
+      eventStore.transcripts = await diskService.loadTranscriptList()
+    } else {
+      try {
+        this.errorMessage = null
+        const res = await getServerTranscripts(url)
+        if (res.transcripts !== undefined) {
+          this.loggedIn = true
+          eventStore.transcripts = res.transcripts
+        } else if ((res as any).error === 'login') {
+          this.loggedIn = false
+        }
+      } catch (e) {
         this.loggedIn = false
+        eventStore.transcripts = []
+        this.errorMessage = 'could not load transcripts from back end.'
       }
-    } catch (e) {
-      this.loggedIn = false
-      eventStore.transcripts = []
-      this.errorMessage = 'could not load transcripts from back end.'
     }
   }
 
@@ -293,18 +345,9 @@ export default class App extends Vue {
     }
   }
 
-  isAudio(file: File) {
-    return file.name.includes('.ogg') || file.type.includes('/ogg')
-  }
-
-  // TODO: better sanity check.
-  isXML(file: File) {
-    return file.type.includes('/xml') || file.name.includes('.exb')
-  }
-
-  async openProjectFile(f: File) {
+  async openProjectFile(f: FileSystemFileHandle) {
     this.importingLocalFile = true
-    const p = await parseProjectFile(f)
+    const p = await diskService.loadProjectFile(f)
     const audioUrl = await this.loadLocalTranscript(p.serverTranscript, p.audioBuffer)
     this.loadPreviousUserState(p.eventStore, audioUrl, p.overviewSvg, p.historyActions)
   }
@@ -316,16 +359,16 @@ export default class App extends Vue {
     historyFile: HistoryEventAction[]
   ) {
     localForage.setItem('waveformOverview__' + audioUrl, overviewSvg)
-    eventStore.events                     = previousEventStore.events
-    eventStore.selectedEventIds           = previousEventStore.selectedEventIds
-    eventStore.selectedSearchResult       = previousEventStore.selectedSearchResult
-    eventStore.searchResults              = previousEventStore.searchResults
-    eventStore.searchTerm                 = previousEventStore.searchTerm
-    eventStore.metadata                   = previousEventStore.metadata
-    eventStore.userState                  = previousEventStore.userState
+    eventStore.events = previousEventStore.events
+    eventStore.selectedEventIds = previousEventStore.selectedEventIds
+    eventStore.selectedSearchResult = previousEventStore.selectedSearchResult
+    eventStore.searchResults = previousEventStore.searchResults
+    eventStore.searchTerm = previousEventStore.searchTerm
+    eventStore.metadata = previousEventStore.metadata
+    eventStore.userState = previousEventStore.userState
     eventStore.transcriptDownloadProgress = previousEventStore.transcriptDownloadProgress
-    eventStore.status                     = 'finished'
-    history.actions                       = historyFile
+    eventStore.status = 'finished'
+    history.actions = historyFile
   }
 
   async loadImportedTranscript(t: ServerTranscript, audioData: File|null, audioUrl?: string): Promise<string> {
@@ -353,6 +396,14 @@ export default class App extends Vue {
     )
     // insert placeholders where necessary
     eventStore.events = insertPlaceholderTokens(eventStore.events, defaultTier)
+    // TODO: if is local!!!
+    history.autoSaver = async () => {
+      console.log('auto saving 123!')
+      eventStore.status = 'loading'
+      await diskService.saveFile()
+      eventStore.status = 'finished'
+      console.log('auto saving 123! DONE.')
+    }
     // get audio url
     if (audioData !== null) {
       const audioElement = await loadAudioFromFile(audioData)
@@ -374,32 +425,23 @@ export default class App extends Vue {
     this.importingLocalFile = false
   }
 
-  newTranscript() {
-    eventStore.status = 'new'
+  async openFileDialog() {
+    const f = await diskService.openFile({
+      'application/zip': '.transcript',
+      'text/xml': '.exb',
+      'audio/ogg': '.ogg'
+    })
+    this.openFile(f)
   }
 
-  openFileDialog() {
-    const el = document.createElement('input')
-    el.type = 'file'
-    el.accept = '.transcript,.exb'
-    el.addEventListener('input', (e) => {
-      if (el.files !== null) {
-        this.openFile(el.files[0])
-      }
-    })
-    this.$nextTick(() => {
-      el.click()
-    })
-  }
-
-  openFile(f: File) {
+  async openFile(f: FileSystemFileHandle) {
     if (f.name.endsWith('.transcript')) {
       this.openProjectFile(f)
     } else if (f.name.endsWith('.exb')) {
-      this.openExmaraldaFile(f)
+      this.openExmaraldaFile(await f.getFile())
     } else if (f.name.endsWith('.ogg')) {
       this.initializeEmptyTranscript()
-      loadAudioFromFile(f)
+      loadAudioFromFile(await f.getFile())
     } else {
       alert('Unrecognized File type.')
     }
@@ -409,9 +451,23 @@ export default class App extends Vue {
     eventStore.status = 'new'
   }
 
+  async openTranscript(t: LocalTranscriptListItem|ServerTranscriptListItem) {
+    if ('fileHandle' in t) {
+      if (await diskService.getPermission(t.fileHandle)) {
+        this.openProjectFile(t.fileHandle)
+      }
+    } else {
+      Sentry.setContext('transcript', {
+        name: t.n,
+        id: t.pk
+      })
+      this.loadRemoteTranscript(t)
+    }
+  }
+
   async loadRemoteTranscript(t: ServerTranscriptListItem) {
     // TODO: ugly
-    console.log({t})
+    console.log({ t })
     this.loadingTranscriptId = t.pk
     const y = document.createElement('audio')
     socket.sendMessage({

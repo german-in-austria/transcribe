@@ -13,6 +13,7 @@ export default Vue.component('FIcon', {
     return c('i', {
       class: [
         'v-icon',
+        context.data.class,
         context.data.staticClass,
         context.props.value,
         context.props.value.includes('mdi') ? 'mdi' : 'material-icons',

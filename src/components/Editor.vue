@@ -1,5 +1,25 @@
 <template>
   <div class="fill-height">
+    <div class="snackbars">
+      <v-snackbar
+        bottom
+        left
+        style="border-radius: 7px"
+        :multi-line="true"
+        :timeout="snackbar.timeout"
+        v-model="snackbar.show">
+        <div style="width: 100%;" class="caption">
+          {{ snackbar.text }}
+          <div>
+            <v-progress-linear style="border-radius: 7px" v-if="snackbar.progressType === 'indeterminate'" indeterminate />
+            <v-progress-linear style="border-radius: 7px" v-else-if="snackbar.progressType === 'determinate'" :value="snackbar.progress" />
+          </div>
+        </div>
+        <v-btn flat @click="snackbar.show = false" tile>
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </v-snackbar>
+    </div>
     <v-toolbar class="elevation-0" fixed app>
       <v-flex xs4>
         <v-btn icon @click="reload"><f-icon value="chevron_left" /></v-btn>
@@ -18,7 +38,7 @@
             offset-y>
             <v-btn
               slot="activator"
-              @click="saveToServer"
+              @click="saveTranscript"
               :loading="eventStore.status === 'loading' || isSaving"
               :disabled="eventStore.status === 'loading' || isSaving"
               icon flat>
@@ -29,7 +49,7 @@
                   :size="16"
                   :rotate="-90"
                   :width="2"
-                  :indeterminate="eventStore.transcriptDownloadProgress === 1 || isSaving"
+                  :indeterminate="eventStore.transcriptDownloadProgress === 1 || isSaving"
                   :value="eventStore.transcriptDownloadProgress * 100" />
               </template>
             </v-btn>
@@ -40,7 +60,7 @@
                 </v-list-tile-content>
               </v-list-tile>
               <v-divider />
-              <v-list-tile @click="saveToServer">
+              <v-list-tile @click="saveTranscript">
                 <v-list-tile-content>
                   <v-list-tile-title>Save To Server</v-list-tile-title>
                 </v-list-tile-content>
@@ -144,6 +164,14 @@
                 <keyboard-shortcut :value="keyboardShortcuts.inspectEvent" />
               </v-list-tile-action>
             </v-list-tile>
+            <v-list-tile @click="transcribeEvent(getSelectedEvent())">
+              <v-list-tile-content>
+                <v-list-tile-title>Auto-Transcribe Event…</v-list-tile-title>
+              </v-list-tile-content>
+              <v-list-tile-action>
+                <keyboard-shortcut :value="keyboardShortcuts.autoTranscribeEvent" />
+              </v-list-tile-action>
+            </v-list-tile>
             <v-divider />
             <v-list-tile
               :disabled="keyboardShortcuts.deleteEvents.disabled()"
@@ -215,15 +243,9 @@ import {
   splitEvent
 } from '../store/transcript'
 
-import {
-  saveChangesToServer
-} from '../service/backend-server'
-
-import {
-  handleGlobalShortcut,
-  keyboardShortcuts,
-  displayKeyboardAction
-} from '../service/keyboard'
+import { saveChangesToServer, serverTranscript } from '../service/backend-server'
+import { handleGlobalShortcut, keyboardShortcuts, displayKeyboardAction } from '../service/keyboard'
+import kaldiService from '../service/kaldi/kaldiService'
 
 import {
   isCmdOrCtrl
@@ -231,7 +253,7 @@ import {
 
 import {
   history,
-  undoable,
+  mutation,
   startListening as startUndoListener,
   stopListening as stopUndoListener
 } from '../store/history'
@@ -243,7 +265,7 @@ import {
 
 import settings from '../store/settings'
 import audio from '../service/audio'
-import { generateProjectFile } from '../service/backend-files'
+import fileService from '../service/disk'
 import eventBus from '../service/event-bus'
 
 @Component({
@@ -274,6 +296,20 @@ export default class Editor extends Vue {
   keyboardShortcuts = keyboardShortcuts
   displayKeyboardAction = displayKeyboardAction
 
+  snackbar: {
+    show: boolean
+    text: string
+    progressType: 'determinate'|'indeterminate'|null,
+    progress: 0,
+    timeout: number|null
+  } = {
+    show: false,
+    text: '',
+    progressType: 'determinate',
+    progress: 0,
+    timeout: null
+  }
+
   scrollTranscriptIndex: number = 0
   scrollTranscriptTime: number = 0
 
@@ -291,34 +327,83 @@ export default class Editor extends Vue {
   }
 
   joinEvents(es: number[]) {
-    return undoable(joinEvents(es))
+    return mutation(joinEvents(es))
   }
 
   deleteSelectedEvents() {
-    return undoable(deleteSelectedEvents())
+    return mutation(deleteSelectedEvents())
   }
 
   async exportProject() {
     this.isSaving = true
     const overviewWave = (document.querySelector('.overview-waveform svg') as HTMLElement).innerHTML
-    const f = await generateProjectFile(eventStore, overviewWave, settings, audio.store.uint8Buffer, history.actions)
+    const f = await fileService.generateProjectFile(eventStore, overviewWave, audio.store.uint8Buffer, history.actions)
     saveAs(f, (eventStore.metadata.transcriptName || 'unnamed_transcript') + '.transcript')
     this.isSaving = false
   }
 
-  async saveToServer() {
+  async transcribeEvent(e?: LocalTranscriptEvent) {
+    if (e !== undefined) {
+      const buffer = await audio.decodeBufferTimeSlice(e.startTime, e.endTime, audio.store.uint8Buffer.buffer)
+      const result = await kaldiService.transcribeAudio(
+        window.location.origin + '/kaldi-models/german.zip',
+        buffer,
+        (status) => {
+          if (status === 'DOWNLOADING_MODEL') {
+            this.snackbar = {
+              text: 'Downloading German Language Model…',
+              show: true,
+              progressType: 'indeterminate',
+              progress: 0,
+              timeout: null
+            }
+          } else if (status === 'INITIALIZING_MODEL') {
+            this.snackbar = {
+              text: 'Initializing Model…',
+              show: true,
+              progressType: 'indeterminate',
+              progress: 0,
+              timeout: null
+            }
+          } else if (status === 'PROCESSING_AUDIO') {
+            this.snackbar = {
+              text: 'Transcribing Audio…',
+              show: true,
+              progressType: null,
+              progress: 0,
+              timeout: 2000
+            }
+          } else if (status === 'DONE') {
+            this.snackbar.show = false
+          }
+        }
+      )
+      const cleanResult = result.replaceAll(/\d\.\d\d\s/g, '')
+      eventBus.$emit('updateSpeakerEventText', {
+        eventId: e.eventId,
+        speakerId: Object.keys(eventStore.metadata.speakers)[0],
+        text: cleanResult
+      })
+    }
+  }
+
+  async saveTranscript() {
     // if (this.history.actions.length > 0) {
     this.isSaving = true
-    try {
-      eventStore.events = await saveChangesToServer(eventStore.events)
-    } catch (e) {
-      Sentry.captureException(e)
-      alert('Could not save transcript to server.')
-      console.log(e)
-    } finally {
-      this.isSaving = false
+    if (settings.backEndUrl !== null) {
+      try {
+        eventStore.events = await saveChangesToServer(eventStore.events)
+      } catch (e) {
+        Sentry.captureException(e)
+        alert('Could not save transcript to server.')
+        console.log(e)
+      } finally {
+        this.isSaving = false
+      }
+    } else {
+      await fileService.saveFile()
     }
-    // }
+    this.isSaving = false
   }
 
   async doShowMenu(e: MouseEvent) {
@@ -344,12 +429,14 @@ export default class Editor extends Vue {
     this.splitEvent(event, splitAt)
   }
 
-  showEventInspector(e: LocalTranscriptEvent) {
-    eventStore.inspectedEvent = e
+  showEventInspector(e?: LocalTranscriptEvent) {
+    if (e !== undefined) {
+      eventStore.inspectedEvent = e
+    }
   }
 
   async splitEvent(e: LocalTranscriptEvent, at: number) {
-    const [ leftEvent ] = undoable(splitEvent(e, at))
+    const [ leftEvent ] = mutation(splitEvent(e, at))
     if (!(await isWaveformEventVisible(leftEvent))) {
       scrollToAudioEvent(leftEvent)
     }

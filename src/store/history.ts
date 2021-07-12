@@ -30,8 +30,11 @@ export interface HistoryEventAction {
   after: LocalTranscriptEvent[]
 }
 
+export type AutoSaver = () => Promise<any>
+
 export let history = {
-  actions: [] as HistoryEventAction[]
+  actions: [] as HistoryEventAction[],
+  autoSaver: (async () => console.log('fake auto-saved.')) as AutoSaver
 }
 
 export function handleRemotePeerEvent(data: [string, HistoryEventAction|HistoryEventAction[]|number]) {
@@ -73,7 +76,7 @@ async function undoRedoHandler(e: KeyboardEvent) {
   if (d.undo === true) {
     e.stopPropagation()
     e.preventDefault()
-    const action = undo()
+    const action = undo(true)
     if (action !== undefined) {
       notifyPeers(action, 'UNDO')
       selectEvents(action.before)
@@ -85,7 +88,7 @@ async function undoRedoHandler(e: KeyboardEvent) {
   } else if (d.redo === true) {
     e.stopPropagation()
     e.preventDefault()
-    const action = redo()
+    const action = redo(true)
     if (action !== undefined) {
       notifyPeers(action, 'REDO')
       selectEvents(action.after)
@@ -142,11 +145,16 @@ function jumpToStateIndex(target: number) {
   }
 }
 
-export function jumpToState(action: HistoryEventAction) {
+export function jumpToState(action: HistoryEventAction, shouldAutoSave?: boolean) {
   const ai = history.actions.findIndex((a) => a.id === action.id)
   // if the index was found.
-  notifyPeers(ai, 'JUMPTOSTATE')
-  jumpToStateIndex(ai)
+  if (ai > -1) {
+    notifyPeers(ai, 'JUMPTOSTATE')
+    jumpToStateIndex(ai)
+    if (shouldAutoSave) {
+      triggerDebouncedSaver()
+    }
+  }
 }
 
 function notifyPeers(a: HistoryEventAction|HistoryEventAction[]|number, t: HistoryApplicationType) {
@@ -172,40 +180,63 @@ function redoAction(a: HistoryEventAction) {
   replaceEvents(a.before, a.after)
 }
 
-export function undo(): HistoryEventAction|undefined {
+export function undo(shouldAutoSave?: boolean): HistoryEventAction|undefined {
   // the last action that is not yet undone.
+
   const a = _.last(history.actions.filter(x => x.apply === true))
   if (a !== undefined) {
     undoAction(a)
     a.apply = false
+    if (shouldAutoSave === true) {
+      triggerDebouncedSaver()
+    }
     return a
   } else {
     // nothing has been done, so we can’t undo anything
   }
 }
 
-export function redo(): HistoryEventAction|undefined {
+export function redo(shouldAutoSave?: boolean): HistoryEventAction|undefined {
   // find the most recent undone action.
   const a = history.actions.find(ac => ac.apply === false)
   if (a !== undefined) {
     redoAction(a)
     a.apply = true
+    if (shouldAutoSave === true) {
+      triggerDebouncedSaver()
+    }
     return a
   } else {
     // nothing has been undone, so we can’t redo anything
   }
 }
 
-export function undoable(action: HistoryEventAction|HistoryEventAction[]|undefined): LocalTranscriptEvent[] {
+const autoSaveTimeout = 5000
+let debouncer = setTimeout(() => null, 0)
+
+export function triggerDebouncedSaver() {
+  clearTimeout(debouncer)
+  debouncer = setTimeout(
+    history.autoSaver,
+    autoSaveTimeout
+  )
+}
+
+export function mutation(action: HistoryEventAction|HistoryEventAction[]|undefined): LocalTranscriptEvent[] {
   // when doing an undoable thing,
   // all things that have been undone before
   // are not re-doable anymore, and are deleted.
   // the new undoable action is appended.
   if (action !== undefined) {
+    // trigger de-bouncer
+    triggerDebouncedSaver()
+    // send to peers
     notifyPeers(action, 'DO')
+    // update history
     history.actions = history.actions
       .filter(a => a.apply === true)
       .concat(action)
+    // return the new event(s)
     if (_.isArray(action)) {
       return _(action).flatMap(a => a.after).value()
     } else {

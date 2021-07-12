@@ -120,7 +120,7 @@ import scrollbar from './Scrollbar.vue'
 import segmentBox from './SegmentBox.vue'
 
 import settings, { minPixelsPerSecond, maxPixelsPerSecond } from '../store/settings'
-import { undoable } from '../store/history'
+import { mutation } from '../store/history'
 import audio from '../service/audio'
 import * as util from '../util'
 import EventBus from '../service/event-bus'
@@ -242,7 +242,7 @@ export default class Waveform extends Vue {
 
   addEventAt(e: MouseEvent) {
     const c = this.$refs.svgContainer as HTMLDivElement
-    return undoable(addEvent((c.scrollLeft + e.pageX) / settings.pixelsPerSecond))
+    return mutation(addEvent((c.scrollLeft + e.pageX) / settings.pixelsPerSecond))
   }
 
   disableAutoScrollDuringPlayback() {
