@@ -14,6 +14,12 @@ module.exports = {
       }))
     }
     if (process.env.NODE_ENV === 'production') {
+      console.log(
+        '-----',
+        process.env.SENTRY_TOKEN,
+        process.env.CIRRUS_BUILD_ID,
+        process.env
+      )
       config.plugins.push(new SentryWebpackPlugin({
         // sentry-cli configuration
         authToken: process.env.SENTRY_TOKEN,
