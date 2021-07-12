@@ -13,19 +13,17 @@ module.exports = {
         defaultSizes: 'gzip'
       }))
     }
-    if (process.env.NODE_ENV === 'production') {
-      console.log(
-        '-----',
-        process.env.SENTRY_TOKEN,
-        process.env.CIRRUS_BUILD_ID,
-        process.env
-      )
+    if (
+      process.env.NODE_ENV === 'production' &&
+      process.env.BUILD_ID !== undefined &&
+      process.env.SENTRY_TOKEN !== undefined
+    ) {
       config.plugins.push(new SentryWebpackPlugin({
         // sentry-cli configuration
         authToken: process.env.SENTRY_TOKEN,
         org: 'university-of-vienna-i1',
         project: 'transcribe',
-        release: process.env.CIRRUS_BUILD_ID || 0,
+        release: process.env.BUILD_ID || 0,
         // webpack specific configuration
         include: './dist',
         ignore: ['node_modules', 'vue.config.js']
