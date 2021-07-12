@@ -9,6 +9,9 @@ WORKDIR /usr/src/app
 COPY package.json /usr/src/app
 COPY package-lock.json /usr/src/app
 
+ARG SENTRY_TOKEN
+ARG BUILD_ID
+
 RUN npm install
 
 COPY . /usr/src/app
