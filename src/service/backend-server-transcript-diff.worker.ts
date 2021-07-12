@@ -165,7 +165,7 @@ registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTran
       // tokens
       return speakerEvent.tokens.map((t, i, tokens) => {
         const token = {
-          e : speakerEvent.speakerEventId,
+          e : event.eventId,
           i : Number(speakerId),
           // NOTE: this produces undefined for "" (empty strings)
           o : t.tiers.ortho.text.trim() || undefined,
