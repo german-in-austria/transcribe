@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y \
   libnotify-dev \
   libgconf-2-4 \
   libnss3 \
-  libxssl \
+  libssl \
   libasound2
 
 ARG SENTRY_TOKEN
