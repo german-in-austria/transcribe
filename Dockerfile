@@ -10,7 +10,7 @@ COPY package.json /usr/src/app
 COPY package-lock.json /usr/src/app
 
 # DEPENDENCIES FOR CYPRESS
-RUN apt-get update && apt-get install -a \
+RUN apt-get update && apt-get install -y \
   xvfb \
   libgtk-3-dev \
   libnotify-dev \
