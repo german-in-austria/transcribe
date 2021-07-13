@@ -8,5 +8,6 @@ docker_builder:
     - git submodule update
   build_script: "curl -i -X POST -H \"Content-Type: application/json\" -d '{\"text\": \"Starting build: dioe/transcribe\\n in branch: '$CIRRUS_BRANCH' \\n details: https://cirrus-ci.com/task/'$CIRRUS_TASK_ID'\"}' https://mm.dioe.at/hooks/9xkct75bzpbn3cm1kiut3jx1ur \
     && docker build --build-arg SENTRY_TOKEN=$SENTRY_TOKEN --build-arg BUILD_ID=$CIRRUS_BUILD_ID --cache-from dioe/transcribe --tag dioe/transcribe ."
+  test_script: "docker run test"
   login_script: "docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD"
   push_script: "test $CIRRUS_BRANCH == \"main\" && docker push dioe/transcribe && curl -i -X POST -H \"Content-Type: application/json\" -d '{\"text\": \"Cirrus CI built and pushed dioe/transcribe\\n details: https://cirrus-ci.com/task/'$CIRRUS_TASK_ID'\"}' https://mm.dioe.at/hooks/9xkct75bzpbn3cm1kiut3jx1ur\n"

@@ -34,6 +34,7 @@
               :loading="isLoadingBackendUrl"
               :error-messages="this.errorMessage !==  null ? [ this.errorMessage ] : []"
               auto-select-first
+              data-cy="select-backend"
               style="position: fixed; left: 0; right: 0; z-index: 1"
               solo
               flat
@@ -52,7 +53,7 @@
             v-if="settings.backEndUrl !== null && loggedIn === false"
             class="text-xs-center mt-5"
           >
-            Please <a :href="`${ settings.backEndUrl }/login/`" target="_blank">login</a> and <a @click="loadTranscriptList(settings.backEndUrl)">refresh</a>
+            Please <a data-cy="login-link" :href="`${ settings.backEndUrl }/login/`" target="_blank">login</a> and <a @click="loadTranscriptList(settings.backEndUrl)">refresh</a>
           </div>
           <v-progress-circular
             indeterminate

@@ -9,6 +9,9 @@ WORKDIR /usr/src/app
 COPY package.json /usr/src/app
 COPY package-lock.json /usr/src/app
 
+# DEPENDENCIES FOR CYPRESS
+RUN apt-get install xvfb libgtk-3-dev libnotify-dev libgconf-2-4 libnss3 libxssl libasound2
+
 ARG SENTRY_TOKEN
 ARG BUILD_ID
 
@@ -19,6 +22,8 @@ COPY . /usr/src/app
 ENV NODE_ENV production
 
 RUN npm run build
+
+RUN npx cypress verify
 
 # START AND EXPOSE TO HOST-DAEMON
 EXPOSE 80

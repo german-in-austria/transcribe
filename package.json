@@ -6,6 +6,7 @@
     "dev": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "test:unit": "vue-cli-service test:unit",
+    "test": "exit 0",
     "lint": "vue-cli-service lint",
     "start": "ts-node -P server/tsconfig.json server/index.ts",
     "dev-server": "nodemon --watch 'server/**/*.ts' --ignore 'server/**/*.spec.ts' --exec 'ts-node' --project server/tsconfig.json server/index.ts"
@@ -91,6 +92,7 @@
     "@vue/test-utils": "^1.0.3",
     "arraybuffer-loader": "^1.0.6",
     "chai": "^4.1.2",
+    "cypress": "^7.7.0",
     "eslint": "^6.8.0",
     "eslint-config-prettier": "^6.15.0",
     "eslint-plugin-import": "^2.20.2",
