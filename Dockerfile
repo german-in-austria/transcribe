@@ -10,7 +10,14 @@ COPY package.json /usr/src/app
 COPY package-lock.json /usr/src/app
 
 # DEPENDENCIES FOR CYPRESS
-RUN apt-get install xvfb libgtk-3-dev libnotify-dev libgconf-2-4 libnss3 libxssl libasound2
+RUN apt-get update && apt-get install -a \
+  xvfb \
+  libgtk-3-dev \
+  libnotify-dev \
+  libgconf-2-4 \
+  libnss3 \
+  libxssl \
+  libasound2
 
 ARG SENTRY_TOKEN
 ARG BUILD_ID
