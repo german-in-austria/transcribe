@@ -45,7 +45,7 @@ export const PP04: ProjectPreset = {
       type: 'group',
       name: 'anonymized',
       bracketSymbols: [
-        /(\[([#a-zA-ZÜüÄäÖöß\.;:-]+))/u,
+        /(\[([#a-zA-ZÜüÄäÖöß'\.;:-]+))/u,
         /(.+\](N|NZ|O|OP|OA|OS|P|Z))/,
       ],
       color: '#880000',
@@ -75,7 +75,7 @@ export const PP04: ProjectPreset = {
       type: 'single',
       name: 'non-verbal',
       color: '#008800',
-      regex: /^(;|,|\.|-)?>$/u,
+      regex: /^(;|,|\.|-|(.+))?>$/u,
       id: 5
     },
     {
@@ -91,7 +91,7 @@ export const PP04: ProjectPreset = {
     {
       type: 'single',
       name: 'contraction',
-      regex: /_[#a-zA-ZÜüÄäÖöß\.;:-]+|[a-zA-ZÜüÄäÖöß\.;:-]+_/,
+      regex: /_[#a-zA-ZÜüÄäÖöß'\.;:-]+|[a-zA-ZÜüÄäÖöß'\.;:-]+_/,
       color: '#d47d0f',
       id: 8
     },
@@ -107,7 +107,7 @@ export const PP04: ProjectPreset = {
     {
       type: 'single',
       name: 'word',
-      regex: /^([#a-zA-ZÜüÄäÖöß\.;:-]+$)/u,
+      regex: /^([#a-zA-ZÜüÄäÖöß'\.;:-]+$)/u,
       color: 'transparent',
       id: 1
     }
