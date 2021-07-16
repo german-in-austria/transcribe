@@ -32,7 +32,7 @@
     </v-layout>
     <v-layout
       v-for="(type, i) in presets[settings.projectPreset].tokenTypes"
-      :key="type.name"
+      :key="type.name + '__' + i"
       class="ml-3 pt-2"
       row>
       <v-flex xs1>
@@ -48,7 +48,7 @@
             :style="{background: type.color, border: '1px solid #ccc'}"
             dark />
           <color-picker
-            :value="type.color" 
+            :value="type.color"
             @input="(e) => type.color = e.hex" />
         </v-menu>
       </v-flex>
