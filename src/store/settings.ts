@@ -58,7 +58,7 @@ export interface Settings {
   playEventOnAppend: boolean
   placeholderToken: string
   scrollSpeed: 1
-  showErrors: {
+  showWarnings: {
     eventGaps: boolean
     unknownTokenTypes: boolean
     eventOverlaps: boolean
@@ -242,7 +242,7 @@ const settings: Settings = {
   placeholderToken: '⦿',
   playEventOnAppend: true,
   scrollSpeed: 1,
-  showErrors: {
+  showWarnings: {
     eventGaps: true,
     unknownTokenTypes: true,
     eventOverlaps: true

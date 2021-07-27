@@ -13,7 +13,7 @@
           </div>
         </v-window-item>
         <v-window-item value="warnings" class="sidebar-scrollable">
-          <error-list v-if="settings.activeSidebarItem === 'warnings'" :errors="errors"/>
+          <warning-list v-if="settings.activeSidebarItem === 'warnings'" :warnings="warnings"/>
         </v-window-item>
         <v-window-item value="search" class="sidebar-scrollable">
           <search v-if="settings.activeSidebarItem === 'search'" />
@@ -49,13 +49,13 @@
             @click="clickTab('warnings')"
             class="mb-2 sidebar-btn">
             <v-badge
-              :value="errors.length > 0"
+              :value="warnings.length > 0"
               :color="settings.activeSidebarItem === 'warnings' ? 'blue' : 'grey'">
               <f-icon
                 :value="keyboardShortcuts.showWarnings.icon"
                 :color="settings.activeSidebarItem === 'warnings' ? 'blue' : ''" />
               <span slot="badge">
-                {{ errors.length < 100 ? errors.length : '99+' }}
+                {{ warnings.length < 100 ? warnings.length : '99+' }}
               </span>
             </v-badge>
           </v-btn>
@@ -103,11 +103,11 @@ import {
 import { history } from '../store/history'
 import settings, { SidebarItem } from '../store/settings'
 
-import { getErrors, ErrorEvent } from '../service/errors'
+import { getWarnings, WarningEvent } from '../service/warnings'
 import { keyboardShortcuts, displayKeyboardAction } from '../service/keyboard'
 
 import editHistory from './EditHistory.vue'
-import errorList from './ErrorList.vue'
+import WarningList from './WarningList.vue'
 import bookmarks from './Bookmarks.vue'
 import search from './Search.vue'
 import actions from './Actions.vue'
@@ -116,9 +116,9 @@ import actions from './Actions.vue'
   components: {
     actions,
     editHistory,
-    errorList,
+    WarningList,
     search,
-    bookmarks,
+    bookmarks
   }
 })
 export default class Sidebar extends Vue {
@@ -126,14 +126,14 @@ export default class Sidebar extends Vue {
   @Prop({ default: false }) active!: boolean
 
   settings = settings
-  errors: ErrorEvent[] = []
+  warnings: WarningEvent[] = []
   history = history
   eventStore = eventStore
   stuckAtBottom = false
   toTime = toTime
   keyboardShortcuts = keyboardShortcuts
   displayKeyboardAction = displayKeyboardAction
-  debouncedGetErrors = _.debounce(this.getErrors, 500)
+  debouncedGetWarnings = _.debounce(this.getWarnings, 500)
 
   clickTab(e: SidebarItem) {
     if (e === settings.activeSidebarItem && settings.showDrawer === true) {
@@ -157,35 +157,35 @@ export default class Sidebar extends Vue {
     }
   }
 
-  @Watch('settings.showErrors', { deep: true })
-  onErrorSettingsUpdate() {
-    this.getErrors()
+  @Watch('settings.showWarnings', { deep: true })
+  onWarningsSettingsUpdate() {
+    this.getWarnings()
   }
 
   @Watch('settings.maxEventGap')
   onGapSettingsUpdate() {
-    this.getErrors()
+    this.getWarnings()
   }
 
   @Watch('eventStore.events')
   onEventsUpdate() {
-    this.debouncedGetErrors()
+    this.debouncedGetWarnings()
   }
 
   @Watch('settings.projectPreset')
   onPresetUpdate() {
-    this.getErrors()
+    this.getWarnings()
   }
 
-  async getErrors() {
+  async getWarnings() {
     await this.$nextTick()
     window.requestIdleCallback(() => {
-      this.errors = getErrors(eventStore.events)
+      this.warnings = getWarnings(eventStore.events)
     })
   }
 
   mounted() {
-    this.getErrors()
+    this.getWarnings()
   }
 
   updated() {
