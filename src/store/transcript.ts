@@ -141,10 +141,10 @@ export const eventStore = {
     length: 0 as number
   },
   userState: {
-    viewingTranscriptEvent: null as LocalTranscriptEvent|null,
-    editingTranscriptEvent: null as LocalTranscriptEvent|null,
-    viewingAudioEvent: null as LocalTranscriptEvent|null,
-    showSpeakerTierEditModal: false,
+    viewingTranscriptEvent: null as LocalTranscriptEvent|null, // TODO: rename to highlightedEventIds: number[]
+    editingTranscriptEvent: null as LocalTranscriptEvent|null, // TODO: remove: unused.
+    viewingAudioEvent: null as LocalTranscriptEvent|null, // TODO: remove: unused.
+    showSpeakerTierEditModal: false, // TODO: rename: show transcript meta settings
     timeSpanSelection: {
       start: null as null|number,
       end: null as null|number
