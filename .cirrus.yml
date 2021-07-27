@@ -1,6 +1,7 @@
 docker_builder: 
   # encrypted environment variables can be changed and added here:
   # https://cirrus-ci.com/settings/repository/5704526273183744
+  # we do this because this is a public/open source repository, but we need our deployment keys to be private.
   env: 
     DOCKER_PASSWORD: "ENCRYPTED[3ee344f0037b1dfa79e0e3672bca50b5c7447dabd0ec78f90470d590fd8448794bea2c5952f26100039eb1b46a2b1350]"
     DOCKER_USERNAME: "ENCRYPTED[222fd639b669ce62bb9f36643cf01d789ba5bedbdef36c0a0b7cc45e379ad4ebce1c9e871850dbc60a65366a9ddd8b00]"
