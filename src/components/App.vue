@@ -393,7 +393,7 @@ export default class App extends Vue {
     eventStore.events = computeTokenTypesForEvents(
       events,
       eventStore.metadata.defaultTier || 'text',
-      _(eventStore.metadata.speakers).map((s, k) => k).value()
+      Object.keys(eventStore.metadata.speakers)
     )
     // insert placeholders where necessary
     eventStore.events = insertPlaceholderTokens(eventStore.events, defaultTier)
