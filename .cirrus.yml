@@ -1,13 +1,30 @@
 docker_builder: 
+  # encrypted environment variables can be changed and added here:
+  # https://cirrus-ci.com/settings/repository/5704526273183744
   env: 
     DOCKER_PASSWORD: "ENCRYPTED[3ee344f0037b1dfa79e0e3672bca50b5c7447dabd0ec78f90470d590fd8448794bea2c5952f26100039eb1b46a2b1350]"
     DOCKER_USERNAME: "ENCRYPTED[222fd639b669ce62bb9f36643cf01d789ba5bedbdef36c0a0b7cc45e379ad4ebce1c9e871850dbc60a65366a9ddd8b00]"
     SENTRY_TOKEN: "ENCRYPTED[8a819dfed99517927e46f210e37f8400802273635873c48ed609102cf6c8714d8bf32ffe15d0a3798e75c3ecdb54cf61]"
+    MATTERMOST_HOOK_URL: "ENCRYPTED[0ad70fb707d943b41cd5c9d568f30799b24e826e1ef559714678c710434c7170c9437f864c0b92767d0a36c52fd9cd86]"
+  # gotta fetch all the sub modules too
   script:
     - git submodule init
     - git submodule update
-  build_script: "curl -i -X POST -H \"Content-Type: application/json\" -d '{\"text\": \"Starting build: dioe/transcribe\\n in branch: '$CIRRUS_BRANCH' \\n details: https://cirrus-ci.com/task/'$CIRRUS_TASK_ID'\"}' https://mm.dioe.at/hooks/9xkct75bzpbn3cm1kiut3jx1ur \
-    && docker build --build-arg SENTRY_TOKEN=$SENTRY_TOKEN --build-arg BUILD_ID=$CIRRUS_BUILD_ID --cache-from dioe/transcribe --tag dioe/transcribe ."
-  test_script: "docker run dioe/transcribe test"
-  login_script: "docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD"
-  push_script: "test $CIRRUS_BRANCH == \"main\" && docker push dioe/transcribe && curl -i -X POST -H \"Content-Type: application/json\" -d '{\"text\": \"Cirrus CI built and pushed dioe/transcribe\\n details: https://cirrus-ci.com/task/'$CIRRUS_TASK_ID'\"}' https://mm.dioe.at/hooks/9xkct75bzpbn3cm1kiut3jx1ur\n"
+  build_script:
+    # build start notification via Mattermost
+    - "curl -i -X POST -H \"Content-Type: application/json\" -d '{\"text\": \"Starting build: dioe/transcribe\\n in branch: '$CIRRUS_BRANCH' \\n details: https://cirrus-ci.com/task/'$CIRRUS_TASK_ID'\"}' $MATTERMOST_HOOK_URL"
+    # build it. pass the sentry token and the unique build id to docker.
+    - "docker build --build-arg SENTRY_TOKEN=$SENTRY_TOKEN --build-arg BUILD_ID=$CIRRUS_BUILD_ID --cache-from dioe/transcribe --tag dioe/transcribe ."
+    # success notification via Mattermost
+    - "curl -i -X POST -H \"Content-Type: application/json\" -d '{\"text\": \"Cirrus CI successfully *built* dioe/transcribe\\n details: https://cirrus-ci.com/task/'$CIRRUS_TASK_ID'\"}' $MATTERMOST_HOOK_URL"
+  test_script:
+    # run the tests on the image
+    - "docker run dioe/transcribe test"
+  login_script:
+    # login to the docker hub registry.
+    - "docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD"
+  push_script:
+    # push to the registry if it’s the main branch
+    - "test $CIRRUS_BRANCH == 'main' && docker push dioe/transcribe"
+    # push success notification via Mattermost if it’s the main branch
+    - "test $CIRRUS_BRANCH == 'main' && curl -i -X POST -H \"Content-Type: application/json\" -d '{\"text\": \"Cirrus CI *pushed* dioe/transcribe\\n details: https://cirrus-ci.com/task/'$CIRRUS_TASK_ID'\"}' $MATTERMOST_HOOK_URL"
