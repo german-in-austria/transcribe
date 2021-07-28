@@ -25,6 +25,13 @@ declare global {
   }
 }
 
+type LocalTranscriptIndexedToken = {
+    token: LocalTranscriptToken
+    eventIndex: number
+    eventId: number
+    speakerId: string
+  }
+
 interface LocalTranscriptTokenTier {
   text: string
   type: number|null
@@ -393,6 +400,59 @@ function getLastEventToken(event: LocalTranscriptEvent|undefined, speakerId: num
       return undefined
     }
   }
+}
+
+/** Generate a Token Hashmap from the Events, to process or search tokens more quickly */
+function getIndexedTokens(es: LocalTranscriptEvent[]): { [id: number]: LocalTranscriptIndexedToken } {
+  // this could be achieved with a reduce function,
+  // but this version is currently faster (which matters at this point).
+  const indexedTokens: { [id: number]: LocalTranscriptIndexedToken } = {}
+  es.forEach((e, i) => {
+    _(e.speakerEvents).forEach((se, speakerId) => {
+      se.tokens.forEach(t => {
+        indexedTokens[t.id] = { token: t, eventIndex: i, eventId: e.eventId, speakerId }
+      })
+    })
+  })
+  return indexedTokens
+}
+
+/** Removes any "fragmentOf" properties that have been orphaned
+ (i.e. broken links to other tokens), and returns the clean Events */
+export function removeBrokenFragmentLinks(es: LocalTranscriptEvent[]): LocalTranscriptEvent[] {
+  const tokensById = getIndexedTokens(es)
+  Object.values(tokensById).forEach(t => {
+    if (
+      // if it points to another token
+      t.token.fragmentOf !== null &&
+      // and that token doesn’t exist
+      tokensById[t.token.fragmentOf] === undefined &&
+      // and it’s an an event that exists.
+      es[t.eventIndex] !== undefined
+    ) {
+      // replace the event with one that has the new token
+      es[t.eventIndex] = {
+        ...es[t.eventIndex],
+        speakerEvents: {
+          ...es[t.eventIndex].speakerEvents,
+          [ t.speakerId ]: {
+            ...es[t.eventIndex].speakerEvents[t.speakerId],
+            tokens: es[t.eventIndex].speakerEvents[t.speakerId].tokens.map(t2 => {
+              console.log('removing broken fragmentOf link', t)
+              // replace the token
+              if (t2.id === t.token.id) {
+                // remove the fragment of link.
+                return { ...t.token, fragmentOf: null }
+              } else {
+                return t2
+              }
+            })
+          }
+        }
+      }
+    }
+  })
+  return es
 }
 
 function hasNextFragmentMarker(event: LocalTranscriptEvent|undefined, speakerId: number, tier: TokenTierType): boolean {

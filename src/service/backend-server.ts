@@ -8,7 +8,8 @@ import {
   timeToSeconds,
   LocalTranscriptTier,
   LocalTranscriptSpeakerEventTiers,
-  TokenTierType
+  TokenTierType,
+  removeBrokenFragmentLinks
 } from '../store/transcript'
 import { clone, getTextWidth } from '../util'
 import ServerTranscriptDiff from './backend-server-transcript-diff.worker'
@@ -823,6 +824,8 @@ export async function saveChangesToServer(
   defaultTier = null,
   name = null
 ): Promise<LocalTranscriptEvent[]> {
+  es = removeBrokenFragmentLinks(es)
+  eventStore.events = es
   // there’s no transcript or no id => throw
   if (serverTranscript === null || serverTranscript.aTranskript === undefined) {
     throw new Error('transcript id is undefined')
