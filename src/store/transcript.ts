@@ -454,7 +454,9 @@ export function removeBrokenFragmentLinks(es: LocalTranscriptEvent[]): LocalTran
   })
   return es
 }
-
+/**
+  Checks whether this Event ends with a "=" to indicate a fragmented token.
+*/
 function hasNextFragmentMarker(event: LocalTranscriptEvent|undefined, speakerId: number, tier: TokenTierType): boolean {
   if (event === undefined) {
     return false
@@ -467,7 +469,9 @@ function hasNextFragmentMarker(event: LocalTranscriptEvent|undefined, speakerId:
     }
   }
 }
-
+/**
+ * Link the first Token of an Event to a Token via the fragmentOf Property.
+*/
 function setFirstTokenFragmentOf(
   eventIndex: number,
   speakerId: number,
@@ -491,7 +495,7 @@ function setFirstTokenFragmentOf(
     }
   }
 }
-
+/** Update several Events at once. */
 export function updateSpeakerEvents(
   es: LocalTranscriptEvent[],
   speakerId: number,
@@ -506,7 +510,7 @@ export function updateSpeakerEvents(
       }
     }
   }))
-  const updateHistoryActions = newEs.map((e, i) => updateSpeakerEvent(e, speakerId))
+  const updateHistoryActions = newEs.map(e => updateSpeakerEvent(e, speakerId))
   return {
     id: _.uniqueId(),
     time: new Date(),
@@ -516,16 +520,17 @@ export function updateSpeakerEvents(
     after: _(updateHistoryActions).map(hea => clone(hea.after)).flatten().value()
   }
 }
-
+/** Checks whether a Speaker Event has any content in it’s event tiers */
 export function hasEventTiers(se: LocalTranscriptSpeakerEvent): boolean {
   // tslint:disable-next-line:max-line-length
-  return !_.isEmpty(se.speakerEventTiers) && _.some(se.speakerEventTiers, (set) => set.text !== undefined && set.text.trim() !== '' )
+  return !_.isEmpty(se.speakerEventTiers) && _.some(se.speakerEventTiers, (set) => set.text !== undefined && set.text.trim() !== '')
 }
 
+/** Checks whether a Speaker Event has tokens */
 export function hasTokens(se: LocalTranscriptSpeakerEvent): boolean {
   return se.tokens.length > 0 && se.tokens.map(t => t.tiers[eventStore.metadata.defaultTier].text).join('').trim() !== ''
 }
-
+/** Update an Event */
 export function updateSpeakerEvent(
   event: LocalTranscriptEvent,
   speakerId: number
@@ -590,7 +595,7 @@ export function updateSpeakerEvent(
     after: [ clone(newEvent) ]
   }
 }
-
+/** Resize Events. Use this to update the startTime or endTime of one or multiple Events at once. */
 export function resizeEvents(...es: LocalTranscriptEvent[]): HistoryEventAction {
   const oldEs = clone(es
     .map(e => findEventIndexById(e.eventId))
@@ -884,7 +889,7 @@ export function shiftCharsAcrossEvents(
     const sourceTokens = collectTokensViaOffsets(
       e.speakerEvents[speakerId].tokens,
       //                 keep right  : keep left
-      direction === -1 ? right       : 0,
+      direction === -1 ? right : 0,
       direction === -1 ? text.length : left
     )
     const targetTokens = (() => {
@@ -1220,7 +1225,7 @@ export function findEventGaps(es: LocalTranscriptEvent[], maxGap = .1): Array<{ 
   return es.reduce((m, e, i, l) => {
     const gap = l[i + 1] !== undefined ? l[i + 1].startTime - e.endTime : 0
     if (gap > maxGap) {
-      m.push({duration: gap, start: e.endTime, end: l[i + 1].startTime})
+      m.push({ duration: gap, start: e.endTime, end: l[i + 1].startTime })
     }
     return m
   }, [] as Array<{ duration: number, start: number, end: number }>)
