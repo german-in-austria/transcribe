@@ -39,7 +39,6 @@ import _ from 'lodash'
 
 import {
   eventStore,
-  deleteSelectedEvents,
   LocalTranscriptEvent,
   selectEvent,
   selectEventRange,
@@ -49,7 +48,6 @@ import {
   toTime
 } from '../store/transcript'
 
-import { mutation } from '../store/history'
 import settings from '../store/settings'
 
 @Component({
@@ -88,17 +86,6 @@ export default class SegmentTranscript extends Vue {
       eventStore.userState.viewingTranscriptEvent !== undefined &&
       eventStore.userState.viewingTranscriptEvent.eventId === e.eventId
     )
-  }
-
-  deleteSelectedEvents() {
-    mutation(deleteSelectedEvents())
-  }
-
-  getLongestSpeakerText(e: LocalTranscriptEvent): string[]|undefined {
-    return _(e.speakerEvents)
-      .map(se => se.tokens.map(t => t.tiers[eventStore.metadata.defaultTier].text))
-      .sortBy(ts => ts.length)
-      .last()
   }
 
   selectAndScrollToEvent(e: LocalTranscriptEvent) {
