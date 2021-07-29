@@ -25,7 +25,7 @@ declare global {
   }
 }
 
-type LocalTranscriptIndexedToken = {
+export type LocalTranscriptIndexedToken = {
     token: LocalTranscriptToken
     eventIndex: number
     eventId: number
@@ -359,12 +359,6 @@ export function findEventIndexById(id: number) {
   return _(eventStore.events).findIndex(e => e.eventId === id)
 }
 
-export function sentencesFromEvent(event: LocalTranscriptEvent, tier: TokenTierType): string[] {
-  return _(event.speakerEvents).map(e => {
-    return e.tokens.map(t => t.tiers[tier].text).join(' ')
-  }).value()
-}
-
 export function getFirstTokenOrder(e: LocalTranscriptEvent, speakerId: string): number {
   const speakerEvent = e.speakerEvents[speakerId]
   if (speakerEvent) {
@@ -495,7 +489,7 @@ function setFirstTokenFragmentOf(
     }
   }
 }
-/** Update several Events at once. */
+/** Update the Tokens for several Events at once. */
 export function updateSpeakerEvents(
   es: LocalTranscriptEvent[],
   speakerId: number,
