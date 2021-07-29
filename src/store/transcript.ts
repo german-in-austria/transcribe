@@ -1417,13 +1417,13 @@ export function getSelectedEvents(): LocalTranscriptEvent[] {
 export function getSelectedEvent(): LocalTranscriptEvent|undefined {
   return _.find(eventStore.events, (e) => e.eventId === eventStore.selectedEventIds[0])
 }
-
+// FIXME: there are 2 functions to do this
 export function toSeconds(time: string): number {
   const a = time.split(':') // split it at the colons
   // minutes are worth 60 seconds. Hours are worth 60 minutes.
   return (+a[0]) * 60 * 60 + (+a[1] || 0) * 60 + (+a[2] || 0)
 }
-
+// FIXME: there are 2 functions to do this
 export function toTime(time: number, decimalPlaces = 0): string {
   // seconds to readable time
   return new Date(time * 1000).toISOString().substr(11, 8 + (decimalPlaces > 0 ? decimalPlaces + 1 : 0))

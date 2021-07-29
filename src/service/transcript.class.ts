@@ -1,6 +1,6 @@
 /// <reference types="@types/wicg-file-system-access" />
 
-import { LocalTranscriptEvent, LocalTranscriptTier, LocalTranscriptToken, LocalTranscriptTokenTypes, SearchResult, TokenTierType, LocalTranscriptIndexedToken, LocalTranscriptSpeakerEvent } from '@/store/transcript'
+import { LocalTranscriptEvent, LocalTranscriptTier, LocalTranscriptToken, LocalTranscriptTokenTypes, SearchResult, TokenTierType, LocalTranscriptIndexedToken, LocalTranscriptSpeakerEvent, LocalTranscriptSpeakers } from '@/store/transcript'
 import AudioStore from './audio.class'
 import { computeTokenTypesForEvents } from './token-types'
 import presets, { TokenTypePresetBase } from '../presets'
@@ -15,9 +15,18 @@ interface TranscribeFile extends FileSystemFileHandle {
   type: 'application/zip'
 }
 
+interface TranscriptMetaData {
+  defaultTier: TokenTierType
+  speakers: LocalTranscriptSpeakers
+  lockedTokens: number[]
+  tokenTypes: LocalTranscriptTokenTypes
+  transcriptName: string|null
+  tiers: LocalTranscriptTier[]
+}
+
 export type AudioFileOrUrl = AudioFile | string
 
-export class Transcript {
+export default class Transcript {
   constructor(init: AudioFile | undefined | TranscribeFile | { backEndUrl: string, id: number } | { events: LocalTranscriptEvent[], audio?: AudioFileOrUrl }) {
     if (init === undefined) {
       this.initEmptyTranscript()
@@ -35,35 +44,45 @@ export class Transcript {
   events: LocalTranscriptEvent[] = []
   audio: AudioStore|null = null
 
-  meta = {
-    defaultTier: 'text' as TokenTierType,
-    speakers: [],
-    lockedTokens: [] as number[],
-    tokenTypes: {} as LocalTranscriptTokenTypes,
-    transcriptName: null as string|null,
-    tiers: [] as LocalTranscriptTier[]
+  meta: TranscriptMetaData = {
+    defaultTier: 'text',
+    speakers: {},
+    lockedTokens: [],
+    tokenTypes: {},
+    transcriptName: null,
+    tiers: []
   }
 
   uiState = {
     selectedEventIds: [] as number[],
-    highlightedEventIds: [] as number[],
     selectedSearchResult: null as SearchResult|null,
-    showTranscriptMetaSettings: false,
+    highlightedEventIds: [] as number[],
+    inspectedEventId: null as number|null,
     searchResults: [] as SearchResult[],
     searchTerm: null as string|null,
-    inspectedEventId: null as number|null,
     downloadProgress: null as number|null,
+    showTranscriptMetaSettings: false,
     timeSpanSelection: {
       start: null as null|number,
       end: null as null|number
     }
   }
 
+  initEmptyTranscript() {
+    this.initTranscriptWithData([])
+  }
+
   initTranscriptWithData(es: LocalTranscriptEvent[], audio?: AudioFileOrUrl) {
     if (audio !== undefined) {
       this.audio = new AudioStore(audio)
     }
-    this.events = computeTokenTypesForEvents(es, this.meta.defaultTier, Object.keys(this.meta.speakers))
+    // Apply some cautious fixed to the events.
+    const fixedEvents = Transcript.sortEvents(
+      Transcript.removeBrokenFragmentLinks(
+        computeTokenTypesForEvents(es, this.meta.defaultTier, Object.keys(this.meta.speakers))
+      )
+    )
+    this.events = fixedEvents
   }
 
   /** Compute the type of a Token from its content. */
@@ -105,7 +124,7 @@ export class Transcript {
     return e.speakerEvents[speakerId] !== undefined
   }
 
-  /** Get the concatinated text from an Event tier for a speaker */
+  /** Get the concatenated text from an Event tier for a speaker */
   static getTextFromTier(e: LocalTranscriptEvent, tier: string, speaker: string): string {
     if (Transcript.eventHasSpeaker(e, speaker)) {
       if (Transcript.isTokenTier(tier)) {
@@ -120,12 +139,12 @@ export class Transcript {
     }
   }
 
-  /** Get the concatinated text from a couple of tokens. */
+  /** Get the concatenated text from a couple of tokens. */
   static getTextFromTokens(ts: LocalTranscriptToken[], defaultTier: TokenTierType): string {
     return ts.map(t => t.tiers[defaultTier].text).join(' ')
   }
 
-  /** See which token occurs at a certain character offset. Returns the Index or -1 if there’s no token at the offset. */
+  /** See which token occurs at a certain character offset. Returns the index or -1 if there’s no token at the offset. */
   static getTokenIndexByCharacterOffset(tokens: LocalTranscriptToken[], offset: number, tier: TokenTierType): number {
     let currentStart = 0
     return tokens.findIndex(e => {
