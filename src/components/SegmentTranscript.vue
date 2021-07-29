@@ -1,7 +1,7 @@
 <template>
   <div :class="{
-    selected: isSelected,
-    segment: true,
+    'selected': isSelected,
+    'segment': true,
     'theme--dark': settings.darkMode,
     'fragment-of': hasFragmentOfInAnyFirstToken
   }">
@@ -9,8 +9,8 @@
       style="outline: 0;"
       tabindex="-1"
       :class="{
-        time: true,
-        viewing: isViewingEvent(event)
+        'time': true,
+        'viewing': isViewingEvent(event)
       }"
       @dblclick="playEvent(event)"
       @mousedown.meta.stop="selectOrDeselectEvent(event)"
@@ -50,7 +50,6 @@ import {
 } from '../store/transcript'
 
 import { mutation } from '../store/history'
-import { getTextWidth } from '../util'
 import settings from '../store/settings'
 
 @Component({
