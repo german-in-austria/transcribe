@@ -1,6 +1,6 @@
 import { AudioFileOrUrl } from './transcript.class'
 
-export class AudioStore {
+export default class AudioStore {
   constructor(a: AudioFileOrUrl) {
     if (a instanceof File) {
       this.addBuffer(a)
