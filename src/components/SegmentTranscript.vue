@@ -10,7 +10,7 @@
       tabindex="-1"
       :class="{
         'time': true,
-        'viewing': isViewingEvent(event)
+        'viewing': isViewingEvent
       }"
       @dblclick="playEvent(event)"
       @mousedown.meta.stop="selectOrDeselectEvent(event)"
@@ -78,13 +78,13 @@ export default class SegmentTranscript extends Vue {
     })
   }
 
-  isViewingEvent(e?: LocalTranscriptEvent) {
+  get isViewingEvent() {
     return (
-      e !== null &&
-      e !== undefined &&
+      this.event !== null &&
+      this.event !== undefined &&
       eventStore.userState.viewingTranscriptEvent !== null &&
       eventStore.userState.viewingTranscriptEvent !== undefined &&
-      eventStore.userState.viewingTranscriptEvent.eventId === e.eventId
+      eventStore.userState.viewingTranscriptEvent.eventId === this.event.eventId
     )
   }
 
