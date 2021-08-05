@@ -1,11 +1,11 @@
 import _ from 'lodash'
 
-import {
-  eventStore,
-  LocalTranscriptToken
-} from '../store/transcript'
+import { LocalTranscriptToken } from '../store/transcript'
 
-import Transcript from '../service/transcript.class'
+import store from '@/store'
+import Transcript from './transcript.class'
+
+const transcript = store.transcript || new Transcript()
 
 export type Pastable<T> = T & {
   index: number
@@ -24,10 +24,10 @@ export function getTokenPartWithMetadata(
       // leave the other tiers untouched
       ...e.tiers,
       // edit the defaultTier text, so it only contains the selected text
-      [ eventStore.metadata.defaultTier ]: {
-        ...e.tiers[ eventStore.metadata.defaultTier ],
-        text: e.tiers[ eventStore.metadata.defaultTier ].text.substring(range1, range2) + '='
-      },
+      [ transcript.meta.defaultTier ]: {
+        ...e.tiers[ transcript.meta.defaultTier ],
+        text: e.tiers[ transcript.meta.defaultTier ].text.substring(range1, range2) + '='
+      }
     }
   }
 }
@@ -43,11 +43,11 @@ export function getTokenPart(
     id: Transcript.makeTokenId(),
     tiers: {
       ortho: { text: '', type: -1 },
-      phon:  { text: '', type: -1 },
-      text:  { text: '', type: -1 },
-      [ eventStore.metadata.defaultTier ]: {
-        ...e.tiers[ eventStore.metadata.defaultTier ],
-        text: e.tiers[ eventStore.metadata.defaultTier ].text.substring(range1, range2)
+      phon: { text: '', type: -1 },
+      text: { text: '', type: -1 },
+      [ transcript.meta.defaultTier ]: {
+        ...e.tiers[ transcript.meta.defaultTier ],
+        text: e.tiers[ transcript.meta.defaultTier ].text.substring(range1, range2)
       }
     }
   }
@@ -118,7 +118,7 @@ export function unserializeTokenTiers(tokens: string): Array<Pastable<LocalTrans
         text: v.ORTHO || '',
         type: -1
       },
-      [ eventStore.metadata.defaultTier ]: {
+      [ transcript.meta.defaultTier ]: {
         text: v[ transcript.meta.defaultTier.toUpperCase() ],
         type: Transcript.getTokenTypeFromToken(v[ transcript.meta.defaultTier.toUpperCase() ]).id
       }
@@ -209,13 +209,13 @@ export function getOtherHalfOfToken(
   token: LocalTranscriptToken,
   tokenPart: LocalTranscriptToken
 ): LocalTranscriptToken {
-  const s = tokenPart.tiers[ transcript.metadata.defaultTier ].text
+  const s = tokenPart.tiers[ transcript.meta.defaultTier ].text
   return {
     ...token,
     tiers: {
       ...token.tiers,
       [ transcript.meta.defaultTier ]: {
-        text: token.tiers[ transcript.metadata.defaultTier ].text.replace(s, '')
+        text: token.tiers[ transcript.meta.defaultTier ].text.replace(s, '')
       }
     }
   }
@@ -226,7 +226,7 @@ export function removeTokensAndTokenParts(
   tokensToRemove: Array<Pastable<LocalTranscriptToken>>
 ) {
   const tokensToRemoveById = _(tokensToRemove).keyBy('id').value()
-  return tokens.reduce((m, t, i, l) => {
+  return tokens.reduce((m, t) => {
     // the token should be removed
     if (t.id in tokensToRemoveById) {
       // the token was partially selected

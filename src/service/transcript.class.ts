@@ -49,11 +49,10 @@ export type AudioFileOrUrl = AudioFile | string | ArrayBuffer
 */
 export default class Transcript extends EventService {
   constructor(
-    init: AudioFile
+    init?: AudioFile
       | TranscribeFile
       | { backEndUrl: string, id: number }
-      | { events: LocalTranscriptEvent[], meta: TranscriptMetaData }
-      | undefined,
+      | { events: LocalTranscriptEvent[], meta: TranscriptMetaData },
     audio?: AudioFileOrUrl
   ) {
     super()

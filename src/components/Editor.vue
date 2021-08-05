@@ -249,7 +249,7 @@ import {
 import {
   isWaveformEventVisible,
   getScrollLeftAudio
-} from '../service/dom-methods'
+} from '../service/dom.service'
 
 import settings from '../store/settings'
 import audio from '../service/audio'

@@ -6,12 +6,17 @@ import * as sliceAudiobuffer from 'audiobuffer-slice'
 import * as PromiseWorker from 'promise-worker-transferable'
 import OggIndexWorker from './oggindex.worker'
 import _ from 'lodash'
+import { LocalTranscriptEvent } from '@/store/transcript'
+import EventService from './event-service'
+import settings from '@/store/settings'
+import * as audioBufferToWav from 'audiobuffer-to-wav'
+import eventBus from './event-bus'
 const oggIndexWorker = new PromiseWorker(new OggIndexWorker(''))
 
 // account for browser api differences
 const CtxClass: any = window.AudioContext || window.webkitAudioContext
 const audioContext: AudioContext = new CtxClass()
-const bufferSrc = audioContext.createBufferSource()
+let bufferSrc = audioContext.createBufferSource()
 
 export default class TranscriptAudio {
   constructor(a: AudioFileOrUrl, overviewWaveformSvg?: string) {
@@ -26,6 +31,7 @@ export default class TranscriptAudio {
 
   private audioElement = document.createElement('audio')
   private oggHeaders: OggHeader[] = []
+  private oggHeaderBuffer: ArrayBuffer|null = null
 
   duration = 0 // seconds
   fileSize = 0 // bytes
@@ -34,7 +40,224 @@ export default class TranscriptAudio {
   onChunkAvailable: null|((startTime: number, endTime: number, audioBuffer: AudioBuffer) => any) = null
   buffer = new Uint8Array(0)
   isLocalFile = false
+  playAllFrom: number|null = null
   url = ''
+
+  pause() {
+    this.audioElement.pause()
+    this.playAllFrom = null
+    eventBus.$emit('pauseAudio', this.currentTime)
+    this.pauseCurrentBuffer()
+    this.isPaused = true
+  }
+
+  pauseCurrentBuffer() {
+    this.audioElement.pause()
+    URL.revokeObjectURL(this.audioElement.src)
+    bufferSrc.buffer = null
+    try {
+      bufferSrc.stop()
+      bufferSrc.disconnect()
+    } catch (e) {
+      console.log(e)
+    }
+  }
+
+  playEvents(events: LocalTranscriptEvent[]) {
+    this.pause()
+    const sortedEvents = EventService.sortEvents(events)
+    const lastEvent = _(sortedEvents).last() as LocalTranscriptEvent
+    const firstEvent = _(sortedEvents).first() as LocalTranscriptEvent
+    const start = this.currentTime > firstEvent.startTime && this.currentTime < lastEvent.endTime
+      ? this.currentTime
+      : firstEvent.startTime
+    this.playRange(start, lastEvent.endTime)
+  }
+
+  playEvent(e: LocalTranscriptEvent) {
+    this.playEvents([ e ])
+  }
+
+  async playRange(start: number, end: number) {
+    if (this.buffer.byteLength === 0) {
+      console.log('can’t play, no buffer loaded')
+    } else {
+      const [ left, right ] = [ start, end ].sort((a, b) => a - b)
+      const buffer = await TranscriptAudio.decodeBufferTimeSlice(left, right, this.buffer)
+      if (buffer !== undefined) {
+        requestAnimationFrame(() => {
+          this.isPaused = false
+          this
+            .playBuffer(buffer, settings.playbackSpeed)
+            .addEventListener('ended', () => this.pause)
+          this.emitUpdateTimeUntilPaused(left, false, right, false)
+        })
+      }
+    }
+  }
+
+  emitUpdateTimeUntilPaused(t: number, lockScroll: boolean, maxT: number, useAudioElement: boolean) {
+    const startTime = performance.now()
+    this.currentTime = t
+    eventBus.$emit('updateTime', t)
+    let currentlyPlayingEventId: number|null = null
+    const step = (now: number) => {
+      const elapsed = (now - startTime) / 1000 * settings.playbackSpeed
+      // more than 16 ms have passed
+      if (useAudioElement === true) {
+        this.currentTime = this.audioElement.currentTime
+        eventBus.$emit('updateTime', this.currentTime)
+      } else {
+        if (t + elapsed - this.currentTime >= .016) {
+          // update and emit.
+          this.currentTime = t + elapsed
+          eventBus.$emit('updateTime', this.currentTime)
+        }
+      }
+      // paused or over max t.
+      if (
+        (maxT !== undefined && this.currentTime >= maxT) ||
+        this.isPaused === true
+      ) {
+        // stop emitting.
+        this.isPaused = true
+        return false
+      } else {
+        // sync scroll if locked.
+        // TODO: move elsewhere.
+        if (lockScroll) {
+          const e = findEventAt(this.currentTime)
+          if (e !== undefined && e.eventId !== currentlyPlayingEventId) {
+            currentlyPlayingEventId = e.eventId
+            scrollToTranscriptEvent(e)
+          }
+        }
+        // continue emitting
+        return requestAnimationFrame(step)
+      }
+    }
+    return step(performance.now())
+  }
+
+  static getBufferFromAudioBuffer(
+    buffer: AudioBuffer,
+    channel: number,
+    mono: boolean) {
+    if (mono === true) {
+      return TranscriptAudio.sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
+    } else {
+      console.time('extracting buffer from channel ' + channel)
+      const x = buffer.getChannelData(channel).buffer
+      console.timeEnd('extracting buffer from channel ' + channel)
+      return x
+    }
+  }
+
+  static sumChannels(first: Float32Array, second: Float32Array): Float32Array {
+    const sum = new Float32Array(first.length)
+    first.forEach((v: number, i: number) => {
+      sum[i] = v + second[i]
+    })
+    return sum
+  }
+
+  playEventsStart(events: LocalTranscriptEvent[], duration: number) {
+    const sortedEvents = EventService.sortEvents(events)
+    const firstEvent = sortedEvents[0]
+    const [ start, end ] = [ firstEvent.startTime, Math.min(firstEvent.startTime + duration, firstEvent.endTime) ]
+    this.playRange(start, end)
+  }
+
+  playEventsEnd(events: LocalTranscriptEvent[], duration: number) {
+    const sortedEvents = EventService.sortEvents(events)
+    const lastEvent = _.last(sortedEvents) as LocalTranscriptEvent
+    const [ start, end ] = [ Math.max(lastEvent.endTime - duration, lastEvent.startTime), lastEvent.endTime ]
+    this.playRange(start, end)
+  }
+
+  scrubAudio(t: number) {
+    this.currentTime = t
+    eventBus.$emit('scrubAudio', t)
+  }
+
+  playBuffer(buffer: AudioBuffer, speed = 1, start = 0, offset?: number, duration?: number) {
+    if (speed !== 1) {
+      const wav = audioBufferToWav(buffer)
+      const blob = new Blob([ new Uint8Array(wav) ])
+      this.audioElement.src = URL.createObjectURL(blob)
+      this.audioElement.playbackRate = speed
+      this.audioElement.crossOrigin = 'anonymous'
+      this.audioElement.play()
+      return this.audioElement
+    } else {
+      bufferSrc = audioContext.createBufferSource()
+      bufferSrc.buffer = buffer
+      bufferSrc.connect(audioContext.destination)
+      bufferSrc.start(0, offset, duration)
+      return bufferSrc
+    }
+  }
+
+  static createMediaFragmentUrl(audioUrl: string, event: LocalTranscriptEvent) {
+    return audioUrl
+      + '#t='
+      + event.startTime.toFixed(2)
+      + ','
+      + event.endTime.toFixed(2)
+  }
+
+  async getOrFetchHeaderBuffer(url: string): Promise<ArrayBuffer|null> {
+    const kb = 100
+    if (this.oggHeaderBuffer === null) {
+      console.log('DOWNLOADING HEADER BUFFER')
+      try {
+        const chunk = await fetch(url, {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            Range: `bytes=0-${ kb * 1024 }`
+          }
+        })
+        const bufferFirstSlice = await chunk.arrayBuffer()
+        return TranscriptAudio.getOggHeaderBuffer(bufferFirstSlice)
+      } catch (e) {
+        console.log(e)
+        return null
+      }
+    } else {
+      return this.oggHeaderBuffer
+    }
+  }
+
+  async getOrFetchAudioBuffer(
+    from: number,
+    to: number,
+    fileSize: number,
+    audioLength: number,
+    url: string
+  ): Promise<AudioBuffer> {
+    if (from > to || audioLength < to) {
+      throw new Error('range is not in audio file')
+    } else {
+      try {
+        return await TranscriptAudio.decodeBufferTimeSlice(from, to, this.buffer)
+      } catch (e) {
+        console.log('could not find audio range locally, attempting download…', { from, to, audioLength }, e)
+        const headerBuffer = await this.getOrFetchHeaderBuffer(url)
+        const startByte = Math.max(fileSize * (from / audioLength) - 1024 * 1024, 0).toFixed(0)
+        const endByte = Math.min(fileSize * (to / audioLength) + 1024 * 1024, fileSize).toFixed(0)
+        // console.log({ startByte, endByte, from, to, fileSize, audioLength, url })
+        const buffer = await (await fetch(url, {
+          credentials: 'include',
+          headers: { Range: `bytes=${startByte}-${endByte}` }
+        })).arrayBuffer()
+        const { pages } = await TranscriptAudio.getOggIndexAsync(buffer)
+        const trimmedBuffer = buffer.slice(pages[0].byteOffset, pages[pages.length - 1].byteOffset)
+        const combinedBuffer = concatBuffer(headerBuffer, trimmedBuffer)
+        return await TranscriptAudio.decodeBufferTimeSlice(from, to, combinedBuffer)
+      }
+    }
+  }
 
   private async downloadAndDecodeBufferProgressively(url: string, chunkSize: number) {
     this.fileSize = await this.getFileSize(url)
@@ -49,7 +272,7 @@ export default class TranscriptAudio {
           const that = this
           await reader
             .read()
-            .then(async function process(chunk: ReadableStreamReadResult<Uint8Array>): Promise<any> {
+            .then(async function process(chunk: ReadableStreamDefaultReadResult<Uint8Array>): Promise<any> {
               if (chunk.done === false) {
                 if (chunk.value && chunk.value.buffer instanceof ArrayBuffer) {
                   [ preBuffer ] = await concatUint8ArrayAsync(preBuffer, chunk.value)
@@ -148,7 +371,6 @@ export default class TranscriptAudio {
       }
     }
   }
-  
 
   private async decodeBufferProgressively(b: Uint8Array) {
     const { pages } = await TranscriptAudio.getOggIndexAsync(b.buffer)
@@ -165,7 +387,7 @@ export default class TranscriptAudio {
     }
   }
 
-  async static getOggIndexAsync(buffer: ArrayBuffer): Promise<OggIndex> {
+  static async getOggIndexAsync(buffer: ArrayBuffer): Promise<OggIndex> {
     const m = await oggIndexWorker.postMessage({ buffer })
     return m.oggIndex
   }
@@ -179,10 +401,17 @@ export default class TranscriptAudio {
   }
 
   private static getOggSampleRate(buffer: ArrayBuffer): number {
-    // that’s where the 32 bit integer sits
+    // this is where the 32 bit integer sits.
+    // see the ogg/vorbis spec for more info.
     const chunk = buffer.slice(40, 48)
     const view = new Uint32Array(chunk)
     return view[0]
+  }
+
+  static getOggNominalBitrate(buffer: ArrayBuffer): number {
+    const chunk = buffer.slice(48, 52)
+    const dataView = new DataView(chunk).getInt32(0, true)
+    return dataView
   }
 
   static getOggIndex(buffer: ArrayBuffer): OggIndex {
@@ -270,7 +499,7 @@ export default class TranscriptAudio {
       console.log({ startPage, endPage })
       throw new Error('Could not find all required pages')
     } else {
-      const decodedBuffer = await TranscriptAudio.decodeBufferByteRange(startPage.byteOffset, endPage.byteOffset, buffer)
+      const decodedBuffer = await TranscriptAudio.decodeBufferByteRange(startPage.byteOffset, endPage.byteOffset, b)
       // FIXME: WHY .2 SECONDS?
       const overflowStart = Math.max(0, startTime - startPage.timestamp + .2)
       const overflowEnd = Math.min(endTime - startTime + overflowStart, decodedBuffer.duration - overflowStart)
@@ -334,5 +563,4 @@ export default class TranscriptAudio {
     console.log({ startPage, endPage })
     return { startPage, endPage }
   }
-
 }

@@ -5,7 +5,6 @@ import * as util from '../util'
 import * as PromiseWorker from 'promise-worker-transferable'
 
 import settings from '../store/settings'
-import GetFrequenciesWorker from './get-frequencies.worker'
 import OggIndexWorker from './oggindex.worker'
 import { LocalTranscriptEvent } from '../store/transcript'
 import _ from 'lodash'
@@ -53,190 +52,13 @@ export interface OggIndex {
 const CtxClass: any = (window as any).AudioContext || (window as any).webkitAudioContext
 
 const audioContext: AudioContext = new CtxClass()
-const localAudioElement = document.createElement('audio')
-let localBufferSrc = audioContext.createBufferSource()
 const uint8Buffer = new Uint8Array(0)
-
-const isLocalFile                       = false
-let   oggPages                          = [] as OggIndex['pages']
-let   oggHeaders                        = [] as OggIndex['headers']
-let   oggLength: number|null            = null
-let   sampleRate: number|null           = null
-let   metadata: AudioMetaData|null      = null
-const isBufferComplete                  = false
-let   oggHeaderBuffer: ArrayBuffer|null = null
-
-function readU4le(dataView: DataView, i: number) {
-  return dataView.byteLength > i + 32 ? dataView.getUint32(i, true) : null
-}
-
-export function readU8le(dataView: DataView, i: number) {
-  const v1 = readU4le(dataView, i)
-  const v2 = readU4le(dataView, i + 4)
-  return v1 !== null && v2 !== null ? 0x100000000 * v2 + v1 : null
-}
-
-export function createMediaFragmentUrl(audioUrl: string, event: LocalTranscriptEvent) {
-  return audioUrl
-    + '#t='
-    + event.startTime.toFixed(2)
-    + ','
-    + event.endTime.toFixed(2)
-}
-
-function getOggNominalBitrate(buffer: ArrayBuffer): number {
-  // that’s where the 32 bit integer sits
-  const chunk = buffer.slice(48, 52)
-  const dataView = new DataView(chunk).getInt32(0, true)
-  return dataView
-}
-
-function getOggHeaderBuffer(buffer: ArrayBuffer): ArrayBuffer|null {
-  const b = new Uint8Array(buffer)
-  const v = new DataView(buffer)
-  const l = b.length
-  let headerStart: number|null = null
-  let headerEnd: number|null = null
-  for (let i = 0; i < l; i ++) {
-    if (
-      b[i]     === 79 &&    // O
-      b[i + 1] === 103 &&   // g
-      b[i + 2] === 103 &&   // g
-      b[i + 3] === 83       // s
-    ) {
-      const granulePosition = readU8le(v, i + 6)
-      if (granulePosition === null) {
-        headerStart = null
-        break
-      }
-      if (granulePosition === 0 && headerStart === null) {
-        headerStart = i
-      } else if (granulePosition > 0 && headerEnd === null) {
-        headerEnd = i
-        break;
-      }
-    }
-  }
-  if (headerStart !== null && headerEnd !== null) {
-    return buffer.slice(headerStart, headerEnd)
-  } else {
-    return null
-  }
-}
-
-export function getOggSampleRate(buffer: ArrayBuffer): number {
-  if (sampleRate === null) {
-    // that’s where the 32 bit integer sits
-    const chunk = buffer.slice(40, 48)
-    const view = new Uint32Array(chunk)
-    sampleRate = view[0]
-    return view[0]
-  } else {
-    return sampleRate
-  }
-}
-
-async function getOggIndexAsync(buffer: ArrayBuffer): Promise<OggIndex> {
-  const m = await oggIndexWorker.postMessage({ buffer })
-  oggLength = m.oggLength
-  return m.oggIndex
-}
-
-function getOggIndex(buffer: ArrayBuffer): OggIndex {
-
-  console.time('indexing ogg')
-  const pages: OggIndex['pages'] = []
-  const headers: OggIndex['headers'] = []
-
-  const uint8Array = new Uint8Array(buffer)
-  const length = uint8Array.length
-  const dataView = new DataView(buffer)
-  const rate = getOggSampleRate(buffer)
-  const l = uint8Array
-  for (let i = 0; i < length; i ++) {
-    if (
-      l[i]     === 79 &&    // O
-      l[i + 1] === 103 &&   // g
-      l[i + 2] === 103 &&   // g
-      l[i + 3] === 83       // s
-    ) {
-      const byteOffset = i
-      const granulePosition = readU8le(dataView, i + 6)
-      if (granulePosition === null) {
-        break;
-      } else {
-        const timestamp = granulePosition / rate
-        if (granulePosition === 0) {
-          headers.push({ byteOffset })
-        } else {
-          pages.push({ byteOffset, granulePosition, timestamp })
-        }
-      }
-    }
-  }
-  console.timeEnd('indexing ogg')
-  oggLength = (pages[pages.length - 1] || { timestamp: 0 }).timestamp
-  return { headers, pages }
-}
 
 async function cacheOggIndex(buffer: ArrayBuffer): Promise<OggIndex> {
   const {pages, headers} = await getOggIndexAsync(buffer)
   oggHeaders = headers
   oggPages = pages
   return {pages, headers}
-}
-
-function sliceAudioBuffer(buffer: AudioBuffer, start: number, end: number): Promise<AudioBuffer> {
-  return new Promise((resolve, reject) => {
-    sliceAudiobuffer(buffer, start, end, (err: Error, sliced: AudioBuffer) => {
-      if (err) {
-        reject(err)
-      } else {
-        resolve(sliced)
-      }
-    })
-  })
-}
-
-function findOggPages(from: number, to: number, pages: OggIndex['pages']): {
-  startPage: OggPage|null,
-  endPage: OggPage|null
-} {
-
-  console.time('find pages')
-  // some timestamps are just too big.
-  // checking for them counts as a kind of
-  // rudimentary error correction.
-  const errorTimestampTooBig = Math.pow(10, 6) // 1 million seconds
-
-  const countPages = pages.length
-  let startPage: OggPage|null = null
-  let endPage: OggPage|null = null
-  let i = 0
-  while (i < countPages) {
-    if (
-      startPage === null &&
-      pages[i + 1] &&
-      pages[i + 1].timestamp >= from &&
-      pages[i + 1].timestamp < errorTimestampTooBig
-    ) {
-      startPage = pages[i]
-    }
-    if (
-      endPage === null &&
-      pages[i] &&
-      pages[i].timestamp >= to &&
-      pages[i].timestamp < errorTimestampTooBig ||
-      i + 1 === countPages
-    ) {
-      endPage = pages[i]
-      break
-    }
-    i++
-  }
-  console.timeEnd('find pages')
-  console.log({startPage, endPage})
-  return {startPage, endPage}
 }
 
 // let spectrogramWasmModule: any
@@ -267,106 +89,6 @@ function findOggPages(from: number, to: number, pages: OggIndex['pages']): {
 //     return drawSpectrogramWasm(buffer, width, height)
 //   }
 // }
-
-export function pauseCurrentBuffer() {
-  localAudioElement.pause()
-  URL.revokeObjectURL(localAudioElement.src)
-  localBufferSrc.buffer = null
-  try {
-    localBufferSrc.stop()
-    localBufferSrc.disconnect()
-  } catch (e) {
-    console.log(e)
-  }
-}
-
-export function playBuffer(buffer: AudioBuffer, speed = 1, start = 0, offset?: number, duration?: number) {
-  if (speed !== 1) {
-    const wav = audio.audioBufferToWav(buffer)
-    const blob = new Blob([new Uint8Array(wav)])
-    localAudioElement.src = URL.createObjectURL(blob)
-    localAudioElement.playbackRate = speed
-    localAudioElement.crossOrigin = 'anonymous'
-    localAudioElement.play()
-    return localAudioElement
-  } else {
-    localBufferSrc = audioContext.createBufferSource()
-    localBufferSrc.buffer = buffer
-    localBufferSrc.connect(audio.store.audioContext.destination)
-    localBufferSrc.start(0, offset, duration)
-    return localBufferSrc
-  }
-}
-
-async function drawSpectrogramAsync(
-  buffer: AudioBuffer,
-  width: number,
-  height: number,
-  channel?: number
-): Promise<[HTMLCanvasElement, Uint8Array[]]> {
-
-  const b = channel === undefined
-    ? sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
-    : buffer.getChannelData(channel)
-
-  const [f, i] = await getFrequenciesWorker.postMessage({
-    fftSamples: 2048,
-    buffer: b,
-    length: buffer.length,
-    sampleRate: buffer.sampleRate,
-    width,
-    gradient: settings.spectrogramGradient
-  }, [ b ])
-
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
-
-  const fakeCanvas = document.createElement('canvas') as HTMLCanvasElement
-  fakeCanvas.width = i.width
-  fakeCanvas.height = i.height;
-  (fakeCanvas.getContext('2d') as CanvasRenderingContext2D).putImageData(i, 0, 0)
-  ctx.scale(1, height / i.height)
-  ctx.drawImage((fakeCanvas as unknown) as CanvasImageSource, 0, 0)
-  return [canvas, f]
-}
-
-export function sumChannels(first: Float32Array, second: Float32Array): Float32Array {
-  const sum = new Float32Array(first.length)
-  first.forEach((v: number, i: number) => {
-    sum[i] = v + second[i]
-  })
-  return sum
-}
-
-function getBuffer(buffer: AudioBuffer, channel: number, mono: boolean) {
-  if (mono === true) {
-    return sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
-  } else {
-    console.time('channel ' + channel)
-    const x = buffer.getChannelData(channel).buffer
-    console.timeEnd('channel ' + channel)
-    return x
-  }
-}
-
-async function drawWavePathAsync(
-  buffer: AudioBuffer,
-  width: number,
-  height: number,
-  channel = 0,
-  offsetLeft = 0,
-  mono = false
-): Promise<string> {
-  const buf = getBuffer(buffer, channel, mono)
-  const options = textEncoder.encode(JSON.stringify({ width, height, offsetLeft })).buffer
-  if (channel === 0) {
-    return await waveformWorker1.postMessage({ buffer: buf, options }, [ buf, options ])
-  } else {
-    return await waveformWorker2.postMessage({ buffer: buf, options }, [ buf, options ])
-  }
-}
 
 // let wasmModule: any
 
@@ -402,93 +124,7 @@ async function drawWavePathAsync(
 //   }
 // }
 
-function drawWavePath(buffer: AudioBuffer, width: number, height: number, channel = 0, offsetLeft = 0) {
-  // based on drawWave.js
-  let upperHalf = ''
-  let lowerHalf = ''
-  const chanData = buffer.getChannelData(channel)
-  const step = Math.ceil( chanData.length / width )
-  const amp = height / 2
-  console.time('draw wave')
-  for (let i = 0; i < width; i++) {
-    let min = 1.0
-    let max = -1.0
-    for (let j = 0; j < step; j++) {
-      const datum = chanData[(i * step) + j]
-      if (datum < min) {
-        min = datum
-      }
-      if (datum > max) {
-        max = datum
-      }
-    }
-    upperHalf = upperHalf + `${ i === 0 ? 'M' : 'L' } ${ i + offsetLeft } ${ (1 + min) * amp } `
-    lowerHalf = `L ${ i + offsetLeft } ${ Math.max(1, (max - min) * amp) + ((1 + min) * amp) } ` + lowerHalf
-  }
-  console.timeEnd('draw wave')
-  return upperHalf + lowerHalf + 'Z'
-}
-
-async function drawWaveSvg(
-  buffer: AudioBuffer,
-  width: number,
-  height: number,
-  color = '#ccc',
-  channel = 0,
-  mono = false
-) {
-  return (
-    // tslint:disable-next-line:max-line-length
-    `<svg viewBox="0 0 ${ width.toFixed(0) } ${ height }" height="${ height }" width="${ width.toFixed(0) }"><path fill="${ color }" d="`
-    + await drawWavePathAsync(buffer, width, height, channel, 0, mono)
-    + `" /></svg>`
-  )
-}
-
 // tslint:disable-next-line:max-line-length
-async function decodeBufferByteRange(fromByte: number, toByte: number, buffer: ArrayBuffer): Promise<AudioBuffer> {
-  const headerBuffer = getOggHeaderBuffer(buffer)
-  const contentBuffer = buffer.slice(fromByte, toByte)
-  const combinedBuffer = concatBuffer(headerBuffer, contentBuffer)
-  const decodedBuffer = await audioContext.decodeAudioData(combinedBuffer)
-  return decodedBuffer
-}
-
-async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuffer): Promise<AudioBuffer> {
-  // TODO: this is could possible be solved a little better.
-  let startPage
-  let endPage
-  if (oggPages.length === 0) {
-    const adHocIndex = (await getOggIndexAsync(buffer)).pages
-    const pages = findOggPages(from, to + 1, adHocIndex)
-    startPage = pages.startPage
-    endPage = pages.endPage
-  } else {
-    const pages = findOggPages(from, to + 1, oggPages)
-    console.log({oggPages, from, to})
-    startPage = pages.startPage
-    endPage = pages.endPage
-  }
-  if (startPage === null || endPage === null) {
-    console.log({startPage, endPage})
-    throw new Error('Could not find all required pages')
-  } else {
-    const decodedBuffer = await decodeBufferByteRange(startPage.byteOffset, endPage.byteOffset, buffer)
-    // TODO: WHY .2?
-    const overflowStart = Math.max(0, from - startPage.timestamp + .2)
-    const overflowEnd = Math.min(to - from + overflowStart, decodedBuffer.duration - overflowStart)
-    console.log('decoded buffer duration', decodedBuffer.duration)
-    console.log('start end', overflowStart, overflowEnd)
-    try {
-      const slicedBuffer = await sliceAudioBuffer(decodedBuffer, overflowStart * 1000, overflowEnd * 1000)
-      console.log(slicedBuffer.duration, 'sliced buffer duration for', startPage.timestamp, endPage.timestamp)
-      return slicedBuffer
-    } catch (e) {
-      console.error(e)
-      return decodedBuffer
-    }
-  }
-}
 
 async function getOrFetchHeaderBuffer(url: string): Promise<ArrayBuffer|null> {
   const kb = 100
@@ -712,9 +348,6 @@ const audio = {
   decodeAudioBufferProgressively, // public
   downloadAndDecodeAudioStream, // public
   downloadAudioStream, // public
-  drawSpectrogramAsync, // public
-  drawWaveSvg, // public
-  drawWavePath, // public
   drawWavePathAsync, // public
   getOggHeaderBuffer,
   getOggIndexAsync,

@@ -1,4 +1,6 @@
 import _ from 'lodash'
+import * as parseXML from '@rgrove/parse-xml'
+
 import {
   ServerEvent,
   ServerSurvey,
@@ -8,21 +10,11 @@ import {
   surveyToServerTranscriptSurvey,
   surveyToServerTranscriptInformants
 } from '../service/backend-server'
-
-import {
-  makeEventId,
-  makeTierId,
-  makeTokenId,
-  timeFromSeconds,
-  TokenTierType,
-  tokenTypeFromToken,
-  makeEventTierId
-} from '../store/transcript'
-
-import * as parseXML from '@rgrove/parse-xml'
-import { padEnd } from '../util/index'
+import { TokenTierType } from '../store/transcript'
+import { padEnd, timeFromSeconds } from '../util/index'
 import settings from '../store/settings'
 import presets from '../presets'
+import Transcript from './transcript.class'
 
 interface BasicNode {
   attributes: object
@@ -33,6 +25,7 @@ interface BasicNode {
   type: string
   text?: string
 }
+
 interface EventNode extends BasicNode {
   name: 'event'
   attributes: {
@@ -42,6 +35,7 @@ interface EventNode extends BasicNode {
   type: 'element'
   children: BasicNode[]
 }
+
 interface TierNode extends BasicNode {
   name: 'tier'
   attributes: {
@@ -114,7 +108,7 @@ export function exmaraldaToImportable(fileName: string, xml: string): ParsedExma
 }
 
 function getTokenTypeId(t: string): number {
-  return tokenTypeFromToken(t).id
+  return Transcript.getTokenTypeFromToken(t).id
 }
 
 function getTierToken(
@@ -179,12 +173,12 @@ export function importableToServerTranscript(
   const tiers: ServerTranscript['aTiers'] = {}
 
   const eventTimeline = _(tiersBySpeakers).chain()
-    .reduce((m, st, i, l) => {
+    .reduce((m, st) => {
       const es = _(st)
         .map(t => t.events)
         .flatten()
         .keyBy(e => e.startTime + '__' + e.endTime)
-        .mapValues(makeEventId)
+        .mapValues(Transcript.makeEventId)
         .value()
       m = { ...m, es }
       return m
@@ -207,14 +201,14 @@ export function importableToServerTranscript(
               if (!e.text) {
                 console.log('e.text is empty: ', e)
               }
-              const eventId = eventTimeline[e.startTime + '__' + e.endTime] || makeEventId()
+              const eventId = eventTimeline[e.startTime + '__' + e.endTime] || Transcript.makeEventId()
               const text = e.text || ''
 
               // create event tiers (free text tiers)
               if (speakerTier.toTierType === 'freeText') {
                 const tierName = speakerTier.toTierName || speakerTier.toTierType || 'untitled'
                 const existingTier = _(tiers).map((t, k) => ({ ...t, id: k })).find(t => t.tier_name === tierName)
-                const tierId = existingTier !== undefined ? existingTier.id : makeTierId()
+                const tierId = existingTier !== undefined ? existingTier.id : Transcript.makeTierId()
 
                 if (existingTier === undefined) {
                   tiers[tierId] = {
@@ -229,8 +223,8 @@ export function importableToServerTranscript(
                   l: 0 as 0,
                   tid: {},
                   event_tiers: {
-                    [speakerTier.toSpeaker!.pk] : {
-                      [makeEventTierId()]: {
+                    [ speakerTier.toSpeaker!.pk ] : {
+                      [ Transcript.makeEventTierId() ]: {
                         t: e.text || '',
                         ti: Number(tierId)
                       }
@@ -244,7 +238,7 @@ export function importableToServerTranscript(
                   .filter(t => t !== '')
                   .map((t, tokenIndex): number => {
                     const fragmentOf = tokenIndex === 0 ? fragmentStartTokenId : undefined
-                    const tokenId = makeTokenId()
+                    const tokenId = Transcript.makeTokenId()
                     const token: ServerToken = {
                       t: speakerTier.tokenTierType === 'text'
                         ? t
@@ -266,7 +260,7 @@ export function importableToServerTranscript(
                     }
                     // if it’s a fragment, add it to the fragment starting token.
                     if (fragmentOf !== undefined) {
-                      tokens[fragmentOf].o = tokens[fragmentOf].o + getTierToken(speakerTiers, defaultTier, e, 0)
+                      tokens[fragmentOf].o = tokens[ fragmentOf ].o + getTierToken(speakerTiers, defaultTier, e, 0)
                     }
                     tokens[tokenId] = token
                     return tokenId

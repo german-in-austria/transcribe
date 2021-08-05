@@ -5,7 +5,7 @@ import JSZip from 'jszip'
 import _ from 'lodash'
 
 import { convertToServerTranscript, ServerTranscript, ServerTranscriptListItem } from '../service/backend-server'
-import { JSONObject, Settings } from '../store/settings'
+import { Settings } from '../store/settings'
 import { HistoryEventAction } from '../store/history'
 import Transcript, { TranscriptMetaData } from './transcript.class'
 import { LocalTranscriptEvent } from '@/store/transcript'

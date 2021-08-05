@@ -1,23 +1,12 @@
 import _ from 'lodash'
-
-import {
-  LocalTranscriptEvent,
-  replaceEvents,
-  selectEvents,
-  scrollToAudioEvent,
-  scrollToTranscriptEvent
-} from './transcript'
-
-import {
-  isUndoOrRedo
-} from '../util'
-
-import {
-  isWaveformEventVisible
-} from '../service/dom-methods'
-
+import { LocalTranscriptEvent } from './transcript'
+import { isUndoOrRedo } from '../util'
+import { isWaveformEventVisible } from '../service/dom.service'
 import { sendMessage } from '../service/socket'
 import { serverTranscript } from '../service/backend-server'
+import store from '@/store'
+import Transcript from '@/service/transcript.class'
+const transcript = store.transcript || new Transcript()
 
 type HistoryApplicationType = 'UNDO'|'REDO'|'DO'|'JUMPTOSTATE'
 
@@ -49,9 +38,9 @@ export function handleRemotePeerEvent(data: [string, HistoryEventAction|HistoryE
         .filter(a => a.apply === true)
         .concat(p)
       if (_.isArray(p)) {
-        _(p).forEach(a => replaceEvents(a.before, a.after))
+        _(p).forEach(a => transcript.replaceEvents(a.before, a.after))
       } else {
-        replaceEvents(p.before, p.after)
+        transcript.replaceEvents(p.before, p.after)
       }
     } else if (t === 'UNDO') {
       // if (_.isArray(p)) {
@@ -79,10 +68,10 @@ async function undoRedoHandler(e: KeyboardEvent) {
     const action = undo(true)
     if (action !== undefined) {
       notifyPeers(action, 'UNDO')
-      selectEvents(action.before)
+      transcript.selectEvents(action.before)
       if (action.before[0] !== undefined && !await isWaveformEventVisible(action.before[0])) {
-        scrollToAudioEvent(action.before[0])
-        scrollToTranscriptEvent(action.before[0])
+        transcript.scrollToAudioEvent(action.before[0])
+        transcript.scrollToTranscriptEvent(action.before[0])
       }
     }
   } else if (d.redo === true) {
@@ -91,10 +80,10 @@ async function undoRedoHandler(e: KeyboardEvent) {
     const action = redo(true)
     if (action !== undefined) {
       notifyPeers(action, 'REDO')
-      selectEvents(action.after)
+      transcript.selectEvents(action.after)
       if (action.after[0] !== undefined && !await isWaveformEventVisible(action.after[0])) {
-        scrollToAudioEvent(action.after[0])
-        scrollToTranscriptEvent(action.after[0])
+        transcript.scrollToAudioEvent(action.after[0])
+        transcript.scrollToTranscriptEvent(action.after[0])
       }
     }
   }
@@ -137,11 +126,11 @@ function jumpToStateIndex(target: number) {
       // redo: left to right, oldest to latest
       _(history.actions).forEach(applyOrUnApplyUntil(target))
     }
-    history.actions = history.actions.map((a, i) => ({ ...a,  apply: i <= target}))
+    history.actions = history.actions.map((a, i) => ({ ...a,  apply: i <= target }))
   } else {
     // target is <= -1, go to initial state
     _(history.actions).forEachRight(applyOrUnApplyUntil(target))
-    history.actions = history.actions.map((a, i) => ({ ...a,  apply: false}))
+    history.actions = history.actions.map(a => ({ ...a, apply: false }))
   }
 }
 
@@ -173,11 +162,11 @@ function notifyPeers(a: HistoryEventAction|HistoryEventAction[]|number, t: Histo
 }
 
 function undoAction(a: HistoryEventAction) {
-  replaceEvents(a.after, a.before)
+  transcript.replaceEvents(a.after, a.before)
 }
 
 function redoAction(a: HistoryEventAction) {
-  replaceEvents(a.before, a.after)
+  transcript.replaceEvents(a.before, a.after)
 }
 
 export function undo(shouldAutoSave?: boolean): HistoryEventAction|undefined {

@@ -1,57 +1,36 @@
 
 import _ from 'lodash'
+import Vue from 'vue'
 
 import { mutation, history } from '../store/history'
 import { platform } from '../util'
-import Vue from 'vue'
+
 import {
   focusSelectedEventElement,
   isWaveformEventVisible,
   getFocusedEvent,
   getFocusedSpeaker
-} from './dom-methods'
+} from './dom.service'
 
 import {
-  eventStore,
-  splitEvent,
-  splitEventAtChar,
-  findEventAt,
-  addEvent,
-  appendEmptyEventAfter,
-  prependEmptyEventBefore,
-  deleteSelectedEvents,
-  selectEvents,
-  deselectEvents,
-  joinEvents,
-  selectPreviousEvent,
-  selectNextEvent,
-  getSelectedEvent,
-  getSelectedEvents,
   playEvents,
-  scrollToAudioEvent,
-  scrollToTranscriptEvent,
-  moveEventStartTime,
-  moveEventEndTime,
-  shiftCharsLeft,
-  shiftCharsRight,
-  selectEvent,
   playAllFrom,
   pause,
   playEventsStart,
   playEventsEnd,
-  timeSpanSelectionIsEmpty,
-  playRange,
-  appendEmptyEventAt,
-  prependEmptyEventAt
+  playRange
 } from '../store/transcript'
 
 import { saveChangesToServer } from '../service/backend-server'
 
 import eventBus from '../service/event-bus'
-import settings from '../store/settings';
+import store from '@/store'
 import { computeTokenTypesForEvents } from './token-types.service'
-import audio from './audio'
 import kaldiService from './kaldi/kaldiService'
+import Transcript from './transcript.class'
+import TranscriptAudio from './transcript-audio.class'
+
+const transcript = store.transcript || new Transcript()
 
 type KeyboardModifier = 'alt'|'shift'|'ctrlOrCmd'
 
@@ -189,7 +168,7 @@ function doModifiersMatch(ms: KeyboardModifier[], e: KeyboardEvent): boolean {
 }
 
 export async function handleGlobalShortcut(e: KeyboardEvent) {
-  _(settings.keyboardShortcuts).forEach(sc => {
+  _(store.settings.keyboardShortcuts).forEach(sc => {
     if (
       // the function is not disabled
       (sc.disabled === undefined || sc.disabled() === false) &&
@@ -246,37 +225,37 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Append Event',
     disabled: () => false,
     action: async () => {
-      const selectedEvent = getFocusedEvent() || getSelectedEvent()
+      const selectedEvent = getFocusedEvent(transcript) || transcript.getSelectedEvent()
       const speaker = getFocusedSpeaker()
       if (selectedEvent !== undefined) {
-        const newEs = mutation(appendEmptyEventAfter(selectedEvent))
-        const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent(1, selectedEvent) ])
+        const newEs = mutation(transcript.appendEmptyEventAfter(selectedEvent))
+        const es = newEs.length > 0 ? newEs : _.compact([ transcript.selectNextEvent(1, selectedEvent) ])
         if (es.length > 0 && es[0] !== undefined) {
-          scrollToTranscriptEvent(es[0], {
+          transcript.scrollToTranscriptEvent(es[0], {
             focusSpeaker: speaker,
             animate: false,
             focusTier: null,
             focusRight: false
           })
-          scrollToAudioEvent(es[0])
-          selectEvent(es[0])
-          if (settings.playEventOnAppend) {
+          transcript.scrollToAudioEvent(es[0])
+          transcript.selectEvent(es[0])
+          if (store.settings.playEventOnAppend) {
             playEvents(es)
           }
         }
       } else {
-        const action = appendEmptyEventAt(eventStore.currentTime)
+        const action = transcript.appendEmptyEventAt(transcript.audio!.currentTime)
         if (action !== undefined && action.after[0] !== undefined) {
           const e = action.after[0]
-          scrollToTranscriptEvent(e, {
+          transcript.scrollToTranscriptEvent(e, {
             focusSpeaker: speaker,
             animate: false,
             focusTier: null,
             focusRight: false
           })
-          scrollToAudioEvent(e)
-          selectEvent(e)
-          if (settings.playEventOnAppend) {
+          transcript.scrollToAudioEvent(e)
+          transcript.selectEvent(e)
+          if (store.settings.playEventOnAppend) {
             playEvents([ e ])
           }
         }
@@ -296,37 +275,37 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Prepend Event',
     disabled: () => false,
     action: async () => {
-      const event = getFocusedEvent() || getSelectedEvent()
+      const event = getFocusedEvent(transcript) || transcript.getSelectedEvent()
       const speaker = getFocusedSpeaker()
       if (event !== undefined) {
-        const newEs = mutation(prependEmptyEventBefore(event))
-        const es = newEs.length > 0 ? newEs : _.compact([ selectNextEvent(-1, event) ])
+        const newEs = mutation(transcript.prependEmptyEventBefore(event))
+        const es = newEs.length > 0 ? newEs : _.compact([ transcript.selectNextEvent(-1, event) ])
         if (es.length > 0 && es[0] !== undefined) {
-          scrollToTranscriptEvent(es[0], {
+          transcript.scrollToTranscriptEvent(es[0], {
             focusSpeaker: speaker,
             animate: false,
             focusTier: null,
             focusRight: false
           })
-          scrollToAudioEvent(es[0])
-          selectEvent(es[0])
-          if (settings.playEventOnAppend) {
+          transcript.scrollToAudioEvent(es[0])
+          transcript.selectEvent(es[0])
+          if (store.settings.playEventOnAppend) {
             playEvents(es)
           }
         }
-      } else {
-        const action = prependEmptyEventAt(eventStore.currentTime)
+      } else if (transcript.audio !== null) {
+        const action = transcript.prependEmptyEventAt(transcript.audio.currentTime)
         if (action !== undefined && action.after[0] !== undefined) {
           const e = action.after[0]
-          scrollToTranscriptEvent(e, {
+          transcript.scrollToTranscriptEvent(e, {
             focusSpeaker: speaker,
             animate: false,
             focusTier: null,
             focusRight: false
           })
-          scrollToAudioEvent(e)
-          selectEvent(e)
-          if (settings.playEventOnAppend) {
+          transcript.scrollToAudioEvent(e)
+          transcript.selectEvent(e)
+          if (store.settings.playEventOnAppend) {
             playEvents([ e ])
           }
         }
@@ -343,10 +322,10 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Delete Events',
     description: 'Delete selected Events',
     icon: 'mdi-trash-can-outline',
-    disabled: () => eventStore.selectedEventIds.length === 0,
+    disabled: () => transcript.uiState.selectedEventIds.length === 0,
     action: () => {
-      mutation(deleteSelectedEvents())
-      deselectEvents()
+      mutation(transcript.deleteSelectedEvents())
+      transcript.deselectEvents()
     }
   },
   split: {
@@ -359,17 +338,19 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Split Event',
     description: 'Split an Event at the current play-head position.',
     icon: 'call_split',
-    disabled: () => eventStore.selectedEventIds.length === 0,
+    disabled: () => transcript.uiState.selectedEventIds.length === 0,
     action: async () => {
-      const eventUnderPlayHead = findEventAt(eventStore.currentTime)
-      if (eventUnderPlayHead === undefined) {
-        const es = mutation(addEvent(eventStore.currentTime))
-        selectEvents(es)
-      } else {
-        const splitAt = eventStore.currentTime - eventUnderPlayHead.startTime
-        const [ leftEvent ] = mutation(splitEvent(eventUnderPlayHead, splitAt))
-        if (!(await isWaveformEventVisible(leftEvent))) {
-          scrollToAudioEvent(leftEvent)
+      if (transcript.audio !== null) {
+        const eventUnderPlayHead = transcript.findEventAt(transcript.audio.currentTime)
+        if (eventUnderPlayHead === undefined) {
+          const es = mutation(transcript.addEvent(transcript.audio.currentTime))
+          transcript.selectEvents(es)
+        } else {
+          const splitAt = transcript.audio.currentTime - eventUnderPlayHead.startTime
+          const [ leftEvent ] = mutation(transcript.splitEvent(eventUnderPlayHead, splitAt))
+          if (!(await isWaveformEventVisible(leftEvent))) {
+            transcript.scrollToAudioEvent(leftEvent)
+          }
         }
       }
     }
@@ -394,9 +375,9 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         const eventId = e.getAttribute('data-event-id')
         if (speakerId !== null && eventId !== null) {
           // console.log({ speakerId, eventId })
-          mutation(splitEventAtChar(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
+          mutation(transcript.splitEventAtChar(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
           // tslint:disable-next-line:max-line-length
-          eventStore.events = eventStore.events = computeTokenTypesForEvents(eventStore.events, eventStore.metadata.defaultTier, [ speakerId ])
+          transcript.events = computeTokenTypesForEvents(transcript.events, transcript.meta.defaultTier, [ speakerId ])
         }
       }
     }
@@ -420,7 +401,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         const speakerId = e.getAttribute('data-speaker-id')
         const eventId = e.getAttribute('data-event-id')
         if (speakerId !== null && eventId !== null) {
-          mutation(shiftCharsRight(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
+          mutation(transcript.shiftCharsRight(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
         }
       }
     }
@@ -444,7 +425,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         const speakerId = e.getAttribute('data-speaker-id')
         const eventId = e.getAttribute('data-event-id')
         if (speakerId !== null && eventId !== null) {
-          mutation(shiftCharsLeft(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
+          mutation(transcript.shiftCharsLeft(Number(eventId), Number(speakerId), (s as any).baseOffset, (s as any).extentOffset))
           return false
         }
       }
@@ -460,7 +441,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Insert Pause',
     description: 'Insert a pause at the current cursor position',
     icon: 'pause_circle_outline',
-    disabled: () => eventStore.userState.timeSpanSelection.start === null,
+    disabled: () => transcript.uiState.timeSpanSelection.start === null,
     action: async (ev) => {
       ev.preventDefault()
       const s = document.getSelection()
@@ -468,11 +449,11 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       if (
         s !== null &&
         e instanceof HTMLElement &&
-        eventStore.userState.timeSpanSelection.start !== null &&
-        eventStore.userState.timeSpanSelection.end !== null
+        transcript.uiState.timeSpanSelection.start !== null &&
+        transcript.uiState.timeSpanSelection.end !== null
       ) {
         const length = Math.abs(
-          eventStore.userState.timeSpanSelection.start - eventStore.userState.timeSpanSelection.end
+          transcript.uiState.timeSpanSelection.start - transcript.uiState.timeSpanSelection.end
         )
         const speakerId = e.getAttribute('data-speaker-id')
         const eventId = e.getAttribute('data-event-id')
@@ -504,22 +485,25 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     description: 'Automatically Transcribe an Audio Segement',
     icon: 'mdi-text-to-speech',
     name: 'Auto-Transcribe Event',
-    disabled: () => eventStore.selectedEventIds.length === 0,
+    disabled: () => transcript.uiState.selectedEventIds.length === 0,
     action: async (ev) => {
-      ev.preventDefault()
-      const e = getSelectedEvent()
-      if (e !== undefined) {
-        const buffer = await audio.decodeBufferTimeSlice(e.startTime, e.endTime, audio.store.uint8Buffer.buffer)
-        const result = await kaldiService.transcribeAudio(
-          window.location.origin + '/kaldi-models/german.zip',
-          buffer,
-          () => null)
-        const cleanResult = result.replaceAll(/\d\.\d\d\s/g, '')
-        eventBus.$emit('updateSpeakerEventText', {
-          eventId: e.eventId,
-          speakerId: Object.keys(eventStore.metadata.speakers)[0],
-          text: cleanResult
-        })
+      if (transcript.audio !== null) {
+        ev.preventDefault()
+        const e = transcript.getSelectedEvent()
+        if (e !== undefined) {
+          const buffer = await TranscriptAudio.decodeBufferTimeSlice(e.startTime, e.endTime, transcript.audio.buffer)
+          const result = await kaldiService.transcribeAudio(
+            window.location.origin + '/kaldi-models/german.zip',
+            buffer,
+            () => null)
+          const cleanResult = result.replaceAll(/\d\.\d\d\s/g, '')
+          eventBus.$emit('updateSpeakerEventText', {
+            eventId: e.eventId,
+            // TODO: 0
+            speakerId: Object.keys(transcript.meta.speakers)[0],
+            text: cleanResult
+          })
+        }
       }
     }
   },
@@ -533,10 +517,10 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Join Events',
     icon: 'merge_type',
     description: 'Join selected Events',
-    disabled: () => eventStore.selectedEventIds.length < 2,
+    disabled: () => transcript.uiState.selectedEventIds.length < 2,
     action: () => {
-      if (eventStore.selectedEventIds.length > 1) {
-        mutation(joinEvents(eventStore.selectedEventIds))
+      if (transcript.uiState.selectedEventIds.length > 1) {
+        mutation(transcript.joinEvents(transcript.uiState.selectedEventIds))
       }
     }
   },
@@ -550,12 +534,12 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Move event start left',
     description: 'Move the beginning of an event to the left',
     icon: 'mdi-arrow-expand-left',
-    disabled: () => eventStore.selectedEventIds.length === 0,
+    disabled: () => transcript.uiState.selectedEventIds.length === 0,
     action: (ev) => {
-      const e = getSelectedEvent()
+      const e = transcript.getSelectedEvent()
       if (e !== undefined) {
-        const t = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
-        mutation(moveEventStartTime(e, t * -1))
+        const t = ev.shiftKey ? store.settings.moveEventTimeByInterval : store.settings.moveEventTimeByIntervalSmall
+        mutation(transcript.moveEventStartTime(e, t * -1))
       }
     }
   },
@@ -569,12 +553,14 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Move event start right',
     description: 'Move the beginning of an event to the right (use Shift to jump)',
     icon: 'mdi-arrow-collapse-right',
-    disabled: () => eventStore.selectedEventIds.length === 0,
+    disabled: () => transcript.uiState.selectedEventIds.length === 0,
     action: (ev) => {
-      const e = getSelectedEvent()
+      const e = transcript.getSelectedEvent()
       if (e !== undefined) {
-        const t = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
-        mutation(moveEventStartTime(e, t))
+        const t = ev.shiftKey
+          ? store.settings.moveEventTimeByInterval
+          : store.settings.moveEventTimeByIntervalSmall
+        mutation(transcript.moveEventStartTime(e, t))
       }
     }
   },
@@ -588,12 +574,14 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Move event end right',
     icon: 'mdi-arrow-expand-right',
     description: 'Move the end of an event to the right (use Shift to jump)',
-    disabled: () => eventStore.selectedEventIds.length === 0,
+    disabled: () => transcript.uiState.selectedEventIds.length === 0,
     action: (ev) => {
-      const e = getSelectedEvent()
+      const e = transcript.getSelectedEvent()
       if (e !== undefined) {
-        const t = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
-        mutation(moveEventEndTime(e, t))
+        const t = ev.shiftKey
+          ? store.settings.moveEventTimeByInterval
+          : store.settings.moveEventTimeByIntervalSmall
+        mutation(transcript.moveEventEndTime(e, t))
       }
     }
   },
@@ -607,12 +595,14 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Move event end left',
     description: 'Move the end of an event to the left (use Shift to jump)',
     icon: 'mdi-arrow-expand-left',
-    disabled: () => eventStore.selectedEventIds.length === 0,
+    disabled: () => transcript.uiState.selectedEventIds.length === 0,
     action: (ev) => {
-      const e = getSelectedEvent()
+      const e = transcript.getSelectedEvent()
       if (e !== undefined) {
-        const t = ev.shiftKey ? settings.moveEventTimeByInterval : settings.moveEventTimeByIntervalSmall
-        mutation(moveEventEndTime(e, t * -1))
+        const t = ev.shiftKey
+          ? store.settings.moveEventTimeByInterval
+          : store.settings.moveEventTimeByIntervalSmall
+        mutation(transcript.moveEventEndTime(e, t * -1))
       }
     }
   },
@@ -628,11 +618,11 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     icon: 'edit',
     disabled: () => false,
     action: () => {
-      if (settings.showDrawer === true && settings.activeSidebarItem === 'edit') {
-        settings.showDrawer = false
+      if (store.settings.showDrawer === true && store.settings.activeSidebarItem === 'edit') {
+        store.settings.showDrawer = false
       } else {
-        settings.showDrawer = true
-        settings.activeSidebarItem = 'edit'
+        store.settings.showDrawer = true
+        store.settings.activeSidebarItem = 'edit'
       }
     },
   },
@@ -648,13 +638,13 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     icon: 'history',
     disabled: () => false,
     action: () => {
-      if (settings.showDrawer === true && settings.activeSidebarItem === 'history') {
-        settings.showDrawer = false
+      if (store.settings.showDrawer === true && store.settings.activeSidebarItem === 'history') {
+        store.settings.showDrawer = false
       } else {
-        settings.showDrawer = true
-        settings.activeSidebarItem = 'history'
+        store.settings.showDrawer = true
+        store.settings.activeSidebarItem = 'history'
       }
-    },
+    }
   },
   showWarnings: {
     group: 'Navigation',
@@ -668,11 +658,11 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     icon: 'mdi-alert-outline',
     disabled: () => false,
     action: () => {
-      if (settings.showDrawer === true && settings.activeSidebarItem === 'warnings') {
-        settings.showDrawer = false
+      if (store.settings.showDrawer === true && store.settings.activeSidebarItem === 'warnings') {
+        store.settings.showDrawer = false
       } else {
-        settings.showDrawer = true
-        settings.activeSidebarItem = 'warnings'
+        store.settings.showDrawer = true
+        store.settings.activeSidebarItem = 'warnings'
       }
     },
   },
@@ -688,11 +678,11 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     icon: 'bookmark_border',
     disabled: () => false,
     action: async () => {
-      if (settings.showDrawer === true && settings.activeSidebarItem === 'bookmarks') {
-        settings.showDrawer = false
+      if (store.settings.showDrawer === true && store.settings.activeSidebarItem === 'bookmarks') {
+        store.settings.showDrawer = false
       } else {
-        settings.showDrawer = true
-        settings.activeSidebarItem = 'bookmarks'
+        store.settings.showDrawer = true
+        store.settings.activeSidebarItem = 'bookmarks'
       }
     }
   },
@@ -708,11 +698,11 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     icon: 'mdi-magnify',
     disabled: () => false,
     action: async () => {
-      if (settings.showDrawer === true && settings.activeSidebarItem === 'search') {
-        settings.showDrawer = false
+      if (store.settings.showDrawer === true && store.settings.activeSidebarItem === 'search') {
+        store.settings.showDrawer = false
       } else {
-        settings.showDrawer = true
-        settings.activeSidebarItem = 'search'
+        store.settings.showDrawer = true
+        store.settings.activeSidebarItem = 'search'
         await Vue.nextTick()
         eventBus.$emit('focusSearch')
       }
@@ -728,9 +718,9 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Select Previous Event',
     description: 'Select the Event before the currently selected Event',
     icon: 'mdi-arrow-left',
-    disabled: () => eventStore.selectedEventIds.length === 0,
+    disabled: () => transcript.uiState.selectedEventIds.length === 0,
     action: async () => {
-      const e = selectPreviousEvent()
+      const e = transcript.selectPreviousEvent()
       if (e !== undefined) {
         focusSelectedEventElement()
       }
@@ -746,9 +736,9 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Select Next Event',
     description: 'Select the Event after the currently selected Event',
     icon: 'mdi-arrow-right',
-    disabled: () => eventStore.selectedEventIds.length === 0,
+    disabled: () => transcript.uiState.selectedEventIds.length === 0,
     action: async () => {
-      const e = selectNextEvent()
+      const e = transcript.selectNextEvent()
       if (e !== undefined) {
         focusSelectedEventElement()
       }
@@ -766,14 +756,14 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     icon: 'mdi-play-pause',
     disabled: () => false,
     action: () => {
-      if (eventStore.isPaused === true) {
-        const es = getSelectedEvents()
-        if (!timeSpanSelectionIsEmpty()) {
-          playRange(eventStore.userState.timeSpanSelection.start || 0, eventStore.userState.timeSpanSelection.end || 0)
+      if (transcript.audio && transcript.audio.isPaused === true) {
+        const es = transcript.getSelectedEvents()
+        if (!transcript.isTimeSpanSelectionEmpty()) {
+          playRange(transcript.uiState.timeSpanSelection.start || 0, transcript.uiState.timeSpanSelection.end || 0)
         } else if (es.length > 0) {
           playEvents(es)
         } else {
-          playAllFrom(eventStore.currentTime)
+          playAllFrom(transcript.audio.currentTime)
         }
       } else {
         pause()
@@ -790,10 +780,10 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Play start of Event',
     description: 'Play the first second of an Event',
     icon: 'mdi-contain-start',
-    disabled: () => eventStore.selectedEventIds.length === 0,
+    disabled: () => transcript.uiState.selectedEventIds.length === 0,
     action: () => {
-      if (eventStore.isPaused === true) {
-        const es = getSelectedEvents()
+      if (transcript.audio && transcript.audio.isPaused === true) {
+        const es = transcript.getSelectedEvents()
         if (es.length > 0) {
           playEventsStart(es, 1)
         }
@@ -812,10 +802,10 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Play end of Event',
     description: 'Play the last second of an Event',
     icon: 'mdi-contain-end',
-    disabled: () => eventStore.selectedEventIds.length === 0,
+    disabled: () => transcript.uiState.selectedEventIds.length === 0,
     action: () => {
-      if (eventStore.isPaused === true) {
-        const es = getSelectedEvents()
+      if (transcript.audio && transcript.audio.isPaused === true) {
+        const es = transcript.getSelectedEvents()
         if (es.length > 0) {
           playEventsEnd(es, 1)
         }
@@ -834,12 +824,12 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Scroll to Event',
     description: 'Scroll to the selected Event',
     icon: 'mdi-eye',
-    disabled: () => eventStore.selectedEventIds.length === 0,
+    disabled: () => transcript.uiState.selectedEventIds.length === 0,
     action: () => {
-      const e = getSelectedEvent()
+      const e = transcript.getSelectedEvent()
       if (e !== undefined) {
-        scrollToAudioEvent(e)
-        scrollToTranscriptEvent(e)
+        transcript.scrollToAudioEvent(e)
+        transcript.scrollToTranscriptEvent(e)
       }
     }
   },
@@ -853,11 +843,11 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Inspect Event…',
     description: 'View audio analysis and event details',
     icon: 'mdi-sine-wave',
-    disabled: () => eventStore.selectedEventIds.length === 0,
+    disabled: () => transcript.uiState.selectedEventIds.length === 0,
     action: () => {
-      const selectedEvent = getSelectedEvent()
+      const selectedEvent = transcript.getSelectedEvent()
       if (selectedEvent !== undefined) {
-        eventStore.inspectedEvent = selectedEvent
+        transcript.uiState.inspectedEventId = selectedEvent.eventId
       }
     }
   },
@@ -873,7 +863,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     icon: 'mdi-checkbox-marked-circle-outline',
     disabled: () => false,
     action: () => {
-      eventStore.selectedEventIds = eventStore.events.map(e => e.eventId)
+      transcript.uiState.selectedEventIds = transcript.events.map(e => e.eventId)
     }
   },
   selectNone: {
@@ -886,10 +876,10 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     name: 'Select none',
     description: 'Selects no Events',
     icon: 'mdi-checkbox-blank-circle-outline',
-    disabled: () => eventStore.selectedEventIds.length === 0,
+    disabled: () => transcript.uiState.selectedEventIds.length === 0,
     action: () => {
-      deselectEvents()
-      eventStore.userState.timeSpanSelection = { start: null, end: null }
+      transcript.deselectEvents()
+      transcript.uiState.timeSpanSelection = { start: null, end: null }
     }
   },
   saveTranscript: {
@@ -904,7 +894,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
     disabled: () => history.actions.length === 0,
     icon: 'save_alt',
     action: async () => {
-      eventStore.events = await saveChangesToServer(eventStore.events)
+      transcript.events = await saveChangesToServer(transcript)
     }
   }
 }

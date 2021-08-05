@@ -36,10 +36,10 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-// tslint:disable-next-line:max-line-length
-import { findEventGaps, eventStore, LocalTranscriptEvent, toTime, findEventAt, scrollToAudioEvent } from '../store/transcript'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import _ from 'lodash'
+import store from '@/store'
+import { timeFromSeconds } from '@/util'
 
 @Component({
   components: {
@@ -48,42 +48,17 @@ import _ from 'lodash'
 })
 export default class Bookmarks extends Vue {
 
-  debouncedGetGaps = _.debounce(this.getGaps, 300)
-
-  gaps: any = []
   bookmarks: any = []
-  eventStore = eventStore
-  toTime = toTime
-  gapSize = 1
+  transcript = store.transcript!
+  toTime = timeFromSeconds
 
   scrollToAudioTime(t: number) {
-    const e = findEventAt(t)
+    const e = this.transcript.findEventAt(t)
     if (e !== undefined) {
-      scrollToAudioEvent(e)
+      this.transcript.scrollToAudioEvent(e)
     }
   }
 
-  async getGaps(es: LocalTranscriptEvent[]) {
-    await this.$nextTick()
-    window.requestIdleCallback(() => {
-      this.gaps = findEventGaps(es, this.gapSize).map((e, i) => ({...e, i}))
-    })
-  }
-
-  mounted() {
-    this.debouncedGetGaps(eventStore.events)
-  }
-
-  // @Watch('gapSize')
-  // onGapSizeUpdate() {
-  //   console.log('gapSize', this.gapSize)
-  //   this.debouncedGetGaps(eventStore.events)
-  // }
-
-  // @Watch('eventStore.events')
-  // onEventsUpdate(newEvents: LocalTranscriptEvent[]) {
-  //   this.debouncedGetGaps(newEvents)
-  // }
 }
 </script>
 <style lang="stylus" scoped>
