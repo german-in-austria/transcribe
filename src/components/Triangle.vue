@@ -6,8 +6,8 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 
 @Component
 export default class Triangle extends Vue {
-  @Prop({default: true}) up: any
-  @Prop({default: false}) down: any
+  @Prop({ default: true }) up: any
+  @Prop({ default: false }) down: any
   isUp = false
   isDown = false
   mounted() {

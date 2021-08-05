@@ -18,12 +18,12 @@
 </template>
 <script lang="ts">
 
-import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { eventStore, toTime, LocalTranscriptEvent } from '../store/transcript'
+import { Vue, Component, Prop } from 'vue-property-decorator'
+import { LocalTranscriptEvent } from '../store/transcript'
 import EventBus, { BusEvent } from '../service/event-bus'
 import settings from '../store/settings'
 import _ from 'lodash'
-import { requestFrameAsync } from '../util'
+import { requestFrameAsync, timeFromSeconds } from '../util'
 
 @Component
 export default class Scrollbar extends Vue {
@@ -41,19 +41,19 @@ export default class Scrollbar extends Vue {
     this.listenToEvents(this.updateOn)
   }
 
-  listenToEvents(es: BusEvent|BusEvent[]) {
-    if (Array.isArray(this.updateOn)) {
-      this.updateOn.forEach((e) => EventBus.$on(e, this.moveThumbToTime))
+  listenToEvents(es = this.updateOn) {
+    if (Array.isArray(es)) {
+      es.forEach((e) => EventBus.$on(e, this.moveThumbToTime))
     } else {
-      EventBus.$on(this.updateOn, this.moveThumbToTime)
+      EventBus.$on(es, this.moveThumbToTime)
     }
   }
 
-  unlisten(es: BusEvent|BusEvent[]) {
-    if (Array.isArray(this.updateOn)) {
-      this.updateOn.forEach((e) => EventBus.$off(e, this.moveThumbToTime))
+  unlisten(es = this.updateOn) {
+    if (Array.isArray(es)) {
+      es.forEach((e) => EventBus.$off(e, this.moveThumbToTime))
     } else {
-      EventBus.$off(this.updateOn, this.moveThumbToTime)
+      EventBus.$off(es, this.moveThumbToTime)
     }
   }
 
@@ -124,7 +124,7 @@ export default class Scrollbar extends Vue {
       const { time, limitedOffset } = await this.getOffsets(e.x)
       if (!_.isNaN(time)) {
         requestAnimationFrame(() => {
-          timer.innerHTML = toTime(time)
+          timer.innerHTML = timeFromSeconds(time)
           timer.style.transform = `translate3d(${ limitedOffset }px, 0, 0)`
         })
       }

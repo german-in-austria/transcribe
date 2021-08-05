@@ -25,18 +25,15 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import {
-  toTime,
-  eventStore,
-  toSeconds,
-  scrollToAudioTime,
-  scrubAudio,
-  deselectEvents
+  scrubAudio
 } from '../store/transcript'
+import store from '@/store'
+import { timeFromSeconds, timeToSeconds } from '@/util'
 @Component
 export default class TimePicker extends Vue {
 
-  eventStore = eventStore
-  toTime = toTime
+  transcript = store.transcript!
+  toTime = timeFromSeconds
 
   mounted() {
     const r = this.$refs.timeSelection
@@ -44,12 +41,13 @@ export default class TimePicker extends Vue {
       r.focus()
     }
   }
+
   // FIXME: this seems to screw up scrolling afterwards
   jumpToTime(time: string) {
-    deselectEvents()
-    const t = toSeconds(time)
+    this.transcript.deselectEvents()
+    const t = timeToSeconds(time)
     requestAnimationFrame(() => {
-      scrollToAudioTime(t)
+      this.transcript.scrollToAudioTime(t)
       scrubAudio(t)
     })
   }

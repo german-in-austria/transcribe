@@ -44,7 +44,7 @@
     "simple-promise-queue": "^0.1.7",
     "socket.io-client": "^2.3.0",
     "ts-node": "^9.0.0",
-    "tslib": "^1.14.1",
+    "tslib": "^2.3.0",
     "util": "^0.12.3",
     "uuid": "^3.4.0",
     "vue": "^2.6.12",

@@ -54,10 +54,12 @@
   </v-dialog>
 </template>
 <script lang="ts">
-import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import { Vue, Component, Prop } from 'vue-property-decorator'
 import audio from '../service/audio'
 import segmentTranscript from './SegmentTranscript.vue'
 import { LocalTranscriptEvent } from '../store/transcript'
+import Transcript from '@/service/transcript.class'
+import TranscriptAudio from '@/service/transcript-audio.class'
 
 @Component({
   components: {
@@ -68,18 +70,20 @@ export default class Settings extends Vue {
 
   @Prop({ default: false }) show!: boolean
   @Prop({ required: true }) event!: LocalTranscriptEvent
+  @Prop({ required: true }) transcript!: Transcript
+
   fitSize = true
   f: number[] = []
 
   async mounted() {
-    const slicedBuffer = await audio.decodeBufferTimeSlice(
+    const slicedBuffer = await TranscriptAudio.decodeBufferTimeSlice(
       this.event.startTime,
       this.event.endTime,
       audio.store.uint8Buffer.buffer
     )
     const width = 1200
     const height = 250
-    const [c, f] = (await audio.drawSpectrogramAsync(slicedBuffer, width, height))
+    const [c, f] = (await TranscriptAudio.drawSpectrogramAsync(slicedBuffer, width, height))
     c.style.width = `${width}px`
     c.style.height = `${height}px`
     const cont = (this.$refs.canvasContainer as HTMLElement)
@@ -87,14 +91,13 @@ export default class Settings extends Vue {
     cont.appendChild(c)
     const step = (i = 0) => {
       if (f[i] !== undefined) {
-        this.f = Array.from(f[i]).reverse()
+        this.f = Array.from(f[i]).reverse() as number[]
         requestAnimationFrame(() => step(i + 1))
       }
     }
     step()
-    // const wl = await audio.drawWave(slicedBuffer, 1000, 300, undefined, 0, false)
-    // const wr = await audio.drawWave(slicedBuffer, 1000, 300, undefined, 1, false)
-
+    // const wl = await audio.drawWaveSvg(slicedBuffer, 1000, 300, undefined, 0, false)
+    // const wr = await audio.drawWaveSvg(slicedBuffer, 1000, 300, undefined, 1, false)
   }
 }
 </script>

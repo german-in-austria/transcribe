@@ -25,13 +25,13 @@
         <v-btn icon @click="reload"><f-icon value="chevron_left" /></v-btn>
       </v-flex>
       <v-flex xs4 class="text-xs-center">
-        <div style="opacity: .7; font-size: small">{{ eventStore.metadata.transcriptName || 'Untitled Transcript' }}</div>
+        <div style="opacity: .7; font-size: small">{{ transcript.meta.transcriptName || 'Untitled Transcript' }}</div>
       </v-flex>
       <v-flex xs4 class="text-xs-right">
         <div style="display: inline-block">
           <v-menu
             lazy
-            :disabled="eventStore.status === 'loading' || isSaving"
+            :disabled="store.status === 'loading' || isSaving"
             open-on-hover
             min-width="150"
             :transition="false"
@@ -39,8 +39,8 @@
             <v-btn
               slot="activator"
               @click="saveTranscript"
-              :loading="eventStore.status === 'loading' || isSaving"
-              :disabled="eventStore.status === 'loading' || isSaving"
+              :loading="store.status === 'loading' || isSaving"
+              :disabled="store.status === 'loading' || isSaving"
               icon flat>
               <f-icon value="save_alt" />
               <template v-slot:loader>
@@ -49,8 +49,8 @@
                   :size="16"
                   :rotate="-90"
                   :width="2"
-                  :indeterminate="eventStore.transcriptDownloadProgress === 1 || isSaving"
-                  :value="eventStore.transcriptDownloadProgress * 100" />
+                  :indeterminate="transcript.uiState.downloadProgress === 1 || isSaving"
+                  :value="(transcript.uiState.downloadProgress || 0) * 100" />
               </template>
             </v-btn>
             <v-list dense class="context-menu-list">
@@ -71,21 +71,22 @@
       </v-flex>
     </v-toolbar>
     <transcript-settings
-      v-if="eventStore.userState.showSpeakerTierEditModal"
-      @close="eventStore.userState.showSpeakerTierEditModal = false"
+      v-if="transcript.uiState.showTranscriptMetaSettings"
+      @close="transcript.uiState.showTranscriptMetaSettings = false"
     />
     <settings-view
       v-if="settings.showSettings"
       @close="settings.showSettings = false"
       :show="settings.showSettings" />
     <event-inspector
-      v-if="eventStore.inspectedEvent !== null"
-      :show="eventStore.inspectedEvent !== null"
-      @close="eventStore.inspectedEvent = null"
-      :event="eventStore.inspectedEvent"
+      :transcript="transcript"
+      v-if="transcript.uiState.inspectedEventId !== null"
+      :show="transcript.uiState.inspectedEventId !== null"
+      @close="transcript.uiState.inspectedEventId = null"
+      :event="transcript.getEventById(transcript.uiState.inspectedEventId)"
     />
     <wave-form
-      v-if="eventStore.audioElement.src"
+      v-if="transcript.audio !== null"
       tabindex="-1"
       class="no-outline"
       @show-menu="doShowMenu"
@@ -115,7 +116,7 @@
             </v-list-tile>
             <v-list-tile
               :disabled="keyboardShortcuts.split.disabled()"
-              @click="splitEventFromMenu(getSelectedEvent())">
+              @click="splitEventFromMenu(transcript.getSelectedEvent())">
               <v-list-tile-content>
                 <v-list-tile-title>Split</v-list-tile-title>
               </v-list-tile-content>
@@ -125,7 +126,7 @@
             </v-list-tile>
             <v-list-tile
               :disabled="keyboardShortcuts.joinEvents.disabled()"
-              @click="joinEvents(eventStore.selectedEventIds)">
+              @click="joinEvents(transcript.uiState.selectedEventIds)">
               <v-list-tile-content>
                 <v-list-tile-title>Join</v-list-tile-title>
               </v-list-tile-content>
@@ -134,13 +135,13 @@
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
-              :disabled="eventStore.selectedEventIds.length === 0"
-              @click="exportEventAudio(eventStore.selectedEventIds)">
+              :disabled="transcript.uiState.selectedEventIds.length === 0"
+              @click="exportEventAudio(transcript.uiState.selectedEventIds)">
               <v-list-tile-content>
                 <v-list-tile-title>
                   Export Audio {{
-                    eventStore.selectedEventIds.length > 1
-                    ? '(' + eventStore.selectedEventIds.length + ' Event' + ((eventStore.selectedEventIds.length === 1) ? '' : 's') + ')'
+                    transcript.uiState.selectedEventIds.length > 1
+                    ? '(' + transcript.uiState.selectedEventIds.length + ' Event' + (( transcript.uiState.selectedEventIds.length === 1 ) ? '' : 's') + ')'
                     : ''
                   }}
                 </v-list-tile-title>
@@ -192,7 +193,7 @@
             v-for="(error) in errors"
             :key="error.eventId"
             class="error-overview"
-            :style="{ left: `${ error.startTime / eventStore.audioElement.duration * 100}%` }" />
+            :style="{ left: `${ error.startTime / duration * 100}%` }" />
         </div>
         <div class="search-overview-container">
           <search-results-inline />
@@ -204,13 +205,13 @@
       format="ogg"
       @update="loadAudioFromFile"
     />
-    <player-bar />
+    <player-bar :transcript="transcript" />
     <transcript-editor />
   </div>
 </template>
 <script lang="ts">
 
-import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import { Vue, Component, Prop } from 'vue-property-decorator'
 import { saveAs } from 'file-saver'
 import * as Sentry from '@sentry/browser'
 
@@ -227,23 +228,10 @@ import KeyboardShortcut from './helper/KeyboardShortcut.vue'
 
 import {
   LocalTranscriptEvent,
-  addEventsToSelection,
-  deleteSelectedEvents,
-  eventStore,
-  exportEventAudio,
-  findEventAt,
-  getSelectedEvent,
-  isEventSelected,
-  joinEvents,
-  loadAudioFromFile,
-  playEvent,
-  scrollToAudioEvent,
-  scrollToTranscriptEvent,
-  selectEvents,
-  splitEvent
+  exportEventAudio
 } from '../store/transcript'
 
-import { saveChangesToServer, serverTranscript } from '../service/backend-server'
+import { saveChangesToServer } from '../service/backend-server'
 import { handleGlobalShortcut, keyboardShortcuts, displayKeyboardAction } from '../service/keyboard'
 import kaldiService from '../service/kaldi/kaldiService'
 
@@ -267,6 +255,9 @@ import settings from '../store/settings'
 import audio from '../service/audio'
 import fileService from '../service/disk'
 import eventBus from '../service/event-bus'
+import store from '@/store'
+import Transcript from '@/service/transcript.class'
+import TranscriptAudio from '@/service/transcript-audio.class'
 
 @Component({
   components: {
@@ -285,13 +276,14 @@ import eventBus from '../service/event-bus'
 
 export default class Editor extends Vue {
 
+  @Prop({ required: true }) transcript!: Transcript
+
   errors: LocalTranscriptEvent[] = []
-  eventStore = eventStore
-  playEvent = playEvent
-  getSelectedEvent = getSelectedEvent
-  isEventSelected = isEventSelected
+  store = store
   history = history
-  loadAudioFromFile = loadAudioFromFile
+  playEvent = this.transcript.audio?.playEvent
+  getSelectedEvent = this.transcript.getSelectedEvent
+  isEventSelected = this.transcript.isEventSelected
   exportEventAudio = exportEventAudio
   keyboardShortcuts = keyboardShortcuts
   displayKeyboardAction = displayKeyboardAction
@@ -313,7 +305,6 @@ export default class Editor extends Vue {
   scrollTranscriptIndex: number = 0
   scrollTranscriptTime: number = 0
 
-  scrollToTranscriptEvent = scrollToTranscriptEvent
   settings = settings
   showSearch = false
   showMenu = false
@@ -322,29 +313,41 @@ export default class Editor extends Vue {
   menuY = 0
   layerX = 0 // this is used for splitting
 
+  get duration() {
+    return this.transcript.audio?.duration || 0
+  }
+
+  async loadAudioFromFile(f: File|Uint8Array) {
+    this.transcript.audio = new TranscriptAudio(f)
+  }
+
   reload() {
     window.location.reload()
   }
 
   joinEvents(es: number[]) {
-    return mutation(joinEvents(es))
+    return mutation(this.transcript.joinEvents(es))
   }
 
   deleteSelectedEvents() {
-    return mutation(deleteSelectedEvents())
+    return mutation(this.transcript.deleteSelectedEvents())
   }
 
   async exportProject() {
-    this.isSaving = true
     const overviewWave = (document.querySelector('.overview-waveform svg') as HTMLElement).innerHTML
-    const f = await fileService.generateProjectFile(eventStore, overviewWave, audio.store.uint8Buffer, history.actions)
-    saveAs(f, (eventStore.metadata.transcriptName || 'unnamed_transcript') + '.transcript')
+    const f = await fileService.generateProjectFile(this.transcript, overviewWave, this.transcript.audio?.buffer || null, history.actions)
+    if (this.transcript.meta.transcriptName === null || this.transcript.meta.transcriptName === '') {
+      const name = (prompt('Please enter a name for the transcript', 'untitled_transcript') || 'untitled_transcript') + '.transcript'
+      saveAs(f, name)
+    } else {
+      saveAs(f, this.transcript.meta.transcriptName)
+    }
     this.isSaving = false
   }
 
   async transcribeEvent(e?: LocalTranscriptEvent) {
     if (e !== undefined) {
-      const buffer = await audio.decodeBufferTimeSlice(e.startTime, e.endTime, audio.store.uint8Buffer.buffer)
+      const buffer = await TranscriptAudio.decodeBufferTimeSlice(e.startTime, e.endTime, audio.store.uint8Buffer.buffer)
       const result = await kaldiService.transcribeAudio(
         window.location.origin + '/kaldi-models/german.zip',
         buffer,
@@ -381,7 +384,7 @@ export default class Editor extends Vue {
       const cleanResult = result.replaceAll(/\d\.\d\d\s/g, '')
       eventBus.$emit('updateSpeakerEventText', {
         eventId: e.eventId,
-        speakerId: Object.keys(eventStore.metadata.speakers)[0],
+        speakerId: Object.keys(this.transcript.meta.speakers)[0],
         text: cleanResult
       })
     }
@@ -392,7 +395,7 @@ export default class Editor extends Vue {
     this.isSaving = true
     if (settings.backEndUrl !== null) {
       try {
-        eventStore.events = await saveChangesToServer(eventStore.events)
+        this.transcript.events = await saveChangesToServer(this.transcript)
       } catch (e) {
         Sentry.captureException(e)
         alert('Could not save transcript to server.')
@@ -401,7 +404,7 @@ export default class Editor extends Vue {
         this.isSaving = false
       }
     } else {
-      await fileService.saveFile()
+      await fileService.saveFile(this.transcript, history.actions)
     }
     this.isSaving = false
   }
@@ -409,13 +412,13 @@ export default class Editor extends Vue {
   async doShowMenu(e: MouseEvent) {
     // this is used for splitting
     this.layerX = e.offsetX
-    const ev = findEventAt(((await getScrollLeftAudio()) + e.x) / settings.pixelsPerSecond)
+    const ev = this.transcript.findEventAt(((await getScrollLeftAudio()) + e.x) / settings.pixelsPerSecond)
     if (ev !== undefined) {
       if (isCmdOrCtrl(e)) {
-        addEventsToSelection([ev])
+        this.transcript.addEventsToSelection([ev])
       } else {
-        if (!isEventSelected(ev.eventId)) {
-          selectEvents([ ev ])
+        if (!this.transcript.isEventSelected(ev.eventId)) {
+          this.transcript.selectEvents([ ev ])
         }
       }
     }
@@ -424,21 +427,23 @@ export default class Editor extends Vue {
     this.showMenu = true
   }
 
-  splitEventFromMenu(event: LocalTranscriptEvent) {
-    const splitAt = this.layerX / settings.pixelsPerSecond
-    this.splitEvent(event, splitAt)
+  splitEventFromMenu(event?: LocalTranscriptEvent) {
+    if (event) {
+      const splitAt = this.layerX / settings.pixelsPerSecond
+      this.splitEvent(event, splitAt)
+    }
   }
 
   showEventInspector(e?: LocalTranscriptEvent) {
     if (e !== undefined) {
-      eventStore.inspectedEvent = e
+      this.transcript.uiState.inspectedEventId = e.eventId
     }
   }
 
   async splitEvent(e: LocalTranscriptEvent, at: number) {
-    const [ leftEvent ] = mutation(splitEvent(e, at))
+    const [ leftEvent ] = mutation(this.transcript.splitEvent(e, at))
     if (!(await isWaveformEventVisible(leftEvent))) {
-      scrollToAudioEvent(leftEvent)
+      this.transcript.scrollToAudioEvent(leftEvent)
     }
   }
 
@@ -453,8 +458,8 @@ export default class Editor extends Vue {
     }
     eventBus.$on('scrollWaveform', this.hideMenu)
     document.addEventListener('keydown', handleGlobalShortcut)
-    if (eventStore.status === 'new') {
-      eventStore.userState.showSpeakerTierEditModal = true
+    if (store.status === 'new') {
+      this.transcript.uiState.showTranscriptMetaSettings = true
     }
   }
 

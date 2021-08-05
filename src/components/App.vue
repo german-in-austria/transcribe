@@ -1,7 +1,7 @@
 <template>
   <v-app :dark="settings.darkMode">
     <v-navigation-drawer
-      v-if="eventStore.status !== 'empty'"
+      v-if="store.status !== 'empty'"
       stateless
       style="padding: 0"
       :value="true"
@@ -15,7 +15,7 @@
       <v-container fluid fill-height class="pa-0">
         <exmaralda-importer
           v-if="importableExmaraldaFile !== null"
-          :transcripts="eventStore.transcripts"
+          :transcripts="store.allTranscripts"
           :importable="importableExmaraldaFile"
           @close="importableExmaraldaFile = null"
           @finish="loadImportedTranscript"
@@ -23,9 +23,9 @@
         <v-layout
           @dragover.prevent=""
           @drop.stop.prevent="onDropFile"
-          v-if="eventStore.status === 'empty'"
+          v-if="store.status === 'empty'"
           class="max-width pick-transcript-container"
-          :align-center="eventStore.transcripts === null"
+          :align-center="store.allTranscripts === null"
           justify-center
           column>
           <v-flex xs1>
@@ -57,9 +57,9 @@
           </div>
           <v-progress-circular
             indeterminate
-            v-if="eventStore.transcripts === null && loggedIn === true && settings.backEndUrl !== null"
+            v-if="store.allTranscripts === null && loggedIn === true && settings.backEndUrl !== null"
           />
-          <v-flex v-if="eventStore.transcripts !== null">
+          <v-flex v-if="store.allTranscripts !== null">
             <v-layout justify-center row>
               <v-flex class="pt-5 mt-3 pl-4 pr-4" xs12 md6>
                 <h1 class="text-xs-center text-light text-uppercase mt-3 mb-4">
@@ -142,11 +142,11 @@
           </v-flex>
         </v-layout>
         <v-layout
-          v-if="eventStore.status !== 'empty'"
+          v-if="store.transcript !== null"
           class="max-width"
           justify-center>
           <v-flex xs12>
-            <editor />
+            <editor :transcript="store.transcript" />
           </v-flex>
         </v-layout>
       </v-container>
@@ -156,69 +156,50 @@
 
 <script lang="ts">
 
-import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import _ from 'lodash'
-import localForage from 'localforage'
+import { Vue, Component, Watch } from 'vue-property-decorator'
 
-import playerBar from './PlayerBar.vue'
 import editor from './Editor.vue'
 import sidebar from './Sidebar.vue'
 import exmaraldaImporter from './ExmaraldaImporter.vue'
 
-import * as socket from '../service/socket'
+// import * as socket from '../service/socket'
 import diskService, { LocalTranscriptListItem } from '../service/disk'
-import settings from '../store/settings'
 
-import {
-  eventStore,
-  loadAudioFromFile,
-  loadAudioFromUrl,
-  insertPlaceholderTokens
-} from '../store/transcript'
+import store from '../store'
 
-import { computeTokenTypesForEvents } from '../service/token-types'
-
-import {
-  fileToTextAndName
-} from '../util'
+import { fileToTextAndName } from '@/util'
 
 import {
   ServerTranscript,
   ServerTranscriptListItem,
   getServerTranscripts,
-  getTranscript,
   mergeServerTranscript,
   serverTranscriptToLocal,
   getMetadataFromServerTranscript
-} from '../service/backend-server'
+} from '@/service/backend-server'
 
 import * as Sentry from '@sentry/browser'
 
 import {
   ParsedExmaraldaXML,
   exmaraldaToImportable
-} from '../service/backend-exmaralda'
+} from '@/service/backend-exmaralda'
 
-import {
-  history,
-  HistoryEventAction,
-  handleRemotePeerEvent
-} from '../store/history'
 import FIcon from './helper/FIcon.vue'
+import Transcript from '@/service/transcript.class'
 
 @Component({
   components: {
     editor,
     exmaraldaImporter,
     sidebar,
-    playerBar,
     FIcon
   }
 })
 export default class App extends Vue {
 
-  eventStore = eventStore
-  settings = settings
+  store = store
+  settings = store.settings
 
   backEndUrls = [
     {
@@ -255,7 +236,7 @@ export default class App extends Vue {
   errorMessage: string|null = null
   isLoadingBackendUrl = false
 
-  @Watch('settings.backEndUrl', { immediate: true })
+  @Watch('store.settings.backEndUrl', { immediate: true })
   async onUpdateBackEndUrl(url: string|null) {
     if (url !== null) {
       this.connectToBackend(url)
@@ -265,12 +246,12 @@ export default class App extends Vue {
   }
 
   useLocalTranscripts() {
-    eventStore.transcripts = diskService.localTranscripts
+    store.allTranscripts = diskService.localTranscripts
   }
 
   async connectToBackend(url: string|null) {
     this.isLoadingBackendUrl = true
-    settings.backEndUrl = url
+    store.settings.backEndUrl = url
     this.updateTokenTypePreset()
     await this.loadTranscriptList(url)
     this.isLoadingBackendUrl = false
@@ -308,37 +289,37 @@ export default class App extends Vue {
   // the way to do it would be to store the project part (PP) in the
   // db alongside the transcript
   async updateTokenTypePreset() {
-    if (settings.backEndUrl !== null && settings.backEndUrl.includes('dioedb')) {
+    if (store.settings.backEndUrl !== null && store.settings.backEndUrl.includes('dioedb')) {
       // settings.projectPreset = 'PP03'
-    } else if (settings.backEndUrl !== null && settings.backEndUrl.includes('dissdb')) {
-      settings.projectPreset = 'dissDB'
+    } else if (store.settings.backEndUrl !== null && store.settings.backEndUrl.includes('dissdb')) {
+      store.settings.projectPreset = 'dissDB'
     }
   }
 
   async loadTranscriptList(url: string|null) {
     if (url === null) {
-      eventStore.transcripts = await diskService.loadTranscriptList()
+      store.allTranscripts = await diskService.loadTranscriptList()
     } else {
       try {
         this.errorMessage = null
         const res = await getServerTranscripts(url)
         if (res.transcripts !== undefined) {
           this.loggedIn = true
-          eventStore.transcripts = res.transcripts
+          store.allTranscripts = res.transcripts
         } else if ((res as any).error === 'login') {
           this.loggedIn = false
         }
       } catch (e) {
         this.loggedIn = false
-        eventStore.transcripts = []
+        store.allTranscripts = []
         this.errorMessage = 'could not load transcripts from back end.'
       }
     }
   }
 
   get filteredTranscriptList(): ServerTranscriptListItem[] {
-    if (eventStore.transcripts !== null) {
-      return eventStore.transcripts.filter(v => {
+    if (store.allTranscripts !== null) {
+      return store.allTranscripts.filter(v => {
         return v.n.toLowerCase().indexOf(this.searchTerm.toLowerCase()) > -1
       })
     } else {
@@ -346,77 +327,12 @@ export default class App extends Vue {
     }
   }
 
-  async openProjectFile(f: FileSystemFileHandle) {
-    this.importingLocalFile = true
-    const p = await diskService.loadProjectFile(f)
-    const audioUrl = await this.loadLocalTranscript(p.serverTranscript, p.audioBuffer)
-    this.loadPreviousUserState(p.eventStore, audioUrl, p.overviewSvg, p.historyActions)
-  }
-
-  loadPreviousUserState(
-    previousEventStore: any,
-    audioUrl: string,
-    overviewSvg: string,
-    historyFile: HistoryEventAction[]
-  ) {
-    localForage.setItem('waveformOverview__' + audioUrl, overviewSvg)
-    eventStore.events = previousEventStore.events
-    eventStore.selectedEventIds = previousEventStore.selectedEventIds
-    eventStore.selectedSearchResult = previousEventStore.selectedSearchResult
-    eventStore.searchResults = previousEventStore.searchResults
-    eventStore.searchTerm = previousEventStore.searchTerm
-    eventStore.metadata = previousEventStore.metadata
-    eventStore.userState = previousEventStore.userState
-    eventStore.transcriptDownloadProgress = previousEventStore.transcriptDownloadProgress
-    eventStore.status = 'finished'
-    history.actions = historyFile
-  }
-
-  async loadImportedTranscript(t: ServerTranscript, audioData: File|null, audioUrl?: string): Promise<string> {
-    const url = await this.loadLocalTranscript(t, audioData, audioUrl)
-    this.importableExmaraldaFile = null
-    return url
-  }
-
-  async loadLocalTranscript(t: ServerTranscript, audioData: File|Uint8Array|null, audioUrl?: string): Promise<string> {
-    // update the UI state
-    this.importingLocalFile = false
-    this.loadingTranscriptId = null
-    // update the state in the server transcript module
+  async loadImportedTranscript(t: ServerTranscript, audioData: File|null, audioUrl?: string) {
     mergeServerTranscript(t)
-    // get the metadata
-    eventStore.metadata = getMetadataFromServerTranscript(t)
-    const defaultTier = eventStore.metadata.defaultTier || 'text'
-    // convert the transcript
+    const meta = getMetadataFromServerTranscript(t)
+    const defaultTier = meta.defaultTier || 'text'
     const events = serverTranscriptToLocal(t, defaultTier)
-    // compute all types
-    eventStore.events = computeTokenTypesForEvents(
-      events,
-      eventStore.metadata.defaultTier || 'text',
-      Object.keys(eventStore.metadata.speakers)
-    )
-    // insert placeholders where necessary
-    eventStore.events = insertPlaceholderTokens(eventStore.events, defaultTier)
-    // TODO: if is local!!!
-    history.autoSaver = async () => {
-      console.log('auto saving 123!')
-      eventStore.status = 'loading'
-      await diskService.saveFile()
-      eventStore.status = 'finished'
-      console.log('auto saving 123! DONE.')
-    }
-    // get audio url
-    if (audioData !== null) {
-      const audioElement = await loadAudioFromFile(audioData)
-      eventStore.status = 'finished'
-      return audioElement.src
-    } else if (audioUrl !== undefined) {
-      const audioElement = await loadAudioFromUrl(audioUrl)
-      eventStore.status = 'finished'
-      return audioElement.src
-    } else {
-      return ''
-    }
+    store.transcript = new Transcript({ events, meta: { ...meta, lockedTokens: [] } }, audioData || audioUrl)
   }
 
   async openExmaraldaFile(f: File) {
@@ -437,63 +353,53 @@ export default class App extends Vue {
 
   async openFile(f: FileSystemFileHandle) {
     if (f.name.endsWith('.transcript')) {
-      this.openProjectFile(f)
+      this.importingLocalFile = true
+      store.transcript = new Transcript(f)
     } else if (f.name.endsWith('.exb')) {
       this.openExmaraldaFile(await f.getFile())
     } else if (f.name.endsWith('.ogg')) {
-      this.initializeEmptyTranscript()
-      loadAudioFromFile(await f.getFile())
+      store.transcript = new Transcript(await f.getFile())
     } else {
       alert('Unrecognized File type.')
     }
   }
 
   initializeEmptyTranscript() {
-    eventStore.status = 'new'
+    store.status = 'new'
   }
 
   async openTranscript(t: LocalTranscriptListItem|ServerTranscriptListItem) {
     if ('fileHandle' in t) {
       if (await diskService.getPermission(t.fileHandle)) {
-        this.openProjectFile(t.fileHandle)
+        store.transcript = new Transcript(t.fileHandle)
+        Sentry.setContext('transcript', {
+          name: t.fileHandle.name,
+          id: -1,
+          type: 'local'
+        })
       }
     } else {
       Sentry.setContext('transcript', {
         name: t.n,
-        id: t.pk
+        id: t.pk,
+        type: 'remote'
       })
       this.loadRemoteTranscript(t)
     }
   }
 
   async loadRemoteTranscript(t: ServerTranscriptListItem) {
-    // TODO: ugly
-    console.log({ t })
-    this.loadingTranscriptId = t.pk
-    const y = document.createElement('audio')
-    socket.sendMessage({
-      type: 'open_transcript',
-      transcript_id: t.pk,
-      app: 'transcribe'
-    })
-    socket.onMessage(m => {
-      if (m.type === 'transcript_action' && m.transcript_id === t.pk) {
-        // handleRemotePeerEvent(m.action)
-      }
-    })
-    getTranscript(t.pk, (progress, events) => {
-      eventStore.transcriptDownloadProgress = progress
-      if (eventStore.metadata.audioUrl !== null) {
-        y.src = eventStore.metadata.audioUrl
-        y.addEventListener('durationchange', (e) => {
-          this.loadingTranscriptId = null
-          eventStore.audioElement = y
-          if (eventStore.status !== 'finished') {
-            eventStore.status = 'loading'
-          }
-        })
-      }
-    })
+    // socket.sendMessage({
+    //   type: 'open_transcript',
+    //   transcript_id: t.pk,
+    //   app: 'transcribe'
+    // })
+    if (store.settings.backEndUrl !== null) {
+      store.transcript = new Transcript({
+        id: t.pk,
+        backEndUrl: store.settings.backEndUrl
+      })
+    }
   }
 }
 </script>

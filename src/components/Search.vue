@@ -9,16 +9,16 @@
         type="text"
         ref="input"
         :class="[settings.darkMode && 'theme--dark']"
-        :value="eventStore.searchTerm"
+        :value="transcript.uiState.searchTerm"
         :style="{ color: useRegEx && !isValidRegex ? 'red' : undefined }"
         @keydown.enter.exact.stop="findNext"
         @keydown.enter.shift.exact.stop="findPrevious"
-        @input="(e) => { eventStore.searchTerm = e.target.value; debouncedHandleSearch(e.target.value) }"
+        @input="(e) => { transcript.uiState.searchTerm = e.target.value; debouncedHandleSearch(e.target.value) }"
         @focus="onFocus"
         @blur="onBlur"
         placeholder="Search…"/>
       <div style="line-height: 1.8em;" :class="['small pt-3 pl-1 pr-1 grey--text', !settings.darkMode && 'text--darken-2']">
-        <checkbox :disabled="useRegEx" :value="caseSensitive || useRegEx" @input="caseSensitive = $event" label="Case Sensitive" />
+        <checkbox :disabled="useRegEx" :value="caseSensitive || useRegEx" @input="caseSensitive = $event" label="Case Sensitive" />
         <checkbox v-model="useRegEx" label="Regular Expression" />
         <v-menu
           lazy
@@ -39,7 +39,7 @@
               Tiers
             </v-subheader>
             <v-list-tile
-              v-for="(tier, i) in eventStore.metadata.tiers"
+              v-for="(tier, i) in transcript.meta.tiers"
               :key="'tier__' + i"
               @click="tier.searchInTier = !tier.searchInTier">
               <v-list-tile-avatar>
@@ -54,7 +54,7 @@
               Speakers
             </v-subheader>
             <v-list-tile
-              v-for="(speaker, speakerKey) in eventStore.metadata.speakers"
+              v-for="(speaker, speakerKey) in transcript.meta.speakers"
               :key="'speaker__' + speakerKey"
               @click="speaker.searchInSpeaker = !speaker.searchInSpeaker">
               <v-list-tile-avatar>
@@ -73,7 +73,7 @@
       <RecycleScroller
         class="scroller"
         ref="resultScroller"
-        :items="eventStore.searchResults"
+        :items="transcript.uiState.searchResults"
         key-field="resultId"
         :item-size="resultItemHeight">
         <template v-slot="{ item }">
@@ -82,7 +82,7 @@
             @dblclick="playEvent(item.event)"
             :class="isEventSelected(item.event.eventId) && 'search-result-selected'">
             <v-list-tile-content>
-              <v-list-tile-sub-title class="subtitle"><b>{{ eventStore.metadata.speakers[item.speakerId].ka }}:</b> {{ toTime(item.event.startTime) }} - {{ toTime(item.event.endTime) }}</v-list-tile-sub-title>
+              <v-list-tile-sub-title class="subtitle"><b>{{ transcript.meta.speakers[item.speakerId].ka }}:</b> {{ toTime(item.event.startTime) }} - {{ toTime(item.event.endTime) }}</v-list-tile-sub-title>
               <highlight-range :text="item.text" :start="item.offset" :end="item.offsetEnd" :truncate="42" />
             </v-list-tile-content>
           </v-list-tile>
@@ -93,12 +93,12 @@
       <v-divider />
       <v-layout>
         <v-flex :class="['small grey--text text-xs-center mb-3 mt-3', !settings.darkMode && 'text--darken-2' ]">
-          {{ eventStore.searchResults.length }} results in {{ searchResultEventCounter }} events
+          {{ transcript.uiState.searchResults.length }} results in {{ searchResultEventCounter }} events
         </v-flex>
         <v-flex class="text-xs-right">
           <v-btn
-            @click="exportResultsExcel(eventStore.searchResults)"
-            :disabled="eventStore.searchResults.length === 0"
+            @click="exportResultsExcel(transcript.uiState.searchResults)"
+            :disabled="transcript.uiState.searchResults.length === 0"
             class="elevation-0 text-lowercase mt-2"
             small>
             export
@@ -122,27 +122,15 @@ import Checkbox from './helper/Checkbox.vue'
 import * as xlsx from 'xlsx'
 
 import {
-  findNextEventAt,
-  findPreviousEventAt,
-  findEventIndexById,
-  isEventSelected,
   playEvent,
-  eventStore,
   LocalTranscriptEvent,
-  scrollToAudioEvent,
-  scrollToTranscriptEvent,
-  selectEvent,
-  toTime,
   TokenTierType,
   LocalTranscriptTier,
-  SearchResult,
-  getSelectedEvent,
-  getTokenIndexByCharacterOffset,
-  getPreviousEvent,
-  getNextEvent,
-  getTextFromTier,
-  isTokenTier
+  SearchResult
 } from '../store/transcript'
+import { timeFromSeconds } from '@/util'
+import store from '@/store'
+import EventService from '@/service/event-service'
 
 @Component({
   components: {
@@ -154,8 +142,8 @@ import {
 export default class Search extends Vue {
 
   settings = settings
-  eventStore = eventStore
-  toTime = toTime
+  toTime = timeFromSeconds
+  transcript = store.transcript!
 
   resultItemHeight = 40
   caseSensitive = false
@@ -163,7 +151,7 @@ export default class Search extends Vue {
   showIpaKeyboard = false
 
   searchResultEventCounter = 0
-  isEventSelected = isEventSelected
+  isEventSelected = this.transcript.isEventSelected
   playEvent = playEvent
 
   debouncedHandleSearch = _.debounce(this.handleSearch, 200)
@@ -186,41 +174,41 @@ export default class Search extends Vue {
   }
 
   getSelectedSpeakersLength(): number {
-    return _.filter(eventStore.metadata.speakers, s => s.searchInSpeaker === true).length
+    return _.filter(this.transcript.meta.speakers, s => s.searchInSpeaker === true).length
   }
 
   getSelectedTiersLength(): number {
-    return eventStore.metadata.tiers.filter(s => s.searchInTier === true).length
+    return this.transcript.meta.tiers.filter(s => s.searchInTier === true).length
   }
 
   areAllTiersSelected(): boolean {
-    return eventStore.metadata.tiers.every(t => t.searchInTier === true)
+    return this.transcript.meta.tiers.every(t => t.searchInTier === true)
   }
 
   areAllSpeakersSelected(): boolean {
-    return _.every(eventStore.metadata.speakers, s => s.searchInSpeaker === true)
+    return _.every(this.transcript.meta.speakers, s => s.searchInSpeaker === true)
   }
 
   get searchSettings() {
     return {
       caseSensitive: this.caseSensitive,
       useRegEx: this.useRegEx,
-      searchInSpeakers: eventStore.metadata.speakers,
-      searchInTiers: eventStore.metadata.tiers
+      searchInSpeakers: this.transcript.meta.speakers,
+      searchInTiers: this.transcript.meta.tiers
     }
   }
 
   @Watch('searchSettings', { deep: true })
   onUpdateSearchSettings() {
-    this.handleSearch(eventStore.searchTerm)
+    this.handleSearch(this.transcript.uiState.searchTerm || '')
   }
 
   showEventIfExists(e: LocalTranscriptEvent) {
-    const i = findEventIndexById(e.eventId)
+    const i = this.transcript.findEventIndexById(e.eventId)
     if (i > -1) {
-      selectEvent(e)
-      scrollToAudioEvent(e)
-      scrollToTranscriptEvent(e)
+      this.transcript.selectEvent(e)
+      this.transcript.scrollToAudioEvent(e)
+      this.transcript.scrollToTranscriptEvent(e)
     }
   }
 
@@ -228,8 +216,12 @@ export default class Search extends Vue {
     const rows = ress.map(res => {
       let matched = ''
       let tokenType = ''
-      if (isTokenTier(res.tierId)) {
-        const tokenIndex = getTokenIndexByCharacterOffset(res.event.speakerEvents[res.speakerId].tokens, res.offset)
+      if (EventService.isTokenTier(res.tierId)) {
+        const tokenIndex = EventService.getTokenIndexByCharacterOffset(
+          res.event.speakerEvents[res.speakerId].tokens,
+          res.offset,
+          res.tierId
+        )
         // tslint:disable-next-line:max-line-length
         const token = res.event.speakerEvents[res.speakerId].tokens[tokenIndex].tiers[res.tierId as TokenTierType] || { type: null, text: '' }
         const t = presets[settings.projectPreset].tokenTypes.find(tt => tt.id === token.type)
@@ -238,39 +230,39 @@ export default class Search extends Vue {
         }
         matched = token.text
       } else {
-        matched = getTextFromTier(res.event, res.tierId, res.speakerId)
+        matched = EventService.getTextFromTier(res.event, res.tierId, res.speakerId)
       }
-      const prev = getPreviousEvent(res.event.eventId)
-      const next = getNextEvent(res.event.eventId)
+      const prev = this.transcript.getPreviousEvent(res.event.eventId)
+      const next = this.transcript.getNextEvent(res.event.eventId)
       return {
-        transcript_name: eventStore.metadata.transcriptName,
+        transcript_name: this.transcript.meta.transcriptName,
         transcript_setting: '',
-        speaker_name: eventStore.metadata.speakers[Number(res.speakerId)].k,
+        speaker_name: this.transcript.meta.speakers[Number(res.speakerId)].k,
         tier_name: res.tierId,
         matched_token: matched,
         token_type: tokenType,
-        left_context: prev !== undefined ? getTextFromTier(prev, res.tierId, res.speakerId) : '',
+        left_context: prev !== undefined ? EventService.getTextFromTier(prev, res.tierId, res.speakerId) : '',
         content: res.text,
-        right_context: next !== undefined ? getTextFromTier(next, res.tierId, res.speakerId) : '',
-        event_audio: createMediaFragmentUrl(eventStore.metadata.audioUrl as string, res.event)
+        right_context: next !== undefined ? EventService.getTextFromTier(next, res.tierId, res.speakerId) : '',
+        event_audio: this.transcript.audio ? createMediaFragmentUrl(this.transcript.audio.url, res.event) : ''
       }
     })
     const sheet = xlsx.utils.json_to_sheet(rows)
     const file = xlsx.writeFile(
       { Sheets: { sheet }, SheetNames: [ 'sheet' ], },
-      eventStore.metadata.transcriptName
+      this.transcript.meta.transcriptName
       + '_search_'
-      + eventStore.searchTerm.replace(/[^a-z0-9]/gi, '_')
+      + this.transcript.uiState.searchTerm.replace(/[^a-z0-9]/gi, '_')
       + '.xlsx'
     )
   }
 
   get selectedResultIndex(): number|null {
-    if (eventStore.selectedEventIds.length !== 1) {
+    if (this.transcript.uiState.selectedEventIds.length !== 1) {
       return null
     } else {
-      const eId = eventStore.selectedEventIds[0]
-      const i = _(eventStore.searchResults).findIndex((e) => e.event.eventId === eId)
+      const eId = this.transcript.uiState.selectedEventIds[0]
+      const i = _(this.transcript.uiState.searchResults).findIndex((e) => e.event.eventId === eId)
       if (i > -1) {
         return i + 1
       } else {
@@ -380,13 +372,13 @@ export default class Search extends Vue {
   }
 
   @Watch('eventStore.events')
-  onUpdateEvents(newEvents: LocalTranscriptEvent[]) {
-    this.handleSearch(eventStore.searchTerm)
+  onUpdateEvents() {
+    this.handleSearch(this.transcript.uiState.searchTerm)
   }
 
   handleSearch(term: string) {
-    if (eventStore.searchTerm === '') {
-      eventStore.searchResults = []
+    if (this.transcript.uiState.searchTerm === '') {
+      this.transcript.uiState.searchResults = []
     } else {
       const search = this.caseSensitive ? term : term.toLowerCase()
       let regex: RegExp|null = null
@@ -396,13 +388,13 @@ export default class Search extends Vue {
         // it failed.
       }
       window.requestIdleCallback(() => {
-        eventStore.searchResults = this.searchEvents(
+        this.transcript.uiState.searchResults = this.searchEvents(
           term,
-          eventStore.events,
-          _(eventStore.metadata.speakers)
+          this.transcript.events,
+          _(this.transcript.meta.speakers)
             .pickBy(s => s.searchInSpeaker === true)
             .map((s, k) => String(k)).value(),
-          eventStore.metadata.tiers.filter(t => t.searchInTier === true)
+          this.transcript.meta.tiers.filter(t => t.searchInTier === true)
         )
       })
     }
@@ -410,7 +402,7 @@ export default class Search extends Vue {
 
   get isValidRegex() {
     try {
-      const y = new RegExp(eventStore.searchTerm)
+      const y = new RegExp(this.transcript.uiState.searchTerm)
       return true
     } catch (e) {
       return false
@@ -418,7 +410,7 @@ export default class Search extends Vue {
   }
 
   scrollToSearchResult(e: LocalTranscriptEvent) {
-    const i = eventStore.searchResults.findIndex(r => r.event.eventId === e.eventId)
+    const i = this.transcript.uiState.searchResults.findIndex(r => r.event.eventId === e.eventId)
     const offset = i * this.resultItemHeight
     requestAnimationFrame(() => {
       const s = this.$el.querySelector('.scroller')
@@ -430,30 +422,40 @@ export default class Search extends Vue {
 
   async goToResult(e: LocalTranscriptEvent|undefined) {
     if (e !== undefined) {
-      scrollToTranscriptEvent(e)
-      scrollToAudioEvent(e)
-      selectEvent(e)
+      this.transcript.scrollToTranscriptEvent(e)
+      this.transcript.scrollToAudioEvent(e)
+      this.transcript.selectEvent(e)
       this.scrollToSearchResult(e)
     }
   }
 
   findNext() {
-    const selectedEvent = getSelectedEvent()
-    const e = findNextEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults.map(r => r.event))
+    const selectedEvent = this.transcript.getSelectedEvent()
+    const e = this.transcript.findNextEventAt(
+      selectedEvent
+        ? selectedEvent.endTime
+        : 0,
+      this.transcript.uiState.searchResults.map(r => r.event)
+    )
     if (e !== undefined) {
       this.goToResult(e)
-    } else if (eventStore.searchResults.length > 0) {
-      this.goToResult(eventStore.searchResults[0].event)
+    } else if (this.transcript.uiState.searchResults.length > 0) {
+      this.goToResult(this.transcript.uiState.searchResults[0].event)
     }
   }
 
   findPrevious() {
-    const selectedEvent = getSelectedEvent()
-    const e = findPreviousEventAt(selectedEvent ? selectedEvent.endTime : 0, eventStore.searchResults.map(r => r.event))
+    const selectedEvent = this.transcript.getSelectedEvent()
+    const e = this.transcript.findPreviousEventAt(
+      selectedEvent
+        ? selectedEvent.endTime
+        : 0,
+      this.transcript.uiState.searchResults.map(r => r.event)
+    )
     if (e !== undefined) {
       this.goToResult(e)
-    } else if (eventStore.searchResults.length > 0) {
-      this.goToResult(_(eventStore.searchResults).last()!.event)
+    } else if (this.transcript.uiState.searchResults.length > 0) {
+      this.goToResult(_(this.transcript.uiState.searchResults).last()!.event)
     }
   }
 }

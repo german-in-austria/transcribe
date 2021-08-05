@@ -1,5 +1,5 @@
 <template>
-  <div :style="{minHeight: height}" :class="['playerbar', settings.darkMode && 'theme--dark']">
+  <div :style="{ minHeight: height }" :class="['playerbar', settings.darkMode && 'theme--dark']">
     <v-dialog
       @keydown.esc="showTimePicker = false"
       lazy
@@ -24,9 +24,9 @@
         xs4
         align-content-center>
         <player-bar-button @click="playPause" :size="height">
-          <f-icon v-if="eventStore.isPaused && timeSpanSelectionIsEmpty()" value="play_arrow" />
-          <f-icon v-if="eventStore.isPaused && !timeSpanSelectionIsEmpty()" value="mdi-play-outline" />
-          <f-icon v-if="!eventStore.isPaused" value="pause" />
+          <f-icon v-if="this.transcript.audio && this.transcript.audio.isPaused && isTimeSpanSelectionEmpty()" value="play_arrow" />
+          <f-icon v-if="this.transcript.audio && this.transcript.audio.isPaused && !isTimeSpanSelectionEmpty()" value="mdi-play-outline" />
+          <f-icon v-if="this.transcript.audio && !this.transcript.audio.isPaused" value="pause" />
         </player-bar-button>
         <div
           @click="showTimePicker = false"
@@ -100,26 +100,25 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import settings, {
+import store from '@/store'
+
+import {
   setPlaybackSpeed,
   setPlaybackVolume
 } from '../store/settings'
-import audio from '../service/audio'
 import eventBus from '../service/event-bus'
 import PlayerBarButton from './PlayerBarButton.vue'
 import TimePicker from './TimePicker.vue'
 import {
-  eventStore,
-  toTime,
   playAllFrom,
   pause,
-  getSelectedEvents,
   playEvents,
   playEventsStart,
   playEventsEnd,
-  playRange,
-  timeSpanSelectionIsEmpty
+  playRange
 } from '../store/transcript'
+import Transcript from '@/service/transcript.class'
+import { timeFromSeconds } from '@/util'
 
 @Component({
   components: {
@@ -130,47 +129,48 @@ import {
 export default class PlayerBar extends Vue {
 
   @Prop({ default: 64 }) height!: number
+  @Prop({ required: true }) transcript!: Transcript
 
-  eventStore = eventStore
-  audioStore = audio.store
-  currentTime = eventStore.audioElement.currentTime
   setPlaybackSpeed = setPlaybackSpeed
   setPlaybackVolume = setPlaybackVolume
-  settings = settings
-  toTime = toTime
-  timeSpanSelectionIsEmpty = timeSpanSelectionIsEmpty
+  settings = store.settings
+  isTimeSpanSelectionEmpty = this.transcript.isTimeSpanSelectionEmpty
   showTimePicker = false
 
-  cachedVolume = settings.playbackVolume
+  cachedVolume = store.settings.playbackVolume
   cachedSpeed = .5
 
+  get currentTime() {
+    return this.transcript.audio ? this.transcript.audio.currentTime : 0
+  }
+
   toggleVolumeOnOff() {
-    if (settings.playbackVolume === 0) {
+    if (store.settings.playbackVolume === 0) {
       setPlaybackVolume(this.cachedVolume)
     } else {
-      this.cachedVolume = settings.playbackVolume
+      this.cachedVolume = store.settings.playbackVolume
       setPlaybackVolume(0)
     }
   }
 
   toggleSpeed() {
-    if (settings.playbackSpeed === 1) {
+    if (store.settings.playbackSpeed === 1) {
       setPlaybackSpeed(this.cachedSpeed)
     } else {
-      this.cachedSpeed = settings.playbackSpeed
+      this.cachedSpeed = store.settings.playbackSpeed
       setPlaybackSpeed(1)
     }
   }
 
-  playPause(e: Event) {
-    if (eventStore.isPaused === true) {
-      const es = getSelectedEvents()
-      if (!timeSpanSelectionIsEmpty()) {
-        playRange(eventStore.userState.timeSpanSelection.start || 0, eventStore.userState.timeSpanSelection.end || 0)
+  playPause() {
+    if (this.transcript.audio && this.transcript.audio.isPaused === true) {
+      const es = this.transcript.getSelectedEvents()
+      if (!this.isTimeSpanSelectionEmpty()) {
+        playRange(this.transcript.uiState.timeSpanSelection.start || 0, this.transcript.uiState.timeSpanSelection.end || 0)
       } else if (es.length > 0) {
         playEvents(es)
       } else {
-        playAllFrom(eventStore.currentTime)
+        playAllFrom(this.currentTime)
       }
     } else {
       pause()
@@ -178,8 +178,8 @@ export default class PlayerBar extends Vue {
   }
 
   playStart() {
-    if (eventStore.isPaused === true) {
-      const es = getSelectedEvents()
+    if (this.transcript.audio && this.transcript.audio.isPaused === true) {
+      const es = this.transcript.getSelectedEvents()
       if (es.length > 0) {
         playEventsStart(es, 1)
       }
@@ -189,8 +189,8 @@ export default class PlayerBar extends Vue {
   }
 
   playEnd() {
-    if (eventStore.isPaused === true) {
-      const es = getSelectedEvents()
+    if (this.transcript.audio && this.transcript.audio.isPaused === true) {
+      const es = this.transcript.getSelectedEvents()
       if (es.length > 0) {
         playEventsEnd(es, 1)
       }
@@ -201,7 +201,7 @@ export default class PlayerBar extends Vue {
 
   updateTimeDisplay(seconds: number, e: HTMLElement|undefined) {
     if (e !== undefined) {
-      const newT = toTime(seconds, 3)
+      const newT = timeFromSeconds(seconds, 3)
       e.innerHTML = newT.split('').reduce((m, d) => {
         m += `<span>${d}</span>\n`
         return m
@@ -218,7 +218,7 @@ export default class PlayerBar extends Vue {
   mounted() {
     eventBus.$on('updateTime', this.onChangeTime)
     eventBus.$on('scrubAudio', this.onChangeTime)
-    this.onChangeTime(eventStore.currentTime)
+    this.onChangeTime(this.currentTime)
   }
 }
 </script>

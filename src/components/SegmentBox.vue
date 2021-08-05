@@ -11,7 +11,7 @@
     :style="{ left: offset + 'px', width: width + 'px' }">
     <div :style="{ left: width / 2 + 'px' }" class="transcript-tooltip" v-if="isEventSelected(event.eventId)">
       <div class="inner" :key="i" v-for="(se, i) in event.speakerEvents">
-        {{ eventStore.metadata.speakers[i].k }}: {{ se.tokens.map(t => t.tiers[eventStore.metadata.defaultTier].text).join(' ') }}
+        {{ transcript.meta.speakers[i].k }}: {{ se.tokens.map(t => t.tiers[transcript.meta.defaultTier].text).join(' ') }}
       </div>
     </div>
     <resize-event
@@ -34,7 +34,7 @@
 </template>
 <script lang="ts">
 
-import { Vue, Component, Prop, Watch, Provide } from 'vue-property-decorator'
+import { Vue, Component, Prop } from 'vue-property-decorator'
 import ResizeEvent from './helper/ResizeEvent.vue'
 import { mutation } from '../store/history'
 import settings from '../store/settings'
@@ -42,15 +42,9 @@ import settings from '../store/settings'
 
 import {
   playEvent,
-  resizeEvents,
-  LocalTranscriptEvent,
-  eventStore,
-  selectEvent,
-  selectOrDeselectEvent,
-  selectEventRange,
-  isEventSelected,
-  scrollToTranscriptEvent
+  LocalTranscriptEvent
 } from '../store/transcript'
+import store from '@/store'
 
 @Component({
   components: {
@@ -63,12 +57,12 @@ export default class SegmentBox extends Vue {
   @Prop() previousEvent?: LocalTranscriptEvent
   @Prop() nextEvent?: LocalTranscriptEvent
 
-  scrollToTranscriptEvent = scrollToTranscriptEvent
-  selectEvent = selectEvent
-  selectEventRange = selectEventRange
-  selectOrDeselectEvent = selectOrDeselectEvent
-  eventStore = eventStore
-  isEventSelected = isEventSelected
+  transcript = store.transcript!
+  scrollToTranscriptEvent = this.transcript.scrollToTranscriptEvent
+  selectEvent = this.transcript.selectEvent
+  selectEventRange = this.transcript.selectEventRange
+  selectOrDeselectEvent = this.transcript.selectOrDeselectEvent
+  isEventSelected = this.transcript.isEventSelected
   playEvent = playEvent
   settings = settings
 
@@ -91,33 +85,17 @@ export default class SegmentBox extends Vue {
     return (Number(this.event.endTime) - Number(this.event.startTime)) * settings.pixelsPerSecond
   }
 
-  // morph() {
-  //   morph({
-  //     from: '#segment-box-' + this.event.eventId,
-  //     style: 'z-index: 2002; position: fixed;',
-  //     to: '.event-inspector .v-dialog',
-  //     onToggle: () => {
-  //       console.log('yo')
-  //       eventStore.inspectedEvent = this.event
-  //     },
-  //     duration: 2000,
-  //     hideFromClone: true,
-
-  //     tween: true
-  //   })
-  // }
-
   onResizeEnd(e: any) {
     const startTime = e.current.left / settings.pixelsPerSecond
     const endTime = e.current.right / settings.pixelsPerSecond
     if (e.next !== null && this.nextEvent !== undefined) {
       const nextStartTime = e.next.left / settings.pixelsPerSecond
-      mutation(resizeEvents({ ...this.event, startTime, endTime }, { ...this.nextEvent, startTime: nextStartTime }))
+      mutation(this.transcript.resizeEvents({ ...this.event, startTime, endTime }, { ...this.nextEvent, startTime: nextStartTime }))
     } else if (e.previous !== null && this.previousEvent !== undefined) {
       const previousEndTime = e.previous.right / settings.pixelsPerSecond
-      mutation(resizeEvents({ ...this.previousEvent, endTime: previousEndTime }, { ...this.event, startTime, endTime }))
+      mutation(this.transcript.resizeEvents({ ...this.previousEvent, endTime: previousEndTime }, { ...this.event, startTime, endTime }))
     } else {
-      mutation(resizeEvents({ ...this.event, startTime, endTime }))
+      mutation(this.transcript.resizeEvents({ ...this.event, startTime, endTime }))
     }
   }
 }

@@ -18,8 +18,8 @@
     />
     <div
       v-if="
-        eventStore.userState.timeSpanSelection.start !== null &&
-        eventStore.userState.timeSpanSelection.end !== null"
+        this.transcript.uiState.timeSpanSelection.start !== null &&
+        this.transcript.uiState.timeSpanSelection.end !== null"
       :style="{
         left: getSelectionLeft() * settings.pixelsPerSecond + 'px',
         width: getSelectionLength() * settings.pixelsPerSecond + 'px'
@@ -34,24 +34,28 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { eventStore, scrubAudio, deselectEvents, toTime } from '../store/transcript'
-import audio from '../service/audio'
-import { easeInOutQuad, requestFrameAsync } from '../util'
+import { scrubAudio } from '../store/transcript'
+import { easeInOutQuad, requestFrameAsync, timeFromSeconds } from '../util'
 import settings from '../store/settings'
 import eventBus from '../service/event-bus'
+import store from '@/store'
 
 @Component
 export default class PlayHead extends Vue {
 
   inFront = false
-  audioStore = audio.store
-  eventStore = eventStore
   left = 10
   settings = settings
-  toTime = toTime
+  toTime = timeFromSeconds
+  transcript = store.transcript!
+  audio = this.transcript.audio
 
   scrollToTime(t: number) {
-    if (settings.lockPlayHead === true && eventStore.isPaused === false) {
+    if (
+      this.audio &&
+      settings.lockPlayHead === true &&
+      this.audio.isPaused === false
+    ) {
       requestAnimationFrame(() => {
         // should be dynamic
         const waveform = document.querySelector('.wave-form')!
@@ -72,8 +76,8 @@ export default class PlayHead extends Vue {
     // we’re using a named function below,
     // so we must keep track of "this"
     const that = this
-    // the time it should take the scroller to
-    // catch up to the playhead.
+    // the time (in seconds) it should take
+    // the scroller to catch up to the playhead.
     const scrollCatchUpTime = 1
     // geometry and time formulae.
     // this should be dynamic
@@ -90,8 +94,8 @@ export default class PlayHead extends Vue {
         if (timeElapsed <= scrollCatchUpTime) {
           waveform.scrollLeft = easeInOutQuad(timeElapsed, wStart, wDistanceToCover, scrollCatchUpTime)
         } else {
-          // when we’re done, hand it over to the
-          // regular, linear scroller
+          // when we’re done, de-register this handler,
+          // and hand it over to the regular, linear scroller ("scrollToTime").
           eventBus.$off('updateTime', catchUpListener)
           eventBus.$on('updateTime', that.scrollToTime)
         }
@@ -117,8 +121,8 @@ export default class PlayHead extends Vue {
   }
 
   startDrag(e: MouseEvent) {
-    eventStore.userState.timeSpanSelection = { start: null, end: null }
-    deselectEvents()
+    this.transcript.uiState.timeSpanSelection = { start: null, end: null }
+    this.transcript.deselectEvents()
     this.inFront = true
     scrubAudio(e.offsetX / settings.pixelsPerSecond)
     document.addEventListener('mousemove', this.drag)
@@ -126,32 +130,32 @@ export default class PlayHead extends Vue {
   }
 
   getSelectionLeft() {
-    return Math.min(eventStore.userState.timeSpanSelection.start || 0, eventStore.userState.timeSpanSelection.end || 0)
+    return Math.min(this.transcript.uiState.timeSpanSelection.start || 0, this.transcript.uiState.timeSpanSelection.end || 0)
   }
 
   getSelectionLength() {
     return Math.abs(
-      (eventStore.userState.timeSpanSelection.end || 0) -
-      (eventStore.userState.timeSpanSelection.start || 0)
+      (this.transcript.uiState.timeSpanSelection.end || 0) -
+      (this.transcript.uiState.timeSpanSelection.start || 0)
     )
   }
 
   startSelection(e: MouseEvent) {
-    deselectEvents()
+    this.transcript.deselectEvents()
     this.inFront = true
-    eventStore.userState.timeSpanSelection.start = e.offsetX / settings.pixelsPerSecond
+    this.transcript.uiState.timeSpanSelection.start = e.offsetX / settings.pixelsPerSecond
     document.addEventListener('mousemove', this.dragSelection)
     document.addEventListener('mouseup', this.endSelection)
   }
 
   dragSelection(e: MouseEvent) {
     // console.log(e.offsetX / settings.pixelsPerSecond, e)
-    eventStore.userState.timeSpanSelection.end = e.offsetX / settings.pixelsPerSecond
+    this.transcript.uiState.timeSpanSelection.end = e.offsetX / settings.pixelsPerSecond
   }
 
   endSelection(e: MouseEvent) {
     this.inFront = false
-    eventStore.userState.timeSpanSelection.end = e.offsetX / settings.pixelsPerSecond
+    this.transcript.uiState.timeSpanSelection.end = e.offsetX / settings.pixelsPerSecond
     document.removeEventListener('mousemove', this.dragSelection)
     document.removeEventListener('mouseup', this.endSelection)
   }

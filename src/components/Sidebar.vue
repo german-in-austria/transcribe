@@ -96,14 +96,10 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import _ from 'lodash'
 
-import {
-  eventStore,
-  toTime
-} from '../store/transcript'
 import { history } from '../store/history'
-import settings, { SidebarItem } from '../store/settings'
+import { SidebarItem } from '../store/settings'
 
-import { getWarnings, WarningEvent } from '../service/warnings'
+import { getWarnings, WarningEvent } from '../service/warnings.service'
 import { keyboardShortcuts, displayKeyboardAction } from '../service/keyboard'
 
 import editHistory from './EditHistory.vue'
@@ -111,6 +107,8 @@ import WarningList from './WarningList.vue'
 import bookmarks from './Bookmarks.vue'
 import search from './Search.vue'
 import actions from './Actions.vue'
+import { timeFromSeconds } from '@/util'
+import store from '@/store'
 
 @Component({
   components: {
@@ -125,23 +123,23 @@ export default class Sidebar extends Vue {
 
   @Prop({ default: false }) active!: boolean
 
-  settings = settings
+  transcript = store.transcript!
+  settings = store.settings
   warnings: WarningEvent[] = []
   history = history
-  eventStore = eventStore
   stuckAtBottom = false
-  toTime = toTime
+  toTime = timeFromSeconds
   keyboardShortcuts = keyboardShortcuts
   displayKeyboardAction = displayKeyboardAction
   debouncedGetWarnings = _.debounce(this.getWarnings, 500)
 
   clickTab(e: SidebarItem) {
-    if (e === settings.activeSidebarItem && settings.showDrawer === true) {
-      settings.showDrawer = false
+    if (e === this.settings.activeSidebarItem && this.settings.showDrawer === true) {
+      this.settings.showDrawer = false
     } else {
-      settings.activeSidebarItem = e
-      if (settings.showDrawer === false) {
-        settings.showDrawer = true
+      this.settings.activeSidebarItem = e
+      if (this.settings.showDrawer === false) {
+        this.settings.showDrawer = true
       }
     }
   }
@@ -167,7 +165,7 @@ export default class Sidebar extends Vue {
     this.getWarnings()
   }
 
-  @Watch('eventStore.events')
+  @Watch('transcript.events')
   onEventsUpdate() {
     this.debouncedGetWarnings()
   }
@@ -180,7 +178,7 @@ export default class Sidebar extends Vue {
   async getWarnings() {
     await this.$nextTick()
     window.requestIdleCallback(() => {
-      this.warnings = getWarnings(eventStore.events)
+      this.warnings = getWarnings(this.transcript.events)
     })
   }
 

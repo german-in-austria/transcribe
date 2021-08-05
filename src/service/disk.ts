@@ -5,14 +5,19 @@ import JSZip from 'jszip'
 import _ from 'lodash'
 
 import { convertToServerTranscript, ServerTranscript, ServerTranscriptListItem } from '../service/backend-server'
-import { Settings } from '../store/settings'
-import { HistoryEventAction, history } from '../store/history'
-import { eventStore } from '@/store/transcript'
+import { JSONObject, Settings } from '../store/settings'
+import { HistoryEventAction } from '../store/history'
+import Transcript, { TranscriptMetaData } from './transcript.class'
+import { LocalTranscriptEvent } from '@/store/transcript'
+
+const FILE_FORMAT_VERSION = '2'
 
 interface ProjectFile {
   serverTranscript: ServerTranscript
   audioBuffer: Uint8Array
-  eventStore: any
+  events: LocalTranscriptEvent[]
+  uiState: any,
+  meta: TranscriptMetaData,
   overviewSvg: string
   historyActions: HistoryEventAction[]
   settings: Settings
@@ -23,7 +28,6 @@ export interface LocalTranscriptListItem extends ServerTranscriptListItem {
 }
 
 class FileService {
-
   private readonly indexKeyLocalTranscripts = 'recentLocalTranscripts'
   private _localTranscripts: LocalTranscriptListItem[] = []
   private fileHandle: FileSystemFileHandle|null = null
@@ -44,7 +48,6 @@ class FileService {
   async loadTranscriptList(): Promise<LocalTranscriptListItem[]> {
     const lts: any[] = await localForage.getItem(this.indexKeyLocalTranscripts) || []
     this._localTranscripts.push(...lts)
-    console.log(this._localTranscripts)
     return this._localTranscripts
   }
 
@@ -59,12 +62,11 @@ class FileService {
       types: [
         {
           accept,
-          description: 'Transcribe, OGG, or Exmaralda Files'
+          description: 'Transcribe, Ogg/Vorbis, or Exmaralda Files'
         }
       ]
     })
     const fName = x[0].name
-    console.log(fName)
     if (fName.endsWith('.transcript')) {
       return this.openTranscriptFile(x[0])
     } else {
@@ -101,46 +103,54 @@ class FileService {
   }
 
   async loadProjectFile(f: FileSystemFileHandle): Promise<ProjectFile> {
-    console.time('zip load')
     this.fileHandle = f
     await this.zipFile.loadAsync(await f.getFile())
-    console.timeEnd('zip load')
-    console.time('unzip audio')
     const audioBuffer = (await this.zipFile.file('audio.ogg')?.async('uint8array')) || new Uint8Array()
-    console.timeEnd('unzip audio')
     const serverTranscriptFile = await this.zipFile.file('transcript.json')?.async('text')
-    const eventStore = await this.zipFile.file('eventStore.json')?.async('text')
+    const events = await this.zipFile.file('events.json')?.async('text')
+    const uiState = await this.zipFile.file('uiState.json')?.async('text')
+    const meta = await this.zipFile.file('meta.json')?.async('text')
     const settings = await this.zipFile.file('settings.json')?.async('text')
     const historyActions = await this.zipFile.file('history.json')?.async('text')
     const overviewSvg = await this.zipFile.file('overview.svg')?.async('text')
+    const version = await this.zipFile.file('VERSION')?.async('text')
     if (
       serverTranscriptFile !== undefined &&
-      eventStore !== undefined &&
+      events !== undefined &&
+      uiState !== undefined &&
+      meta !== undefined &&
       settings !== undefined &&
       historyActions !== undefined &&
-      overviewSvg !== undefined
+      overviewSvg !== undefined &&
+      version === FILE_FORMAT_VERSION
     ) {
       return {
         serverTranscript: JSON.parse(serverTranscriptFile),
-        audioBuffer,
-        eventStore: JSON.parse(eventStore),
-        overviewSvg,
+        events: JSON.parse(events),
+        uiState: JSON.parse(uiState),
+        meta: JSON.parse(meta),
         historyActions: JSON.parse(historyActions),
-        settings: JSON.parse(settings)
+        settings: JSON.parse(settings),
+        audioBuffer,
+        overviewSvg
       }
     } else {
-      throw new Error('incomplete file')
+      throw new Error('incomplete or incompatible file.')
     }
   }
 
-  async saveFile() {
-    this.zipFile.file('eventStore.json', JSON.stringify(eventStore))
-    this.zipFile.file('history.json', JSON.stringify(history.actions))
-    console.log('history actions', history.actions)
-    console.log('fileHandle', this.fileHandle)
+  async saveFile(
+    transcript: Transcript,
+    historyActions: HistoryEventAction[]
+  ) {
+    // we’re only updating the files in the zipFile here.
+    this.zipFile.file('events.json', JSON.stringify(transcript.events))
+    this.zipFile.file('uiState.json', JSON.stringify(transcript.uiState))
+    this.zipFile.file('meta.json', JSON.stringify(transcript.meta))
+    this.zipFile.file('history.json', JSON.stringify(historyActions))
+    // write to disk
     if (this.fileHandle !== null) {
       const writable = await this.fileHandle.createWritable()
-      console.log('writable', writable)
       const blob = await this.zipFile.generateAsync({ type: 'blob' })
       await writable.write(blob)
       await writable.close()
@@ -148,22 +158,25 @@ class FileService {
   }
 
   async generateProjectFile(
-    eventStore: any,
+    transcript: Transcript,
     overviewWave: string,
-    audioBuffer: Uint8Array,
+    audioBuffer: Uint8Array|null,
     historyActions: HistoryEventAction[]
   ): Promise<Blob> {
     this.zipFile = new JSZip()
-    const newServerTranscript = await convertToServerTranscript(eventStore.events)
-    console.timeEnd('convert to server transcript')
-    console.time('zip')
+    const newServerTranscript = await convertToServerTranscript(transcript.events)
     this.zipFile.file('overview.svg', overviewWave)
-    this.zipFile.file('audio.ogg', audioBuffer.buffer, { compression: 'STORE' })
+    if (audioBuffer !== null) {
+      // The ogg file is not zipped, because it’s already compressed.
+      // That would waste compute cycles.
+      this.zipFile.file('audio.ogg', audioBuffer.buffer, { compression: 'STORE' })
+    }
     this.zipFile.file('transcript.json', JSON.stringify(newServerTranscript))
+    this.zipFile.file('events.json', JSON.stringify(transcript.events))
+    this.zipFile.file('uiState.json', JSON.stringify(transcript.uiState))
+    this.zipFile.file('meta.json', JSON.stringify(transcript.meta))
     this.zipFile.file('history.json', JSON.stringify(historyActions))
-    this.zipFile.file('eventStore.json', JSON.stringify(eventStore))
-    this.zipFile.file('VERSION', '1')
-    console.timeEnd('zip')
+    this.zipFile.file('VERSION', '2')
     return this.zipFile.generateAsync({ type: 'blob' })
   }
 }

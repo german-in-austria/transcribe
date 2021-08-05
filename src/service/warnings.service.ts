@@ -1,6 +1,8 @@
 import _ from 'lodash'
-import { LocalTranscriptEvent, sortEvents, eventStore } from '../store/transcript'
+import { LocalTranscriptEvent, TokenTierType } from '../store/transcript'
 import settings from '../store/settings'
+import Transcript from './transcript.class'
+import store from '@/store'
 
 interface GapMetadata {
   duration: number
@@ -18,7 +20,8 @@ export interface WarningEvent {
 }
 
 export function getWarnings(es: LocalTranscriptEvent[]): WarningEvent[] {
-  const events = sortEvents(es)
+  const defaultTier = store.transcript?.meta.defaultTier || 'text'
+  const events = Transcript.sortEvents(es)
   const warnings: WarningEvent[] = ([] as WarningEvent[])
     // find events with overlaps
     .concat(
@@ -40,7 +43,7 @@ export function getWarnings(es: LocalTranscriptEvent[]): WarningEvent[] {
         ? []
         : events.filter((e) => {
           return _(e.speakerEvents).some((se) => {
-            return _(se.tokens).some((t) => t.tiers[eventStore.metadata.defaultTier].type === -1)
+            return _(se.tokens).some((t) => t.tiers[ defaultTier ].type === -1)
           })
         })
           .map(e => ({

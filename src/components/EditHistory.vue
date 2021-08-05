@@ -115,22 +115,15 @@
 
 <script lang="ts">
 
-import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import { Vue, Component } from 'vue-property-decorator'
 import SegmentTranscript from './SegmentTranscript.vue'
-import { groupConsecutiveBy } from '../util'
+import { groupConsecutiveBy, timeFromSeconds } from '../util'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import _ from 'lodash'
 
 import {
-  toTime,
-  scrollToAudioEvent,
-  scrollToTranscriptEvent,
-  findEventIndexById,
   LocalTranscriptEvent,
-  selectEvent,
-  playEvent,
-  eventStore,
-  sortEvents
+  playEvent
 } from '../store/transcript'
 
 import {
@@ -139,6 +132,8 @@ import {
   goToInitialState,
   HistoryEventAction
 } from '../store/history'
+import store from '@/store'
+import EventService from '@/service/event-service'
 
 @Component({
   components: {
@@ -148,19 +143,22 @@ import {
 })
 export default class EditHistory extends Vue {
 
-  defaultTier = eventStore.metadata.defaultTier
   history = history
-  toTime = toTime
+  toTime = timeFromSeconds
   playEvent = playEvent
   goToInitialState = goToInitialState
   hoveredEvent: HistoryEventAction|null = null
   menuX = 0
   menuY = 0
 
+  get defaultTier() {
+    return store.transcript?.meta.defaultTier || 'text'
+  }
+
   get groupedHistoryActions(): HistoryEventAction[] {
     // group consecutive historyEventActions by type and all "before" eventIds
     const groups = groupConsecutiveBy(history.actions, (ha: HistoryEventAction) => {
-      return ha.type + '__' + sortEvents(ha.before).map(e => e.eventId).join('__')
+      return ha.type + '__' + EventService.sortEvents(ha.before).map(e => e.eventId).join('__')
     }) as HistoryEventAction[][]
     // use the first historyEventAction for the "before" state, and the last for the "after" state.
     return _(groups)
@@ -170,19 +168,21 @@ export default class EditHistory extends Vue {
   }
 
   showEventIfExists(e: LocalTranscriptEvent) {
-    const i = findEventIndexById(e.eventId)
-    if (i > -1) {
-      selectEvent(e)
-      scrollToAudioEvent(e)
-      scrollToTranscriptEvent(e)
+    if (store.transcript !== null) {
+      const i = store.transcript.findEventIndexById(e.eventId)
+      if (i > -1) {
+        store.transcript.selectEvent(e)
+        store.transcript.scrollToAudioEvent(e)
+        store.transcript.scrollToTranscriptEvent(e)
+      }
     }
   }
 
   undoOrRedoUntil(action: HistoryEventAction) {
-    if (action.after[0]) {
-      selectEvent(action.after[0])
-      scrollToAudioEvent(action.after[0])
-      scrollToTranscriptEvent(action.after[0])
+    if (action.after[0] && store.transcript !== null) {
+      store.transcript.selectEvent(action.after[0])
+      store.transcript.scrollToAudioEvent(action.after[0])
+      store.transcript.scrollToTranscriptEvent(action.after[0])
     }
     jumpToState(action, true)
   }

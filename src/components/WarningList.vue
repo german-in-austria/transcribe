@@ -51,7 +51,7 @@
 
 <script lang="ts">
 
-import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import { Vue, Component, Prop } from 'vue-property-decorator'
 
 import SegmentTranscript from './SegmentTranscript.vue'
 import { RecycleScroller } from 'vue-virtual-scroller'
@@ -59,14 +59,9 @@ import Checkbox from './helper/Checkbox.vue'
 import Dropdown from './helper/Dropdown.vue'
 
 import settings from '../store/settings'
-import { WarningEvent } from '../service/warnings'
-import {
-  scrollToAudioEvent,
-  findEventIndexById,
-  scrollToTranscriptEvent,
-  toTime,
-  selectEvent
-} from '../store/transcript'
+import { WarningEvent } from '../service/warnings.service'
+import { timeFromSeconds } from '@/util'
+import store from '@/store'
 
 @Component({
   components: {
@@ -79,7 +74,9 @@ import {
 export default class WarningList extends Vue {
 
   @Prop({ default: [] }) warnings!: WarningEvent[]
-  toTime = toTime
+
+  transcript = store.transcript!
+  toTime = timeFromSeconds
   selectedWarning: WarningEvent|null = null
   settings = settings
   eventGapOptions = [
@@ -104,12 +101,12 @@ export default class WarningList extends Vue {
   ]
 
   showEventIfExists(e: WarningEvent) {
-    const i = findEventIndexById(e.event.eventId)
+    const i = this.transcript.findEventIndexById(e.event.eventId)
     this.selectedWarning = e
     if (i > -1) {
-      selectEvent(e.event)
-      scrollToAudioEvent(e.event)
-      scrollToTranscriptEvent(e.event)
+      this.transcript.selectEvent(e.event)
+      this.transcript.scrollToAudioEvent(e.event)
+      this.transcript.scrollToTranscriptEvent(e.event)
     }
   }
 }

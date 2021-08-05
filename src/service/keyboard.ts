@@ -49,7 +49,7 @@ import { saveChangesToServer } from '../service/backend-server'
 
 import eventBus from '../service/event-bus'
 import settings from '../store/settings';
-import { computeTokenTypesForEvents } from './token-types'
+import { computeTokenTypesForEvents } from './token-types.service'
 import audio from './audio'
 import kaldiService from './kaldi/kaldiService'
 

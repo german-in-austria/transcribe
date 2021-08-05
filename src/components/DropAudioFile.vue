@@ -17,7 +17,8 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import DropFile from './DropFile.vue'
 import { createFFmpeg, fetchFile } from '@ffmpeg/ffmpeg'
-import { loadAudioFromFile, toSeconds, toTime } from '@/store/transcript'
+import { loadAudioFromFile } from '@/store/transcript'
+import { timeToSeconds, timeFromSeconds } from '@/util'
 
 @Component({
   components: {
@@ -31,17 +32,17 @@ export default class DropAudioFile extends Vue {
   time = 0
   speed = 0
   loadingFFMpeg = false
-  toTime = toTime
+  toTime = timeFromSeconds
 
   processLog(arg: { message: string, type: string }) {
     const durationLog = /(?:Duration: )([0-9|:|.]+)(,)/.exec(arg.message)
     const timeLog = /(?:time=)([0-9|:|.]+)(\s)/.exec(arg.message)
     const speedLog = /(?:speed=)([0-9|.]+)(x)/.exec(arg.message)
     if (durationLog !== null) {
-      this.duration = toSeconds(durationLog[1])
+      this.duration = timeToSeconds(durationLog[1])
     }
     if (timeLog !== null) {
-      this.time = toSeconds(timeLog[1])
+      this.time = timeToSeconds(timeLog[1])
     }
     if (speedLog !== null) {
       this.speed = parseFloat(speedLog[1])

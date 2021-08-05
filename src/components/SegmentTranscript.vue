@@ -22,7 +22,7 @@
     <div
       class="speaker-segment"
       :style="{ height: speakerHeight }"
-      v-for="(speaker, speakerKey) in eventStore.metadata.speakers"
+      v-for="(speaker, speakerKey) in this.transcript.meta.speakers"
       :key="speakerKey">
       <speaker-segment-transcript
         class="tokens"
@@ -33,22 +33,19 @@
   </div>
 </template>
 <script lang="ts">
-import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import { Vue, Component, Prop } from 'vue-property-decorator'
 import SpeakerSegmentTranscript from './SpeakerSegmentTranscript.vue'
 import _ from 'lodash'
 
 import {
   eventStore,
   LocalTranscriptEvent,
-  selectEvent,
-  selectEventRange,
-  selectOrDeselectEvent,
-  playEvent,
-  scrollToAudioEvent,
-  toTime
+  playEvent
 } from '../store/transcript'
 
 import settings from '../store/settings'
+import { timeFromSeconds } from '@/util'
+import store from '@/store'
 
 @Component({
   components: {
@@ -60,13 +57,13 @@ export default class SegmentTranscript extends Vue {
   @Prop({ required: true }) event!: LocalTranscriptEvent
   @Prop({ default: false }) isSelected!: boolean
 
-  eventStore = eventStore
+  transcript = store.transcript!
   offsetWidth = 0
-  selectOrDeselectEvent = selectOrDeselectEvent
+  selectOrDeselectEvent = this.transcript.selectOrDeselectEvent
   playEvent = playEvent
-  toTime = toTime
+  toTime = timeFromSeconds
   settings = settings
-  selectEventRange = selectEventRange
+  selectEventRange = this.transcript.selectEventRange
 
   get speakerHeight() {
     return eventStore.metadata.tiers.filter(t => t.show === true).length * 25 + 'px'
@@ -90,9 +87,9 @@ export default class SegmentTranscript extends Vue {
 
   selectAndScrollToEvent(e: LocalTranscriptEvent) {
     if (!settings.lockScroll) {
-      scrollToAudioEvent(e)
+      this.transcript.scrollToAudioEvent(e)
     }
-    selectEvent(e)
+    this.transcript.selectEvent(e)
   }
 }
 </script>

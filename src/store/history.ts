@@ -23,7 +23,7 @@ type HistoryApplicationType = 'UNDO'|'REDO'|'DO'|'JUMPTOSTATE'
 
 export interface HistoryEventAction {
   id: string
-  type: 'RESIZE'|'DELETE'|'CHANGE_TOKENS'|'ADD'|'JOIN'|'INSERT'|'SPLIT'
+  type: 'RESIZE'|'DELETE'|'CHANGE_TOKENS'|'ADD'|'JOIN'|'SPLIT'
   apply: boolean
   time: Date
   before: LocalTranscriptEvent[]

@@ -2,10 +2,10 @@ import _ from 'lodash'
 
 import {
   eventStore,
-  LocalTranscriptToken,
-  makeTokenId,
-  tokenTypeFromToken
+  LocalTranscriptToken
 } from '../store/transcript'
+
+import Transcript from '../service/transcript.class'
 
 export type Pastable<T> = T & {
   index: number
@@ -40,7 +40,7 @@ export function getTokenPart(
   // new token id and only the default tier
   return {
     ...e,
-    id: makeTokenId(),
+    id: Transcript.makeTokenId(),
     tiers: {
       ortho: { text: '', type: -1 },
       phon:  { text: '', type: -1 },
@@ -55,7 +55,7 @@ export function getTokenPart(
 
 export function pastableTiersToTokens(ps: Array<Pastable<LocalTranscriptToken['tiers']>>): LocalTranscriptToken[] {
   return ps.map((ttp) => ({
-    id: makeTokenId(),
+    id: Transcript.makeTokenId(),
     fragmentOf: -1,
     sentenceId: -1,
     order: 0,
@@ -119,8 +119,8 @@ export function unserializeTokenTiers(tokens: string): Array<Pastable<LocalTrans
         type: -1
       },
       [ eventStore.metadata.defaultTier ]: {
-        text: v[ eventStore.metadata.defaultTier.toUpperCase() ],
-        type: tokenTypeFromToken(v[ eventStore.metadata.defaultTier.toUpperCase() ]).id
+        text: v[ transcript.meta.defaultTier.toUpperCase() ],
+        type: Transcript.getTokenTypeFromToken(v[ transcript.meta.defaultTier.toUpperCase() ]).id
       }
     }
   })
@@ -136,7 +136,7 @@ export function collectTokensViaOffsets(
   return tokens.reduce((m, e, i) => {
     // get range for token
     const tokenStart = cursor
-    const tokenEnd = cursor + e.tiers[ eventStore.metadata.defaultTier ].text.length
+    const tokenEnd = cursor + e.tiers[ transcript.meta.defaultTier ].text.length
     // move cursor to the end of the token and account for whitespace
     cursor = tokenEnd + 1
     // decide whether it’s in the range
@@ -176,7 +176,7 @@ export function insertTokensAfterTextOffset(
   return tokens.reduce((m, e, i, l) => {
     // get range for token
     const tokenStart = cursor
-    const tokenEnd = cursor + e.tiers[ eventStore.metadata.defaultTier ].text.length
+    const tokenEnd = cursor + e.tiers[ transcript.meta.defaultTier ].text.length
     // move cursor to the end of the token and account for whitespace
     cursor = tokenEnd + 1
     if (tokenStart < offset && tokenEnd > offset) {
@@ -209,13 +209,13 @@ export function getOtherHalfOfToken(
   token: LocalTranscriptToken,
   tokenPart: LocalTranscriptToken
 ): LocalTranscriptToken {
-  const s = tokenPart.tiers[eventStore.metadata.defaultTier].text
+  const s = tokenPart.tiers[ transcript.metadata.defaultTier ].text
   return {
     ...token,
     tiers: {
       ...token.tiers,
-      [ eventStore.metadata.defaultTier ]: {
-        text: token.tiers[eventStore.metadata.defaultTier].text.replace(s, '')
+      [ transcript.meta.defaultTier ]: {
+        text: token.tiers[ transcript.metadata.defaultTier ].text.replace(s, '')
       }
     }
   }
@@ -263,14 +263,14 @@ export function mergePastableTokensAt(
   end: number,
   firstTokenOrder: number
 ): LocalTranscriptToken[] {
-  const segmentText = localTokens.map(t => t.tiers[eventStore.metadata.defaultTier].text).join(' ')
+  const segmentText = localTokens.map(t => t.tiers[ transcript.meta.defaultTier ].text).join(' ')
   // the target is either empty, or all of it is selected
   if (start === 0 && end === segmentText.length) {
     // replace all tokens
     // console.log('all tokens selected, replace all', this.segmentText.length, start, end)
-    return tokenTiers.map(({text, ortho, phon}, ti) => {
+    return tokenTiers.map(({ text, ortho, phon }, ti) => {
       return {
-        id: makeTokenId(),
+        id: Transcript.makeTokenId(),
         fragmentOf: null,
         sentenceId: -1,
         order: (firstTokenOrder || 0) + ti,

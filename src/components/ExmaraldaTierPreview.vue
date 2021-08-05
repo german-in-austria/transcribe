@@ -23,8 +23,8 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import { SpeakerTierImportable } from '../service/backend-exmaralda'
 import { RecycleScroller } from 'vue-virtual-scroller'
-import { toTime } from '../store/transcript'
 import _ from 'lodash'
+import { timeFromSeconds } from '@/util'
 
 @Component({
   components: {
@@ -33,10 +33,10 @@ import _ from 'lodash'
 })
 export default class ExmaraldaTierPreview extends Vue {
   @Prop({ required: true }) tier!: SpeakerTierImportable
-  toTime = toTime
+  toTime = timeFromSeconds
   get tierEventsWithId() {
     return this.tier.events.map(te => {
-      return {...te, id: _.uniqueId()}
+      return { ...te, id: _.uniqueId() }
     })
   }
 }

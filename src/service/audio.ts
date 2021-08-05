@@ -429,7 +429,7 @@ function drawWavePath(buffer: AudioBuffer, width: number, height: number, channe
   return upperHalf + lowerHalf + 'Z'
 }
 
-async function drawWave(
+async function drawWaveSvg(
   buffer: AudioBuffer,
   width: number,
   height: number,
@@ -455,7 +455,6 @@ async function decodeBufferByteRange(fromByte: number, toByte: number, buffer: A
 }
 
 async function decodeBufferTimeSlice(from: number, to: number, buffer: ArrayBuffer): Promise<AudioBuffer> {
-  // console.time('decode buffer segment from ' + from + ' to ' + to)
   // TODO: this is could possible be solved a little better.
   let startPage
   let endPage
@@ -699,31 +698,31 @@ const audio = {
   store : {
     audioContext,
     isBufferComplete,
-    isLocalFile,
+    isLocalFile, // public
     oggHeaderBuffer,
     oggHeaders,
     oggPages,
-    uint8Buffer
+    uint8Buffer // public
   },
-  audioBufferToWav,
+  audioBufferToWav, // public
   cacheOggIndex,
   concatBuffer,
   decodeBufferByteRange,
-  decodeBufferTimeSlice,
-  decodeAudioBufferProgressively,
-  downloadAndDecodeAudioStream,
-  downloadAudioStream,
-  drawSpectrogramAsync,
-  drawWave,
-  drawWavePath,
-  drawWavePathAsync,
+  decodeBufferTimeSlice, // public
+  decodeAudioBufferProgressively, // public
+  downloadAndDecodeAudioStream, // public
+  downloadAudioStream, // public
+  drawSpectrogramAsync, // public
+  drawWaveSvg, // public
+  drawWavePath, // public
+  drawWavePathAsync, // public
   getOggHeaderBuffer,
   getOggIndexAsync,
   getOggNominalBitrate,
   getOggSampleRate,
-  getOrFetchAudioBuffer,
-  playBuffer,
-  pauseCurrentBuffer,
+  getOrFetchAudioBuffer, // public
+  playBuffer, // public
+  pauseCurrentBuffer, // public
   sliceAudioBuffer
 }
 

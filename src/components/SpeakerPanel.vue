@@ -1,9 +1,9 @@
 <template>
   <v-flex :style="theme" class="speaker-panel">
     <div
-      :style="{height: speakerHeight + 1}"
+      :style="{ height: speakerHeight + 1 }"
       :key="i"
-      v-for="(speaker, i) in eventStore.metadata.speakers"
+      v-for="(speaker, i) in transcript.meta.speakers"
       class="speaker">
       <v-menu
         lazy
@@ -33,12 +33,12 @@
           </v-list-tile>
           <v-divider />
           <v-list-tile
-            v-for="(tier, i) in eventStore.metadata.tiers"
+            v-for="(tier, i) in transcript.meta.tiers"
             :key="i"
-            :disabled="tier.id === eventStore.metadata.defaultTier"
+            :disabled="tier.id === transcript.meta.defaultTier"
             @click="tier.show = !tier.show">
             <v-list-tile-avatar>
-              <v-icon v-if="tier.show === true || tier.id === eventStore.metadata.defaultTier">check</v-icon>
+              <v-icon v-if="tier.show === true || tier.id === transcript.meta.defaultTier">check</v-icon>
             </v-list-tile-avatar>
             <v-list-tile-content>
               <v-list-tile-title>{{ tier.name }}</v-list-tile-title>
@@ -58,28 +58,28 @@
 </template>
 
 <script lang="ts">
-import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import settings from '../store/settings'
-import { eventStore, LocalTranscriptTier } from '../store/transcript'
+import { Vue, Component } from 'vue-property-decorator'
+import { LocalTranscriptTier } from '../store/transcript'
+import store from '@/store'
 
 @Component
 export default class SpeakerPanel extends Vue {
 
-  settings = settings
-  eventStore = eventStore
+  settings = store.settings
+  transcript = store.transcript!
   tierHeight = 25
   isBasicInfoValid = false
 
   get speakerHeight(): string {
-    return eventStore.metadata.tiers.filter(t => t.show === true).length * this.tierHeight + 1 + 'px'
+    return this.transcript.meta.tiers.filter(t => t.show === true).length * this.tierHeight + 1 + 'px'
   }
 
   get secondaryVisibleTiers(): LocalTranscriptTier[] {
-    return eventStore.metadata.tiers.filter(t => t.id !== eventStore.metadata.defaultTier && t.show === true)
+    return this.transcript.meta.tiers.filter(t => t.id !== this.transcript.meta.defaultTier && t.show === true)
   }
 
   get areAllExpanded(): boolean {
-    return eventStore.metadata.tiers.every(t => t.id === eventStore.metadata.defaultTier || t.show === true)
+    return this.transcript.meta.tiers.every(t => t.id === this.transcript.meta.defaultTier || t.show === true)
   }
 
   expandOrCollapse() {
@@ -91,18 +91,18 @@ export default class SpeakerPanel extends Vue {
   }
 
   openSpeakerAndTierSettings() {
-    this.eventStore.userState.showSpeakerTierEditModal = true
+    this.transcript.uiState.showTranscriptMetaSettings = true
   }
 
   expandAll() {
-    eventStore.metadata.tiers = eventStore.metadata.tiers.map((t) => {
+    this.transcript.meta.tiers = this.transcript.meta.tiers.map((t) => {
       return { ...t, show: true }
     })
   }
 
   collapseAll() {
-    eventStore.metadata.tiers = eventStore.metadata.tiers.map((t) => {
-      return { ...t, show: t.id === eventStore.metadata.defaultTier }
+    this.transcript.meta.tiers = this.transcript.meta.tiers.map((t) => {
+      return { ...t, show: t.id === this.transcript.meta.defaultTier }
     })
   }
 

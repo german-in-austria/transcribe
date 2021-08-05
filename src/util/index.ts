@@ -3,7 +3,7 @@ import Worker from '../service/buffer-concat.worker'
 const worker = new Worker('')
 const concatWorker = new PromiseWorker(worker)
 
-type PrimitiveOrNone = number|null|undefined|string
+type PrimitiveOrNone = number|null|undefined|string|boolean
 
 export interface UndoRedo {
   undo: boolean
@@ -69,6 +69,27 @@ export function fileToTextAndName(f: File): Promise<{ t: string, n: string }> {
       reject(e)
     }
   })
+}
+
+export function readU4le(dataView: DataView, i: number) {
+  return dataView.byteLength > i + 32 ? dataView.getUint32(i, true) : null
+}
+
+export function readU8le(dataView: DataView, i: number) {
+  const v1 = readU4le(dataView, i)
+  const v2 = readU4le(dataView, i + 4)
+  return v1 !== null && v2 !== null ? 0x100000000 * v2 + v1 : null
+}
+
+export function isUrl(a: string): boolean {
+  let isIt = true
+  try {
+    new URL(a)
+  } catch (e) {
+    console.log(e)
+    isIt = false
+  }
+  return isIt
 }
 
 export function isUndoOrRedo(e: KeyboardEvent): UndoRedo {
@@ -200,7 +221,7 @@ export function isEqualDeep<T>(one: T, two: T): boolean {
   return JSON.stringify(one) === JSON.stringify(two)
 }
 
-export function findAllNotIn<T extends PrimitiveOrNone>(base: T[], find: T[]): T[] {
+export function findAllNotIn<T = PrimitiveOrNone>(base: T[], find: T[]): T[] {
   const l = find.length
   const b = []
   for (let i = 0; i < l; ++i) {
@@ -209,6 +230,18 @@ export function findAllNotIn<T extends PrimitiveOrNone>(base: T[], find: T[]): T
     }
   }
   return b
+}
+
+/** Convert a time string like '01:05:12' to a time offset in seconds */
+export function timeToSeconds(time: string): number {
+  const a = time.split(':') // split it at the colons
+  // minutes are worth 60 seconds. Hours are worth 60 minutes.
+  return (+a[0]) * 60 * 60 + (+a[1] || 0) * 60 + (+a[2] || 0)
+}
+
+/** Convert a time offset in seconds to a string like '01:05:12' */
+export function timeFromSeconds(seconds: number, decimalPlaces = 0): string {
+  return new Date(seconds * 1000).toISOString().substr(11, 8 + (decimalPlaces > 0 ? decimalPlaces + 1 : 0))
 }
 
 export function allInArray<T extends PrimitiveOrNone>(base: T[], find: T[]): boolean {

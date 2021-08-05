@@ -33,13 +33,10 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SegmentTranscript from './SegmentTranscript.vue'
 import {
-  eventStore,
-  selectEvent,
-  scrollToAudioEvent,
-  scrollToTranscriptEvent,
   LocalTranscriptEvent
 } from '../store/transcript'
 import settings from '../store/settings'
+import store from '@/store'
 
 interface Square {
   event: LocalTranscriptEvent
@@ -54,10 +51,12 @@ interface Square {
 })
 export default class SearchResults extends Vue {
 
+  readonly resultMarkerColor = 'yellow'
+
   menuX = 0
   menuY = 0
   hoveredEvent: LocalTranscriptEvent|null = null
-  eventStore = eventStore
+  transcript = store.transcript!
   settings = settings
   context: null|CanvasRenderingContext2D = null
   squares: Square[] = []
@@ -72,9 +71,9 @@ export default class SearchResults extends Vue {
 
   onClick() {
     if (this.hoveredEvent !== null) {
-      scrollToAudioEvent(this.hoveredEvent)
-      scrollToTranscriptEvent(this.hoveredEvent)
-      selectEvent(this.hoveredEvent)
+      this.transcript.scrollToAudioEvent(this.hoveredEvent)
+      this.transcript.scrollToTranscriptEvent(this.hoveredEvent)
+      this.transcript.selectEvent(this.hoveredEvent)
     }
   }
 
@@ -93,13 +92,13 @@ export default class SearchResults extends Vue {
     this.squares = []
     if (this.context !== null) {
       const width = this.$el.clientWidth
-      const duration = eventStore.audioElement.duration
+      const duration = this.transcript.audio?.duration || 0
       // setting the width clears the canvas.
       this.context.canvas.width = width
       // batched drawing setup
       this.context.beginPath()
-      this.context.fillStyle = 'yellow'
-      for (const r of eventStore.searchResults) {
+      this.context.fillStyle = this.resultMarkerColor
+      for (const r of this.transcript.uiState.searchResults) {
         const left = (((r.event.startTime / duration) * width) + .5) | 0
         // draw the rectangle
         this.context.rect(left, 0, 3, 10)

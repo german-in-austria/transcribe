@@ -66,7 +66,7 @@
         <scrollbar
           class="scrollbar"
           update-on="updateWaveformScrollbar"
-          :max-time="eventStore.audioElement.duration"
+          :max-time="duration"
           @scroll="scrollFromScrollbar"
         />
         <div
@@ -121,18 +121,11 @@ import segmentBox from './SegmentBox.vue'
 
 import settings, { minPixelsPerSecond, maxPixelsPerSecond } from '../store/settings'
 import { mutation } from '../store/history'
-import audio from '../service/audio'
 import * as util from '../util'
 import EventBus from '../service/event-bus'
 
-import {
-  eventStore,
-  findEventAt,
-  LocalTranscriptEvent,
-  scrollToTranscriptEvent,
-  addEvent,
-  toTime
-} from '../store/transcript'
+import { LocalTranscriptEvent } from '../store/transcript'
+import store from '@/store'
 
 const queue = new Queue({
   concurrency: 2,
@@ -162,9 +155,8 @@ export default class Waveform extends Vue {
   overviewSvgWidth = 1500 // width of the overview waveform in pixels
 
   // bind stores
-  settings = settings
-  userState = eventStore.userState
-  eventStore = eventStore
+  settings = store.settings
+  transcript = store.transcript!
 
   onScroll = _.throttle(this.handleScroll, 350)
   debouncedZoom = _.debounce(this.zoom, 350)
@@ -195,6 +187,10 @@ export default class Waveform extends Vue {
     this.initWithAudio()
   }
 
+  get duration(): number {
+    return this.transcript.audio?.duration || 0
+  }
+
   beforeDestroy() {
     EventBus.$off('scrollTranscript', this.scrollLockedScroll)
     EventBus.$off('scrollToAudioEvent', this.scrollToSegment)
@@ -204,7 +200,7 @@ export default class Waveform extends Vue {
     if (settings.lockScroll) {
       this.scrollToSecond(t)
     }
-    if (eventStore.playAllFrom !== null) {
+    if (this.transcript.audio !== null && this.transcript.audio.playAllFrom !== null) {
       this.disableAutoScrollDuringPlayback()
     }
   }
@@ -220,18 +216,24 @@ export default class Waveform extends Vue {
   }
 
   async cacheOverviewWaveform() {
-    await util.requestFrameAsync()
-    const el = (this.$el.querySelector('.overview-waveform svg') as HTMLElement)
-    try {
-      localForage.setItem('waveformOverview__' + eventStore.metadata.audioUrl, el.innerHTML)
-    } catch (e) {
-      console.log(e)
+    if (this.transcript.audio !== null) {
+      await util.requestFrameAsync()
+      const el = (this.$el.querySelector('.overview-waveform svg') as HTMLElement)
+      try {
+        localForage.setItem('waveformOverview__' + this.transcript.audio.url, el.innerHTML)
+      } catch (e) {
+        console.log(e)
+      }
     }
   }
 
   async hasOverviewCache(): Promise<boolean> {
-    const c = await localForage.getItem('waveformOverview__' + eventStore.metadata.audioUrl)
-    return c !== null
+    if (this.transcript.audio) {
+      const c = await localForage.getItem('waveformOverview__' + this.transcript.audio.url)
+      return c !== null
+    } else {
+      return false
+    }
   }
 
   get containerStyle() {
@@ -242,7 +244,7 @@ export default class Waveform extends Vue {
 
   addEventAt(e: MouseEvent) {
     const c = this.$refs.svgContainer as HTMLDivElement
-    return mutation(addEvent((c.scrollLeft + e.pageX) / settings.pixelsPerSecond))
+    return mutation(this.transcript.addEvent((c.scrollLeft + e.pageX) / settings.pixelsPerSecond))
   }
 
   disableAutoScrollDuringPlayback() {
@@ -322,7 +324,7 @@ export default class Waveform extends Vue {
         // emulate horizontal scrolling (windows etc.)
         this.emulateHorizontalScrolling(e)
       }
-      if (eventStore.playAllFrom !== null) {
+      if (this.transcript.audio !== null && this.transcript.audio.playAllFrom !== null) {
         this.disableAutoScrollDuringPlayback()
       }
     }
@@ -350,25 +352,28 @@ export default class Waveform extends Vue {
   }
 
   async updateSegments() {
-    const shouldKeepFocus = this.shouldKeepFocus()
-    await util.requestFrameAsync()
-    const el = this.$refs.svgContainer as HTMLElement
-    const w = el.scrollWidth
-    const l = el.scrollLeft
-    const cw = el.clientWidth
-    const scrollFactorLeft = l / w
-    const scrollFactorRight = (l + cw) / w
-    boundLeft = eventStore.audioElement.duration * (scrollFactorLeft - segmentBufferPercent)
-    boundRight = eventStore.audioElement.duration * (scrollFactorRight + segmentBufferPercent)
-    const ves = this.getVisibleEvents(boundLeft, boundRight, eventStore.events)
-    this.visibleEvents = ves
-    // if we didn’t do that, the elements that are re-rendered
-    // (because of the above call) would lose focus, causing the
-    // window to receive focus, and thus breaking the ability
-    // to handle keyboard events from here.
-    if (shouldKeepFocus) {
-      await this.$nextTick();
-      (this.$el as any).focus()
+    if (this.transcript.audio !== null) {
+      const shouldKeepFocus = this.shouldKeepFocus()
+      await util.requestFrameAsync()
+      const el = this.$refs.svgContainer as HTMLElement
+      const w = el.scrollWidth
+      const l = el.scrollLeft
+      const cw = el.clientWidth
+      const scrollFactorLeft = l / w
+      const scrollFactorRight = (l + cw) / w
+      boundLeft = this.transcript.audio.duration * (scrollFactorLeft - segmentBufferPercent)
+      boundRight = this.transcript.audio.duration * (scrollFactorRight + segmentBufferPercent)
+      const ves = this.getVisibleEvents(boundLeft, boundRight, this.transcript.events)
+      this.visibleEvents = ves
+      // if we didn’t do the following call, the elements
+      // that are re-rendered (because of the above call)
+      // would lose focus, causing the window to receive
+      //  focus, and thus breaking the ability
+      // to handle keyboard events from here onwards.
+      if (shouldKeepFocus) {
+        await this.$nextTick();
+        (this.$el as any).focus()
+      }
     }
   }
 
@@ -386,38 +391,40 @@ export default class Waveform extends Vue {
       Math.floor(right / settings.pixelsPerSecond)]
     const visibleSeconds = util
       .range(Math.max(startSecond, 0), Math.min(endSecond, this.audioLength))
-      .filter((s, i) => settings.pixelsPerSecond > 60 || s % 2 === 0)
+      .filter(s => settings.pixelsPerSecond > 60 || s % 2 === 0)
     await util.requestFrameAsync()
     const el = this.$el.querySelector('.second-marker-row') as HTMLElement
     el.innerHTML = visibleSeconds.map(s => {
       return (
         `<div style="transform: translate3d(${ s * settings.pixelsPerSecond }px, 0, 0)" class="second-marker">`
-        + toTime(s)
+        + util.timeFromSeconds(s)
         + '</div>'
       )
     }).join('')
   }
 
   async drawSpectrogramPiece(i: number) {
-    console.log('DRAWING Spectrogram')
-    const isLast = i + 1 === this.amountDrawSegments
-    const secondsPerDrawWidth = this.drawWidth / settings.pixelsPerSecond
-    const from = i * secondsPerDrawWidth
-    const to = isLast ? this.audioLength : from + secondsPerDrawWidth
-    const buffer = await audio.getOrFetchAudioBuffer(
-      from,
-      to,
-      eventStore.audioMetadata.fileSize,
-      eventStore.audioMetadata.length,
-      eventStore.audioElement.src
-    )
-    const width = isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth
-    const [c, f] = (await audio.drawSpectrogramAsync(buffer, width, this.height))
-    const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
-    console.time('render')
-    el.innerHTML = ''
-    el.appendChild(c)
-    console.timeEnd('render')
+    if (this.transcript.audio !== null) {
+      console.log('DRAWING Spectrogram')
+      const isLast = i + 1 === this.amountDrawSegments
+      const secondsPerDrawWidth = this.drawWidth / settings.pixelsPerSecond
+      const from = i * secondsPerDrawWidth
+      const to = isLast ? this.audioLength : from + secondsPerDrawWidth
+      const buffer = await this.transcript.audio.getOrFetchAudioBuffer(
+        from,
+        to,
+        this.transcript.audio.fileSize,
+        this.transcript.audio.duration,
+        this.transcript.audio.url
+      )
+      const width = isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth
+      const [ c ] = (await this.transcript.audio.drawSpectrogramAsync(buffer, width, this.height))
+      const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
+      console.time('render')
+      el.innerHTML = ''
+      el.appendChild(c)
+      console.timeEnd('render')
+    }
   }
 
   async doMaybeRerender() {
@@ -489,11 +496,12 @@ export default class Waveform extends Vue {
     console.log('scrollTranscriptFromOverview')
     const c = this.$refs.svgContainer as HTMLElement
     const currentSeconds = c.scrollLeft / settings.pixelsPerSecond
-    const e = findEventAt(currentSeconds)
+    const e = this.transcript.findEventAt(currentSeconds)
     if (e !== undefined) {
-      scrollToTranscriptEvent(e)
+      this.transcript.scrollToTranscriptEvent(e)
     }
   }
+
   scrollFromScrollbar(s: number) {
     this.scrollToSecond(s)
   }
@@ -561,7 +569,7 @@ export default class Waveform extends Vue {
   }
 
   scrollToSegment(e?: LocalTranscriptEvent|null) {
-    if (eventStore.playAllFrom !== null) {
+    if (this.transcript.audio !== null && this.transcript.audio.playAllFrom !== null) {
       this.disableAutoScrollDuringPlayback()
     }
     if (e !== null && e !== undefined) {
@@ -574,70 +582,82 @@ export default class Waveform extends Vue {
   }
 
   async initWithCache() {
-    // tslint:disable-next-line:max-line-length
-    const waveformCache = (await localForage.getItem('waveformOverview__' + eventStore.metadata.audioUrl)) as string|null
-    const scrollLeft = localStorage.getItem('scrollPos')
-    if (waveformCache !== null) {
-      const overviewEl = (this.$el.querySelector('.overview-waveform svg') as HTMLElement);
-      overviewEl.innerHTML = waveformCache
-    }
-    this.loading = false
-    const el = this.$refs.svgContainer
-    if (scrollLeft !== null && el instanceof HTMLElement) {
-      el.scrollTo({ left : Number(scrollLeft) })
+    if (this.transcript.audio !== null) {
+      // tslint:disable-next-line:max-line-length
+      const waveformCache = (await localForage.getItem('waveformOverview__' + this.transcript.audio.url)) as string|null
+      const scrollLeft = localStorage.getItem('scrollPos')
+      if (waveformCache !== null) {
+        const overviewEl = this.$el.querySelector('.overview-waveform svg') as HTMLElement
+        overviewEl.innerHTML = waveformCache
+      }
+      this.loading = false
+      const el = this.$refs.svgContainer
+      if (scrollLeft !== null && el instanceof HTMLElement) {
+        el.scrollTo({ left: Number(scrollLeft) })
+      }
     }
   }
 
   async initWithAudio() {
-    if (eventStore.audioElement !== null && !isNaN(eventStore.audioElement.duration)) {
-      this.loading = true
-      this.audioLength = eventStore.audioElement.duration
-      this.totalWidth = this.audioLength * settings.pixelsPerSecond
-      if (audio.store.isLocalFile === true) {
-        this.loading = false
-        await audio.decodeAudioBufferProgressively({
-          buffer: audio.store.uint8Buffer,
-          onProgress: async (chunk: AudioBuffer, from: number, to: number) => {
-            await this.drawOverviewWaveformPiece(from, to, chunk)
-          }
-        })
+    if (this.transcript.audio !== null) {
+      if (await this.hasOverviewCache()) {
+        this.initWithCache()
+        this.doMaybeRerender()
       } else {
-        if (await this.hasOverviewCache()) {
-          await audio.downloadAudioStream({
-            url: eventStore.audioElement.src,
-            onStart: (metadata) => {
-              if (metadata !== null) {
-                eventStore.metadata.audioUrl = metadata.url
-                eventStore.audioMetadata.fileSize = metadata.fileSize
-                eventStore.audioMetadata.length = eventStore.audioElement.duration
-              }
-              this.initWithCache()
-              this.doMaybeRerender()
-            }
-          })
-        } else {
-          await audio.downloadAndDecodeAudioStream({
-            url: eventStore.audioElement.src,
-            onStart: (metadata) => {
-              if (metadata !== null) {
-                eventStore.metadata.audioUrl = metadata.url
-                eventStore.audioMetadata.fileSize = metadata.fileSize
-                eventStore.audioMetadata.length = eventStore.audioElement.duration
-              }
-              this.initWithCache()
-              this.doMaybeRerender()
-            },
-            onProgress: async (chunk: AudioBuffer, from: number, to: number) => {
-              if (!(await this.hasOverviewCache())) {
-                await this.drawOverviewWaveformPiece(from, to, chunk)
-              }
-            }
-          })
-          this.cacheOverviewWaveform()
+        this.transcript.audio.onChunkAvailable = async (start, end, ab) => {
+          await this.drawOverviewWaveformPiece(start, end, ab)
         }
-        console.log('download done.')
       }
     }
+    // if (eventStore.audioElement !== null && !isNaN(eventStore.audioElement.duration)) {
+    //   this.loading = true
+    //   this.audioLength = eventStore.audioElement.duration
+    //   this.totalWidth = this.audioLength * settings.pixelsPerSecond
+    //   if (audio.store.isLocalFile === true) {
+    //     this.loading = false
+    //     await audio.decodeAudioBufferProgressively({
+    //       buffer: audio.store.uint8Buffer,
+    //       onProgress: async (chunk: AudioBuffer, from: number, to: number) => {
+    //         await this.drawOverviewWaveformPiece(from, to, chunk)
+    //       }
+    //     })
+    //   } else {
+    //     if (await this.hasOverviewCache()) {
+    //       await audio.downloadAudioStream({
+    //         url: eventStore.audioElement.src,
+    //         onStart: (metadata) => {
+    //           if (metadata !== null) {
+    //             eventStore.metadata.audioUrl = metadata.url
+    //             eventStore.audioMetadata.fileSize = metadata.fileSize
+    //             eventStore.audioMetadata.length = eventStore.audioElement.duration
+    //           }
+    //           this.initWithCache()
+    //           this.doMaybeRerender()
+    //         }
+    //       })
+    //     } else {
+    //       await audio.downloadAndDecodeAudioStream({
+    //         url: eventStore.audioElement.src,
+    //         onStart: (metadata) => {
+    //           if (metadata !== null) {
+    //             eventStore.metadata.audioUrl = metadata.url
+    //             eventStore.audioMetadata.fileSize = metadata.fileSize
+    //             eventStore.audioMetadata.length = eventStore.audioElement.duration
+    //           }
+    //           this.initWithCache()
+    //           this.doMaybeRerender()
+    //         },
+    //         onProgress: async (chunk: AudioBuffer, from: number, to: number) => {
+    //           if (!(await this.hasOverviewCache())) {
+    //             await this.drawOverviewWaveformPiece(from, to, chunk)
+    //           }
+    //         }
+    //       })
+    //       this.cacheOverviewWaveform()
+    //     }
+    //     console.log('download done.')
+    //   }
+    // }
   }
 
   get amountDrawSegments() {
@@ -666,63 +686,69 @@ export default class Waveform extends Vue {
   }
 
   async drawOverviewWaveformPiece(startTime: number, endTime: number, audioBuffer: AudioBuffer) {
-    const totalDuration = this.audioLength
-    const width = Math.ceil((endTime - startTime) * (this.overviewSvgWidth / totalDuration)) + 1
-    const left = Math.floor((startTime) * (this.overviewSvgWidth / totalDuration))
-    const [svg1, svg2] = await Promise.all([
-      audio.drawWavePathAsync(audioBuffer, width, this.overviewHeight, 0, left),
-      audio.drawWavePathAsync(audioBuffer, width, this.overviewHeight, 1, left)
-    ])
-    await util.requestFrameAsync()
-    const el = (this.$el.querySelector('.overview-waveform svg') as HTMLElement);
-    console.log('drawing overview from to', toTime(startTime), toTime(endTime))
-    el.insertAdjacentHTML(
-      'beforeend',
-      `<path fill="${ settings.waveFormColors[0] }" d="${ svg1 }" />
-       <path fill="${ settings.waveFormColors[1] }" d="${ svg2 }" />`
-    )
+    if (this.transcript.audio) {
+      const totalDuration = this.audioLength
+      const width = Math.ceil((endTime - startTime) * (this.overviewSvgWidth / totalDuration)) + 1
+      const left = Math.floor((startTime) * (this.overviewSvgWidth / totalDuration))
+      const [svg1, svg2] = await Promise.all([
+        this.transcript.audio.drawWavePathAsync(audioBuffer, width, this.overviewHeight, 0, left),
+        this.transcript.audio.drawWavePathAsync(audioBuffer, width, this.overviewHeight, 1, left)
+      ])
+      await util.requestFrameAsync()
+      const el = this.$el.querySelector('.overview-waveform svg') as HTMLElement
+      console.log('drawing overview from to', util.timeFromSeconds(startTime), util.timeFromSeconds(endTime))
+      el.insertAdjacentHTML(
+        'beforeend',
+        `<path fill="${ settings.waveFormColors[0] }" d="${ svg1 }" />
+         <path fill="${ settings.waveFormColors[1] }" d="${ svg2 }" />`
+      )
+    }
   }
 
   async drawWaveFormPiece(i: number) {
-    const isLast = i + 1 === this.amountDrawSegments
-    const secondsPerDrawWidth = this.drawWidth / settings.pixelsPerSecond
-    const from = i * secondsPerDrawWidth
-    const to = isLast ? eventStore.audioMetadata.length : from + secondsPerDrawWidth
-    const width = isLast ? (to - from) * settings.pixelsPerSecond : this.drawWidth
-    const buffer = await audio.getOrFetchAudioBuffer(
-      from,
-      to,
-      eventStore.audioMetadata.fileSize,
-      eventStore.audioMetadata.length,
-      eventStore.audioElement.src
-    )
-
-    console.log({
-      from,
-      to,
-      duration: to - from,
-      drawWidth: this.drawWidth,
-      secondsPerDrawWidth,
-      bufferDuration: buffer.duration,
-      pixelsPerSecond: settings.pixelsPerSecond
-    })
-
-    const svg = await (async () => {
-      if (settings.useMonoWaveForm === true) {
-        return await audio.drawWave(buffer, width, this.height, settings.waveFormColors[1], undefined, true)
-      } else {
-        return (await Promise.all([
-          audio.drawWave(buffer, width, this.height, settings.waveFormColors[0], 0),
-          audio.drawWave(buffer, width, this.height, settings.waveFormColors[1], 1)
-        ])).join('')
+    if (this.transcript.audio !== null) {
+      const isLast = i + 1 === this.amountDrawSegments
+      const secondsPerDrawWidth = this.drawWidth / settings.pixelsPerSecond
+      const from = i * secondsPerDrawWidth
+      const to = isLast ? this.transcript.audio.duration : from + secondsPerDrawWidth
+      const width = isLast ? (to - from) * settings.pixelsPerSecond : this.drawWidth
+      const buffer = await this.transcript.audio.getOrFetchAudioBuffer(
+        from,
+        to,
+        this.transcript.audio.fileSize,
+        this.transcript.audio.duration,
+        this.transcript.audio.url
+      )
+      // console.log({
+      //   from,
+      //   to,
+      //   duration: to - from,
+      //   drawWidth: this.drawWidth,
+      //   secondsPerDrawWidth,
+      //   bufferDuration: buffer.duration,
+      //   pixelsPerSecond: settings.pixelsPerSecond
+      // })
+      const svg = await (async () => {
+        if (settings.useMonoWaveForm === true) {
+          if (this.transcript.audio !== null) {
+            return await this.transcript.audio.drawWaveSvg(buffer, width, this.height, settings.waveFormColors[1], undefined, true)
+          }
+        } else {
+          if (this.transcript.audio !== null) {
+            return (await Promise.all([
+              this.transcript.audio.drawWaveSvg(buffer, width, this.height, settings.waveFormColors[0], 0),
+              this.transcript.audio.drawWaveSvg(buffer, width, this.height, settings.waveFormColors[1], 1)
+            ])).join('')
+          }
+        }
+      })()
+      if (this.$refs.svgContainer instanceof HTMLElement) {
+        requestAnimationFrame(() => {
+          const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
+          el.innerHTML = svg
+          el.style.width = `${(to - from) * settings.pixelsPerSecond}px`
+        })
       }
-    })()
-    if (this.$refs.svgContainer instanceof HTMLElement) {
-      requestAnimationFrame(() => {
-        const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
-        el.innerHTML = svg
-        el.style.width = `${(to - from) * settings.pixelsPerSecond}px`
-      })
     }
   }
 }

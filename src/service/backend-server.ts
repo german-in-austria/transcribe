@@ -3,17 +3,18 @@ import PromiseWorker from 'promise-worker-transferable'
 
 import {
   LocalTranscriptEvent,
-  eventStore,
+  // eventStore,
   LocalTranscript,
-  timeToSeconds,
   LocalTranscriptTier,
   LocalTranscriptSpeakerEventTiers,
-  TokenTierType,
-  removeBrokenFragmentLinks
+  TokenTierType
 } from '../store/transcript'
-import { clone, getTextWidth } from '../util'
+import { clone, timeToSeconds } from '../util'
 import ServerTranscriptDiff from './backend-server-transcript-diff.worker'
 import settings from '../store/settings'
+import Transcript from './transcript.class'
+import EventService from './event-service'
+import store from '@/store'
 
 type ServerTranscriptId = number
 
@@ -819,20 +820,19 @@ function logServerResponse(req: ServerTranscriptSaveRequest, res: ServerTranscri
 
 // also changes metadata: tiers.
 export async function saveChangesToServer(
-  es: LocalTranscriptEvent[],
+  transcript: Transcript,
   surveyId = null,
   defaultTier = null,
   name = null
 ): Promise<LocalTranscriptEvent[]> {
-  es = removeBrokenFragmentLinks(es)
-  eventStore.events = es
+  transcript.events = EventService.removeBrokenFragmentLinks(transcript.events)
   // there’s no transcript or no id => throw
   if (serverTranscript === null || serverTranscript.aTranskript === undefined) {
     throw new Error('transcript id is undefined')
   } else {
     // it’s already on the server
     if (serverTranscript.aTranskript.pk > -1) {
-      const t = await localTranscriptToServerSaveRequest(serverTranscript, es)
+      const t = await localTranscriptToServerSaveRequest(serverTranscript, transcript.events)
       console.log({ ServerTranscriptSaveRequest: t })
       const serverChanges = await performSaveRequest(serverTranscript.aTranskript.pk, t)
       console.log({ serverChanges })
@@ -841,7 +841,7 @@ export async function saveChangesToServer(
       console.log({ updatedServerTranscript })
       const updatedLocalTranscript = serverTranscriptToLocal(
         updatedServerTranscript,
-        eventStore.metadata.defaultTier || 'text'
+        transcript.meta.defaultTier || 'text'
       )
       // eventStore.events = updatedLocalTranscript
       return updatedLocalTranscript
@@ -864,18 +864,18 @@ export async function saveChangesToServer(
         aTokens: {},
         aEvents: []
       }
-      const t = await localTranscriptToServerSaveRequest(transcriptWithoutTokensAndEvents, eventStore.events)
+      const t = await localTranscriptToServerSaveRequest(transcriptWithoutTokensAndEvents, transcript.events)
       const serverChanges = await performSaveRequest(transcript_id, t)
       logServerResponse(t, serverChanges)
       const updatedServerTranscript = updateServerTranscriptWithChanges(transcriptWithoutTokensAndEvents, serverChanges)
       console.log({ updatedServerTranscript })
       const updatedLocalTranscript = serverTranscriptToLocal(
         updatedServerTranscript,
-        eventStore.metadata.defaultTier || 'text'
+        transcript.meta.defaultTier || 'text'
       )
       console.log({ updatedLocalTranscript })
       const { tiers } = getMetadataFromServerTranscript(serverTranscript)
-      eventStore.metadata.tiers = tiers
+      transcript.meta.tiers = tiers
       serverTranscript.aTranskript!.pk = transcript_id
       // eventStore.events = updatedLocalTranscript
       return updatedLocalTranscript
@@ -912,16 +912,17 @@ function appendTranscriptEventChunk(a: LocalTranscriptEvent[], b: LocalTranscrip
   }
 }
 
-export async function getTranscript(
+export async function fetchTranscript(
   id: number,
+  backEndUrl: string,
+  transcript: Transcript,
   onProgress: (v: number, es: LocalTranscriptEvent[], res: ServerTranscript) => any,
   chunk = 0,
-  buffer: LocalTranscript = [],
-  totalSteps?: number,
-): Promise<LocalTranscript> {
+  totalSteps?: number
+): Promise<Transcript> {
   try {
     // download transcript page
-    const res = await (await fetch(`${ settings.backEndUrl }/routes/transcript/${ id }/${ chunk }`, {
+    const res = await (await fetch(`${ backEndUrl }/routes/transcript/${ id }/${ chunk }`, {
       credentials: 'include'
     })).json() as ServerTranscript
 
@@ -930,34 +931,38 @@ export async function getTranscript(
 
     // when it’s the first page, get its metadata
     if (res.aNr === 0) {
-      eventStore.metadata = getMetadataFromServerTranscript(res)
+      transcript.meta = {
+        ...getMetadataFromServerTranscript(res),
+        lockedTokens: getLockedTokensFromServerTranscript(res)
+      }
     }
 
-    // get and concat the locked tokens
-    eventStore.lockedTokens = eventStore.lockedTokens.concat(getLockedTokensFromServerTranscript(res))
+    // get and concatenate the locked tokens
+    transcript.meta.lockedTokens = transcript.meta.lockedTokens.concat(getLockedTokensFromServerTranscript(res))
 
-    const eventChunk = serverTranscriptToLocal(res, eventStore.metadata.defaultTier || 'text')
+    const eventChunk = serverTranscriptToLocal(res, transcript.meta.defaultTier || 'text')
     // update the store
-    eventStore.events = appendTranscriptEventChunk(eventStore.events, eventChunk)
+    transcript.events = appendTranscriptEventChunk(transcript.events, eventChunk)
     // progress callback with data
     if (onProgress !== undefined) {
-      onProgress(res.aNr / (totalSteps || res.aTmNr || 10), eventStore.events, res)
+      onProgress(res.aNr / (totalSteps || res.aTmNr || 10), transcript.events, res)
     }
     // get next (recursion) or finish
     if (res.nNr > res.aNr) {
-      return getTranscript(
+      return fetchTranscript(
         id,
+        backEndUrl,
+        transcript,
         onProgress,
         chunk + 1,
-        eventStore.events,
         totalSteps || res.aTmNr
       )
     } else {
-      eventStore.status = 'finished'
-      return buffer
+      store.status = 'finished'
+      return transcript
     }
   } catch (e) {
     console.error(e)
-    return buffer
+    return transcript
   }
 }

@@ -39,23 +39,17 @@
 
 <script lang="ts">
 
-import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import { Vue, Component, Watch } from 'vue-property-decorator'
 import SegmentTranscript from './SegmentTranscript.vue'
 import SpeakerPanel from './SpeakerPanel.vue'
 import Scrollbar from './Scrollbar.vue'
 import settings from '../store/settings'
 import _ from 'lodash'
 import EventBus from '../service/event-bus'
-// tslint:disable-next-line:max-line-length
 
-import {
-  eventStore,
-  LocalTranscriptEvent,
-  isEventSelected,
-  findEventIndexById,
-  findEventIndexAt
-} from '../store/transcript'
+import { LocalTranscriptEvent } from '../store/transcript'
 import { getTextWidth } from '../util'
+import store from '@/store'
 
 const defaultLimit = 20
 
@@ -68,17 +62,17 @@ const defaultLimit = 20
 })
 export default class TranscriptEditor extends Vue {
 
-  eventStore = eventStore
+  transcript = store.transcript!
   innerLeft = 0
   currentIndex = 0
   lastScrollLeft = 0
   visibleEvents = this.getEventRange(this.currentIndex, this.currentIndex + defaultLimit)
 
   throttledRenderer = _.throttle(this.updateList, 100)
-  isEventSelected = isEventSelected
+  isEventSelected = this.transcript.isEventSelected
 
   get transcriptHasSpeakers(): boolean {
-    return Object.values(this.eventStore.metadata.speakers).length > 0
+    return Object.values(this.transcript.meta.speakers).length > 0
   }
 
   setInnerLeft(l: number) {
@@ -92,8 +86,8 @@ export default class TranscriptEditor extends Vue {
     // this is a very hot code path, so we optimize and don’t use .filter.
     const r = []
     for (let i = 0; i <= end - start; i++) {
-      if (eventStore.events[start + i] !== undefined) {
-        r[i] = eventStore.events[start + i]
+      if (this.transcript.events[start + i] !== undefined) {
+        r[i] = this.transcript.events[start + i]
       }
     }
     return r
@@ -114,7 +108,7 @@ export default class TranscriptEditor extends Vue {
   // tslint:disable-next-line:max-line-length
   doScrollToEvent(e: LocalTranscriptEvent, animate = true, focusSpeaker: number|null = null, focusTier: string|null, focusRight: boolean) {
     // right in the middle
-    const i = findEventIndexById(e.eventId) - Math.floor(defaultLimit / 2)
+    const i = this.transcript.findEventIndexById(e.eventId) - Math.floor(defaultLimit / 2)
     this.currentIndex = Math.max(0, i)
     this.visibleEvents = this.getEventRange(this.currentIndex, this.currentIndex + defaultLimit)
     this.$nextTick(() => {
@@ -134,7 +128,7 @@ export default class TranscriptEditor extends Vue {
           this.setInnerLeft(el.offsetLeft * -1 + c.clientWidth / 2 - el.clientWidth / 2 - 25)
           if (focusSpeaker !== null) {
             // tslint:disable-next-line:max-line-length
-            const speakerEvent = el.querySelector(`#speaker_event_tier_${focusSpeaker}__${focusTier || eventStore.metadata.defaultTier}`) as HTMLElement
+            const speakerEvent = el.querySelector(`#speaker_event_tier_${focusSpeaker}__${focusTier || this.transcript.meta.defaultTier}`) as HTMLElement
             speakerEvent.focus()
             if (focusRight === true) {
               const range = document.createRange()
@@ -152,13 +146,13 @@ export default class TranscriptEditor extends Vue {
     })
   }
 
-  @Watch('eventStore.events')
+  @Watch('transcript.events')
   onUpdateSpeakerEvents() {
     this.visibleEvents = this.getEventRange(this.currentIndex, this.currentIndex + defaultLimit)
   }
 
   get lastEventStartTime() {
-    const lastEvent = _(eventStore.events).last()
+    const lastEvent = _(this.transcript.events).last()
     return lastEvent ? lastEvent.startTime : 0
   }
 
@@ -179,7 +173,7 @@ export default class TranscriptEditor extends Vue {
   }
 
   async scrollToSecond(seconds: number) {
-    const i = findEventIndexAt(seconds)
+    const i = this.transcript.findEventIndexAt(seconds)
     if (i !== -1) {
       if (i !== this.currentIndex) {
         this.visibleEvents = this.getEventRange(i, i + defaultLimit)
@@ -210,7 +204,7 @@ export default class TranscriptEditor extends Vue {
   }
 
   async debouncedEmitScroll() {
-    const [firstVisibleEvent, innerOffset, width] = await this.findFirstVisibleEventAndDimensions()
+    const [firstVisibleEvent, innerOffset, width] = this.findFirstVisibleEventAndDimensions()
     if (firstVisibleEvent) {
       const eventLength = firstVisibleEvent.endTime - firstVisibleEvent.startTime
       const progressFactor = innerOffset / width
@@ -221,7 +215,7 @@ export default class TranscriptEditor extends Vue {
 
   getLongestSpeakerText(e: LocalTranscriptEvent): string[]|undefined {
     return _(e.speakerEvents)
-      .map(se => se.tokens.map(t => t.tiers[eventStore.metadata.defaultTier].text))
+      .map(se => se.tokens.map(t => t.tiers[this.transcript.meta.defaultTier].text))
       .sortBy(ts => ts.length)
       .last()
   }
@@ -230,7 +224,7 @@ export default class TranscriptEditor extends Vue {
     const totalPadding = 20
     const longestText = this.getLongestSpeakerText(e)
     if (longestText !== undefined) {
-      return  Math.max(getTextWidth(longestText.join(' '), 14, 'HKGrotesk') + totalPadding, 146)
+      return Math.max(getTextWidth(longestText.join(' '), 14, 'HKGrotesk') + totalPadding, 146)
     } else {
       return 0
     }
@@ -241,9 +235,9 @@ export default class TranscriptEditor extends Vue {
       // SCROLL LEFT TO RIGHT
       if (
         this.innerLeft <= -1500 &&
-        this.currentIndex + defaultLimit + 1 < this.eventStore.events.length
+        this.currentIndex + defaultLimit + 1 < this.transcript.events.length
       ) {
-        const removedEvent = eventStore.events[this.currentIndex]
+        const removedEvent = this.transcript.events[this.currentIndex]
         const removedEventWidth = this.getEventWidth(removedEvent)
         this.setInnerLeft(this.innerLeft + removedEventWidth)
         this.currentIndex = this.currentIndex + 1
@@ -257,7 +251,7 @@ export default class TranscriptEditor extends Vue {
         this.innerLeft >= -200 &&
         this.currentIndex > 0
       ) {
-        const addedEvent = eventStore.events[this.currentIndex - 1]
+        const addedEvent = this.transcript.events[this.currentIndex - 1]
         const addedEventWidth = this.getEventWidth(addedEvent)
         this.setInnerLeft(this.innerLeft - addedEventWidth)
         this.currentIndex = this.currentIndex - 1
@@ -270,7 +264,7 @@ export default class TranscriptEditor extends Vue {
     if (
       (timesCalled <= defaultLimit) &&
       (this.innerLeft <= -1500 || this.innerLeft >= -200) &&
-      (this.currentIndex > 0 && this.currentIndex + defaultLimit + 1 < this.eventStore.events.length)
+      (this.currentIndex > 0 && this.currentIndex + defaultLimit + 1 < this.transcript.events.length)
     ) {
       this.updateList(leftToRight, timesCalled + 1)
     }
