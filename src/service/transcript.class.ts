@@ -502,7 +502,7 @@ export default class Transcript extends EventService {
       endTime: atTime + length,
       eventId: newId,
       speakerEvents: {}
-      // OR: _.mapValues(eventStore.metadata.speakers, () => makeSpeakerEvent(newId))
+      // OR: _.mapValues(transcript.meta.speakers, () => makeSpeakerEvent(newId))
     }
     if (nextEvent !== undefined) {
       const i = this.findEventIndexById(nextEvent.eventId)

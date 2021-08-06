@@ -48,7 +48,7 @@ export async function drawSpectrogramAsync(
   return [canvas, f]
 }
 
-async function drawWavePathAsync(
+export async function drawWavePathAsync(
   buffer: AudioBuffer,
   width: number,
   height: number,
@@ -65,7 +65,7 @@ async function drawWavePathAsync(
   }
 }
 
-function drawWavePath(buffer: AudioBuffer, width: number, height: number, channel = 0, offsetLeft = 0) {
+export function drawWavePath(buffer: AudioBuffer, width: number, height: number, channel = 0, offsetLeft = 0) {
   // based on drawWave.js
   let upperHalf = ''
   let lowerHalf = ''
@@ -92,7 +92,7 @@ function drawWavePath(buffer: AudioBuffer, width: number, height: number, channe
   return upperHalf + lowerHalf + 'Z'
 }
 
-async function drawWaveSvg(
+export async function drawWaveSvg(
   buffer: AudioBuffer,
   width: number,
   height: number,

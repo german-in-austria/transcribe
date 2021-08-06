@@ -55,7 +55,7 @@
 </template>
 <script lang="ts">
 import { Vue, Component, Prop } from 'vue-property-decorator'
-import audio from '../service/audio'
+// import audio from '../service/audio'
 import segmentTranscript from './SegmentTranscript.vue'
 import { LocalTranscriptEvent } from '../store/transcript'
 import Transcript from '@/service/transcript.class'

@@ -2,8 +2,9 @@ import _ from 'lodash'
 
 import { LocalTranscriptToken } from '../store/transcript'
 
-import store from '@/store'
 import Transcript from './transcript.class'
+import store from '@/store'
+console.log(store)
 
 const transcript = store.transcript || new Transcript()
 
@@ -251,7 +252,7 @@ export function insertTokensAfterTokenIndex(
   index: number,
   tokenTiers: Array<Pastable<LocalTranscriptToken['tiers']>>
 ) {
-  const tsCopy = [...tokens]
+  const tsCopy = [ ...tokens ]
   tsCopy.splice(index, 0, ...pastableTiersToTokens(tokenTiers))
   return tsCopy
 }

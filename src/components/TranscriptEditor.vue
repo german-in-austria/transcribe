@@ -9,7 +9,7 @@
         @wheel="handleMousewheel"
         ref="tracks"
         class="tracks"
-        v-if="eventStore.events.length">
+        v-if="transcript.events.length">
         <div ref="inner" class="transcript-segments-inner">
           <segment-transcript
             v-for="event in visibleEvents"
@@ -30,7 +30,7 @@
   </v-layout>
   <v-layout class="text-center" v-else>
     <v-btn
-      @click="eventStore.userState.showSpeakerTierEditModal = true"
+      @click="transcript.uiState.showTranscriptMetaSettings = true"
       class="elevation-0 text-lowercase ma-auto mt-5 white--text"
       color="grey darken-2"
       small>Set up Survey or add Speaker(s)</v-btn>

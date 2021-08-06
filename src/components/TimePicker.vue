@@ -3,7 +3,8 @@
     <v-card-text class="pa-5 text-xs-center">
       <input
         autofocus
-        :value="toTime(eventStore.currentTime)"
+        v-if="transcript.audio !== null"
+        :value="toTime(transcript.audio.currentTime)"
         @input="jumpToTime($event.target.value)"
         @keydown.enter="$emit('close')"
         @keydown.esc="$emit('close')"

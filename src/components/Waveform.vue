@@ -119,12 +119,13 @@ import scrollLockButton from './ScrollLockButton.vue'
 import scrollbar from './Scrollbar.vue'
 import segmentBox from './SegmentBox.vue'
 
-import settings, { minPixelsPerSecond, maxPixelsPerSecond } from '../store/settings'
-import { mutation } from '../store/history'
-import * as util from '../util'
-import EventBus from '../service/event-bus'
+import settings, { minPixelsPerSecond, maxPixelsPerSecond } from '@/store/settings'
+import { mutation } from '@/store/history'
+import * as util from '@/util'
+import EventBus from '@/service/event-bus'
+import { drawWaveSvg, drawWavePathAsync, drawSpectrogramAsync } from '@/service/audio-visualizer.service'
+import { LocalTranscriptEvent } from '@/store/transcript'
 
-import { LocalTranscriptEvent } from '../store/transcript'
 import store from '@/store'
 
 const queue = new Queue({
@@ -210,7 +211,7 @@ export default class Waveform extends Vue {
     settings.lockScroll = v
   }
 
-  @Watch('eventStore.events')
+  @Watch('transcript.events')
   async onEventsChange(newEs: LocalTranscriptEvent[]) {
     this.visibleEvents = this.getVisibleEvents(boundLeft, boundRight, newEs)
   }
@@ -418,7 +419,7 @@ export default class Waveform extends Vue {
         this.transcript.audio.url
       )
       const width = isLast ? (to - from) / secondsPerDrawWidth : this.drawWidth
-      const [ c ] = (await this.transcript.audio.drawSpectrogramAsync(buffer, width, this.height))
+      const [ c ] = (await drawSpectrogramAsync(buffer, width, this.height))
       const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
       console.time('render')
       el.innerHTML = ''
@@ -691,8 +692,8 @@ export default class Waveform extends Vue {
       const width = Math.ceil((endTime - startTime) * (this.overviewSvgWidth / totalDuration)) + 1
       const left = Math.floor((startTime) * (this.overviewSvgWidth / totalDuration))
       const [svg1, svg2] = await Promise.all([
-        this.transcript.audio.drawWavePathAsync(audioBuffer, width, this.overviewHeight, 0, left),
-        this.transcript.audio.drawWavePathAsync(audioBuffer, width, this.overviewHeight, 1, left)
+        drawWavePathAsync(audioBuffer, width, this.overviewHeight, 0, left),
+        drawWavePathAsync(audioBuffer, width, this.overviewHeight, 1, left)
       ])
       await util.requestFrameAsync()
       const el = this.$el.querySelector('.overview-waveform svg') as HTMLElement
@@ -731,13 +732,13 @@ export default class Waveform extends Vue {
       const svg = await (async () => {
         if (settings.useMonoWaveForm === true) {
           if (this.transcript.audio !== null) {
-            return await this.transcript.audio.drawWaveSvg(buffer, width, this.height, settings.waveFormColors[1], undefined, true)
+            return await drawWaveSvg(buffer, width, this.height, settings.waveFormColors[1], undefined, true)
           }
         } else {
           if (this.transcript.audio !== null) {
             return (await Promise.all([
-              this.transcript.audio.drawWaveSvg(buffer, width, this.height, settings.waveFormColors[0], 0),
-              this.transcript.audio.drawWaveSvg(buffer, width, this.height, settings.waveFormColors[1], 1)
+              drawWaveSvg(buffer, width, this.height, settings.waveFormColors[0], 0),
+              drawWaveSvg(buffer, width, this.height, settings.waveFormColors[1], 1)
             ])).join('')
           }
         }
@@ -745,7 +746,7 @@ export default class Waveform extends Vue {
       if (this.$refs.svgContainer instanceof HTMLElement) {
         requestAnimationFrame(() => {
           const el = (this.$el.querySelector('.draw-segment-' + i) as HTMLElement)
-          el.innerHTML = svg
+          el.innerHTML = svg || ''
           el.style.width = `${(to - from) * settings.pixelsPerSecond}px`
         })
       }

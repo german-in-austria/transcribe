@@ -5,7 +5,6 @@ import localForage from 'localforage'
 import { makeGradient, Color } from '../lib/gradient'
 import { setNumberInBounds, platform } from '../util'
 import { KeyboardShortcuts, keyboardShortcuts, KeyboardAction } from '../service/keyboard'
-import { eventStore } from './transcript'
 import { ProjectPresets } from '@/presets'
 
 type JSONValue = string | number | boolean | null | JSONObject | JSONArray

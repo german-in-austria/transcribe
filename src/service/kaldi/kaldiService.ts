@@ -1,4 +1,5 @@
-import { sumChannels } from "../audio"
+
+import TranscriptAudio from '../transcript-audio.class'
 import trackedDownload from './utils/downloadModel.js'
 import AsrHandler from './workerWrappers/asrHandler.js'
 import ResamplerHandler from './workerWrappers/resamplerHandler.js'
@@ -22,7 +23,7 @@ export default {
     const sampleRate = buffer.sampleRate
     console.log({ targetSampleRate, sampleRate })
     // convert the PCM format from Stereo Float 32 to Mono Int 16
-    const audioData = sumChannels(buffer.getChannelData(0), buffer.getChannelData(1))
+    const audioData = TranscriptAudio.sumChannels(buffer.getChannelData(0), buffer.getChannelData(1))
     const y = await resampleHandler.resample(audioData)
     await asrHandler.process(y)
     const x = await asrHandler.reset()

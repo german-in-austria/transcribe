@@ -38,9 +38,7 @@ import SpeakerSegmentTranscript from './SpeakerSegmentTranscript.vue'
 import _ from 'lodash'
 
 import {
-  eventStore,
-  LocalTranscriptEvent,
-  playEvent
+  LocalTranscriptEvent
 } from '../store/transcript'
 
 import settings from '../store/settings'
@@ -60,13 +58,13 @@ export default class SegmentTranscript extends Vue {
   transcript = store.transcript!
   offsetWidth = 0
   selectOrDeselectEvent = this.transcript.selectOrDeselectEvent
-  playEvent = playEvent
+  playEvent = this.transcript.audio?.playEvent
   toTime = timeFromSeconds
   settings = settings
   selectEventRange = this.transcript.selectEventRange
 
   get speakerHeight() {
-    return eventStore.metadata.tiers.filter(t => t.show === true).length * 25 + 'px'
+    return this.transcript.meta.tiers.filter(t => t.show === true).length * 25 + 'px'
   }
 
   get hasFragmentOfInAnyFirstToken(): boolean {
@@ -79,9 +77,7 @@ export default class SegmentTranscript extends Vue {
     return (
       this.event !== null &&
       this.event !== undefined &&
-      eventStore.userState.viewingTranscriptEvent !== null &&
-      eventStore.userState.viewingTranscriptEvent !== undefined &&
-      eventStore.userState.viewingTranscriptEvent.eventId === this.event.eventId
+      this.transcript.uiState.highlightedEventIds.indexOf(this.event.eventId) > -1
     )
   }
 

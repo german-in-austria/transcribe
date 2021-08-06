@@ -112,7 +112,7 @@ export default class SearchResults extends Vue {
     }
   }
 
-  @Watch('eventStore.searchResults')
+  @Watch('transcript.uiState.searchResults')
   onResultsChange() {
     this.drawResults()
   }

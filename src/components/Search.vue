@@ -113,7 +113,6 @@ import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import _ from 'lodash'
 import eventBus from '../service/event-bus'
 import * as history from '../store/history'
-import { createMediaFragmentUrl } from '../service/audio'
 import settings from '../store/settings'
 import presets from '../presets'
 import { RecycleScroller } from 'vue-virtual-scroller'
@@ -131,6 +130,7 @@ import {
 import { timeFromSeconds } from '@/util'
 import store from '@/store'
 import EventService from '@/service/event-service'
+import TranscriptAudio from '@/service/transcript-audio.class'
 
 @Component({
   components: {
@@ -244,7 +244,7 @@ export default class Search extends Vue {
         left_context: prev !== undefined ? EventService.getTextFromTier(prev, res.tierId, res.speakerId) : '',
         content: res.text,
         right_context: next !== undefined ? EventService.getTextFromTier(next, res.tierId, res.speakerId) : '',
-        event_audio: this.transcript.audio ? createMediaFragmentUrl(this.transcript.audio.url, res.event) : ''
+        event_audio: this.transcript.audio ? TranscriptAudio.createMediaFragmentUrl(this.transcript.audio.url, res.event) : ''
       }
     })
     const sheet = xlsx.utils.json_to_sheet(rows)
@@ -371,7 +371,7 @@ export default class Search extends Vue {
     return r
   }
 
-  @Watch('eventStore.events')
+  @Watch('transcript.events')
   onUpdateEvents() {
     this.handleSearch(this.transcript.uiState.searchTerm)
   }

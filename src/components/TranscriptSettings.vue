@@ -167,7 +167,6 @@ export default class TranscriptSettings extends Vue {
     ) {
       this.transcript.meta.tiers = this.tiers
       this.transcript.meta.transcriptName = this.basicInfos.transcriptName
-      // this.eventStore.metadata.speakers = this.speakers
       // it’s a new transcript
       if (
         this.serverTranscript?.aTranskript?.pk === undefined &&
