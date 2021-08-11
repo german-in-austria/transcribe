@@ -133,7 +133,7 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import settings from '../store/settings'
+import settings from '../store/settings.store'
 import SettingsKeyboardShortcuts from './SettingsKeyboardShortcuts.vue'
 import SettingsTokenTypes from './SettingsTokenTypes.vue'
 import { makeGradient } from '../lib/gradient'

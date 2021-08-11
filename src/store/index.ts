@@ -1,13 +1,11 @@
-import { ServerTranscriptListItem } from '@/service/backend-server'
-import { LocalTranscriptListItem } from '@/service/disk'
-import Transcript from '@/service/transcript.class'
-import { history } from '@/store/history'
-import settings from '@/store/settings'
+import { ServerTranscriptListItem } from '@/service/backend-server.service'
+import { LocalTranscriptListItem } from '@/service/disk.service'
+import Transcript from '@/classes/transcript.class'
 
-export default {
+const store = {
   status: 'empty' as 'empty'|'loading'|'finished'|'new',
   transcript: null as Transcript|null,
-  allTranscripts: null as ServerTranscriptListItem[]|LocalTranscriptListItem[]|null,
-  history,
-  settings
+  allTranscripts: null as ServerTranscriptListItem[]|LocalTranscriptListItem[]|null
 }
+
+export default store

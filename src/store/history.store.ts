@@ -1,11 +1,10 @@
 import _ from 'lodash'
-import { LocalTranscriptEvent } from './transcript'
+import { TranscriptEvent } from '../types/transcript'
 import { isUndoOrRedo } from '../util'
 import { isWaveformEventVisible } from '../service/dom.service'
 import { sendMessage } from '../service/socket'
-import { serverTranscript } from '../service/backend-server'
 import store from '@/store'
-import Transcript from '@/service/transcript.class'
+import Transcript from '@/classes/transcript.class'
 const transcript = store.transcript || new Transcript()
 
 type HistoryApplicationType = 'UNDO'|'REDO'|'DO'|'JUMPTOSTATE'
@@ -15,8 +14,8 @@ export interface HistoryEventAction {
   type: 'RESIZE'|'DELETE'|'CHANGE_TOKENS'|'ADD'|'JOIN'|'SPLIT'
   apply: boolean
   time: Date
-  before: LocalTranscriptEvent[]
-  after: LocalTranscriptEvent[]
+  before: TranscriptEvent[]
+  after: TranscriptEvent[]
 }
 
 export type AutoSaver = () => Promise<any>
@@ -146,19 +145,18 @@ export function jumpToState(action: HistoryEventAction, shouldAutoSave?: boolean
   }
 }
 
-function notifyPeers(a: HistoryEventAction|HistoryEventAction[]|number, t: HistoryApplicationType) {
-  sendMessage({
-    type: 'transcript_action',
-    app: 'transcribe',
-    action: [t, a],
-    transcript_id: (() => {
-      if (serverTranscript && serverTranscript.aTranskript && serverTranscript.aTranskript.pk) {
-        return serverTranscript.aTranskript.pk
-      } else {
-        return -1
-      }
-    })()
-  })
+function notifyPeers(
+  a: HistoryEventAction|HistoryEventAction[]|number,
+  t: HistoryApplicationType
+) {
+  if (transcript !== null) {
+    sendMessage({
+      type: 'transcript_action',
+      app: 'transcribe',
+      action: [t, a],
+      transcript_id: String(transcript.key)
+    })
+  }
 }
 
 function undoAction(a: HistoryEventAction) {
@@ -186,7 +184,7 @@ export function undo(shouldAutoSave?: boolean): HistoryEventAction|undefined {
 }
 
 export function redo(shouldAutoSave?: boolean): HistoryEventAction|undefined {
-  // find the most recent undone action.
+  // find the most recently undone action.
   const a = history.actions.find(ac => ac.apply === false)
   if (a !== undefined) {
     redoAction(a)
@@ -211,11 +209,11 @@ export function triggerDebouncedSaver() {
   )
 }
 
-export function mutation(action: HistoryEventAction|HistoryEventAction[]|undefined): LocalTranscriptEvent[] {
+export function mutation(action: HistoryEventAction|HistoryEventAction[]|undefined): TranscriptEvent[] {
   // when doing an undoable thing,
   // all things that have been undone before
-  // are not re-doable anymore, and are deleted.
-  // the new undoable action is appended.
+  // are not re-doable anymore, and thus are
+  // deleted. the new undoable action is appended.
   if (action !== undefined) {
     // trigger de-bouncer
     triggerDebouncedSaver()

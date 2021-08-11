@@ -1,8 +1,8 @@
 import {
-  LocalTranscriptEvent,
-  LocalTranscriptToken,
+  TranscriptEvent,
+  TranscriptToken,
   TokenTierType
-} from '../store/transcript'
+} from '../types/transcript'
 
 import {
   ServerEvent,
@@ -12,7 +12,7 @@ import {
   ServerTranscript,
   ServerTranscriptSaveRequest,
   SaveRequest
-} from '../service/backend-server'
+} from './backend-server.service'
 
 const registerPromiseWorker = require('promise-worker-transferable/register')
 const textDecoder = new TextDecoder('utf-8')
@@ -59,9 +59,9 @@ function replaceLastOccurrence(token: string, toReplace: string, replaceWith: st
 }
 
 function getTokenTextWithFragments(
-  t: LocalTranscriptToken,
+  t: TranscriptToken,
   speakerId: string,
-  es: LocalTranscriptEvent[],
+  es: TranscriptEvent[],
   defaultTier: TokenTierType
 ): string {
   // find the event that should come immediately after
@@ -135,7 +135,7 @@ function markEventTierUpdateStatus(newEvent: ServerEvent, oldEvent: ServerEvent)
 registerPromiseWorker((message: {oldT: ArrayBuffer, newT: ArrayBuffer}, withTransferList: (...args: any[]) => any): [ServerTranscriptSaveRequest, ServerTranscript] => {
   const { oldT, newT } = message
   const oldTranscript = JSON.parse(textDecoder.decode(oldT)) as ServerTranscript
-  const localTranscript = JSON.parse(textDecoder.decode(newT)) as LocalTranscriptEvent[]
+  const localTranscript = JSON.parse(textDecoder.decode(newT)) as TranscriptEvent[]
   const defaultTier = oldTranscript.aTranskript!.default_tier || 'text'
 
   const newServerEvents: ServerEvent[] = []

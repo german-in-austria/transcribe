@@ -66,7 +66,7 @@
     "@types/compression": "^1.0.1",
     "@types/cookie-session": "^2.0.37",
     "@types/diff": "^4.0.2",
-    "@types/express": "^4.17.2",
+    "@types/express": "^4.17.13",
     "@types/jszip": "3.1.5",
     "@types/lodash": "^4.14.165",
     "@types/lodash-es": "^4.17.3",
@@ -92,6 +92,7 @@
     "@vue/test-utils": "^1.0.3",
     "arraybuffer-loader": "^1.0.6",
     "chai": "^4.1.2",
+    "circular-dependency-plugin": "^5.2.2",
     "cypress": "^7.7.0",
     "eslint": "^6.8.0",
     "eslint-config-prettier": "^6.15.0",
@@ -107,10 +108,10 @@
     "prettier-eslint": "^11.0.0",
     "stylus": "^0.54.8",
     "stylus-loader": "^3.0.2",
-    "typescript": "~3.9.3",
+    "typescript": "^3.9.10",
     "vue-template-compiler": "^2.6.12",
-    "vue-type-check": "^1.0.0",
+    "vue-type-check": "^1.1.0",
     "webpack-bundle-analyzer": "^4.1.0",
-    "worker-loader": "^3.0.5"
+    "worker-loader": "^3.0.8"
   }
 }

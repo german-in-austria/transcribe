@@ -17,8 +17,9 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import DropFile from './DropFile.vue'
 import { createFFmpeg, fetchFile } from '@ffmpeg/ffmpeg'
-import { loadAudioFromFile } from '@/store/transcript'
+import store from '@/store'
 import { timeToSeconds, timeFromSeconds } from '@/util'
+import TranscriptAudio from '@/classes/transcript-audio.class'
 
 @Component({
   components: {
@@ -33,6 +34,7 @@ export default class DropAudioFile extends Vue {
   speed = 0
   loadingFFMpeg = false
   toTime = timeFromSeconds
+  transcript = store.transcript!
 
   processLog(arg: { message: string, type: string }) {
     const durationLog = /(?:Duration: )([0-9|:|.]+)(,)/.exec(arg.message)
@@ -56,7 +58,7 @@ export default class DropAudioFile extends Vue {
   async onSelectAudioFile(f: File) {
     console.log({ f })
     if (f.type === 'audio/ogg') {
-      loadAudioFromFile(f)
+      this.transcript.audio = new TranscriptAudio(f)
     } else {
       const ffmpeg = createFFmpeg({ logger: this.processLog, corePath: 'ffmpeg/ffmpeg-core.js' })
       const { name } = f
@@ -65,7 +67,7 @@ export default class DropAudioFile extends Vue {
       ffmpeg.FS('writeFile', name, await fetchFile(f))
       await ffmpeg.run('-i', name, 'output.ogg')
       const data = ffmpeg.FS('readFile', 'output.ogg') as Uint8Array
-      loadAudioFromFile(data)
+      this.transcript.audio = new TranscriptAudio(data)
     }
   }
 }

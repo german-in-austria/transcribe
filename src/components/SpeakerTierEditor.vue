@@ -82,18 +82,19 @@
 </template>
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { LocalTranscriptTier, LocalTranscriptSpeakers, LocalTranscriptSpeaker } from '../store/transcript'
+import { TranscriptTier, LocalTranscriptSpeakers, LocalTranscriptSpeaker } from '@/types/transcript'
 import store from '@/store'
 import _ from 'lodash'
-import Transcript from '@/service/transcript.class'
+import Transcript from '@/classes/transcript.class'
+import settings from '@/store/settings.store'
 
 @Component
 export default class SpeakerTierEditor extends Vue {
 
   @Prop({ default: {} }) speakers!: LocalTranscriptSpeakers
-  @Prop({ default: [] }) tiers!: LocalTranscriptTier[]
+  @Prop({ default: [] }) tiers!: TranscriptTier[]
 
-  settings = store.settings
+  settings = settings
   enteringTierName = ''
   enteringSpeakerName = ''
 
@@ -125,7 +126,7 @@ export default class SpeakerTierEditor extends Vue {
     }
   }
 
-  tierFromName(name: string): LocalTranscriptTier {
+  tierFromName(name: string): TranscriptTier {
     return {
       name,
       id: String(Transcript.makeEventTierId()),
@@ -161,7 +162,7 @@ export default class SpeakerTierEditor extends Vue {
     this.$emit('update:speakers', _.omit(this.speakers, key))
   }
 
-  get eventTiers(): LocalTranscriptTier[] {
+  get eventTiers(): TranscriptTier[] {
     return this.tiers.filter(t => t.type === 'freeText')
   }
 

@@ -1,13 +1,13 @@
-import { LocalTranscriptEvent, TokenTierType, LocalTranscriptToken } from '../store/transcript'
-import settings from '../store/settings'
+import { TranscriptEvent, TokenTierType, TranscriptToken } from '../types/transcript'
+import settings from '../store/settings.store'
 import presets, { TokenTypesPresetGroup } from '../presets'
 
 // tslint:disable-next-line:max-line-length
 function iterateTokensBySpeakers(
-  es: LocalTranscriptEvent[],
+  es: TranscriptEvent[],
   speakerIds: string[],
-  f: (t: LocalTranscriptToken) => LocalTranscriptToken
-): LocalTranscriptEvent[] {
+  f: (t: TranscriptToken) => TranscriptToken
+): TranscriptEvent[] {
   speakerIds.forEach((s) => {
     es.forEach(e => {
       if (
@@ -23,10 +23,10 @@ function iterateTokensBySpeakers(
 
 // tslint:disable-next-line:max-line-length
 export function computeTokenTypesForEvents(
-  es: LocalTranscriptEvent[],
+  es: TranscriptEvent[],
   defaultTier: TokenTierType,
   speakerIds: string[]
-): LocalTranscriptEvent[] {
+): TranscriptEvent[] {
   let currentBracketGroup: TokenTypesPresetGroup|null = null
   const newEs = iterateTokensBySpeakers(es, speakerIds, (t) => {
     const cleanText = t.tiers[defaultTier].text.replace('=', '')
@@ -55,11 +55,8 @@ export function computeTokenTypesForEvents(
           }
         }
       })
-      // it’s the placeholder token
-      if (cleanText === settings.placeholderToken) {
-        t.tiers[defaultTier].type = -2
       // its type could not be identified
-      } else if (type === undefined) {
+      if (type === undefined) {
         t.tiers[defaultTier].type = -1
       // its type was found.
       } else {

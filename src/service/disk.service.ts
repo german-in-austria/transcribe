@@ -4,18 +4,18 @@ import localForage from 'localforage'
 import JSZip from 'jszip'
 import _ from 'lodash'
 
-import { convertToServerTranscript, ServerTranscript, ServerTranscriptListItem } from '../service/backend-server'
-import { Settings } from '../store/settings'
-import { HistoryEventAction } from '../store/history'
-import Transcript, { TranscriptMetaData } from './transcript.class'
-import { LocalTranscriptEvent } from '@/store/transcript'
+import { convertToServerTranscript, ServerTranscript, ServerTranscriptListItem } from './backend-server.service'
+import { Settings } from '../store/settings.store'
+import { HistoryEventAction } from '../store/history.store'
+import Transcript, { TranscriptMetaData } from '../classes/transcript.class'
+import { TranscriptEvent } from '@/types/transcript'
 
 const FILE_FORMAT_VERSION = '2'
 
 interface ProjectFile {
   serverTranscript: ServerTranscript
   audioBuffer: Uint8Array
-  events: LocalTranscriptEvent[]
+  events: TranscriptEvent[]
   uiState: any,
   meta: TranscriptMetaData,
   overviewSvg: string

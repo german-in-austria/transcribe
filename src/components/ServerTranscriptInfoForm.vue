@@ -51,8 +51,8 @@
 <script lang="ts">
 import { Vue, Component, Prop } from 'vue-property-decorator'
 import presets from '../presets'
-import settings from '../store/settings'
-import { ServerTranscriptListItem, ServerSurvey, getSurveys } from '../service/backend-server'
+import settings from '../store/settings.store'
+import { ServerTranscriptListItem, ServerSurvey, getSurveys } from '../service/backend-server.service'
 import _ from 'lodash'
 import { clone } from '../util'
 
@@ -104,7 +104,11 @@ export default class ServerTranscriptInfoForm extends Vue {
   }
 
   async mounted() {
-    this.surveys = await getSurveys()
+    if (this.settings.backEndUrl !== null) {
+      this.surveys = await getSurveys(this.settings.backEndUrl)
+    } else {
+      this.surveys = []
+    }
   }
 
   get projectPresetNames(): string[] {

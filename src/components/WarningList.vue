@@ -58,7 +58,7 @@ import { RecycleScroller } from 'vue-virtual-scroller'
 import Checkbox from './helper/Checkbox.vue'
 import Dropdown from './helper/Dropdown.vue'
 
-import settings from '../store/settings'
+import settings from '../store/settings.store'
 import { WarningEvent } from '../service/warnings.service'
 import { timeFromSeconds } from '@/util'
 import store from '@/store'

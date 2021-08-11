@@ -111,9 +111,9 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import _ from 'lodash'
-import eventBus from '../service/event-bus'
-import * as history from '../store/history'
-import settings from '../store/settings'
+import bus from '../service/bus'
+import * as history from '../store/history.store'
+import settings from '../store/settings.store'
 import presets from '../presets'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import HighlightRange from './helper/HighlightRange.vue'
@@ -121,16 +121,15 @@ import Checkbox from './helper/Checkbox.vue'
 import * as xlsx from 'xlsx'
 
 import {
-  playEvent,
-  LocalTranscriptEvent,
+  TranscriptEvent,
   TokenTierType,
-  LocalTranscriptTier,
+  TranscriptTier,
   SearchResult
-} from '../store/transcript'
+} from '@/types/transcript'
 import { timeFromSeconds } from '@/util'
 import store from '@/store'
-import EventService from '@/service/event-service'
-import TranscriptAudio from '@/service/transcript-audio.class'
+import EventService from '@/classes/event.class'
+import TranscriptAudio from '@/classes/transcript-audio.class'
 
 @Component({
   components: {
@@ -152,17 +151,22 @@ export default class Search extends Vue {
 
   searchResultEventCounter = 0
   isEventSelected = this.transcript.isEventSelected
-  playEvent = playEvent
 
   debouncedHandleSearch = _.debounce(this.handleSearch, 200)
 
   mounted() {
-    eventBus.$on('focusSearch', () => {
+    bus.$on('focusSearch', () => {
       if (this.$refs.input instanceof HTMLInputElement) {
         this.$refs.input.focus()
         this.$refs.input.select()
       }
     })
+  }
+
+  playEvent(e: TranscriptEvent) {
+    if (this.transcript.audio !== null) {
+      this.transcript.audio.playEvent(e)
+    }
   }
 
   onFocus() {
@@ -203,7 +207,7 @@ export default class Search extends Vue {
     this.handleSearch(this.transcript.uiState.searchTerm || '')
   }
 
-  showEventIfExists(e: LocalTranscriptEvent) {
+  showEventIfExists(e: TranscriptEvent) {
     const i = this.transcript.findEventIndexById(e.eventId)
     if (i > -1) {
       this.transcript.selectEvent(e)
@@ -273,9 +277,9 @@ export default class Search extends Vue {
 
   searchEvents(
     term: string,
-    es: LocalTranscriptEvent[],
+    es: TranscriptEvent[],
     speakerIds: string[],
-    tiers: LocalTranscriptTier[]
+    tiers: TranscriptTier[]
   ): SearchResult[] {
     console.log({ speakerIds, tiers })
     this.searchResultEventCounter = 0
@@ -409,7 +413,7 @@ export default class Search extends Vue {
     }
   }
 
-  scrollToSearchResult(e: LocalTranscriptEvent) {
+  scrollToSearchResult(e: TranscriptEvent) {
     const i = this.transcript.uiState.searchResults.findIndex(r => r.event.eventId === e.eventId)
     const offset = i * this.resultItemHeight
     requestAnimationFrame(() => {
@@ -420,7 +424,7 @@ export default class Search extends Vue {
     })
   }
 
-  async goToResult(e: LocalTranscriptEvent|undefined) {
+  async goToResult(e: TranscriptEvent|undefined) {
     if (e !== undefined) {
       this.transcript.scrollToTranscriptEvent(e)
       this.transcript.scrollToAudioEvent(e)
@@ -455,7 +459,10 @@ export default class Search extends Vue {
     if (e !== undefined) {
       this.goToResult(e)
     } else if (this.transcript.uiState.searchResults.length > 0) {
-      this.goToResult(_(this.transcript.uiState.searchResults).last()!.event)
+      const last = _(this.transcript.uiState.searchResults).last()
+      if (last) {
+        this.goToResult(last.event)
+      }
     }
   }
 }

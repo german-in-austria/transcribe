@@ -24,9 +24,9 @@
         xs4
         align-content-center>
         <player-bar-button @click="playPause" :size="height">
-          <f-icon v-if="this.transcript.audio && this.transcript.audio.isPaused && isTimeSpanSelectionEmpty()" value="play_arrow" />
-          <f-icon v-if="this.transcript.audio && this.transcript.audio.isPaused && !isTimeSpanSelectionEmpty()" value="mdi-play-outline" />
-          <f-icon v-if="this.transcript.audio && !this.transcript.audio.isPaused" value="pause" />
+          <f-icon v-if="transcript.audio && transcript.audio.isPaused && isTimeSpanSelectionEmpty()" value="play_arrow" />
+          <f-icon v-if="transcript.audio && transcript.audio.isPaused && !isTimeSpanSelectionEmpty()" value="mdi-play-outline" />
+          <f-icon v-if="transcript.audio && !transcript.audio.isPaused" value="pause" />
         </player-bar-button>
         <div
           @click="showTimePicker = false"
@@ -100,24 +100,15 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import store from '@/store'
 
-import {
+import settings, {
   setPlaybackSpeed,
   setPlaybackVolume
-} from '../store/settings'
-import eventBus from '../service/event-bus'
+} from '@/store/settings.store'
+import bus from '@/service/bus'
 import PlayerBarButton from './PlayerBarButton.vue'
 import TimePicker from './TimePicker.vue'
-import {
-  playAllFrom,
-  pause,
-  playEvents,
-  playEventsStart,
-  playEventsEnd,
-  playRange
-} from '../store/transcript'
-import Transcript from '@/service/transcript.class'
+import Transcript from '@/classes/transcript.class'
 import { timeFromSeconds } from '@/util'
 
 @Component({
@@ -133,69 +124,78 @@ export default class PlayerBar extends Vue {
 
   setPlaybackSpeed = setPlaybackSpeed
   setPlaybackVolume = setPlaybackVolume
-  settings = store.settings
-  isTimeSpanSelectionEmpty = this.transcript.isTimeSpanSelectionEmpty
+  settings = settings
   showTimePicker = false
 
-  cachedVolume = store.settings.playbackVolume
+  cachedVolume = settings.playbackVolume
   cachedSpeed = .5
 
   get currentTime() {
     return this.transcript.audio ? this.transcript.audio.currentTime : 0
   }
 
+  isTimeSpanSelectionEmpty() {
+    return this.transcript.isTimeSpanSelectionEmpty()
+  }
+
   toggleVolumeOnOff() {
-    if (store.settings.playbackVolume === 0) {
+    if (settings.playbackVolume === 0) {
       setPlaybackVolume(this.cachedVolume)
     } else {
-      this.cachedVolume = store.settings.playbackVolume
+      this.cachedVolume = settings.playbackVolume
       setPlaybackVolume(0)
     }
   }
 
   toggleSpeed() {
-    if (store.settings.playbackSpeed === 1) {
+    if (settings.playbackSpeed === 1) {
       setPlaybackSpeed(this.cachedSpeed)
     } else {
-      this.cachedSpeed = store.settings.playbackSpeed
+      this.cachedSpeed = settings.playbackSpeed
       setPlaybackSpeed(1)
     }
   }
 
   playPause() {
-    if (this.transcript.audio && this.transcript.audio.isPaused === true) {
-      const es = this.transcript.getSelectedEvents()
-      if (!this.isTimeSpanSelectionEmpty()) {
-        playRange(this.transcript.uiState.timeSpanSelection.start || 0, this.transcript.uiState.timeSpanSelection.end || 0)
-      } else if (es.length > 0) {
-        playEvents(es)
+    if (this.transcript.audio !== null) {
+      if (this.transcript.audio.isPaused === true) {
+        const es = this.transcript.getSelectedEvents()
+        if (!this.isTimeSpanSelectionEmpty()) {
+          this.transcript.audio.playRange(this.transcript.uiState.timeSpanSelection.start || 0, this.transcript.uiState.timeSpanSelection.end || 0)
+        } else if (es.length > 0) {
+          this.transcript.audio.playEvents(es)
+        } else {
+          this.transcript.audio.playAllFrom(this.currentTime)
+        }
       } else {
-        playAllFrom(this.currentTime)
+        this.transcript.audio.pause()
       }
-    } else {
-      pause()
     }
   }
 
   playStart() {
-    if (this.transcript.audio && this.transcript.audio.isPaused === true) {
-      const es = this.transcript.getSelectedEvents()
-      if (es.length > 0) {
-        playEventsStart(es, 1)
+    if (this.transcript.audio) {
+      if (this.transcript.audio.isPaused === true) {
+        const es = this.transcript.getSelectedEvents()
+        if (es.length > 0) {
+          this.transcript.audio.playEventsStart(es, 1)
+        }
+      } else {
+        this.transcript.audio.pause()
       }
-    } else {
-      pause()
     }
   }
 
   playEnd() {
-    if (this.transcript.audio && this.transcript.audio.isPaused === true) {
-      const es = this.transcript.getSelectedEvents()
-      if (es.length > 0) {
-        playEventsEnd(es, 1)
+    if (this.transcript.audio) {
+      if (this.transcript.audio.isPaused === true) {
+        const es = this.transcript.getSelectedEvents()
+        if (es.length > 0) {
+          this.transcript.audio.playEventsEnd(es, 1)
+        }
+      } else {
+        this.transcript.audio.pause()
       }
-    } else {
-      pause()
     }
   }
 
@@ -216,8 +216,9 @@ export default class PlayerBar extends Vue {
   }
 
   mounted() {
-    eventBus.$on('updateTime', this.onChangeTime)
-    eventBus.$on('scrubAudio', this.onChangeTime)
+    console.log('this.transcript.uiState', this.transcript.uiState)
+    bus.$on('updateTime', this.onChangeTime)
+    bus.$on('scrubAudio', this.onChangeTime)
     this.onChangeTime(this.currentTime)
   }
 }

@@ -25,9 +25,6 @@
 </template>
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import {
-  scrubAudio
-} from '../store/transcript'
 import store from '@/store'
 import { timeFromSeconds, timeToSeconds } from '@/util'
 @Component
@@ -48,8 +45,10 @@ export default class TimePicker extends Vue {
     this.transcript.deselectEvents()
     const t = timeToSeconds(time)
     requestAnimationFrame(() => {
-      this.transcript.scrollToAudioTime(t)
-      scrubAudio(t)
+      if (this.transcript.audio !== null) {
+        this.transcript.scrollToAudioTime(t)
+        this.transcript.audio.scrubAudio(t)
+      }
     })
   }
 

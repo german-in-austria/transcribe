@@ -9,12 +9,12 @@ import {
   ServerTranscript,
   surveyToServerTranscriptSurvey,
   surveyToServerTranscriptInformants
-} from '../service/backend-server'
-import { TokenTierType } from '../store/transcript'
+} from './backend-server.service'
+import { TokenTierType } from '../types/transcript'
 import { padEnd, timeFromSeconds } from '../util/index'
-import settings from '../store/settings'
+import settings from '../store/settings.store'
 import presets from '../presets'
-import Transcript from './transcript.class'
+import Transcript from '../classes/transcript.class'
 
 interface BasicNode {
   attributes: object
@@ -108,7 +108,7 @@ export function exmaraldaToImportable(fileName: string, xml: string): ParsedExma
 }
 
 function getTokenTypeId(t: string): number {
-  return Transcript.getTokenTypeFromToken(t).id
+  return Transcript.getTokenTypeFromToken(t, presets[settings.projectPreset]).id
 }
 
 function getTierToken(

@@ -19,8 +19,8 @@
         </template>
         <v-list-tile
           v-for="(sc, k) in group"
-          @click="sc.action($event)"
-          :disabled="sc.disabled ? sc.disabled() : false"
+          @click="sc.action($event, transcript)"
+          :disabled="sc.disabled !== undefined ? sc.disabled(transcript) : false"
           v-show="sc.showInMenu === true"
           :key="k">
           <v-list-tile-avatar style="min-width: 42px">
@@ -41,9 +41,10 @@
 </template>
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { displayKeyboardAction, KeyboardAction } from '../service/keyboard'
+import { displayKeyboardAction, KeyboardAction } from '../service/keyboard.service'
 import KeyboardShortcut from '@/components/helper/KeyboardShortcut.vue'
-import settings from '../store/settings'
+import settings from '@/store/settings.store'
+import store from '@/store'
 import _ from 'lodash'
 
 @Component({
@@ -52,8 +53,13 @@ import _ from 'lodash'
   }
 })
 export default class Actions extends Vue {
+
   settings = settings
-  displayKeyboardAction = displayKeyboardAction
+  transcript = store.transcript!
+
+  displayKeyboardAction(a: KeyboardAction) {
+    displayKeyboardAction(a)
+  }
 
   get groups(): _.Dictionary<KeyboardAction[]> {
     return _(settings.keyboardShortcuts).groupBy('group').value()

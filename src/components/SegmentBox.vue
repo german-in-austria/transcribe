@@ -36,14 +36,11 @@
 
 import { Vue, Component, Prop } from 'vue-property-decorator'
 import ResizeEvent from './helper/ResizeEvent.vue'
-import { mutation } from '../store/history'
-import settings from '../store/settings'
+import { mutation } from '../store/history.store'
+import settings from '../store/settings.store'
 // import { morph } from 'quasar'
 
-import {
-  playEvent,
-  LocalTranscriptEvent
-} from '../store/transcript'
+import { TranscriptEvent } from '@/types/transcript'
 import store from '@/store'
 
 @Component({
@@ -53,18 +50,32 @@ import store from '@/store'
 })
 export default class SegmentBox extends Vue {
 
-  @Prop({ required: true }) event!: LocalTranscriptEvent
-  @Prop() previousEvent?: LocalTranscriptEvent
-  @Prop() nextEvent?: LocalTranscriptEvent
+  @Prop({ required: true }) event!: TranscriptEvent
+  @Prop() previousEvent?: TranscriptEvent
+  @Prop() nextEvent?: TranscriptEvent
 
   transcript = store.transcript!
-  scrollToTranscriptEvent = this.transcript.scrollToTranscriptEvent
-  selectEvent = this.transcript.selectEvent
-  selectEventRange = this.transcript.selectEventRange
-  selectOrDeselectEvent = this.transcript.selectOrDeselectEvent
-  isEventSelected = this.transcript.isEventSelected
-  playEvent = playEvent
   settings = settings
+
+  scrollToTranscriptEvent(e: TranscriptEvent) {
+    return this.transcript.scrollToTranscriptEvent(e)
+  }
+
+  selectEvent(e: TranscriptEvent) {
+    return this.transcript.selectEvent(e)
+  }
+
+  selectEventRange(e: TranscriptEvent) {
+    return this.transcript.selectEventRange(e)
+  }
+
+  selectOrDeselectEvent(e: TranscriptEvent) {
+    return this.transcript.selectOrDeselectEvent(e)
+  }
+
+  isEventSelected(id: number) {
+    return this.transcript.isEventSelected
+  }
 
   get hasOverlap() {
     const x = (
@@ -75,6 +86,12 @@ export default class SegmentBox extends Vue {
       console.log('overlap', this.event, this.previousEvent, this.nextEvent)
     }
     return x
+  }
+
+  playEvent(e: TranscriptEvent) {
+    if (this.transcript.audio !== null) {
+      this.transcript.audio.playEvent(e)
+    }
   }
 
   get offset() {

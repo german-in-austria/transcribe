@@ -1,7 +1,7 @@
 import _ from 'lodash'
-import { LocalTranscriptEvent, TokenTierType } from '../store/transcript'
-import settings from '../store/settings'
-import Transcript from './transcript.class'
+import { TranscriptEvent, TokenTierType } from '../types/transcript'
+import settings from '../store/settings.store'
+import Transcript from '../classes/transcript.class'
 import store from '@/store'
 
 interface GapMetadata {
@@ -15,11 +15,11 @@ type UnknownTokenMetadata = null
 export interface WarningEvent {
   warning_id: string
   warning_type: 'event_overlap'|'unknown_token'|'event_gap'
-  event: LocalTranscriptEvent
+  event: TranscriptEvent
   metadata: GapMetadata|OverlapMetadata|UnknownTokenMetadata|null
 }
 
-export function getWarnings(es: LocalTranscriptEvent[]): WarningEvent[] {
+export function getWarnings(es: TranscriptEvent[]): WarningEvent[] {
   const defaultTier = store.transcript?.meta.defaultTier || 'text'
   const events = Transcript.sortEvents(es)
   const warnings: WarningEvent[] = ([] as WarningEvent[])

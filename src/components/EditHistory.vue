@@ -122,18 +122,17 @@ import { RecycleScroller } from 'vue-virtual-scroller'
 import _ from 'lodash'
 
 import {
-  LocalTranscriptEvent,
-  playEvent
-} from '../store/transcript'
+  TranscriptEvent,
+} from '@/types/transcript'
 
 import {
   history,
   jumpToState,
   goToInitialState,
   HistoryEventAction
-} from '../store/history'
+} from '../store/history.store'
 import store from '@/store'
-import EventService from '@/service/event-service'
+import EventService from '@/classes/event.class'
 
 @Component({
   components: {
@@ -145,11 +144,17 @@ export default class EditHistory extends Vue {
 
   history = history
   toTime = timeFromSeconds
-  playEvent = playEvent
   goToInitialState = goToInitialState
   hoveredEvent: HistoryEventAction|null = null
   menuX = 0
   menuY = 0
+  transcript = store.transcript!
+
+  playEvent(e: TranscriptEvent) {
+    if (this.transcript.audio !== null) {
+      this.transcript.audio.playEvent(e)
+    }
+  }
 
   get defaultTier() {
     return store.transcript?.meta.defaultTier || 'text'
@@ -167,7 +172,7 @@ export default class EditHistory extends Vue {
       .value()
   }
 
-  showEventIfExists(e: LocalTranscriptEvent) {
+  showEventIfExists(e: TranscriptEvent) {
     if (store.transcript !== null) {
       const i = store.transcript.findEventIndexById(e.eventId)
       if (i > -1) {

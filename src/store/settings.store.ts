@@ -4,8 +4,9 @@ import localForage from 'localforage'
 
 import { makeGradient, Color } from '../lib/gradient'
 import { setNumberInBounds, platform } from '../util'
-import { KeyboardShortcuts, keyboardShortcuts, KeyboardAction } from '../service/keyboard'
+import { KeyboardShortcuts, keyboardShortcuts, KeyboardAction } from '../service/keyboard.service'
 import { ProjectPresets } from '@/presets'
+import store from '.'
 
 type JSONValue = string | number | boolean | null | JSONObject | JSONArray
 
@@ -179,7 +180,9 @@ const spectrogramPresets = [
 
 export function setPlaybackSpeed(s: number) {
   settings.playbackSpeed = setNumberInBounds(s, 0, 1.5)
-  eventStore.audioElement.playbackRate = settings.playbackSpeed
+  if (store.transcript && store.transcript.audio) {
+    store.transcript.audio.setPlaybackSpeed(settings.playbackSpeed)
+  }
 }
 
 export function increasePlaybackSpeed(by: number) {
@@ -192,7 +195,9 @@ export function decreasePlaybackSpeed(by: number) {
 
 export function setPlaybackVolume(v: number) {
   settings.playbackVolume = setNumberInBounds(v)
-  eventStore.audioElement.volume = settings.playbackVolume
+  if (store.transcript && store.transcript.audio) {
+    store.transcript.audio.setVolume(settings.playbackVolume)
+  }
 }
 
 export function increaseVolume(by: number) {
@@ -217,7 +222,7 @@ const settings: Settings = {
   showSettings: false,
   darkMode: false,
   drawerWidth: 350,
-  emulateHorizontalScrolling: platform() === 'windows' || platform() === 'linux',
+  emulateHorizontalScrolling: platform() === 'windows' || platform() === 'linux',
   eventDockingInterval: 0.05,
   keyboardShortcuts,
   lockPlayHead: true,

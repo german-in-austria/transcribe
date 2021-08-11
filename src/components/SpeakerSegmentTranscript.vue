@@ -92,21 +92,20 @@ import {
 } from '../util'
 
 import {
-  LocalTranscriptEvent,
+  TranscriptEvent,
   TierFreeText,
-  TokenTierType,
-  playEvent
-} from '../store/transcript'
+  TokenTierType
+} from '@/types/transcript'
 
 import contenteditable from './helper/Contenteditable.vue'
-import * as copyPaste from '../service/copy-paste'
-import { mutation } from '../store/history'
+import * as copyPaste from '@/service/copy-paste.service'
+import { mutation } from '@/store/history.store'
 import _ from 'lodash'
 import * as jsdiff from 'diff'
-import eventBus from '../service/event-bus'
-import { computeTokenTypesForEvents } from '../service/token-types.service'
-import EventService from '@/service/event-service'
-import Transcript from '@/service/transcript.class'
+import bus from '@/service/bus'
+import { computeTokenTypesForEvents } from '@/service/token-types.service'
+import Transcript from '@/classes/transcript.class'
+import settings from '@/store/settings.store'
 
 @Component({
   components: {
@@ -115,7 +114,7 @@ import Transcript from '@/service/transcript.class'
 })
 export default class SpeakerSegmentTranscript extends Vue {
 
-  @Prop({ required: true }) event!: LocalTranscriptEvent
+  @Prop({ required: true }) event!: TranscriptEvent
   @Prop({ required: true }) speaker!: string
 
   transcript = store.transcript!
@@ -129,8 +128,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   segmentText = this.localTokens ? this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ') : ''
   focused = false
 
-  settings = store.settings
-  playEvent = playEvent
+  settings = settings
 
   debouncedUpdateTokenTier = _.debounce(this.updateTokenTier, 300)
   debouncedUpdateEventTier = _.debounce(this.updateEventTier, 300)
@@ -138,11 +136,17 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   mounted() {
     // tslint:disable-next-line:max-line-length
-    eventBus.$on('updateSpeakerEventText', this.updateTextFromEventBus)
+    bus.$on('updateSpeakerEventText', this.updateTextFromEventBus)
   }
 
   destroyed() {
-    eventBus.$off('updateSpeakerEventText', this.updateTextFromEventBus)
+    bus.$off('updateSpeakerEventText', this.updateTextFromEventBus)
+  }
+
+  playEvent(e: TranscriptEvent) {
+    if (this.transcript.audio !== null) {
+      this.transcript.audio.playEvent(e)
+    }
   }
 
   updateTextFromEventBus({ eventId, speakerId, text }: { eventId: string, speakerId: string, text: string }) {
@@ -185,7 +189,7 @@ export default class SpeakerSegmentTranscript extends Vue {
     }
   }
 
-  updateLocalTokenTypes(e: LocalTranscriptEvent) {
+  updateLocalTokenTypes(e: TranscriptEvent) {
     this.localTokens = this.localTokens.map((t, i) => {
       return {
         ...t,
@@ -248,7 +252,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   @Watch('event', { deep: true })
-  onUpdateEvent(newEvent: LocalTranscriptEvent) {
+  onUpdateEvent(newEvent: TranscriptEvent) {
     // update if not focused
     // console.log('watcher', window.getSelection())
     this.localEvent = clone(newEvent)
@@ -264,8 +268,8 @@ export default class SpeakerSegmentTranscript extends Vue {
     if (s !== null) {
       const base = (s as any).baseOffset
       const extent = (s as any).extentOffset
-      const selectedTokens = copyPaste.collectTokensViaOffsets(this.localTokens, base, extent)
-      this.localTokens = copyPaste.removeTokensAndTokenParts(this.localTokens, selectedTokens)
+      const selectedTokens = Transcript.collectTokensViaOffsets(this.localTokens, this.transcript, base, extent)
+      this.localTokens = copyPaste.removeTokensAndTokenParts(this.localTokens, this.transcript, selectedTokens)
       const csv = copyPaste.serializeTokens(selectedTokens)
       if (e.clipboardData !== null) {
         e.clipboardData.setData('text/plain', csv)
@@ -282,7 +286,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   copyTokens(e: ClipboardEvent) {
     const s = document.getSelection()
     if (s !== null) {
-      const tokens = copyPaste.collectTokensViaOffsets(this.localTokens, (s as any).baseOffset, (s as any).extentOffset)
+      const tokens = Transcript.collectTokensViaOffsets(this.localTokens, this.transcript, (s as any).baseOffset, (s as any).extentOffset)
       const csv = copyPaste.serializeTokens(tokens)
       if (e.clipboardData !== null) {
         e.clipboardData.setData('text/plain', csv)
@@ -311,7 +315,7 @@ export default class SpeakerSegmentTranscript extends Vue {
       const s = document.getSelection()
       try {
         // TODO: check what is returned here if it’s not a csv
-        const tokensTiers = copyPaste.unserializeTokenTiers(clipboardString)
+        const tokensTiers = copyPaste.unserializeTokenTiers(clipboardString, this.transcript)
         if (tokensTiers.length > 0 && s !== null) {
           // copy to local variables, because the selection might change.
           const base = (s as any).baseOffset
@@ -320,6 +324,7 @@ export default class SpeakerSegmentTranscript extends Vue {
           // update tokens
           this.localTokens = copyPaste.mergePastableTokensAt(
             this.localTokens,
+            this.transcript,
             tokensTiers,
             base,
             extent,
@@ -392,7 +397,7 @@ export default class SpeakerSegmentTranscript extends Vue {
     return text.split(' ').filter((t) => t !== '')
   }
 
-  viewAndSelectAudioEvent(e: LocalTranscriptEvent) {
+  viewAndSelectAudioEvent(e: TranscriptEvent) {
     this.transcript.selectEvent(e)
     this.transcript.scrollToAudioEvent(e)
   }
@@ -415,7 +420,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   commitEvent() {
     const oldIndex = this.transcript.findEventIndexById(this.event.eventId)
     const oldEvent = this.transcript.events[oldIndex]
-    const newEvent: LocalTranscriptEvent = {
+    const newEvent: TranscriptEvent = {
       ...this.localEvent,
       speakerEvents: {
         [ this.speaker ]: {
@@ -548,7 +553,7 @@ export default class SpeakerSegmentTranscript extends Vue {
             ...this.localTokens[change.index + addedCounter].tiers,
             [ this.defaultTier ]: {
               text: change.text,
-              type: Transcript.getTokenTypeFromToken(change.text).id
+              type: Transcript.getTokenTypeFromToken(change.text, presets[settings.projectPreset]).id
             }
           }
         }
@@ -573,7 +578,7 @@ export default class SpeakerSegmentTranscript extends Vue {
             },
             [ this.defaultTier ]: {
               text: change.text,
-              type: Transcript.getTokenTypeFromToken(change.text).id
+              type: Transcript.getTokenTypeFromToken(change.text, presets[settings.projectPreset]).id
             }
           }
         })

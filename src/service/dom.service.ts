@@ -1,8 +1,8 @@
 import Vue from 'vue'
 
-import { LocalTranscriptEvent } from '../store/transcript'
+import { TranscriptEvent } from '../types/transcript'
 import { requestFrameAsync } from '../util'
-import Transcript from './transcript.class'
+import Transcript from '../classes/transcript.class'
 
 export async function getScrollLeftAudio(): Promise<number> {
   await requestFrameAsync()
@@ -26,7 +26,7 @@ export function getFocusedSpeaker(): string|null {
   }
 }
 
-export function getFocusedEvent(t: Transcript): LocalTranscriptEvent|null {
+export function getFocusedEvent(t: Transcript): TranscriptEvent|null {
   if (
     document.activeElement instanceof HTMLElement &&
     document.activeElement.dataset &&
@@ -54,7 +54,7 @@ export async function focusSelectedEventElement() {
   }, 0)
 }
 
-export async function isWaveformEventVisible(e: LocalTranscriptEvent): Promise<boolean> {
+export async function isWaveformEventVisible(e: TranscriptEvent): Promise<boolean> {
   await Vue.nextTick()
   await requestFrameAsync()
   const el = document.querySelector(`.segment-box-container .segment[data-event-id="${e.eventId}"]`)

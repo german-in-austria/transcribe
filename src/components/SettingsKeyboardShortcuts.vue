@@ -45,8 +45,8 @@
 <script lang="ts">
 
 import { Vue, Component } from 'vue-property-decorator'
-import settings from '../store/settings'
-import { modifierKeys, specialKeys, alphaNumericKeys } from '../service/keyboard'
+import settings from '../store/settings.store'
+import { modifierKeys, specialKeys, alphaNumericKeys } from '../service/keyboard.service'
 
 @Component
 export default class SettingsKeyboardShortcuts extends Vue {

@@ -33,13 +33,13 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SegmentTranscript from './SegmentTranscript.vue'
 import {
-  LocalTranscriptEvent
-} from '../store/transcript'
-import settings from '../store/settings'
+  TranscriptEvent
+} from '@/types/transcript'
+import settings from '../store/settings.store'
 import store from '@/store'
 
 interface Square {
-  event: LocalTranscriptEvent
+  event: TranscriptEvent
   left: number
   right: number
 }
@@ -55,7 +55,7 @@ export default class SearchResults extends Vue {
 
   menuX = 0
   menuY = 0
-  hoveredEvent: LocalTranscriptEvent|null = null
+  hoveredEvent: TranscriptEvent|null = null
   transcript = store.transcript!
   settings = settings
   context: null|CanvasRenderingContext2D = null

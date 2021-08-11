@@ -87,6 +87,7 @@
     />
     <wave-form
       v-if="transcript.audio !== null"
+      :transcript="transcript"
       tabindex="-1"
       class="no-outline"
       @show-menu="doShowMenu"
@@ -115,7 +116,7 @@
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
-              :disabled="keyboardShortcuts.split.disabled()"
+              :disabled="keyboardShortcuts.split.disabled(transcript)"
               @click="splitEventFromMenu(transcript.getSelectedEvent())">
               <v-list-tile-content>
                 <v-list-tile-title>Split</v-list-tile-title>
@@ -125,7 +126,7 @@
               </v-list-tile-action>
             </v-list-tile>
             <v-list-tile
-              :disabled="keyboardShortcuts.joinEvents.disabled()"
+              :disabled="keyboardShortcuts.joinEvents.disabled(transcript)"
               @click="joinEvents(transcript.uiState.selectedEventIds)">
               <v-list-tile-content>
                 <v-list-tile-title>Join</v-list-tile-title>
@@ -136,7 +137,7 @@
             </v-list-tile>
             <v-list-tile
               :disabled="transcript.uiState.selectedEventIds.length === 0"
-              @click="exportEventAudio(transcript.uiState.selectedEventIds)">
+              @click="exportAudio">
               <v-list-tile-content>
                 <v-list-tile-title>
                   Export Audio {{
@@ -175,7 +176,7 @@
             </v-list-tile>
             <v-divider />
             <v-list-tile
-              :disabled="keyboardShortcuts.deleteEvents.disabled()"
+              :disabled="keyboardShortcuts.deleteEvents.disabled(transcript)"
               @click="keyboardShortcuts.deleteEvents.action">
               <v-list-tile-content>
                 <v-list-tile-title>Delete</v-list-tile-title>
@@ -206,7 +207,7 @@
       @update="loadAudioFromFile"
     />
     <player-bar :transcript="transcript" />
-    <transcript-editor />
+    <transcript-editor :transcript="transcript" />
   </div>
 </template>
 <script lang="ts">
@@ -226,13 +227,10 @@ import dropAudioFile from './DropAudioFile.vue'
 import transcriptSettings from './TranscriptSettings.vue'
 import KeyboardShortcut from './helper/KeyboardShortcut.vue'
 
-import {
-  LocalTranscriptEvent,
-  exportEventAudio
-} from '../store/transcript'
+import { TranscriptEvent } from '@/types/transcript'
+import { saveChangesToServer } from '../service/backend-server.service'
+import { handleGlobalShortcut, keyboardShortcuts, displayKeyboardAction } from '../service/keyboard.service'
 
-import { saveChangesToServer } from '../service/backend-server'
-import { handleGlobalShortcut, keyboardShortcuts, displayKeyboardAction } from '../service/keyboard'
 import kaldiService from '../service/kaldi/kaldiService'
 
 import {
@@ -244,20 +242,20 @@ import {
   mutation,
   startListening as startUndoListener,
   stopListening as stopUndoListener
-} from '../store/history'
+} from '../store/history.store'
 
 import {
   isWaveformEventVisible,
   getScrollLeftAudio
 } from '../service/dom.service'
 
-import settings from '../store/settings'
-// import audio from '../service/audio'
-import fileService from '../service/disk'
-import eventBus from '../service/event-bus'
+import settings from '../store/settings.store'
+import fileService from '../service/disk.service'
+import bus from '../service/bus'
 import store from '@/store'
-import Transcript from '@/service/transcript.class'
-import TranscriptAudio from '@/service/transcript-audio.class'
+import Transcript from '@/classes/transcript.class'
+import TranscriptAudio from '@/classes/transcript-audio.class'
+import EventService from '@/classes/event.class'
 
 @Component({
   components: {
@@ -278,13 +276,12 @@ export default class Editor extends Vue {
 
   @Prop({ required: true }) transcript!: Transcript
 
-  errors: LocalTranscriptEvent[] = []
+  errors: TranscriptEvent[] = []
   store = store
   history = history
   playEvent = this.transcript.audio?.playEvent
   getSelectedEvent = this.transcript.getSelectedEvent
   isEventSelected = this.transcript.isEventSelected
-  exportEventAudio = exportEventAudio
   keyboardShortcuts = keyboardShortcuts
   displayKeyboardAction = displayKeyboardAction
 
@@ -325,6 +322,13 @@ export default class Editor extends Vue {
     window.location.reload()
   }
 
+  async exportAudio(ids: number[]) {
+    const es = ids.map(this.transcript.getEventById).filter((e): e is TranscriptEvent => e !== undefined)
+    if (this.transcript.audio !== null) {
+      await this.transcript.audio.exportEventAudio(es, this.transcript.meta.transcriptName || 'untitled_transcript')
+    }
+  }
+
   joinEvents(es: number[]) {
     return mutation(this.transcript.joinEvents(es))
   }
@@ -345,9 +349,9 @@ export default class Editor extends Vue {
     this.isSaving = false
   }
 
-  async transcribeEvent(e?: LocalTranscriptEvent) {
-    if (e !== undefined) {
-      const buffer = await TranscriptAudio.decodeBufferTimeSlice(e.startTime, e.endTime, audio.store.uint8Buffer.buffer)
+  async transcribeEvent(e?: TranscriptEvent) {
+    if (e !== undefined && this.transcript.audio !== null) {
+      const buffer = await TranscriptAudio.decodeBufferTimeSlice(e.startTime, e.endTime, this.transcript.audio.buffer)
       const result = await kaldiService.transcribeAudio(
         window.location.origin + '/kaldi-models/german.zip',
         buffer,
@@ -382,7 +386,7 @@ export default class Editor extends Vue {
         }
       )
       const cleanResult = result.replaceAll(/\d\.\d\d\s/g, '')
-      eventBus.$emit('updateSpeakerEventText', {
+      bus.$emit('updateSpeakerEventText', {
         eventId: e.eventId,
         speakerId: Object.keys(this.transcript.meta.speakers)[0],
         text: cleanResult
@@ -395,6 +399,7 @@ export default class Editor extends Vue {
     this.isSaving = true
     if (settings.backEndUrl !== null) {
       try {
+        this.transcript.events = EventService.removeBrokenFragmentLinks(this.transcript.events)
         this.transcript.events = await saveChangesToServer(this.transcript)
       } catch (e) {
         Sentry.captureException(e)
@@ -427,20 +432,20 @@ export default class Editor extends Vue {
     this.showMenu = true
   }
 
-  splitEventFromMenu(event?: LocalTranscriptEvent) {
+  splitEventFromMenu(event?: TranscriptEvent) {
     if (event) {
       const splitAt = this.layerX / settings.pixelsPerSecond
       this.splitEvent(event, splitAt)
     }
   }
 
-  showEventInspector(e?: LocalTranscriptEvent) {
+  showEventInspector(e?: TranscriptEvent) {
     if (e !== undefined) {
       this.transcript.uiState.inspectedEventId = e.eventId
     }
   }
 
-  async splitEvent(e: LocalTranscriptEvent, at: number) {
+  async splitEvent(e: TranscriptEvent, at: number) {
     const [ leftEvent ] = mutation(this.transcript.splitEvent(e, at))
     if (!(await isWaveformEventVisible(leftEvent))) {
       this.transcript.scrollToAudioEvent(leftEvent)
@@ -456,7 +461,7 @@ export default class Editor extends Vue {
         e.returnValue = ''
       }
     }
-    eventBus.$on('scrollWaveform', this.hideMenu)
+    bus.$on('scrollWaveform', this.hideMenu)
     document.addEventListener('keydown', handleGlobalShortcut)
     if (store.status === 'new') {
       this.transcript.uiState.showTranscriptMetaSettings = true

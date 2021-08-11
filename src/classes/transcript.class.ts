@@ -1,28 +1,30 @@
 /// <reference types="@types/wicg-file-system-access" />
 
 import {
-  LocalTranscriptEvent,
-  LocalTranscriptTier,
-  LocalTranscriptToken,
-  LocalTranscriptTokenTypes,
+  TranscriptEvent,
+  TranscriptTier,
+  TranscriptToken,
+  TranscriptTokenTypes,
   SearchResult,
   TokenTierType,
-  LocalTranscriptSpeakerEvent,
+  TranscriptSpeakerEvent,
   LocalTranscriptSpeakers,
-  LocalTranscriptSpeakerEventTiers
-} from '@/store/transcript'
+  TranscriptSpeakerEventTiers
+} from '@/types/transcript'
 
 import TranscriptAudio from './transcript-audio.class'
-import { computeTokenTypesForEvents } from './token-types.service'
+import { computeTokenTypesForEvents } from '../service/token-types.service'
 import _ from 'lodash'
-import settings from '@/store/settings'
-import EventService from './event-service'
-import eventBus from './event-bus'
-import { HistoryEventAction, history } from '@/store/history'
-import { collectTokensViaOffsets } from './copy-paste'
-import diskService from './disk'
+import settings from '@/store/settings.store'
+import EventService from './event.class'
+import bus from '../service/bus'
+import { HistoryEventAction, history } from '@/store/history.store'
+// import { collectTokensViaOffsets } from './copy-paste'
+import diskService from '../service/disk.service'
 import { clone } from '@/util'
-import { fetchTranscript } from './backend-server'
+import { fetchTranscript, getAudioUrlFromServerNames } from '../service/backend-server.service'
+import store from '@/store'
+import { Pastable } from '../service/copy-paste.service'
 
 type AudioFile = File
 type TranscribeFile = FileSystemFileHandle
@@ -31,9 +33,26 @@ export interface TranscriptMetaData {
   defaultTier: TokenTierType
   speakers: LocalTranscriptSpeakers
   lockedTokens: number[]
-  tokenTypes: LocalTranscriptTokenTypes
+  tokenTypes: TranscriptTokenTypes
   transcriptName: string|null
-  tiers: LocalTranscriptTier[]
+  tiers: TranscriptTier[]
+}
+
+export interface TranscriptUiState {
+  selectedEventIds: number[]
+  selectedSearchResult: SearchResult|null
+  highlightedEventIds: number[]
+  inspectedEventId: number|null
+  searchResults: SearchResult[]
+  searchTerm: string
+  /** Number between 0 and 1. "null" means that the transcript is not currently loading." */
+  downloadProgress: number|null
+  isSaving: boolean
+  showTranscriptMetaSettings: boolean
+  timeSpanSelection: {
+    start: null|number
+    end: null|number
+  }
 }
 
 export type AudioFileOrUrl = AudioFile | string | ArrayBuffer
@@ -52,7 +71,7 @@ export default class Transcript extends EventService {
     init?: AudioFile
       | TranscribeFile
       | { backEndUrl: string, id: number }
-      | { events: LocalTranscriptEvent[], meta: TranscriptMetaData },
+      | { events: TranscriptEvent[], meta: TranscriptMetaData },
     audio?: AudioFileOrUrl
   ) {
     super()
@@ -69,7 +88,8 @@ export default class Transcript extends EventService {
     }
   }
 
-  events: LocalTranscriptEvent[] = []
+  key = '-1'
+  events: TranscriptEvent[] = []
   audio: TranscriptAudio|null = null
 
   meta: TranscriptMetaData = {
@@ -81,20 +101,20 @@ export default class Transcript extends EventService {
     tiers: []
   }
 
-  uiState = {
-    selectedEventIds: [] as number[],
-    selectedSearchResult: null as SearchResult|null,
-    highlightedEventIds: [] as number[],
-    inspectedEventId: null as number|null,
-    searchResults: [] as SearchResult[],
-    searchTerm: '' as string,
+  uiState: TranscriptUiState = {
+    selectedEventIds: [],
+    selectedSearchResult: null,
+    highlightedEventIds: [],
+    inspectedEventId: null,
+    searchResults: [],
+    searchTerm: '',
     /** Number between 0 and 1. "null" means that the transcript is not currently loading." */
-    downloadProgress: null as number|null,
+    downloadProgress: null,
     isSaving: false,
     showTranscriptMetaSettings: false,
     timeSpanSelection: {
-      start: null as null|number,
-      end: null as null|number
+      start: null,
+      end: null
     }
   }
 
@@ -125,25 +145,34 @@ export default class Transcript extends EventService {
   }
 
   async initTranscriptWithBackend(id: number, backEndUrl: string) {
-    fetchTranscript(id, backEndUrl, this, (p, es, res) => {
+    await fetchTranscript(id, backEndUrl, this, (p, es, res) => {
       this.uiState.downloadProgress = p
-      if (this.audio === null && res.aEinzelErhebung?.af !== undefined) {
-        this.audio = new TranscriptAudio(res.aEinzelErhebung.af)
+      this.key = String(id)
+      if (
+        this.audio === null &&
+        settings.backEndUrl !== null &&
+        res.aEinzelErhebung?.af !== undefined
+      ) {
+        const audioUrl = getAudioUrlFromServerNames(res.aEinzelErhebung.af, res.aEinzelErhebung.dp, settings.backEndUrl)
+        if (audioUrl !== null) {
+          this.audio = new TranscriptAudio(audioUrl)
+        }
       }
     })
+    store.status = 'finished'
   }
 
   initTranscriptWithData(
-    es: LocalTranscriptEvent[],
+    es: TranscriptEvent[],
     audio?: AudioFileOrUrl,
     meta?: TranscriptMetaData,
-    uiState?: any,
+    uiState?: TranscriptUiState,
     overviewSvg?: string
   ) {
     if (audio !== undefined) {
       this.audio = new TranscriptAudio(audio, overviewSvg)
     }
-    if (this.uiState !== undefined) {
+    if (uiState !== undefined) {
       this.uiState = uiState
     }
     if (meta !== undefined) {
@@ -179,21 +208,22 @@ export default class Transcript extends EventService {
 
   /** Checks if a time span selection exists */
   isTimeSpanSelectionEmpty() {
+    console.log('this.uiState', this.uiState)
     return this.uiState.timeSpanSelection.start === null &&
       this.uiState.timeSpanSelection.end === null
   }
 
   scrollToAudioTime(t: number) {
-    eventBus.$emit('scrollToAudioTime', t)
+    bus.$emit('scrollToAudioTime', t)
   }
 
-  scrollToAudioEvent(e: LocalTranscriptEvent) {
+  scrollToAudioEvent(e: TranscriptEvent) {
     this.uiState.highlightedEventIds = [ e.eventId ]
-    eventBus.$emit('scrollToAudioEvent', e)
+    bus.$emit('scrollToAudioEvent', e)
   }
 
   scrollToTranscriptEvent(
-    e: LocalTranscriptEvent, opts?: {
+    e: TranscriptEvent, opts?: {
       animate: boolean,
       focusSpeaker: string|null,
       focusTier: string|null,
@@ -201,7 +231,7 @@ export default class Transcript extends EventService {
     }
   ) {
     this.uiState.highlightedEventIds = [ e.eventId ]
-    eventBus.$emit('scrollToTranscriptEvent', e, {
+    bus.$emit('scrollToTranscriptEvent', e, {
       animate: true,
       focusSpeaker: null,
       focusTier: this.meta.defaultTier,
@@ -214,7 +244,7 @@ export default class Transcript extends EventService {
     return _(this.events).findIndex(e => e.eventId === id)
   }
 
-  getFirstTokenOrder(e: LocalTranscriptEvent, speakerId: string): number {
+  getFirstTokenOrder(e: TranscriptEvent, speakerId: string): number {
     const speakerEvent = e.speakerEvents[speakerId]
     if (speakerEvent) {
       const firstToken = e.speakerEvents[speakerId].tokens[0]
@@ -243,7 +273,7 @@ export default class Transcript extends EventService {
     return _(this.events).findLastIndex((e, eventIndex) => eventIndex < i && e.speakerEvents[speaker] !== undefined)
   }
 
-  getLastEventToken(event: LocalTranscriptEvent|undefined, speakerId: number): LocalTranscriptToken|undefined {
+  getLastEventToken(event: TranscriptEvent|undefined, speakerId: number): TranscriptToken|undefined {
     if (event === undefined) {
       return undefined
     } else {
@@ -262,7 +292,7 @@ export default class Transcript extends EventService {
   setFirstTokenFragmentOf(
     eventIndex: number,
     speakerId: number,
-    lastEventToken?: LocalTranscriptToken
+    lastEventToken?: TranscriptToken
   ) {
     const event = this.events[eventIndex]
     if (
@@ -284,9 +314,9 @@ export default class Transcript extends EventService {
 
   /** Update the Tokens for several Events at once. */
   updateSpeakerEvents(
-    es: LocalTranscriptEvent[],
+    es: TranscriptEvent[],
     speakerId: number,
-    eTokens: LocalTranscriptToken[][]
+    eTokens: TranscriptToken[][]
   ): HistoryEventAction {
     const newEs = es.map((e, i) => ({
       ...e,
@@ -309,13 +339,13 @@ export default class Transcript extends EventService {
   }
 
   /** Checks whether a Speaker Event has any tokens */
-  hasTokens(se: LocalTranscriptSpeakerEvent): boolean {
+  hasTokens(se: TranscriptSpeakerEvent): boolean {
     return se.tokens.length > 0 && se.tokens.map(t => t.tiers[this.meta.defaultTier].text).join('').trim() !== ''
   }
 
   /** Update an Event, creating an undoable History Action. */
   updateSpeakerEvent(
-    event: LocalTranscriptEvent,
+    event: TranscriptEvent,
     speakerId: number
   ): HistoryEventAction {
     const tokens = event.speakerEvents[speakerId].tokens
@@ -338,7 +368,7 @@ export default class Transcript extends EventService {
         m[k] = e
       }
       return m
-    }, {} as LocalTranscriptEvent['speakerEvents'])
+    }, {} as TranscriptEvent['speakerEvents'])
 
     // create the event
     const newEvent = clone({ ...oldEvent, speakerEvents })
@@ -380,14 +410,14 @@ export default class Transcript extends EventService {
   }
 
   /** Get the event before this one. */
-  getPreviousEvent(id: number): LocalTranscriptEvent|undefined {
+  getPreviousEvent(id: number): TranscriptEvent|undefined {
     const sorted = EventService.sortEvents(this.events)
     const index = sorted.findIndex(e => e.eventId === id) - 1
     return sorted[index]
   }
 
   /** Resize Events. Use this to update the startTime or endTime of one or multiple Events at once. */
-  resizeEvents(...es: LocalTranscriptEvent[]): HistoryEventAction {
+  resizeEvents(...es: TranscriptEvent[]): HistoryEventAction {
     const oldEs = clone(es
       .map(e => this.findEventIndexById(e.eventId))
       .map(i => this.events[i])
@@ -410,15 +440,15 @@ export default class Transcript extends EventService {
   }
 
   /** Move the left side of an event (i. e. the start time) */
-  moveEventStartTime(e: LocalTranscriptEvent, by: number): HistoryEventAction {
+  moveEventStartTime(e: TranscriptEvent, by: number): HistoryEventAction {
     // same as above but in the other direction and with the previous event.
     const newEvent = { ...e, startTime: e.startTime + by }
     const previousEvent = this.findPreviousEventAt(e.endTime)
-    console.log({ previousEvent, isEventDockedToEvent: previousEvent && EventService.isEventDockedToEvent(e, previousEvent) })
+    console.log({ previousEvent, isEventDockedToEvent: previousEvent && EventService.isEventDockedToEvent([e, previousEvent], settings.eventDockingInterval) })
     if (
       previousEvent !== undefined && (
-        EventService.isEventDockedToEvent(newEvent, previousEvent) ||
-        EventService.isEventDockedToEvent(e, previousEvent)
+        EventService.isEventDockedToEvent([newEvent, previousEvent], settings.eventDockingInterval) ||
+        EventService.isEventDockedToEvent([e, previousEvent], settings.eventDockingInterval)
       )
     ) {
       const previousEventFutureLength = newEvent.startTime - previousEvent.startTime
@@ -439,7 +469,7 @@ export default class Transcript extends EventService {
   }
 
   /** Move the right side of an event (i. e. its end time). */
-  moveEventEndTime(e: LocalTranscriptEvent, by: number): HistoryEventAction {
+  moveEventEndTime(e: TranscriptEvent, by: number): HistoryEventAction {
     // create future event and find next.
     const newEvent = { ...e, endTime: e.endTime + by }
     const nextEvent = this.findNextEventAt(e.endTime)
@@ -448,8 +478,8 @@ export default class Transcript extends EventService {
     // either the current event or the future event
     if (
       nextEvent !== undefined && (
-        EventService.isEventDockedToEvent(newEvent, nextEvent) ||
-        EventService.isEventDockedToEvent(e, nextEvent)
+        EventService.isEventDockedToEvent([newEvent, nextEvent], settings.eventDockingInterval) ||
+        EventService.isEventDockedToEvent([e, nextEvent], settings.eventDockingInterval)
       )
     ) {
       const nextEventFutureLength = nextEvent.endTime - newEvent.endTime
@@ -475,7 +505,7 @@ export default class Transcript extends EventService {
   }
 
   /** Insert a complete event into the transcript. */
-  private insertEvent(e: LocalTranscriptEvent): HistoryEventAction {
+  private insertEvent(e: TranscriptEvent): HistoryEventAction {
     const nextEvent = this.findNextEventAt(e.startTime)
     if (nextEvent !== undefined) {
       const i = this.findEventIndexById(nextEvent.eventId)
@@ -497,7 +527,7 @@ export default class Transcript extends EventService {
   addEvent(atTime: number, length = 1): HistoryEventAction {
     const nextEvent = this.findNextEventAt(atTime)
     const newId = EventService.makeEventId()
-    const newEvent: LocalTranscriptEvent = {
+    const newEvent: TranscriptEvent = {
       startTime: atTime,
       endTime: atTime + length,
       eventId: newId,
@@ -554,13 +584,13 @@ export default class Transcript extends EventService {
   }
 
   /** Same as appendEmptyEventAt, but dependent on a previous event. */
-  appendEmptyEventAfter(e: LocalTranscriptEvent|undefined): HistoryEventAction|undefined {
+  appendEmptyEventAfter(e: TranscriptEvent|undefined): HistoryEventAction|undefined {
     // an event is selected
     if (e !== undefined) {
       const next = this.findNextEventAt(e.endTime)
       // there is one after it.
       if (next !== undefined) {
-        if (EventService.isEventDockedToEvent(e, next)) {
+        if (EventService.isEventDockedToEvent([e, next], settings.eventDockingInterval)) {
           // it’s docked, so there’s nothing to do
           return undefined
         } else {
@@ -574,11 +604,11 @@ export default class Transcript extends EventService {
   }
 
   /** Same as prependEmptyEventAt, but dependent on a previous event. */
-  prependEmptyEventBefore(e: LocalTranscriptEvent|undefined): HistoryEventAction|undefined {
+  prependEmptyEventBefore(e: TranscriptEvent|undefined): HistoryEventAction|undefined {
     if (e !== undefined) {
       const prev = this.findPreviousEventAt(e.endTime)
       if (prev !== undefined) {
-        if (EventService.isEventDockedToEvent(prev, e)) {
+        if (EventService.isEventDockedToEvent([prev, e], settings.eventDockingInterval)) {
           return undefined
         } else {
           return this.addEvent(Math.max(prev.endTime, e.startTime - 2), Math.min(2, e.startTime - prev.endTime))
@@ -600,7 +630,7 @@ export default class Transcript extends EventService {
     }
   }
 
-  deleteEvent(event: LocalTranscriptEvent): HistoryEventAction {
+  deleteEvent(event: TranscriptEvent): HistoryEventAction {
     const i = this.findEventIndexById(event.eventId)
     const e = clone(this.events[i])
     this.events.splice(i, 1)
@@ -624,6 +654,95 @@ export default class Transcript extends EventService {
     return this.shiftCharsAcrossEvents(eventId, speakerId, start, end, 1)
   }
 
+  static collectTokensViaOffsets(
+    tokens: TranscriptToken[],
+    t: Transcript,
+    start:
+    number,
+    end: number
+  ): Array<Pastable<TranscriptToken>> {
+    // start and end are not necessarily from left to right
+    const [left, right] = [start, end].sort((a, b) => a - b)
+    // init cursor
+    let cursor = 0
+    // reduce to relevant tokens and mark partiality
+    return tokens.reduce((m, e, i) => {
+      // get range for token
+      const tokenStart = cursor
+      const tokenEnd = cursor + e.tiers[ t.meta.defaultTier ].text.length
+      // move cursor to the end of the token and account for whitespace
+      cursor = tokenEnd + 1
+      // decide whether it’s in the range
+      if (left <= tokenStart && right >= tokenEnd) {
+        // token is fully in collection range, not partial
+        return m.concat({ ...e, partial: false, index: i })
+      } else if (left > tokenEnd || right <= tokenStart) {
+        // token is outside of collection range -> do nothing
+        return m
+      } else {
+        // token is partly in collection range, not fully
+        if (right < tokenEnd) {
+          // only take the left part (it’s the start)
+          return m.concat([{
+            ...Transcript.getTokenPartWithMetadata(e, t.meta.defaultTier, 0, right - tokenStart),
+            index: i,
+            partial: true
+          }])
+        } else {
+          // only take the right part (it’s the end)
+          return m.concat([{
+            ...Transcript.getTokenPart(e, t.meta.defaultTier, left - tokenStart),
+            index: i,
+            partial: true
+          }])
+        }
+      }
+    }, [] as Array<Pastable<TranscriptToken>>)
+  }
+
+  static getTokenPartWithMetadata(
+    e: TranscriptToken,
+    defaultTier: TokenTierType,
+    range1: number,
+    range2?: number
+  ): TranscriptToken {
+    return {
+      // old token id and all tiers
+      ...e,
+      tiers: {
+        // leave the other tiers untouched
+        ...e.tiers,
+        // edit the defaultTier text, so it only contains the selected text
+        [ defaultTier ]: {
+          ...e.tiers[ defaultTier ],
+          text: e.tiers[ defaultTier ].text.substring(range1, range2) + '='
+        }
+      }
+    }
+  }
+
+  static getTokenPart(
+    e: TranscriptToken,
+    defaultTier: TokenTierType,
+    range1: number,
+    range2?: number
+  ): TranscriptToken {
+    // new token id and only the default tier
+    return {
+      ...e,
+      id: Transcript.makeTokenId(),
+      tiers: {
+        ortho: { text: '', type: -1 },
+        phon: { text: '', type: -1 },
+        text: { text: '', type: -1 },
+        [ defaultTier ]: {
+          ...e.tiers[ defaultTier ],
+          text: e.tiers[ defaultTier ].text.substring(range1, range2)
+        }
+      }
+    }
+  }
+
   /** Utility function to move characters / tokens from one event to an adjacent event. */
   private shiftCharsAcrossEvents(
     eventId: number,
@@ -640,8 +759,9 @@ export default class Transcript extends EventService {
     if (e !== undefined && targetE !== undefined) {
       const ts = e.speakerEvents[speakerId].tokens
       const text = EventService.getTextFromTokens(ts, this.meta.defaultTier)
-      const sourceTokens = collectTokensViaOffsets(
+      const sourceTokens = Transcript.collectTokensViaOffsets(
         e.speakerEvents[speakerId].tokens,
+        this,
         //                 keep right  : keep left
         direction === -1 ? right : 0,
         direction === -1 ? text.length : left
@@ -651,12 +771,12 @@ export default class Transcript extends EventService {
         if (direction === -1) {
           return [
             ...targetE.speakerEvents[speakerId] ? targetE.speakerEvents[speakerId].tokens : [],
-            ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, 0, right)
+            ...Transcript.collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, this, 0, right)
           ]
         // prepend
         } else {
           return [
-            ...collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, left, text.length),
+            ...Transcript.collectTokensViaOffsets(e.speakerEvents[speakerId].tokens, this, left, text.length),
             ...targetE.speakerEvents[speakerId] ? targetE.speakerEvents[speakerId].tokens : []
           ]
         }
@@ -674,13 +794,13 @@ export default class Transcript extends EventService {
   }
 
   /** Split an event at a certain offset. Also splits the token list. */
-  splitEvent(event: LocalTranscriptEvent, splitTime: number): HistoryEventAction {
+  splitEvent(event: TranscriptEvent, splitTime: number): HistoryEventAction {
     const i = this.findEventIndexById(event.eventId)
     const before = clone(this.events[i])
     const eventLength = event.endTime - event.startTime
     const cutAtProgressFactor = splitTime / eventLength
     const newEventId = EventService.makeEventId()
-    const leftEvent: LocalTranscriptEvent = {
+    const leftEvent: TranscriptEvent = {
       ...event,
       speakerEvents: {
         ..._(event.speakerEvents).mapValues(se => {
@@ -692,7 +812,7 @@ export default class Transcript extends EventService {
       },
       endTime: event.startTime + splitTime
     }
-    const rightEvent: LocalTranscriptEvent = {
+    const rightEvent: TranscriptEvent = {
       startTime: event.startTime + splitTime,
       endTime: event.endTime,
       eventId: newEventId,
@@ -738,17 +858,17 @@ export default class Transcript extends EventService {
         const splitFactor = left / segmentCharacters
         const splitTime = splitFactor * (e.endTime - e.startTime)
         const newEventId = EventService.makeEventId()
-        const leftEvent: LocalTranscriptEvent = {
+        const leftEvent: TranscriptEvent = {
           ...e,
           speakerEvents: {
             ..._(e.speakerEvents).mapValues((se, sid) => ({
               ...se,
-              tokens: collectTokensViaOffsets(e.speakerEvents[sid].tokens, 0, left)
+              tokens: Transcript.collectTokensViaOffsets(e.speakerEvents[sid].tokens, this, 0, left)
             })).value()
           },
           endTime: e.startTime + splitTime
         }
-        const rightEvent: LocalTranscriptEvent = {
+        const rightEvent: TranscriptEvent = {
           startTime: e.startTime + splitTime,
           endTime: e.endTime,
           eventId: newEventId,
@@ -756,7 +876,7 @@ export default class Transcript extends EventService {
             ..._(e.speakerEvents).mapValues((se, sid) => ({
               ...se,
               speakerEventId: newEventId,
-              tokens: collectTokensViaOffsets(e.speakerEvents[sid].tokens, left, segmentCharacters)
+              tokens: Transcript.collectTokensViaOffsets(e.speakerEvents[sid].tokens, this, left, segmentCharacters)
             })).value()
           }
         }
@@ -793,7 +913,7 @@ export default class Transcript extends EventService {
               ts = { ...ts, ...ev.speakerEvents[speakerId].speakerEventTiers}
             }
             return ts
-          }, {} as LocalTranscriptSpeakerEventTiers),
+          }, {} as TranscriptSpeakerEventTiers),
           speakerEventId: EventService.makeEventId(),
           tokens: events.reduce((ts, ev) => {
             if (ev.speakerEvents[speakerId]) {
@@ -802,10 +922,10 @@ export default class Transcript extends EventService {
             } else {
               return ts
             }
-          }, [] as LocalTranscriptToken[])
+          }, [] as TranscriptToken[])
         }
         return speakerEvents
-      }, {} as LocalTranscriptEvent['speakerEvents'])
+      }, {} as TranscriptEvent['speakerEvents'])
     }
     this.replaceEvents(events, [ joinedEvent ])
     this.uiState.selectedEventIds = [ joinedEvent.eventId ]
@@ -819,16 +939,16 @@ export default class Transcript extends EventService {
     }
   }
 
-  findNextEventAt(seconds: number, events = this.events): LocalTranscriptEvent|undefined {
+  findNextEventAt(seconds: number, events = this.events): TranscriptEvent|undefined {
     return _(events).sortBy(e => e.startTime).find((e) => e.startTime >= seconds)
   }
 
-  findPreviousEventAt(seconds: number, events = this.events): LocalTranscriptEvent|undefined {
+  findPreviousEventAt(seconds: number, events = this.events): TranscriptEvent|undefined {
     const i = _(events).sortBy(e => e.startTime).findLastIndex((e) => e.endTime < seconds)
     return events[i]
   }
 
-  findEventAt(seconds: number, events = this.events): LocalTranscriptEvent|undefined {
+  findEventAt(seconds: number, events = this.events): TranscriptEvent|undefined {
     return _(events).find((e) => e.startTime <= seconds && e.endTime >= seconds)
   }
 
@@ -841,7 +961,7 @@ export default class Transcript extends EventService {
     return _(this.events).findIndex((e, eventIndex) => eventIndex > i && e.speakerEvents[speaker] !== undefined)
   }
 
-  getNextEvent(id: number): LocalTranscriptEvent|undefined {
+  getNextEvent(id: number): TranscriptEvent|undefined {
     const sorted = EventService.sortEvents(this.events)
     const index = sorted.findIndex(e => e.eventId === id) + 1
     return sorted[index]
@@ -852,11 +972,11 @@ export default class Transcript extends EventService {
     return this.deleteEvent(this.events[i])
   }
 
-  getEventById(id: number): LocalTranscriptEvent|undefined {
+  getEventById(id: number): TranscriptEvent|undefined {
     return this.events[this.findEventIndexById(id)]
   }
 
-  private getEventsByIds(ids: number[]): LocalTranscriptEvent[] {
+  private getEventsByIds(ids: number[]): TranscriptEvent[] {
     return _(ids)
       .map(id => this.events[this.findEventIndexById(id)])
       .compact()
@@ -864,7 +984,7 @@ export default class Transcript extends EventService {
       .value()
   }
 
-  replaceEvents(oldEvents: LocalTranscriptEvent[], newEvents: LocalTranscriptEvent[]) {
+  replaceEvents(oldEvents: TranscriptEvent[], newEvents: TranscriptEvent[]) {
     oldEvents.forEach(this.deleteEvent)
     newEvents.forEach(this.insertEvent)
   }
@@ -877,7 +997,7 @@ export default class Transcript extends EventService {
     return _.last(this.uiState.selectedEventIds) === id
   }
 
-  selectNextEvent(direction: 1|-1 = 1, event?: LocalTranscriptEvent): LocalTranscriptEvent|undefined {
+  selectNextEvent(direction: 1|-1 = 1, event?: TranscriptEvent): TranscriptEvent|undefined {
     const id = event ? event.eventId : this.uiState.selectedEventIds[0]
     if (id !== undefined) {
       const i = this.findEventIndexById(id)
@@ -888,7 +1008,7 @@ export default class Transcript extends EventService {
     }
   }
 
-  selectPreviousEvent(): LocalTranscriptEvent|undefined {
+  selectPreviousEvent(): TranscriptEvent|undefined {
     return this.selectNextEvent(-1)
   }
 
@@ -897,22 +1017,22 @@ export default class Transcript extends EventService {
     return []
   }
 
-  selectEvents(es: LocalTranscriptEvent[]): LocalTranscriptEvent[] {
+  selectEvents(es: TranscriptEvent[]): TranscriptEvent[] {
     this.uiState.selectedEventIds = es.map(e => e.eventId)
     return es
   }
 
-  selectEvent(e: LocalTranscriptEvent): LocalTranscriptEvent[] {
+  selectEvent(e: TranscriptEvent): TranscriptEvent[] {
     return this.selectEvents([ e ])
   }
 
-  collectEventsByTimeRange(start: number, end: number): LocalTranscriptEvent[] {
+  collectEventsByTimeRange(start: number, end: number): TranscriptEvent[] {
     return this.events.filter((e) => {
       return e.startTime >= start && e.endTime <= end
     })
   }
 
-  selectEventRange(e: LocalTranscriptEvent) {
+  selectEventRange(e: TranscriptEvent) {
     const anchorEvent = this.getSelectedEvent()
     if (anchorEvent === undefined) {
       this.selectEvent(e)
@@ -931,7 +1051,7 @@ export default class Transcript extends EventService {
     }
   }
 
-  selectOrDeselectEvent(e: LocalTranscriptEvent): LocalTranscriptEvent {
+  selectOrDeselectEvent(e: TranscriptEvent): TranscriptEvent {
     if (this.isEventSelected(e.eventId)) {
       this.removeEventsFromSelection([ e ])
     } else {
@@ -940,20 +1060,20 @@ export default class Transcript extends EventService {
     return e
   }
 
-  addEventsToSelection(es: LocalTranscriptEvent[]) {
+  addEventsToSelection(es: TranscriptEvent[]) {
     this.uiState.selectedEventIds = this.uiState.selectedEventIds.concat(es.map(e => e.eventId))
   }
 
-  removeEventsFromSelection(es: LocalTranscriptEvent[]) {
+  removeEventsFromSelection(es: TranscriptEvent[]) {
     const eIds = es.map(e => e.eventId)
     this.uiState.selectedEventIds = this.uiState.selectedEventIds.filter((eId) => eIds.indexOf(eId) === -1)
   }
 
-  getSelectedEvents(): LocalTranscriptEvent[] {
+  getSelectedEvents(): TranscriptEvent[] {
     return this.getEventsByIds(this.uiState.selectedEventIds)
   }
 
-  getSelectedEvent(): LocalTranscriptEvent|undefined {
+  getSelectedEvent(): TranscriptEvent|undefined {
     return _.find(this.events, (e) => e.eventId === this.uiState.selectedEventIds[0])
   }
 }

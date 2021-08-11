@@ -71,7 +71,7 @@
 </template>
 <script lang="ts">
 import { Vue, Component } from 'vue-property-decorator'
-import { LocalTranscriptTier, TokenTierType, LocalTranscriptSpeakers } from '../store/transcript'
+import { TranscriptTier, TokenTierType, LocalTranscriptSpeakers } from '@/types/transcript'
 import ServerTranscriptInfoForm from './ServerTranscriptInfoForm.vue'
 import SpeakerTierEditor from './SpeakerTierEditor.vue'
 import {
@@ -86,13 +86,14 @@ import {
   getMetadataFromServerTranscript,
   serverTranscriptToLocal,
   serverTranscriptSurveyToSurvey
-} from '@/service/backend-server'
+} from '@/service/backend-server.service'
 import _ from 'lodash'
 import { computeTokenTypesForEvents } from '@/service/token-types.service'
 import { resourceAtUrlExists, clone } from '@/util'
 import { ProjectPresetName } from '@/presets'
 import store from '@/store/'
-import TranscriptAudio from '@/service/transcript-audio.class'
+import TranscriptAudio from '@/classes/transcript-audio.class'
+import settings from '@/store/settings.store'
 
 interface BasicInfos {
   transcriptName: string|null
@@ -113,13 +114,13 @@ export default class TranscriptSettings extends Vue {
   serverTranscript = serverTranscript
   serverTokenTiers = serverTokenTiers
   defaultTier: TokenTierType = 'ortho'
-  tiers: LocalTranscriptTier[] = clone(this.transcript.meta.tiers)
+  tiers: TranscriptTier[] = clone(this.transcript.meta.tiers)
   basicInfos: BasicInfos = {
     transcriptName: this.transcript.meta.transcriptName,
     selectedSurvey: serverTranscript?.aEinzelErhebung
       ? serverTranscriptSurveyToSurvey(serverTranscript?.aEinzelErhebung)
       : null,
-    projectPreset: store.settings.projectPreset
+    projectPreset: settings.projectPreset
   }
 
   async updateBasicInfos(args: BasicInfos) {
@@ -182,12 +183,15 @@ export default class TranscriptSettings extends Vue {
             this.transcript.meta.defaultTier || 'text',
             Object.keys(this.transcript.meta.speakers)
           )
-          const audioFileUrl = getAudioUrlFromServerNames(
-            this.basicInfos.selectedSurvey.Audiofile,
-            this.basicInfos.selectedSurvey.Dateipfad
-          )
-          if (audioFileUrl !== null && (await resourceAtUrlExists(audioFileUrl))) {
-            this.transcript.audio = new TranscriptAudio(audioFileUrl)
+          if (settings.backEndUrl !== null) {
+            const audioFileUrl = getAudioUrlFromServerNames(
+              this.basicInfos.selectedSurvey.Audiofile,
+              this.basicInfos.selectedSurvey.Dateipfad,
+              settings.backEndUrl
+            )
+            if (audioFileUrl !== null && (await resourceAtUrlExists(audioFileUrl))) {
+              this.transcript.audio = new TranscriptAudio(audioFileUrl)
+            }
           }
         }
       }

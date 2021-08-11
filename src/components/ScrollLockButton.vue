@@ -18,7 +18,7 @@
 
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import settings from '../store/settings'
+import settings from '../store/settings.store'
 
 @Component
 export default class ScrollLockButton extends Vue {

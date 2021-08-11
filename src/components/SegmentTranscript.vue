@@ -38,10 +38,10 @@ import SpeakerSegmentTranscript from './SpeakerSegmentTranscript.vue'
 import _ from 'lodash'
 
 import {
-  LocalTranscriptEvent
-} from '../store/transcript'
+  TranscriptEvent
+} from '@/types/transcript'
 
-import settings from '../store/settings'
+import settings from '../store/settings.store'
 import { timeFromSeconds } from '@/util'
 import store from '@/store'
 
@@ -52,7 +52,7 @@ import store from '@/store'
 })
 export default class SegmentTranscript extends Vue {
 
-  @Prop({ required: true }) event!: LocalTranscriptEvent
+  @Prop({ required: true }) event!: TranscriptEvent
   @Prop({ default: false }) isSelected!: boolean
 
   transcript = store.transcript!
@@ -81,7 +81,7 @@ export default class SegmentTranscript extends Vue {
     )
   }
 
-  selectAndScrollToEvent(e: LocalTranscriptEvent) {
+  selectAndScrollToEvent(e: TranscriptEvent) {
     if (!settings.lockScroll) {
       this.transcript.scrollToAudioEvent(e)
     }

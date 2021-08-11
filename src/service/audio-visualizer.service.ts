@@ -1,8 +1,9 @@
-import settings from '@/store/settings'
+import settings from '@/store/settings.store'
+import { sumChannels } from '@/util'
 import * as PromiseWorker from 'promise-worker-transferable'
 
 import GetFrequenciesWorker from './get-frequencies.worker'
-import TranscriptAudio from './transcript-audio.class'
+import TranscriptAudio from '../classes/transcript-audio.class'
 import WaveformWorker from './waveform.worker'
 
 const textEncoder = new TextEncoder()
@@ -22,7 +23,7 @@ export async function drawSpectrogramAsync(
 ): Promise<[HTMLCanvasElement, Uint8Array[]]> {
 
   const b = channel === undefined
-    ? TranscriptAudio.sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
+    ? sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
     : buffer.getChannelData(channel)
 
   const [f, i] = await getFrequenciesWorker.postMessage({
@@ -56,7 +57,7 @@ export async function drawWavePathAsync(
   offsetLeft = 0,
   mono = false
 ): Promise<string> {
-  const buf = getBuffer(buffer, channel, mono)
+  const buf = TranscriptAudio.getBufferFromAudioBuffer(buffer, channel, mono)
   const options = textEncoder.encode(JSON.stringify({ width, height, offsetLeft })).buffer
   if (channel === 0) {
     return await waveformWorker1.postMessage({ buffer: buf, options }, [ buf, options ])

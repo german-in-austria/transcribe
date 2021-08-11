@@ -21,7 +21,7 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { SpeakerTierImportable } from '../service/backend-exmaralda'
+import { SpeakerTierImportable } from '../service/backend-exmaralda.service'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import _ from 'lodash'
 import { timeFromSeconds } from '@/util'

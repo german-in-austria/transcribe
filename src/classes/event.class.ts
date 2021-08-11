@@ -1,28 +1,23 @@
 
-import presets, { TokenTypePresetBase } from '@/presets'
-import settings from '@/store/settings'
-import { LocalTranscriptEvent, LocalTranscriptIndexedToken, LocalTranscriptSpeakerEvent, LocalTranscriptToken, TokenTierType } from '@/store/transcript'
+import { ProjectPreset, TokenTypePresetBase } from '@/presets'
+import { TranscriptEvent, LocalTranscriptIndexedToken, TranscriptSpeakerEvent, TranscriptToken, TokenTierType } from '@/types/transcript'
 import _ from 'lodash'
 
-
 /**
- * A class with static* methods for modifying and
+ * A class with *static* methods for modifying and
  * analyzing events or lists of events, and no constructor or state.
  */
 export default class EventService {
   /** Compute the type of a Token from its content. */
-  static getTokenTypeFromToken(token: string): TokenTypePresetBase {
-    const type = _(presets[settings.projectPreset].tokenTypes).find((tt) => {
+  static getTokenTypeFromToken(
+    token: string,
+    preset: ProjectPreset
+  ): TokenTypePresetBase {
+    const type = _(preset.tokenTypes).find((tt) => {
       return tt.type === 'single' && tt.regex.test(token.replace('=', ''))
     })
     if (type !== undefined) {
       return type
-    } else if (token === settings.placeholderToken) {
-      return {
-        name: 'placeholder',
-        color: 'grey',
-        id: -2
-      }
     } else {
       return {
         name: 'error',
@@ -38,19 +33,19 @@ export default class EventService {
   }
 
   /** Check whether a certain Event contains a certain tier */
-  static speakerEventHasTier(e: LocalTranscriptEvent, speakerId: string, tierId: string): boolean {
+  static speakerEventHasTier(e: TranscriptEvent, speakerId: string, tierId: string): boolean {
     return EventService.isTokenTier(tierId) ||
       e.speakerEvents[speakerId] !== undefined &&
       e.speakerEvents[speakerId].speakerEventTiers[tierId] !== undefined
   }
 
   /** Check whether a certain Event contains a certain speaker */
-  static eventHasSpeaker(e: LocalTranscriptEvent, speakerId: string): boolean {
+  static eventHasSpeaker(e: TranscriptEvent, speakerId: string): boolean {
     return e.speakerEvents[speakerId] !== undefined
   }
 
   /** Get the concatenated text from an Event tier for a speaker */
-  static getTextFromTier(e: LocalTranscriptEvent, tier: string, speaker: string): string {
+  static getTextFromTier(e: TranscriptEvent, tier: string, speaker: string): string {
     if (EventService.eventHasSpeaker(e, speaker)) {
       if (EventService.isTokenTier(tier)) {
         return EventService.getTextFromTokens(e.speakerEvents[speaker].tokens, tier)
@@ -65,12 +60,12 @@ export default class EventService {
   }
 
   /** Get the concatenated text from a couple of tokens. */
-  static getTextFromTokens(ts: LocalTranscriptToken[], defaultTier: TokenTierType): string {
+  static getTextFromTokens(ts: TranscriptToken[], defaultTier: TokenTierType): string {
     return ts.map(t => t.tiers[defaultTier].text).join(' ')
   }
 
   /** See which token occurs at a certain character offset. Returns the index or -1 if there’s no token at the offset. */
-  static getTokenIndexByCharacterOffset(tokens: LocalTranscriptToken[], offset: number, tier: TokenTierType): number {
+  static getTokenIndexByCharacterOffset(tokens: TranscriptToken[], offset: number, tier: TokenTierType): number {
     let currentStart = 0
     return tokens.findIndex(e => {
       const currentEnd = currentStart + e.tiers[tier].text.length
@@ -94,12 +89,12 @@ export default class EventService {
   }
 
   /** Sort events by their start time. */
-  static sortEvents(es: LocalTranscriptEvent[]): LocalTranscriptEvent[] {
+  static sortEvents(es: TranscriptEvent[]): TranscriptEvent[] {
     return _.sortBy(es, (e) => e.startTime)
   }
 
   /** Generate a Token Hashmap from the Events, to process or look up tokens more quickly */
-  static getIndexedTokens(es: LocalTranscriptEvent[]): { [id: number]: LocalTranscriptIndexedToken } {
+  static getIndexedTokens(es: TranscriptEvent[]): { [id: number]: LocalTranscriptIndexedToken } {
     // this could be achieved with a reduce function,
     // but this version is currently faster (which matters at this point).
     const indexedTokens: { [id: number]: LocalTranscriptIndexedToken } = {}
@@ -115,7 +110,7 @@ export default class EventService {
 
   /** Removes any "fragmentOf" properties that have been orphaned
   (i.e. broken links to other tokens), and returns the fixed/cleaned Events */
-  static removeBrokenFragmentLinks(es: LocalTranscriptEvent[]): LocalTranscriptEvent[] {
+  static removeBrokenFragmentLinks(es: TranscriptEvent[]): TranscriptEvent[] {
     const tokensById = EventService.getIndexedTokens(es)
     Object.values(tokensById).forEach(t => {
       if (
@@ -154,7 +149,7 @@ export default class EventService {
   }
 
   /** Get the last Token of an Event for a speaker. Returns undefined if not found. */
-  static getLastTokenOfEvent(event: LocalTranscriptEvent|undefined, speakerId: number): LocalTranscriptToken|undefined {
+  static getLastTokenOfEvent(event: TranscriptEvent|undefined, speakerId: number): TranscriptToken|undefined {
     if (event === undefined) {
       return undefined
     } else {
@@ -168,7 +163,7 @@ export default class EventService {
   }
 
   /** Checks whether this Event ends with a "=" to indicate a fragmented token. */
-  static hasNextFragmentMarker(event: LocalTranscriptEvent|undefined, speakerId: number, tier: TokenTierType): boolean {
+  static hasNextFragmentMarker(event: TranscriptEvent|undefined, speakerId: number, tier: TokenTierType): boolean {
     if (event === undefined) {
       return false
     } else {
@@ -182,7 +177,7 @@ export default class EventService {
   }
 
   /** Checks whether a Speaker Event has Event Tiers and if there’s any content in those Event Tiers. */
-  static hasEventTiers(se: LocalTranscriptSpeakerEvent): boolean {
+  static hasEventTiers(se: TranscriptSpeakerEvent): boolean {
     return (
       !_.isEmpty(se.speakerEventTiers) &&
       _.some(se.speakerEventTiers, (set) => set.text !== undefined && set.text.trim() !== '')
@@ -194,10 +189,10 @@ export default class EventService {
    * - Events that overlap our Event on the left side of it,
    * - Events that overlap in the middle or completely,
    * - Events that overlap the right side of it */
-  static findEventOverlaps(e: LocalTranscriptEvent, events: LocalTranscriptEvent[]): LocalTranscriptEvent[][] {
-    const left: LocalTranscriptEvent[] = []
-    const middle: LocalTranscriptEvent[] = []
-    const right: LocalTranscriptEvent[] = []
+  static findEventOverlaps(e: TranscriptEvent, events: TranscriptEvent[]): TranscriptEvent[][] {
+    const left: TranscriptEvent[] = []
+    const middle: TranscriptEvent[] = []
+    const right: TranscriptEvent[] = []
     events.forEach(ev => {
       if (ev.eventId !== e.eventId) {
         if (ev.startTime <= e.startTime && ev.endTime > e.startTime && ev.endTime <= e.endTime) {
@@ -220,14 +215,14 @@ export default class EventService {
 
   /** Checks if the supplied events all "dock" to each other
    * (i. e. they have gaps between them that are smaller than the given amount.) */
-  static isEventDockedToEvent(...es: LocalTranscriptEvent[]): boolean {
+  static isEventDockedToEvent(es: TranscriptEvent[], maxDistance: number): boolean {
     return EventService.sortEvents(es).every((e, i, l) => {
-      return i === 0 || e.startTime - l[ i - 1].endTime <= settings.eventDockingInterval
+      return i === 0 || e.startTime - l[ i - 1].endTime <= maxDistance
     })
   }
 
   /** Returns an empty Speaker Event. */
-  static makeSpeakerEvent(id: number): LocalTranscriptSpeakerEvent {
+  static makeSpeakerEvent(id: number): TranscriptSpeakerEvent {
     return {
       speakerEventId: id,
       speakerEventTiers: {},
@@ -236,17 +231,17 @@ export default class EventService {
   }
 
   /** Split a list of tokens into two lists, at a graphemic offset factor (percentage between 0 and 1). */
-  static splitTokensAtFactor(ts: LocalTranscriptToken[], factor: number): LocalTranscriptToken[][] {
+  static splitTokensAtFactor(ts: TranscriptToken[], factor: number): TranscriptToken[][] {
     // _.partition would have been nicer here
     // but typescript keeps getting confused with it.
     return ts.reduce((m, e, i, l) => {
       m[ i / l.length <= factor ? 0 : 1 ].push(e)
       return m
-    }, [[], []] as LocalTranscriptToken[][])
+    }, [[], []] as TranscriptToken[][])
   }
 
   /** Gets a list of Speaker Ids from an Event */
-  static getSpeakersFromEvents(es: LocalTranscriptEvent[]): string[] {
+  static getSpeakersFromEvents(es: TranscriptEvent[]): string[] {
     return _(es)
       .flatMap(e => Object.keys(e.speakerEvents))
       .uniq()
@@ -254,7 +249,7 @@ export default class EventService {
   }
 
   /** Finds all temporal gaps or "pauses" between Events that are longer than a certain duration  */
-  static findEventGaps(es: LocalTranscriptEvent[], maxGap = .1): Array<{ duration: number, start: number, end: number }> {
+  static findEventGaps(es: TranscriptEvent[], maxGap = .1): Array<{ duration: number, start: number, end: number }> {
     return es.reduce((m, e, i, l) => {
       const gap = l[i + 1] !== undefined ? l[i + 1].startTime - e.endTime : 0
       if (gap > maxGap) {
@@ -265,7 +260,7 @@ export default class EventService {
   }
 
   /** Update the "order" prop of Tokens for a list of Events. In case they get jumbled. */
-  static updateTokenOrder(es: LocalTranscriptEvent[]): LocalTranscriptEvent[] {
+  static updateTokenOrder(es: TranscriptEvent[]): TranscriptEvent[] {
     let tr = 0
     return es.map(e => {
       return {
@@ -283,52 +278,5 @@ export default class EventService {
         })
       }
     })
-  }
-
-  /** Insert a pre-defined string into every Event that is empty. */
-  static insertPlaceholderTokens(es: LocalTranscriptEvent[], defaultTier: TokenTierType): LocalTranscriptEvent[] {
-    const newEs = es.map((e) => {
-      return {
-        ...e,
-        speakerEvents: _.mapValues(e.speakerEvents, (se) => {
-          return {
-            ...se,
-            tokens: ((): LocalTranscriptToken[] => {
-              if (se.tokens.length === 0 && Object.keys(se.speakerEventTiers).length > 0) {
-                return [
-                  {
-                    fragmentOf: null,
-                    id: EventService.makeTokenId(),
-                    order: -1, // this gets updated later on
-                    sentenceId: null,
-                    tiers: {
-                      ortho: {
-                        text: '',
-                        type: null
-                      },
-                      phon: {
-                        text: '',
-                        type: null
-                      },
-                      text: {
-                        text: '',
-                        type: null
-                      },
-                      [ defaultTier ]: {
-                        text: settings.placeholderToken,
-                        type: -2
-                      }
-                    }
-                  }
-                ]
-              } else {
-                return se.tokens
-              }
-            })()
-          }
-        })
-      }
-    })
-    return EventService.updateTokenOrder(newEs)
   }
 }

@@ -18,8 +18,8 @@
     />
     <div
       v-if="
-        this.transcript.uiState.timeSpanSelection.start !== null &&
-        this.transcript.uiState.timeSpanSelection.end !== null"
+        transcript.uiState.timeSpanSelection.start !== null &&
+        transcript.uiState.timeSpanSelection.end !== null"
       :style="{
         left: getSelectionLeft() * settings.pixelsPerSecond + 'px',
         width: getSelectionLength() * settings.pixelsPerSecond + 'px'
@@ -34,10 +34,9 @@
 <script lang="ts">
 
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { scrubAudio } from '../store/transcript'
 import { easeInOutQuad, requestFrameAsync, timeFromSeconds } from '../util'
-import settings from '../store/settings'
-import eventBus from '../service/event-bus'
+import settings from '../store/settings.store'
+import bus from '../service/bus'
 import store from '@/store'
 
 @Component
@@ -64,7 +63,7 @@ export default class PlayHead extends Vue {
         waveform.scrollLeft = viewPortLeft
       })
     } else {
-      eventBus.$off('updateTime', this.scrollToTime)
+      bus.$off('updateTime', this.scrollToTime)
     }
   }
 
@@ -86,7 +85,7 @@ export default class PlayHead extends Vue {
     const wStart = waveform.scrollLeft
     const wTargetPosition = (t + scrollCatchUpTime) * settings.pixelsPerSecond - stageWidth / 2
     const wDistanceToCover = wTargetPosition - waveform.scrollLeft
-    eventBus.$on('updateTime', function catchUpListener(currentTime: number) {
+    bus.$on('updateTime', function catchUpListener(currentTime: number) {
       const timeElapsed = currentTime - t
       // if playhead is still locked
       if (settings.lockPlayHead === true) {
@@ -96,8 +95,8 @@ export default class PlayHead extends Vue {
         } else {
           // when we’re done, de-register this handler,
           // and hand it over to the regular, linear scroller ("scrollToTime").
-          eventBus.$off('updateTime', catchUpListener)
-          eventBus.$on('updateTime', that.scrollToTime)
+          bus.$off('updateTime', catchUpListener)
+          bus.$on('updateTime', that.scrollToTime)
         }
       }
     })
@@ -109,24 +108,26 @@ export default class PlayHead extends Vue {
   }
 
   mounted() {
-    eventBus.$on('scrubAudio', this.movePlayHead)
-    eventBus.$on('playAudio', this.animateScrollCatchUp)
-    eventBus.$on('updateTime', this.movePlayHead)
+    bus.$on('scrubAudio', this.movePlayHead)
+    bus.$on('playAudio', this.animateScrollCatchUp)
+    bus.$on('updateTime', this.movePlayHead)
   }
 
   beforeDestroy() {
-    eventBus.$off('scrubAudio', this.movePlayHead)
-    eventBus.$off('playAudio', this.animateScrollCatchUp)
-    eventBus.$off('updateTime', this.movePlayHead)
+    bus.$off('scrubAudio', this.movePlayHead)
+    bus.$off('playAudio', this.animateScrollCatchUp)
+    bus.$off('updateTime', this.movePlayHead)
   }
 
   startDrag(e: MouseEvent) {
     this.transcript.uiState.timeSpanSelection = { start: null, end: null }
     this.transcript.deselectEvents()
     this.inFront = true
-    scrubAudio(e.offsetX / settings.pixelsPerSecond)
-    document.addEventListener('mousemove', this.drag)
-    document.addEventListener('mouseup', this.endDrag)
+    if (this.transcript.audio !== null) {
+      this.transcript.audio.scrubAudio(e.offsetX / settings.pixelsPerSecond)
+      document.addEventListener('mousemove', this.drag)
+      document.addEventListener('mouseup', this.endDrag)
+    }
   }
 
   getSelectionLeft() {
@@ -161,7 +162,9 @@ export default class PlayHead extends Vue {
   }
 
   drag(e: MouseEvent) {
-    scrubAudio(e.offsetX / settings.pixelsPerSecond)
+    if (this.transcript.audio !== null) {
+      this.transcript.audio.scrubAudio(e.offsetX / settings.pixelsPerSecond)
+    }
   }
 
   endDrag(e: MouseEvent) {

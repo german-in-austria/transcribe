@@ -54,6 +54,14 @@ export function setNumberInBounds(n: number, min = 0, max = 1) {
   }
 }
 
+export function sumChannels(first: Float32Array, second: Float32Array): Float32Array {
+  const sum = new Float32Array(first.length)
+  first.forEach((v: number, i: number) => {
+    sum[i] = v + second[i]
+  })
+  return sum
+}
+
 export function fileToTextAndName(f: File): Promise<{ t: string, n: string }> {
   return new Promise((resolve, reject) => {
     try {
@@ -86,7 +94,7 @@ export function isUrl(a: string): boolean {
   try {
     new URL(a)
   } catch (e) {
-    console.log(e)
+    console.log(a, e)
     isIt = false
   }
   return isIt

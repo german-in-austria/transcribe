@@ -2,19 +2,19 @@ import _ from 'lodash'
 import PromiseWorker from 'promise-worker-transferable'
 
 import {
-  LocalTranscriptEvent,
+  TranscriptEvent,
   // eventStore,
   LocalTranscript,
-  LocalTranscriptTier,
-  LocalTranscriptSpeakerEventTiers,
+  TranscriptTier,
+  TranscriptSpeakerEventTiers,
   TokenTierType
-} from '../store/transcript'
+} from '../types/transcript'
 import { clone, timeToSeconds } from '../util'
 import ServerTranscriptDiff from './backend-server-transcript-diff.worker'
-import settings from '../store/settings'
-import Transcript from './transcript.class'
-import EventService from './event-service'
+import Transcript from '../classes/transcript.class'
+// import EventService from './event-service'
 import store from '@/store'
+import settings from '@/store/settings.store'
 
 type ServerTranscriptId = number
 
@@ -155,11 +155,15 @@ export interface ServerTier {
 }
 
 export interface ServerTranscriptSurvey {
+  /** Audio File */
   af: string
   d: string
+  /** Datei Pfad */
   dp: string
   e: number
+  /** Primary Key */
   pk: number
+  /** Transcript Id */
   trId: number
 }
 
@@ -277,7 +281,11 @@ export function surveyToServerTranscriptInformants(s: ServerSurvey): ServerTrans
   }, {} as ServerTranscriptInformants)
 }
 
-export function getAudioUrlFromServerNames(name: string|undefined, path: string|undefined): string|null {
+export function getAudioUrlFromServerNames(
+  name: string|undefined,
+  path: string|undefined,
+  host: string
+): string|null {
   if (path === undefined || name === undefined) {
     return null
   } else {
@@ -294,7 +302,7 @@ export function getAudioUrlFromServerNames(name: string|undefined, path: string|
     console.log({cleanPath, cleanPathWithSlashes})
     // add .ogg if necessary
     const cleanName = name.endsWith('.ogg') ? (name) : (name + '.ogg')
-    return `${ settings.backEndUrl }/private-media${ cleanPathWithSlashes }${ cleanName }`
+    return `${ host }/private-media${ cleanPathWithSlashes }${ cleanName }`
   }
 }
 
@@ -307,7 +315,8 @@ export function getMetadataFromServerTranscript(res: ServerTranscript) {
     defaultTier,
     audioUrl: getAudioUrlFromServerNames(
       res.aEinzelErhebung ? res.aEinzelErhebung.af : undefined,
-      res.aEinzelErhebung ? res.aEinzelErhebung.dp : undefined
+      res.aEinzelErhebung ? res.aEinzelErhebung.dp : undefined,
+      settings.backEndUrl!
     ),
     tiers: [
       {
@@ -337,7 +346,7 @@ export function getMetadataFromServerTranscript(res: ServerTranscript) {
       name: t.tier_name,
       show: false,
       id: tid
-    })).value()) as LocalTranscriptTier[]
+    })).value()) as TranscriptTier[]
   }
   return v
 }
@@ -641,7 +650,7 @@ export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenT
                   }
                 })
                 return ts
-              }, {} as LocalTranscriptSpeakerEventTiers),
+              }, {} as TranscriptSpeakerEventTiers),
               speakerEventId: se.pk,
               // generate token tiers
               tokens: (se.tid[speakerKey] || [])
@@ -691,7 +700,7 @@ export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenT
             }
           })
           return m
-        }, {} as LocalTranscriptEvent['speakerEvents'])
+        }, {} as TranscriptEvent['speakerEvents'])
       }
     })
     .orderBy(e => e.startTime)
@@ -699,28 +708,25 @@ export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenT
     .value()
 }
 
-export async function getSurveys(): Promise<ServerSurvey[]> {
-  if (settings.backEndUrl !== null) {
-    const x = await (await fetch(`${ settings.backEndUrl }/routes/einzelerhebungen`, {
-      credentials: 'include',
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
-    })).json()
-    return x.einzelerhebungen
-  } else {
-    return []
-  }
+export async function getSurveys(host: string): Promise<ServerSurvey[]> {
+  const x = await (await fetch(`${ host }/routes/einzelerhebungen`, {
+    credentials: 'include',
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    }
+  })).json()
+  return x.einzelerhebungen
 }
 
 export async function createEmptyTranscript(
+  host: string,
   surveyId: number,
   name: string,
   defaultTier: TokenTierType
 ): Promise<{error: string|null, transcript_id: ServerTranscriptId}> {
-  const res = await (await fetch(`${ settings.backEndUrl }/routes/transcript/create`, {
+  const res = await (await fetch(`${ host }/routes/transcript/create`, {
     credentials: 'include',
     method: 'POST',
     headers: {
@@ -776,9 +782,13 @@ export async function getServerTranscripts(backEndUrl: string): Promise<{transcr
   return res
 }
 
-async function performSaveRequest(id: number, t: ServerTranscriptSaveRequest): Promise<ServerTranscriptSaveResponse> {
+async function performSaveRequest(
+  host: string,
+  id: number,
+  t: ServerTranscriptSaveRequest
+): Promise<ServerTranscriptSaveResponse> {
   return await (
-    await fetch(`${ settings.backEndUrl }/routes/transcript/save/${ id }`, {
+    await fetch(`${ host }/routes/transcript/save/${ id }`, {
       credentials: 'include',
       method: 'POST',
       headers: {
@@ -793,7 +803,7 @@ async function performSaveRequest(id: number, t: ServerTranscriptSaveRequest): P
 // only passing the events won’t work, because we also need to
 // diff the tiers and send them to the server.
 // as in `ts: {[tier_id: string]: ServerTier}`
-export async function convertToServerTranscript(es: LocalTranscriptEvent[]): Promise<ServerTranscript|null> {
+export async function convertToServerTranscript(es: TranscriptEvent[]): Promise<ServerTranscript|null> {
   if (serverTranscript !== null) {
     return localTranscriptToServerTranscript(serverTranscript, es)
   } else {
@@ -824,17 +834,16 @@ export async function saveChangesToServer(
   surveyId = null,
   defaultTier = null,
   name = null
-): Promise<LocalTranscriptEvent[]> {
-  transcript.events = EventService.removeBrokenFragmentLinks(transcript.events)
+): Promise<TranscriptEvent[]> {
   // there’s no transcript or no id => throw
   if (serverTranscript === null || serverTranscript.aTranskript === undefined) {
     throw new Error('transcript id is undefined')
   } else {
     // it’s already on the server
-    if (serverTranscript.aTranskript.pk > -1) {
+    if (serverTranscript.aTranskript.pk > -1 && settings.backEndUrl !== null) {
       const t = await localTranscriptToServerSaveRequest(serverTranscript, transcript.events)
       console.log({ ServerTranscriptSaveRequest: t })
-      const serverChanges = await performSaveRequest(serverTranscript.aTranskript.pk, t)
+      const serverChanges = await performSaveRequest(settings.backEndUrl, serverTranscript.aTranskript.pk, t)
       console.log({ serverChanges })
       logServerResponse(t, serverChanges)
       const updatedServerTranscript = updateServerTranscriptWithChanges(serverTranscript, serverChanges)
@@ -850,6 +859,7 @@ export async function saveChangesToServer(
     } else {
       console.log({ serverTranscript })
       const { transcript_id } = await createEmptyTranscript(
+        settings.backEndUrl!,
         surveyId || serverTranscript.aEinzelErhebung!.pk,
         name || serverTranscript.aTranskript.n,
         defaultTier || serverTranscript.aTranskript.default_tier!
@@ -865,7 +875,7 @@ export async function saveChangesToServer(
         aEvents: []
       }
       const t = await localTranscriptToServerSaveRequest(transcriptWithoutTokensAndEvents, transcript.events)
-      const serverChanges = await performSaveRequest(transcript_id, t)
+      const serverChanges = await performSaveRequest(settings.backEndUrl!, transcript_id, t)
       logServerResponse(t, serverChanges)
       const updatedServerTranscript = updateServerTranscriptWithChanges(transcriptWithoutTokensAndEvents, serverChanges)
       console.log({ updatedServerTranscript })
@@ -883,7 +893,7 @@ export async function saveChangesToServer(
   }
 }
 
-function appendTranscriptEventChunk(a: LocalTranscriptEvent[], b: LocalTranscriptEvent[]): LocalTranscriptEvent[] {
+function appendTranscriptEventChunk(a: TranscriptEvent[], b: TranscriptEvent[]): TranscriptEvent[] {
   const lastOfPrevious = _(a).last()
   const firstOfNext = _(b).first()
   if (lastOfPrevious !== undefined && firstOfNext !== undefined) {
@@ -893,7 +903,7 @@ function appendTranscriptEventChunk(a: LocalTranscriptEvent[], b: LocalTranscrip
       lastOfPrevious.endTime === firstOfNext.endTime
     ) {
       // merge the event
-      const mergedEvent: LocalTranscriptEvent = {
+      const mergedEvent: TranscriptEvent = {
         ...lastOfPrevious,
         speakerEvents: {
           ...lastOfPrevious.speakerEvents,
@@ -916,7 +926,7 @@ export async function fetchTranscript(
   id: number,
   backEndUrl: string,
   transcript: Transcript,
-  onProgress: (v: number, es: LocalTranscriptEvent[], res: ServerTranscript) => any,
+  onProgress: (v: number, es: TranscriptEvent[], res: ServerTranscript) => any,
   chunk = 0,
   totalSteps?: number
 ): Promise<Transcript> {
@@ -958,7 +968,6 @@ export async function fetchTranscript(
         totalSteps || res.aTmNr
       )
     } else {
-      store.status = 'finished'
       return transcript
     }
   } catch (e) {

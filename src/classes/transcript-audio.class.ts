@@ -1,22 +1,34 @@
-import { concatUint8ArrayAsync, isUrl, readU8le } from '@/util'
-import { AudioMetaData, OggHeader, OggIndex, OggPage } from './audio'
+// Libraries
+import * as audioBufferToWav from 'audiobuffer-to-wav'
+import _ from 'lodash'
+import { saveAs } from 'file-saver'
 import * as concatBuffer from 'array-buffer-concat'
-import { AudioFileOrUrl } from './transcript.class'
 import * as sliceAudiobuffer from 'audiobuffer-slice'
 import * as PromiseWorker from 'promise-worker-transferable'
-import OggIndexWorker from './oggindex.worker'
-import _ from 'lodash'
-import { LocalTranscriptEvent } from '@/store/transcript'
-import EventService from './event-service'
-import settings from '@/store/settings'
-import * as audioBufferToWav from 'audiobuffer-to-wav'
-import eventBus from './event-bus'
+
+import { concatUint8ArrayAsync, isUrl, readU8le, sumChannels } from '@/util'
+import { AudioMetaData, OggHeader, OggIndex, OggPage } from '@/types/audio'
+import { AudioFileOrUrl } from './transcript.class'
+import OggIndexWorker from '@/service/oggindex.worker'
+import { TranscriptEvent } from '@/types/transcript'
+import EventService from './event.class'
+import settings from '@/store/settings.store'
+import bus from '@/service/bus'
 const oggIndexWorker = new PromiseWorker(new OggIndexWorker(''))
 
 // account for browser api differences
 const CtxClass: any = window.AudioContext || window.webkitAudioContext
 const audioContext: AudioContext = new CtxClass()
 let bufferSrc = audioContext.createBufferSource()
+
+/**
+ * This is a Helper because ReadableStreamDefaultReadResult<Uint8Array>
+ * is not available in all TS versions, and subject to change by the standards body.
+ */
+interface DownloadChunk {
+  value?: Uint8Array
+  done: boolean
+}
 
 export default class TranscriptAudio {
   constructor(a: AudioFileOrUrl, overviewWaveformSvg?: string) {
@@ -40,13 +52,13 @@ export default class TranscriptAudio {
   onChunkAvailable: null|((startTime: number, endTime: number, audioBuffer: AudioBuffer) => any) = null
   buffer = new Uint8Array(0)
   isLocalFile = false
-  playAllFrom: number|null = null
+  playAllFromTime: number|null = null
   url = ''
 
   pause() {
     this.audioElement.pause()
-    this.playAllFrom = null
-    eventBus.$emit('pauseAudio', this.currentTime)
+    this.playAllFromTime = null
+    bus.$emit('pauseAudio', this.currentTime)
     this.pauseCurrentBuffer()
     this.isPaused = true
   }
@@ -63,18 +75,38 @@ export default class TranscriptAudio {
     }
   }
 
-  playEvents(events: LocalTranscriptEvent[]) {
+  playAllFrom(t: number) {
+    if (this.isPaused === false) {
+      this.pause()
+    }
+    this.playAllFromTime = t
+    this.audioElement.currentTime = t
+    this.audioElement.play().then(() => {
+      this.isPaused = false
+      bus.$emit('playAudio', t)
+      this.emitUpdateTimeUntilPaused(
+        this.audioElement.currentTime,
+        settings.lockScroll && settings.lockPlayHead,
+        this.duration,
+        true
+      )
+    })
+  }
+
+  /** Plays a list of events */
+  playEvents(events: TranscriptEvent[]) {
     this.pause()
     const sortedEvents = EventService.sortEvents(events)
-    const lastEvent = _(sortedEvents).last() as LocalTranscriptEvent
-    const firstEvent = _(sortedEvents).first() as LocalTranscriptEvent
+    const lastEvent = _(sortedEvents).last() as TranscriptEvent
+    const firstEvent = _(sortedEvents).first() as TranscriptEvent
     const start = this.currentTime > firstEvent.startTime && this.currentTime < lastEvent.endTime
       ? this.currentTime
       : firstEvent.startTime
     this.playRange(start, lastEvent.endTime)
   }
 
-  playEvent(e: LocalTranscriptEvent) {
+  /** Plays one event */
+  playEvent(e: TranscriptEvent) {
     this.playEvents([ e ])
   }
 
@@ -96,22 +128,34 @@ export default class TranscriptAudio {
     }
   }
 
+  /** Set audio volume. Between 0 and 1 */
+  setVolume(v: number) {
+    this.audioElement.volume = v
+  }
+
+  /** Set playback speed. Pitch Corrected.
+   * Advisable to keep between .25 and 4.0
+   * (see also https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/playbackRate) */
+  setPlaybackSpeed(v: number) {
+    this.audioElement.playbackRate = v
+  }
+
   emitUpdateTimeUntilPaused(t: number, lockScroll: boolean, maxT: number, useAudioElement: boolean) {
     const startTime = performance.now()
     this.currentTime = t
-    eventBus.$emit('updateTime', t)
+    bus.$emit('updateTime', t)
     let currentlyPlayingEventId: number|null = null
     const step = (now: number) => {
       const elapsed = (now - startTime) / 1000 * settings.playbackSpeed
       // more than 16 ms have passed
       if (useAudioElement === true) {
         this.currentTime = this.audioElement.currentTime
-        eventBus.$emit('updateTime', this.currentTime)
+        bus.$emit('updateTime', this.currentTime)
       } else {
         if (t + elapsed - this.currentTime >= .016) {
           // update and emit.
           this.currentTime = t + elapsed
-          eventBus.$emit('updateTime', this.currentTime)
+          bus.$emit('updateTime', this.currentTime)
         }
       }
       // paused or over max t.
@@ -125,12 +169,13 @@ export default class TranscriptAudio {
       } else {
         // sync scroll if locked.
         // TODO: move elsewhere.
+        // FIXME:
         if (lockScroll) {
-          const e = findEventAt(this.currentTime)
-          if (e !== undefined && e.eventId !== currentlyPlayingEventId) {
-            currentlyPlayingEventId = e.eventId
-            scrollToTranscriptEvent(e)
-          }
+          // const e = findEventAt(this.currentTime)
+          // if (e !== undefined && e.eventId !== currentlyPlayingEventId) {
+          //   currentlyPlayingEventId = e.eventId
+          //   scrollToTranscriptEvent(e)
+          // }
         }
         // continue emitting
         return requestAnimationFrame(step)
@@ -144,7 +189,7 @@ export default class TranscriptAudio {
     channel: number,
     mono: boolean) {
     if (mono === true) {
-      return TranscriptAudio.sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
+      return sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
     } else {
       console.time('extracting buffer from channel ' + channel)
       const x = buffer.getChannelData(channel).buffer
@@ -153,31 +198,23 @@ export default class TranscriptAudio {
     }
   }
 
-  static sumChannels(first: Float32Array, second: Float32Array): Float32Array {
-    const sum = new Float32Array(first.length)
-    first.forEach((v: number, i: number) => {
-      sum[i] = v + second[i]
-    })
-    return sum
-  }
-
-  playEventsStart(events: LocalTranscriptEvent[], duration: number) {
+  playEventsStart(events: TranscriptEvent[], duration: number) {
     const sortedEvents = EventService.sortEvents(events)
     const firstEvent = sortedEvents[0]
     const [ start, end ] = [ firstEvent.startTime, Math.min(firstEvent.startTime + duration, firstEvent.endTime) ]
     this.playRange(start, end)
   }
 
-  playEventsEnd(events: LocalTranscriptEvent[], duration: number) {
+  playEventsEnd(events: TranscriptEvent[], duration: number) {
     const sortedEvents = EventService.sortEvents(events)
-    const lastEvent = _.last(sortedEvents) as LocalTranscriptEvent
+    const lastEvent = _.last(sortedEvents) as TranscriptEvent
     const [ start, end ] = [ Math.max(lastEvent.endTime - duration, lastEvent.startTime), lastEvent.endTime ]
     this.playRange(start, end)
   }
 
   scrubAudio(t: number) {
     this.currentTime = t
-    eventBus.$emit('scrubAudio', t)
+    bus.$emit('scrubAudio', t)
   }
 
   playBuffer(buffer: AudioBuffer, speed = 1, start = 0, offset?: number, duration?: number) {
@@ -198,7 +235,7 @@ export default class TranscriptAudio {
     }
   }
 
-  static createMediaFragmentUrl(audioUrl: string, event: LocalTranscriptEvent) {
+  static createMediaFragmentUrl(audioUrl: string, event: TranscriptEvent) {
     return audioUrl
       + '#t='
       + event.startTime.toFixed(2)
@@ -272,7 +309,7 @@ export default class TranscriptAudio {
           const that = this
           await reader
             .read()
-            .then(async function process(chunk: ReadableStreamDefaultReadResult<Uint8Array>): Promise<any> {
+            .then(async function process(chunk: DownloadChunk): Promise<any> {
               if (chunk.done === false) {
                 if (chunk.value && chunk.value.buffer instanceof ArrayBuffer) {
                   [ preBuffer ] = await concatUint8ArrayAsync(preBuffer, chunk.value)
@@ -337,9 +374,32 @@ export default class TranscriptAudio {
     }
   }
 
+  /** Finds the time range for the given events, converts
+   * them to a WAV buffer and triggers the download.
+   * Appends a ".wav" extension to the given file name */
+  async exportEventAudio(
+    events: TranscriptEvent[],
+    fileName: string
+  ) {
+    const sortedEvents = EventService.sortEvents(events)
+    const [firstEvent, lastEvent] = [_(sortedEvents).first(), _(sortedEvents).last()]
+    console.log({ firstEvent, lastEvent })
+    if (firstEvent !== undefined && lastEvent !== undefined) {
+      const buffer = await TranscriptAudio.decodeBufferTimeSlice(
+        firstEvent.startTime,
+        lastEvent.endTime,
+        this.buffer
+      )
+      const wav = audioBufferToWav(buffer)
+      const blob = new Blob([new Uint8Array(wav)])
+      saveAs(blob, fileName + '.wav')
+    }
+  }
+
   private static async doesServerAcceptRanges(url: string): Promise<boolean> {
     const res = (await fetch(url, { method: 'HEAD', credentials: 'include' }))
     // FIXME: this is often a problem with CORS requests.
+    // for now we return true, and continue the Operation
     // return res.headers.has('Accept-Ranges')
     return true
   }
@@ -528,7 +588,8 @@ export default class TranscriptAudio {
     })
   }
 
-  static findOggPages(from: number, to: number, pages: OggIndex['pages']): { startPage: OggPage|null, endPage: OggPage|null } {
+  /** finds the first and last Ogg-Page for a given time range. */
+  private static findOggPages(from: number, to: number, pages: OggIndex['pages']): { startPage: OggPage|null, endPage: OggPage|null } {
     // console.time('find pages')
     // some timestamps are just too big.
     // checking for them counts as a kind of

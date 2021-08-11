@@ -119,14 +119,15 @@ import scrollLockButton from './ScrollLockButton.vue'
 import scrollbar from './Scrollbar.vue'
 import segmentBox from './SegmentBox.vue'
 
-import settings, { minPixelsPerSecond, maxPixelsPerSecond } from '@/store/settings'
-import { mutation } from '@/store/history'
+import settings, { minPixelsPerSecond, maxPixelsPerSecond } from '@/store/settings.store'
+import { mutation } from '@/store/history.store'
 import * as util from '@/util'
-import EventBus from '@/service/event-bus'
+import bus from '@/service/bus'
 import { drawWaveSvg, drawWavePathAsync, drawSpectrogramAsync } from '@/service/audio-visualizer.service'
-import { LocalTranscriptEvent } from '@/store/transcript'
+import { TranscriptEvent } from '@/types/transcript'
 
 import store from '@/store'
+import Transcript from '@/classes/transcript.class'
 
 const queue = new Queue({
   concurrency: 2,
@@ -149,6 +150,7 @@ let scrollTimer: number|null = null
 export default class Waveform extends Vue {
 
   @Prop({ default: 300 }) height!: number
+  @Prop({ required: true }) transcript!: Transcript
 
   // config
   drawDistance = 5000 // pixels in both directions from the center of the viewport (left and right)
@@ -156,8 +158,7 @@ export default class Waveform extends Vue {
   overviewSvgWidth = 1500 // width of the overview waveform in pixels
 
   // bind stores
-  settings = store.settings
-  transcript = store.transcript!
+  settings = settings
 
   onScroll = _.throttle(this.handleScroll, 350)
   debouncedZoom = _.debounce(this.zoom, 350)
@@ -169,7 +170,7 @@ export default class Waveform extends Vue {
 
   overviewHeight = 60
   visibleSeconds: number[] = []
-  visibleEvents: LocalTranscriptEvent[] = []
+  visibleEvents: TranscriptEvent[] = []
   audioLength = 0
   renderedWaveFormPieces: number[] = []
   totalWidth = this.audioLength * settings.pixelsPerSecond
@@ -182,9 +183,9 @@ export default class Waveform extends Vue {
   hideSecondMarkers = false
 
   mounted() {
-    EventBus.$on('scrollTranscript', this.scrollLockedScroll)
-    EventBus.$on('scrollToAudioEvent', this.scrollToSegment)
-    EventBus.$on('scrollToAudioTime', this.scrollToSecond)
+    bus.$on('scrollTranscript', this.scrollLockedScroll)
+    bus.$on('scrollToAudioEvent', this.scrollToSegment)
+    bus.$on('scrollToAudioTime', this.scrollToSecond)
     this.initWithAudio()
   }
 
@@ -193,8 +194,8 @@ export default class Waveform extends Vue {
   }
 
   beforeDestroy() {
-    EventBus.$off('scrollTranscript', this.scrollLockedScroll)
-    EventBus.$off('scrollToAudioEvent', this.scrollToSegment)
+    bus.$off('scrollTranscript', this.scrollLockedScroll)
+    bus.$off('scrollToAudioEvent', this.scrollToSegment)
   }
 
   scrollLockedScroll(t: number) {
@@ -212,7 +213,7 @@ export default class Waveform extends Vue {
   }
 
   @Watch('transcript.events')
-  async onEventsChange(newEs: LocalTranscriptEvent[]) {
+  async onEventsChange(newEs: TranscriptEvent[]) {
     this.visibleEvents = this.getVisibleEvents(boundLeft, boundRight, newEs)
   }
 
@@ -254,8 +255,8 @@ export default class Waveform extends Vue {
 
   emitScroll() {
     const t = (this.$refs.svgContainer as HTMLElement).scrollLeft / settings.pixelsPerSecond
-    EventBus.$emit('scrollWaveform', t)
-    EventBus.$emit('updateWaveformScrollbar', t)
+    bus.$emit('scrollWaveform', t)
+    bus.$emit('updateWaveformScrollbar', t)
   }
 
   zoomPreview(e: MouseWheelEvent) {
@@ -378,7 +379,7 @@ export default class Waveform extends Vue {
     }
   }
 
-  getVisibleEvents(l: number, r: number, es: LocalTranscriptEvent[]): LocalTranscriptEvent[] {
+  getVisibleEvents(l: number, r: number, es: TranscriptEvent[]): TranscriptEvent[] {
     return es
       .filter(s => (s.endTime >= l && s.startTime <= r))
       .sort((a, b) => a.startTime - b.startTime)
@@ -569,7 +570,7 @@ export default class Waveform extends Vue {
     }
   }
 
-  scrollToSegment(e?: LocalTranscriptEvent|null) {
+  scrollToSegment(e?: TranscriptEvent|null) {
     if (this.transcript.audio !== null && this.transcript.audio.playAllFrom !== null) {
       this.disableAutoScrollDuringPlayback()
     }
@@ -577,7 +578,7 @@ export default class Waveform extends Vue {
       const duration = e.endTime - e.startTime
       const offset = (e.startTime + duration / 2)
       const tCenter = offset - (this.$el.clientWidth / 2 / settings.pixelsPerSecond)
-      EventBus.$emit('updateWaveformScrollbar', tCenter)
+      bus.$emit('updateWaveformScrollbar', tCenter)
       this.scrollToSecondSmooth(tCenter)
     }
   }

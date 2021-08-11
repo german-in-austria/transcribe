@@ -19,9 +19,9 @@
 <script lang="ts">
 
 import { Vue, Component, Prop } from 'vue-property-decorator'
-import { LocalTranscriptEvent } from '../store/transcript'
-import EventBus, { BusEvent } from '../service/event-bus'
-import settings from '../store/settings'
+import { TranscriptEvent } from '@/types/transcript'
+import bus, { BusEvent } from '../service/bus'
+import settings from '../store/settings.store'
 import _ from 'lodash'
 import { requestFrameAsync, timeFromSeconds } from '../util'
 
@@ -43,17 +43,17 @@ export default class Scrollbar extends Vue {
 
   listenToEvents(es = this.updateOn) {
     if (Array.isArray(es)) {
-      es.forEach((e) => EventBus.$on(e, this.moveThumbToTime))
+      es.forEach((e) => bus.$on(e, this.moveThumbToTime))
     } else {
-      EventBus.$on(es, this.moveThumbToTime)
+      bus.$on(es, this.moveThumbToTime)
     }
   }
 
   unlisten(es = this.updateOn) {
     if (Array.isArray(es)) {
-      es.forEach((e) => EventBus.$off(e, this.moveThumbToTime))
+      es.forEach((e) => bus.$off(e, this.moveThumbToTime))
     } else {
-      EventBus.$off(es, this.moveThumbToTime)
+      bus.$off(es, this.moveThumbToTime)
     }
   }
 
@@ -76,7 +76,7 @@ export default class Scrollbar extends Vue {
     }
   }
 
-  moveThumbToTime(t: number|LocalTranscriptEvent) {
+  moveThumbToTime(t: number|TranscriptEvent) {
     const time = typeof t === 'number' ? t : t.startTime
     requestAnimationFrame(() => {
       const thumb = this.$refs.scrollbarThumb

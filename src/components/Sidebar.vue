@@ -96,11 +96,11 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import _ from 'lodash'
 
-import { history } from '../store/history'
-import { SidebarItem } from '../store/settings'
+import { history } from '../store/history.store'
+import settings, { SidebarItem } from '../store/settings.store'
 
 import { getWarnings, WarningEvent } from '../service/warnings.service'
-import { keyboardShortcuts, displayKeyboardAction } from '../service/keyboard'
+import { keyboardShortcuts, displayKeyboardAction } from '../service/keyboard.service'
 
 import editHistory from './EditHistory.vue'
 import WarningList from './WarningList.vue'
@@ -108,7 +108,7 @@ import bookmarks from './Bookmarks.vue'
 import search from './Search.vue'
 import actions from './Actions.vue'
 import { timeFromSeconds } from '@/util'
-import store from '@/store'
+import Transcript from '@/classes/transcript.class'
 
 @Component({
   components: {
@@ -122,9 +122,9 @@ import store from '@/store'
 export default class Sidebar extends Vue {
 
   @Prop({ default: false }) active!: boolean
+  @Prop({ required: true }) transcript!: Transcript
 
-  transcript = store.transcript!
-  settings = store.settings
+  settings = settings
   warnings: WarningEvent[] = []
   history = history
   stuckAtBottom = false

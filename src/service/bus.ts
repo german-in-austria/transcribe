@@ -1,5 +1,5 @@
 import Vue from 'vue'
-const EventBus = new Vue()
+const bus = new Vue()
 
 export type BusEvent =
   'scrollWaveform'|
@@ -15,7 +15,7 @@ export type BusEvent =
   'focusSearch'|
   'updateSpeakerEventText'
 
-export default EventBus as {
+export default bus as {
   $on: (e: BusEvent|BusEvent[], fn: (e: any, opts?: any) => any) => void
   $off: (e: BusEvent|BusEvent[], fn: (e: any, opts?: any) => any) => void
   $emit: (e: BusEvent, p?: any, opts?: any) => void

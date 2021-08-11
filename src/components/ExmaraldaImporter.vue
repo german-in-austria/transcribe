@@ -319,7 +319,7 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import _ from 'lodash'
 
-import settings from '../store/settings'
+import settings from '../store/settings.store'
 import { resourceAtUrlExists } from '../util'
 import {
   ServerInformant,
@@ -327,17 +327,17 @@ import {
   ServerTranscriptListItem,
   getAudioUrlFromServerNames,
   serverTokenTiers
-} from '../service/backend-server'
+} from '../service/backend-server.service'
 
 import {
   ParsedExmaraldaXML,
   SpeakerTierImportable,
   importableToServerTranscript
-} from '../service/backend-exmaralda'
+} from '../service/backend-exmaralda.service'
 
 import {
   TokenTierType
-} from '../store/transcript'
+} from '@/types/transcript'
 
 import ExmaraldaTierPreview from './ExmaraldaTierPreview.vue'
 import DropFile from './DropFile.vue'
@@ -415,12 +415,14 @@ export default class ExmaraldaImporter extends Vue {
 
   async selectSurvey(survey: ServerSurvey) {
     this.selectedSurvey = survey
-    const audioFileUrl = getAudioUrlFromServerNames(survey.Audiofile, survey.Dateipfad)
-    if (audioFileUrl !== null && await resourceAtUrlExists(audioFileUrl)) {
-      this.audioFileName = survey.Audiofile + '.ogg'
-      this.audioFileUrl = audioFileUrl
-    } else {
-      // not found.
+    if (settings.backEndUrl !== null) {
+      const audioFileUrl = getAudioUrlFromServerNames(survey.Audiofile, survey.Dateipfad, settings.backEndUrl)
+      if (audioFileUrl !== null && await resourceAtUrlExists(audioFileUrl)) {
+        this.audioFileName = survey.Audiofile + '.ogg'
+        this.audioFileUrl = audioFileUrl
+      } else {
+        // not found.
+      }
     }
   }
 

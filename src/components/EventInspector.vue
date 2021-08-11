@@ -55,11 +55,11 @@
 </template>
 <script lang="ts">
 import { Vue, Component, Prop } from 'vue-property-decorator'
-// import audio from '../service/audio'
 import segmentTranscript from './SegmentTranscript.vue'
-import { LocalTranscriptEvent } from '../store/transcript'
-import Transcript from '@/service/transcript.class'
-import TranscriptAudio from '@/service/transcript-audio.class'
+import { TranscriptEvent } from '@/types/transcript'
+import Transcript from '@/classes/transcript.class'
+import TranscriptAudio from '@/classes/transcript-audio.class'
+import { drawSpectrogramAsync } from '@/service/audio-visualizer.service'
 
 @Component({
   components: {
@@ -69,35 +69,37 @@ import TranscriptAudio from '@/service/transcript-audio.class'
 export default class Settings extends Vue {
 
   @Prop({ default: false }) show!: boolean
-  @Prop({ required: true }) event!: LocalTranscriptEvent
+  @Prop({ required: true }) event!: TranscriptEvent
   @Prop({ required: true }) transcript!: Transcript
 
   fitSize = true
   f: number[] = []
 
   async mounted() {
-    const slicedBuffer = await TranscriptAudio.decodeBufferTimeSlice(
-      this.event.startTime,
-      this.event.endTime,
-      audio.store.uint8Buffer.buffer
-    )
-    const width = 1200
-    const height = 250
-    const [c, f] = (await TranscriptAudio.drawSpectrogramAsync(slicedBuffer, width, height))
-    c.style.width = `${width}px`
-    c.style.height = `${height}px`
-    const cont = (this.$refs.canvasContainer as HTMLElement)
-    cont.innerHTML = ''
-    cont.appendChild(c)
-    const step = (i = 0) => {
-      if (f[i] !== undefined) {
-        this.f = Array.from(f[i]).reverse() as number[]
-        requestAnimationFrame(() => step(i + 1))
+    if (this.transcript.audio) {
+      const slicedBuffer = await TranscriptAudio.decodeBufferTimeSlice(
+        this.event.startTime,
+        this.event.endTime,
+        this.transcript.audio?.buffer
+      )
+      const width = 1200
+      const height = 250
+      const [c, f] = (await drawSpectrogramAsync(slicedBuffer, width, height))
+      c.style.width = `${width}px`
+      c.style.height = `${height}px`
+      const cont = (this.$refs.canvasContainer as HTMLElement)
+      cont.innerHTML = ''
+      cont.appendChild(c)
+      const step = (i = 0) => {
+        if (f[i] !== undefined) {
+          this.f = Array.from(f[i]).reverse() as number[]
+          requestAnimationFrame(() => step(i + 1))
+        }
       }
-    }
-    step()
+      step()
     // const wl = await audio.drawWaveSvg(slicedBuffer, 1000, 300, undefined, 0, false)
     // const wr = await audio.drawWaveSvg(slicedBuffer, 1000, 300, undefined, 1, false)
+    }
   }
 }
 </script>

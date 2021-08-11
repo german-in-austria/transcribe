@@ -59,13 +59,14 @@
 
 <script lang="ts">
 import { Vue, Component } from 'vue-property-decorator'
-import { LocalTranscriptTier } from '../store/transcript'
+import { TranscriptTier } from '@/types/transcript'
 import store from '@/store'
+import settings from '@/store/settings.store'
 
 @Component
 export default class SpeakerPanel extends Vue {
 
-  settings = store.settings
+  settings = settings
   transcript = store.transcript!
   tierHeight = 25
   isBasicInfoValid = false
@@ -74,7 +75,7 @@ export default class SpeakerPanel extends Vue {
     return this.transcript.meta.tiers.filter(t => t.show === true).length * this.tierHeight + 1 + 'px'
   }
 
-  get secondaryVisibleTiers(): LocalTranscriptTier[] {
+  get secondaryVisibleTiers(): TranscriptTier[] {
     return this.transcript.meta.tiers.filter(t => t.id !== this.transcript.meta.defaultTier && t.show === true)
   }
 

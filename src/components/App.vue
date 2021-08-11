@@ -9,7 +9,11 @@
       right
       disable-resize-watcher
       app>
-      <sidebar :active="settings.showDrawer" />
+      <sidebar
+        v-if="store.transcript !== null"
+        :active="settings.showDrawer"
+        :transcript="store.transcript"
+      />
     </v-navigation-drawer>
     <v-content class="main-content">
       <v-container fluid fill-height class="pa-0">
@@ -163,10 +167,10 @@ import sidebar from './Sidebar.vue'
 import exmaraldaImporter from './ExmaraldaImporter.vue'
 
 // import * as socket from '../service/socket'
-import diskService, { LocalTranscriptListItem } from '../service/disk'
+import diskService, { LocalTranscriptListItem } from '../service/disk.service'
 
-import store from '../store'
-
+import store from '@/store'
+import settings from '@/store/settings.store'
 import { fileToTextAndName } from '@/util'
 
 import {
@@ -176,17 +180,17 @@ import {
   mergeServerTranscript,
   serverTranscriptToLocal,
   getMetadataFromServerTranscript
-} from '@/service/backend-server'
+} from '@/service/backend-server.service'
 
 import * as Sentry from '@sentry/browser'
 
 import {
   ParsedExmaraldaXML,
   exmaraldaToImportable
-} from '@/service/backend-exmaralda'
+} from '@/service/backend-exmaralda.service'
 
 import FIcon from './helper/FIcon.vue'
-import Transcript from '@/service/transcript.class'
+import Transcript from '@/classes/transcript.class'
 
 @Component({
   components: {
@@ -199,7 +203,7 @@ import Transcript from '@/service/transcript.class'
 export default class App extends Vue {
 
   store = store
-  settings = store.settings
+  settings = settings
 
   backEndUrls = [
     {
@@ -236,7 +240,7 @@ export default class App extends Vue {
   errorMessage: string|null = null
   isLoadingBackendUrl = false
 
-  @Watch('store.settings.backEndUrl', { immediate: true })
+  @Watch('settings.backEndUrl', { immediate: true })
   async onUpdateBackEndUrl(url: string|null) {
     if (url !== null) {
       this.connectToBackend(url)
@@ -251,7 +255,7 @@ export default class App extends Vue {
 
   async connectToBackend(url: string|null) {
     this.isLoadingBackendUrl = true
-    store.settings.backEndUrl = url
+    settings.backEndUrl = url
     this.updateTokenTypePreset()
     await this.loadTranscriptList(url)
     this.isLoadingBackendUrl = false
@@ -285,18 +289,21 @@ export default class App extends Vue {
     }
   }
 
-  // FIXME: this is insanely hacky.
-  // the way to do it would be to store the project part (PP) in the
-  // db alongside the transcript
+  // FIXME:
+  // Here, we’re picking the project preset based on the backend url.
+  // This is insanely hacky.
+  // The right way to do it would be to store the project part (PP) in the
+  // DB alongside the transcript.
   async updateTokenTypePreset() {
-    if (store.settings.backEndUrl !== null && store.settings.backEndUrl.includes('dioedb')) {
+    if (settings.backEndUrl !== null && settings.backEndUrl !== undefined && settings.backEndUrl.includes('dioedb')) {
       // settings.projectPreset = 'PP03'
-    } else if (store.settings.backEndUrl !== null && store.settings.backEndUrl.includes('dissdb')) {
-      store.settings.projectPreset = 'dissDB'
+    } else if (settings.backEndUrl !== null && settings.backEndUrl !== undefined && settings.backEndUrl.includes('dissdb')) {
+      settings.projectPreset = 'dissDB'
     }
   }
 
   async loadTranscriptList(url: string|null) {
+    console.log('url when loading', url)
     if (url === null) {
       store.allTranscripts = await diskService.loadTranscriptList()
     } else {
@@ -394,10 +401,10 @@ export default class App extends Vue {
     //   transcript_id: t.pk,
     //   app: 'transcribe'
     // })
-    if (store.settings.backEndUrl !== null) {
+    if (settings.backEndUrl !== null) {
       store.transcript = new Transcript({
         id: t.pk,
-        backEndUrl: store.settings.backEndUrl
+        backEndUrl: settings.backEndUrl
       })
     }
   }

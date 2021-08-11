@@ -10,7 +10,7 @@
 </template>
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { KeyboardAction, convertKey, convertModifier } from '@/service/keyboard'
+import { KeyboardAction, convertKey, convertModifier } from '@/service/keyboard.service'
 @Component
 export default class KeyboardShortcut extends Vue {
   @Prop({ required: true }) value!: KeyboardAction

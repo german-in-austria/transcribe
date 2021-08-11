@@ -1,6 +1,6 @@
 
 const registerPromiseWorker = require('promise-worker-transferable/register')
-import { OggIndex, OggHeader, OggPage } from './audio'
+import { OggIndex, OggHeader, OggPage } from '../types/audio'
 
 let sampleRate: number|null = null
 

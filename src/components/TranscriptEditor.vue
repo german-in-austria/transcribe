@@ -9,7 +9,7 @@
         @wheel="handleMousewheel"
         ref="tracks"
         class="tracks"
-        v-if="transcript.events.length">
+        v-if="transcript.events.length > 0">
         <div ref="inner" class="transcript-segments-inner">
           <segment-transcript
             v-for="event in visibleEvents"
@@ -39,17 +39,17 @@
 
 <script lang="ts">
 
-import { Vue, Component, Watch } from 'vue-property-decorator'
+import { Vue, Component, Watch, Prop } from 'vue-property-decorator'
 import SegmentTranscript from './SegmentTranscript.vue'
 import SpeakerPanel from './SpeakerPanel.vue'
 import Scrollbar from './Scrollbar.vue'
-import settings from '../store/settings'
+import settings from '../store/settings.store'
 import _ from 'lodash'
-import EventBus from '../service/event-bus'
+import bus from '../service/bus'
 
-import { LocalTranscriptEvent } from '../store/transcript'
+import { TranscriptEvent } from '@/types/transcript'
 import { getTextWidth } from '../util'
-import store from '@/store'
+import Transcript from '@/classes/transcript.class'
 
 const defaultLimit = 20
 
@@ -62,14 +62,18 @@ const defaultLimit = 20
 })
 export default class TranscriptEditor extends Vue {
 
-  transcript = store.transcript!
+  @Prop({ required: true }) transcript!: Transcript
+
   innerLeft = 0
   currentIndex = 0
   lastScrollLeft = 0
   visibleEvents = this.getEventRange(this.currentIndex, this.currentIndex + defaultLimit)
 
   throttledRenderer = _.throttle(this.updateList, 100)
-  isEventSelected = this.transcript.isEventSelected
+
+  isEventSelected(id: number) {
+    return this.transcript.isEventSelected(id)
+  }
 
   get transcriptHasSpeakers(): boolean {
     return Object.values(this.transcript.meta.speakers).length > 0
@@ -82,7 +86,7 @@ export default class TranscriptEditor extends Vue {
     })
   }
 
-  getEventRange(start: number, end: number): LocalTranscriptEvent[] {
+  getEventRange(start: number, end: number): TranscriptEvent[] {
     // this is a very hot code path, so we optimize and don’t use .filter.
     const r = []
     for (let i = 0; i <= end - start; i++) {
@@ -94,7 +98,7 @@ export default class TranscriptEditor extends Vue {
   }
 
   // tslint:disable-next-line:max-line-length
-  onChangeViewingEvent(e: LocalTranscriptEvent|null, opts: {
+  onChangeViewingEvent(e: TranscriptEvent|null, opts: {
     animate: boolean,
     focusSpeaker: number|null,
     focusTier: string|null,
@@ -106,7 +110,7 @@ export default class TranscriptEditor extends Vue {
   }
 
   // tslint:disable-next-line:max-line-length
-  doScrollToEvent(e: LocalTranscriptEvent, animate = true, focusSpeaker: number|null = null, focusTier: string|null, focusRight: boolean) {
+  doScrollToEvent(e: TranscriptEvent, animate = true, focusSpeaker: number|null = null, focusTier: string|null, focusRight: boolean) {
     // right in the middle
     const i = this.transcript.findEventIndexById(e.eventId) - Math.floor(defaultLimit / 2)
     this.currentIndex = Math.max(0, i)
@@ -157,13 +161,13 @@ export default class TranscriptEditor extends Vue {
   }
 
   mounted() {
-    EventBus.$on('scrollWaveform', this.scrollLockedScroll)
-    EventBus.$on('scrollToTranscriptEvent', this.onChangeViewingEvent)
+    bus.$on('scrollWaveform', this.scrollLockedScroll)
+    bus.$on('scrollToTranscriptEvent', this.onChangeViewingEvent)
   }
 
   beforeDestroy() {
-    EventBus.$off('scrollWaveform', this.scrollLockedScroll)
-    EventBus.$off('scrollToTranscriptEvent', this.onChangeViewingEvent)
+    bus.$off('scrollWaveform', this.scrollLockedScroll)
+    bus.$off('scrollToTranscriptEvent', this.onChangeViewingEvent)
   }
 
   scrollLockedScroll(t: number) {
@@ -190,7 +194,7 @@ export default class TranscriptEditor extends Vue {
     }
   }
 
-  findFirstVisibleEventAndDimensions(): [LocalTranscriptEvent|null, number, number] {
+  findFirstVisibleEventAndDimensions(): [TranscriptEvent|null, number, number] {
     let width = 0
     let totalLeft = 0
     let obscuredHalfWidth = 0
@@ -209,18 +213,18 @@ export default class TranscriptEditor extends Vue {
       const eventLength = firstVisibleEvent.endTime - firstVisibleEvent.startTime
       const progressFactor = innerOffset / width
       const progress = progressFactor * eventLength
-      EventBus.$emit('scrollTranscript', firstVisibleEvent.startTime + progress)
+      bus.$emit('scrollTranscript', firstVisibleEvent.startTime + progress)
     }
   }
 
-  getLongestSpeakerText(e: LocalTranscriptEvent): string[]|undefined {
+  getLongestSpeakerText(e: TranscriptEvent): string[]|undefined {
     return _(e.speakerEvents)
       .map(se => se.tokens.map(t => t.tiers[this.transcript.meta.defaultTier].text))
       .sortBy(ts => ts.length)
       .last()
   }
 
-  getEventWidth(e: LocalTranscriptEvent): number {
+  getEventWidth(e: TranscriptEvent): number {
     const totalPadding = 20
     const longestText = this.getLongestSpeakerText(e)
     if (longestText !== undefined) {
