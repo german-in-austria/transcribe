@@ -64,7 +64,23 @@
                   v-if="settings.backEndUrl !== null && loggedIn === false"
                   class="text-xs-center mt-5"
                 >
-                  Please <a data-cy="login-link" :href="`${ settings.backEndUrl }/login/`" target="_blank">login</a> and <a @click="loadTranscriptList(settings.backEndUrl)">refresh</a>
+                  Please
+                  <v-btn
+                    data-cy="login-link"
+                    class="text-lowercase elevation-0"
+                    small
+                    @click.prevent="openLoginSite(settings.backEndUrl)"
+                    :href="`${ settings.backEndUrl }/login/`"
+                    target="_blank">login</v-btn>
+                  and
+                  <v-btn
+                    small
+                    :loading="isLoadingBackendUrl"
+                    class="text-lowercase elevation-0"
+                    @click="loadTranscriptList(settings.backEndUrl)"
+                  >
+                  refresh
+                  </v-btn>
                 </div>
                 <div v-else>
                   <v-layout>
@@ -242,6 +258,17 @@ export default class App extends Vue {
   importableExmaraldaFile: ParsedExmaraldaXML|null = null
   errorMessage: string|null = null
   isLoadingBackendUrl = false
+
+  openLoginSite(host: string|null) {
+    if (host !== null) {
+      window.open(host + '/login/', '_blank')
+      const that = this
+      window.addEventListener('focus', async function onRefocus() {
+        window.removeEventListener('focus', onRefocus)
+        await that.loadTranscriptList(host)
+      })
+    }
+  }
 
   @Watch('searchTerm')
   onChangeSearchTerm(v: string|null) {
