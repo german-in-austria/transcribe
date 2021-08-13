@@ -5,7 +5,6 @@ import { isWaveformEventVisible } from '../service/dom.service'
 import { sendMessage } from '../service/socket'
 import store from '@/store'
 import Transcript from '@/classes/transcript.class'
-const transcript = store.transcript || new Transcript()
 
 type HistoryApplicationType = 'UNDO'|'REDO'|'DO'|'JUMPTOSTATE'
 
@@ -20,7 +19,7 @@ export interface HistoryEventAction {
 
 export type AutoSaver = () => Promise<any>
 
-export let history = {
+export const history = {
   actions: [] as HistoryEventAction[],
   autoSaver: (async () => console.log('fake auto-saved.')) as AutoSaver
 }
@@ -37,9 +36,9 @@ export function handleRemotePeerEvent(data: [string, HistoryEventAction|HistoryE
         .filter(a => a.apply === true)
         .concat(p)
       if (_.isArray(p)) {
-        _(p).forEach(a => transcript.replaceEvents(a.before, a.after))
+        _(p).forEach(a => store.transcript?.replaceEvents(a.before, a.after))
       } else {
-        transcript.replaceEvents(p.before, p.after)
+        store.transcript?.replaceEvents(p.before, p.after)
       }
     } else if (t === 'UNDO') {
       // if (_.isArray(p)) {
@@ -67,10 +66,10 @@ async function undoRedoHandler(e: KeyboardEvent) {
     const action = undo(true)
     if (action !== undefined) {
       notifyPeers(action, 'UNDO')
-      transcript.selectEvents(action.before)
+      store.transcript?.selectEvents(action.before)
       if (action.before[0] !== undefined && !await isWaveformEventVisible(action.before[0])) {
-        transcript.scrollToAudioEvent(action.before[0])
-        transcript.scrollToTranscriptEvent(action.before[0])
+        store.transcript?.scrollToAudioEvent(action.before[0])
+        store.transcript?.scrollToTranscriptEvent(action.before[0])
       }
     }
   } else if (d.redo === true) {
@@ -79,10 +78,10 @@ async function undoRedoHandler(e: KeyboardEvent) {
     const action = redo(true)
     if (action !== undefined) {
       notifyPeers(action, 'REDO')
-      transcript.selectEvents(action.after)
+      store.transcript?.selectEvents(action.after)
       if (action.after[0] !== undefined && !await isWaveformEventVisible(action.after[0])) {
-        transcript.scrollToAudioEvent(action.after[0])
-        transcript.scrollToTranscriptEvent(action.after[0])
+        store.transcript?.scrollToAudioEvent(action.after[0])
+        store.transcript?.scrollToTranscriptEvent(action.after[0])
       }
     }
   }
@@ -149,22 +148,22 @@ function notifyPeers(
   a: HistoryEventAction|HistoryEventAction[]|number,
   t: HistoryApplicationType
 ) {
-  if (transcript !== null) {
+  if (store.transcript !== null) {
     sendMessage({
       type: 'transcript_action',
       app: 'transcribe',
       action: [t, a],
-      transcript_id: String(transcript.key)
+      transcript_id: String(store.transcript.key)
     })
   }
 }
 
 function undoAction(a: HistoryEventAction) {
-  transcript.replaceEvents(a.after, a.before)
+  store.transcript?.replaceEvents(a.after, a.before)
 }
 
 function redoAction(a: HistoryEventAction) {
-  transcript.replaceEvents(a.before, a.after)
+  store.transcript?.replaceEvents(a.before, a.after)
 }
 
 export function undo(shouldAutoSave?: boolean): HistoryEventAction|undefined {

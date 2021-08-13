@@ -586,7 +586,7 @@ export default class SpeakerSegmentTranscript extends Vue {
       } else if (change.type === 'remove') {
         if (change.id !== -1 && this.transcript.meta.lockedTokens.indexOf(change.id) > -1) {
           // can’t delete because it’s locked.
-          console.log('can’t delete')
+          alert('This Token has meta data attached to it. It must be removed, before it can be fully deleted.')
           // update display text
           setTimeout(() => {
             // tslint:disable-next-line:max-line-length

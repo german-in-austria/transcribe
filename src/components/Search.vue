@@ -150,7 +150,10 @@ export default class Search extends Vue {
   showIpaKeyboard = false
 
   searchResultEventCounter = 0
-  isEventSelected = this.transcript.isEventSelected
+
+  isEventSelected(id: number) {
+    return this.transcript.isEventSelected(id)
+  }
 
   debouncedHandleSearch = _.debounce(this.handleSearch, 200)
 

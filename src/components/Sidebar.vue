@@ -7,19 +7,19 @@
           <actions v-if="settings.activeSidebarItem === 'edit'" />
         </v-window-item>
         <v-window-item value="history" class="sidebar-scrollable">
-          <edit-history v-if="settings.activeSidebarItem === 'history' && history.actions.length > 0" />
-          <div v-else class="text-xs-center grey--text mt-4">
-            <small>Edits will appear here.</small>
-          </div>
+          <edit-history
+            v-if="settings.activeSidebarItem === 'history'"
+            :transcript="transcript"
+          />
         </v-window-item>
         <v-window-item value="warnings" class="sidebar-scrollable">
-          <warning-list v-if="settings.activeSidebarItem === 'warnings'" :warnings="warnings"/>
+          <warning-list v-if="settings.activeSidebarItem === 'warnings'" :warnings="store.warnings"/>
         </v-window-item>
         <v-window-item value="search" class="sidebar-scrollable">
           <search v-if="settings.activeSidebarItem === 'search'" />
         </v-window-item>
-        <v-window-item value="bookmarks" class="sidebar-scrollable">
-          <bookmarks v-if="settings.activeSidebarItem === 'bookmarks'" />
+        <v-window-item value="tags" class="sidebar-scrollable">
+          <tags v-if="settings.activeSidebarItem === 'tags'" />
         </v-window-item>
       </v-window>
     </v-flex>
@@ -40,7 +40,7 @@
             icon
             @click="clickTab('history')"
             class="mb-2 sidebar-btn">
-            <f-icon :value="keyboardShortcuts.showHistory.icon" :color="settings.activeSidebarItem === 'history' ? 'blue' : ''" />
+            <f-icon :value="keyboardShortcuts.showHistory.icon" :color="settings.activeSidebarItem === 'history' ? 'green' : ''" />
           </v-btn>
           <v-btn
             v-ripple="false"
@@ -49,13 +49,13 @@
             @click="clickTab('warnings')"
             class="mb-2 sidebar-btn">
             <v-badge
-              :value="warnings.length > 0"
-              :color="settings.activeSidebarItem === 'warnings' ? 'blue' : 'grey'">
+              :value="store.warnings.length > 0"
+              :color="settings.activeSidebarItem === 'warnings' ? 'red' : 'grey'">
               <f-icon
                 :value="keyboardShortcuts.showWarnings.icon"
-                :color="settings.activeSidebarItem === 'warnings' ? 'blue' : ''" />
+                :color="settings.activeSidebarItem === 'warnings' ? 'red' : ''" />
               <span slot="badge">
-                {{ warnings.length < 100 ? warnings.length : '99+' }}
+                {{ store.warnings.length < 100 ? store.warnings.length : '99+' }}
               </span>
             </v-badge>
           </v-btn>
@@ -65,15 +65,15 @@
             icon
             @click="clickTab('search')"
             class="mb-2 sidebar-btn">
-            <f-icon :color="settings.activeSidebarItem === 'search' ? 'blue' : ''" :value="keyboardShortcuts.showSearch.icon" />
+            <f-icon :color="settings.activeSidebarItem === 'search' ? 'yellow--text text--darken-3 a' : ''" :value="keyboardShortcuts.showSearch.icon" />
           </v-btn>
           <v-btn
             v-ripple="false"
-            :title="'Bookmarks (' + displayKeyboardAction(keyboardShortcuts.showBookmarks) + ')'"
+            :title="'Tags (' + displayKeyboardAction(keyboardShortcuts.showTags) + ')'"
             icon
-            @click="clickTab('bookmarks')"
+            @click="clickTab('tags')"
             class="mb-2 sidebar-btn">
-            <f-icon :color="settings.activeSidebarItem === 'bookmarks' ? 'blue' : ''" :value="keyboardShortcuts.showBookmarks.icon" />
+            <f-icon :color="settings.activeSidebarItem === 'tags' ? 'blue' : ''" :value="keyboardShortcuts.showTags.icon" />
           </v-btn>
         </v-flex>
         <v-flex xs1>
@@ -93,30 +93,29 @@
 </template>
 <script lang="ts">
 
-import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import _ from 'lodash'
+import { Vue, Component, Prop } from 'vue-property-decorator'
 
 import { history } from '../store/history.store'
 import settings, { SidebarItem } from '../store/settings.store'
 
-import { getWarnings, WarningEvent } from '../service/warnings.service'
 import { keyboardShortcuts, displayKeyboardAction } from '../service/keyboard.service'
 
 import editHistory from './EditHistory.vue'
 import WarningList from './WarningList.vue'
-import bookmarks from './Bookmarks.vue'
-import search from './Search.vue'
-import actions from './Actions.vue'
+import Tags from './Tags.vue'
+import Search from './Search.vue'
+import Actions from './Actions.vue'
 import { timeFromSeconds } from '@/util'
 import Transcript from '@/classes/transcript.class'
+import store from '@/store'
 
 @Component({
   components: {
-    actions,
+    Actions,
     editHistory,
     WarningList,
-    search,
-    bookmarks
+    Search,
+    Tags
   }
 })
 export default class Sidebar extends Vue {
@@ -124,14 +123,13 @@ export default class Sidebar extends Vue {
   @Prop({ default: false }) active!: boolean
   @Prop({ required: true }) transcript!: Transcript
 
+  store = store
   settings = settings
-  warnings: WarningEvent[] = []
   history = history
   stuckAtBottom = false
   toTime = timeFromSeconds
   keyboardShortcuts = keyboardShortcuts
   displayKeyboardAction = displayKeyboardAction
-  debouncedGetWarnings = _.debounce(this.getWarnings, 500)
 
   clickTab(e: SidebarItem) {
     if (e === this.settings.activeSidebarItem && this.settings.showDrawer === true) {
@@ -153,37 +151,6 @@ export default class Sidebar extends Vue {
         this.stuckAtBottom = false
       }
     }
-  }
-
-  @Watch('settings.showWarnings', { deep: true })
-  onWarningsSettingsUpdate() {
-    this.getWarnings()
-  }
-
-  @Watch('settings.maxEventGap')
-  onGapSettingsUpdate() {
-    this.getWarnings()
-  }
-
-  @Watch('transcript.events')
-  onEventsUpdate() {
-    this.debouncedGetWarnings()
-  }
-
-  @Watch('settings.projectPreset')
-  onPresetUpdate() {
-    this.getWarnings()
-  }
-
-  async getWarnings() {
-    await this.$nextTick()
-    window.requestIdleCallback(() => {
-      this.warnings = getWarnings(this.transcript.events)
-    })
-  }
-
-  mounted() {
-    this.getWarnings()
   }
 
   updated() {

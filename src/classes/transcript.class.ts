@@ -208,7 +208,6 @@ export default class Transcript extends EventService {
 
   /** Checks if a time span selection exists */
   isTimeSpanSelectionEmpty() {
-    console.log('this.uiState', this.uiState)
     return this.uiState.timeSpanSelection.start === null &&
       this.uiState.timeSpanSelection.end === null
   }
@@ -625,12 +624,13 @@ export default class Transcript extends EventService {
       time: new Date(),
       apply: true,
       type: 'DELETE',
-      before: _(this.uiState.selectedEventIds).map(this.deleteEventById).flatMap(a => a.before).value(),
+      before: _(this.uiState.selectedEventIds).map((id) => this.deleteEventById(id)).flatMap(a => a.before).value(),
       after: []
     }
   }
 
   deleteEvent(event: TranscriptEvent): HistoryEventAction {
+    console.log('deleteEvent', this)
     const i = this.findEventIndexById(event.eventId)
     const e = clone(this.events[i])
     this.events.splice(i, 1)
@@ -985,8 +985,8 @@ export default class Transcript extends EventService {
   }
 
   replaceEvents(oldEvents: TranscriptEvent[], newEvents: TranscriptEvent[]) {
-    oldEvents.forEach(this.deleteEvent)
-    newEvents.forEach(this.insertEvent)
+    oldEvents.forEach(e => this.deleteEvent(e))
+    newEvents.forEach(e => this.insertEvent(e))
   }
 
   isEventSelected(id: number): boolean {

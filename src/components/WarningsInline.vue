@@ -1,15 +1,16 @@
 <template>
-  <div :class="['search-results-container', settings.darkMode === true && 'theme--dark']">
+  <div :class="['warnings-container', settings.darkMode === true && 'theme--dark']">
     <canvas
       @mousemove="onMouseMove"
       @mouseout="hoveredEvent = null"
       @click.prevent.stop="onClick"
       height="10"
       :class="[
+        settings.activeSidebarItem === 'warnings' && 'visible',
         'my-canvas',
         this.squares.length > 0 && 'active'
       ]"
-      ref="myCanvas" />
+      ref="warningsCanvas" />
     <v-menu
       absolute
       lazy
@@ -32,7 +33,9 @@
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import SegmentTranscript from './SegmentTranscript.vue'
-import { TranscriptEvent } from '@/types/transcript'
+import {
+  TranscriptEvent
+} from '@/types/transcript'
 import settings from '../store/settings.store'
 import store from '@/store'
 import _ from 'lodash'
@@ -50,12 +53,13 @@ interface Square {
 })
 export default class SearchResults extends Vue {
 
-  readonly resultMarkerColor = 'yellow'
+  readonly resultMarkerColor = 'red'
 
   menuX = 0
   menuY = 0
   hoveredEvent: TranscriptEvent|null = null
   transcript = store.transcript!
+  store = store
   settings = settings
   context: null|CanvasRenderingContext2D = null
   squares: Square[] = []
@@ -66,7 +70,7 @@ export default class SearchResults extends Vue {
   }
 
   mounted() {
-    this.context = (this.$refs.myCanvas as HTMLCanvasElement).getContext('2d')
+    this.context = (this.$refs.warningsCanvas as HTMLCanvasElement).getContext('2d')
     window.addEventListener('resize', this.debouncedDrawResults)
   }
 
@@ -107,12 +111,12 @@ export default class SearchResults extends Vue {
       // batched drawing setup
       this.context.beginPath()
       this.context.fillStyle = this.resultMarkerColor
-      for (const r of this.transcript.uiState.searchResults) {
-        const left = (((r.event.startTime / duration) * width) + .5) | 0
+      for (const we of store.warnings) {
+        const left = (((we.event.startTime / duration) * width) + .5) | 0
         // draw the rectangle
         this.context.rect(left, 0, 3, 10)
         this.squares.push({
-          event: r.event,
+          event: we.event,
           left: left,
           right: left + 3
         })
@@ -123,21 +127,22 @@ export default class SearchResults extends Vue {
 
   debouncedDrawResults = _.debounce(this.drawResults, 300)
 
-  @Watch('transcript.uiState.searchResults')
+  @Watch('store.warnings')
   onResultsChange() {
     this.drawResults()
   }
 }
 </script>
 <style lang="stylus" scoped>
-.search-results-container
+.warnings-container
   position relative
   height 12px
 .my-canvas
-  border-radius 3px
   opacity 0
   transition opacity .2s
+  border-radius 3px
   &.active
-    opacity 1
     background rgba(255,255,255,.1)
+  &.visible
+    opacity 1
 </style>

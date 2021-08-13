@@ -107,7 +107,7 @@ img[lazy=loaded] {
   max-height: calc(90vh - 40px);
   overflow-y: auto;
 }
-.settings-header{
+.sticky-header{
   position: sticky;
   top: 0;
   background: white;
@@ -125,7 +125,7 @@ nav.v-toolbar[data-booted=true]{
 .theme--light.v-toolbar{
   background-color: #e8e8e8;
 }
-.theme--dark .settings-header{
+.theme--dark .sticky-header{
   background: #282828;
 }
 .theme--dark.v-toolbar{

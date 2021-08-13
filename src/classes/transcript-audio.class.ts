@@ -37,6 +37,7 @@ export default class TranscriptAudio {
       this.fileSize = this.buffer.byteLength
       this.decodeBufferProgressively(this.buffer)
     } else if (isUrl(a)) {
+      this.url = a
       this.downloadAndDecodeBufferProgressively(a, 2048 * 1024)
     }
   }
@@ -115,7 +116,7 @@ export default class TranscriptAudio {
       console.log('can’t play, no buffer loaded')
     } else {
       const [ left, right ] = [ start, end ].sort((a, b) => a - b)
-      const buffer = await TranscriptAudio.decodeBufferTimeSlice(left, right, this.buffer)
+      const buffer = await TranscriptAudio.decodeBufferTimeSlice(left, right, this.buffer.buffer)
       if (buffer !== undefined) {
         requestAnimationFrame(() => {
           this.isPaused = false
@@ -277,7 +278,7 @@ export default class TranscriptAudio {
       throw new Error('range is not in audio file')
     } else {
       try {
-        return await TranscriptAudio.decodeBufferTimeSlice(from, to, this.buffer)
+        return await TranscriptAudio.decodeBufferTimeSlice(from, to, this.buffer.buffer)
       } catch (e) {
         console.log('could not find audio range locally, attempting download…', { from, to, audioLength }, e)
         const headerBuffer = await this.getOrFetchHeaderBuffer(url)
@@ -298,6 +299,10 @@ export default class TranscriptAudio {
 
   private async downloadAndDecodeBufferProgressively(url: string, chunkSize: number) {
     this.fileSize = await this.getFileSize(url)
+    this.audioElement.addEventListener('durationchange', () => {
+      this.duration = this.audioElement.duration
+    })
+    this.audioElement.src = url
     // eslint-disable-next-line no-async-promise-executor
     return new Promise(async (resolve, reject) => {
       // const metadata = await this.getAudioMetadata(url)
@@ -388,7 +393,7 @@ export default class TranscriptAudio {
       const buffer = await TranscriptAudio.decodeBufferTimeSlice(
         firstEvent.startTime,
         lastEvent.endTime,
-        this.buffer
+        this.buffer.buffer
       )
       const wav = audioBufferToWav(buffer)
       const blob = new Blob([new Uint8Array(wav)])
@@ -563,8 +568,6 @@ export default class TranscriptAudio {
       // FIXME: WHY .2 SECONDS?
       const overflowStart = Math.max(0, startTime - startPage.timestamp + .2)
       const overflowEnd = Math.min(endTime - startTime + overflowStart, decodedBuffer.duration - overflowStart)
-      // console.log('decoded buffer duration', decodedBuffer.duration)
-      // console.log('start end', overflowStart, overflowEnd)
       try {
         const slicedBuffer = await TranscriptAudio.sliceAudioBuffer(decodedBuffer, overflowStart * 1000, overflowEnd * 1000)
         // console.log(slicedBuffer.duration, 'sliced buffer duration for', startPage.timestamp, endPage.timestamp)
@@ -590,7 +593,7 @@ export default class TranscriptAudio {
 
   /** finds the first and last Ogg-Page for a given time range. */
   private static findOggPages(from: number, to: number, pages: OggIndex['pages']): { startPage: OggPage|null, endPage: OggPage|null } {
-    // console.time('find pages')
+    console.time('find pages')
     // some timestamps are just too big.
     // checking for them counts as a kind of
     // rudimentary error correction.

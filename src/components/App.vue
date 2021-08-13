@@ -1,7 +1,7 @@
 <template>
   <v-app :dark="settings.darkMode">
     <v-navigation-drawer
-      v-if="store.status !== 'empty'"
+      v-if="store.transcript !== null"
       stateless
       style="padding: 0"
       :value="true"
@@ -10,7 +10,6 @@
       disable-resize-watcher
       app>
       <sidebar
-        v-if="store.transcript !== null"
         :active="settings.showDrawer"
         :transcript="store.transcript"
       />
@@ -27,38 +26,11 @@
         <v-layout
           @dragover.prevent=""
           @drop.stop.prevent="onDropFile"
-          v-if="store.status === 'empty'"
+          v-if="store.transcript === null"
           class="max-width pick-transcript-container"
           :align-center="store.allTranscripts === null"
           justify-center
           column>
-          <v-flex xs1>
-            <v-combobox
-              @change="connectToBackend"
-              :loading="isLoadingBackendUrl"
-              :error-messages="this.errorMessage !==  null ? [ this.errorMessage ] : []"
-              auto-select-first
-              data-cy="select-backend"
-              style="position: fixed; left: 0; right: 0; z-index: 1"
-              solo
-              flat
-              v-model="settings.backEndUrl"
-              :items="backEndUrls"
-              :return-object="false"
-              dense
-              label="Select a Back End"
-            >
-            <template v-slot:prepend-inner>
-              <span class="caption">Transcript Server</span>
-            </template>
-            </v-combobox>
-          </v-flex>
-          <div
-            v-if="settings.backEndUrl !== null && loggedIn === false"
-            class="text-xs-center mt-5"
-          >
-            Please <a data-cy="login-link" :href="`${ settings.backEndUrl }/login/`" target="_blank">login</a> and <a @click="loadTranscriptList(settings.backEndUrl)">refresh</a>
-          </div>
           <v-progress-circular
             indeterminate
             v-if="store.allTranscripts === null && loggedIn === true && settings.backEndUrl !== null"
@@ -69,78 +41,107 @@
                 <h1 class="text-xs-center text-light text-uppercase mt-3 mb-4">
                   Transcribe
                 </h1>
-                <v-layout>
-                  <v-flex class="pr-1" xs6>
-                    <v-btn
-                      :loading="importingLocalFile" @click="openFileDialog" class="mb-2 elevation-0" style="height: 40px;" block>
-                      Open/Import File …
-                    </v-btn>
-                  </v-flex>
-                  <v-flex class="pl-1" xs6>
-                    <v-btn @click="initializeEmptyTranscript" class="mb-2 elevation-0" style="height: 40px;" block>
-                      New Transcript …
-                    </v-btn>
-                  </v-flex>
-                </v-layout>
-                <v-text-field
+                <v-combobox
+                  @change="connectToBackend"
+                  :loading="isLoadingBackendUrl"
+                  :error-messages="this.errorMessage !==  null ? [ this.errorMessage ] : []"
+                  auto-select-first
+                  data-cy="select-backend"
                   solo
-                  flat
-                  v-model="searchTerm"
-                  placeholder="Search …"
                   hide-details
-                  prepend-inner-icon="search"
-                  autofocus />
-                <v-list two-line style="background: transparent">
-                  <v-subheader v-if="settings.backEndUrl !== null">
-                    Server Transcripts
-                  </v-subheader>
-                  <v-subheader v-else>
-                    Local Transcripts
-                  </v-subheader>
-                  <template v-for="(transcript) in filteredTranscriptList">
-                    <v-divider :key="'dk' + transcript.pk" />
-                    <v-list-tile
-                      :key="transcript.pk"
-                      :disabled="loadingTranscriptId !== null || transcript.locked === true"
-                      @click="openTranscript(transcript)">
-                      <v-list-tile-avatar>
-                        <f-icon v-if="transcript.locked" value="lock" />
-                        <v-progress-circular
-                          v-else-if="loadingTranscriptId === transcript.pk"
-                          class="mb-2"
-                          size="20"
-                          width="2"
-                          indeterminate />
-                        <f-icon
-                          v-else-if="settings.backEndUrl !== null"
-                          value="cloud_queue"
-                          style="opacity: .5"
-                        />
-                        <f-icon
-                          v-else-if="settings.backEndUrl === null"
-                          value="mdi-file-document-outline"
-                          style="opacity: .5"
-                        />
-                      </v-list-tile-avatar>
-                      <v-list-tile-content>
-                        <v-list-tile-title>
-                          {{ transcript.n }}
-                        </v-list-tile-title>
-                        <v-list-tile-sub-title>
-                          {{ transcript.ut }}
-                        </v-list-tile-sub-title>
-                      </v-list-tile-content>
-                      <v-list-tile-action>
-                        <v-chip style="max-width: 120px;" small v-for="(user, i) in transcript.users" :key="i">
-                          {{ user }}
-                        </v-chip>
-                      </v-list-tile-action>
-                    </v-list-tile>
+                  flat
+                  v-model="settings.backEndUrl"
+                  :items="backEndUrls"
+                  :return-object="false"
+                  dense
+                  label="Select a Back End"
+                >
+                  <template v-slot:prepend-inner>
+                    <span class="caption">Transcript Server</span>
                   </template>
-                  <div class="caption text-xs-center grey--text" v-if="filteredTranscriptList.length === 0">
-                    no matching transcripts found
-                  </div>
-                </v-list>
+                </v-combobox>
+                <div
+                  v-if="settings.backEndUrl !== null && loggedIn === false"
+                  class="text-xs-center mt-5"
+                >
+                  Please <a data-cy="login-link" :href="`${ settings.backEndUrl }/login/`" target="_blank">login</a> and <a @click="loadTranscriptList(settings.backEndUrl)">refresh</a>
+                </div>
+                <div v-else>
+                  <v-layout>
+                    <v-flex class="pr-1" xs6>
+                      <v-btn
+                        :loading="importingLocalFile" @click="openFileDialog" class="mb-2 elevation-0" style="height: 40px;" block>
+                        Open/Import File …
+                      </v-btn>
+                    </v-flex>
+                    <v-flex class="pl-1" xs6>
+                      <v-btn @click="initializeEmptyTranscript" class="mb-2 elevation-0" style="height: 40px;" block>
+                        New Transcript …
+                      </v-btn>
+                    </v-flex>
+                  </v-layout>
+                  <v-text-field
+                    solo
+                    flat
+                    v-model="searchTerm"
+                    placeholder="Search …"
+                    hide-details
+                    class="sticky-header"
+                    clearable
+                    prepend-inner-icon="search"
+                    autofocus />
+                  <v-list two-line style="background: transparent">
+                    <v-subheader v-if="settings.backEndUrl !== null">
+                      Server Transcripts
+                    </v-subheader>
+                    <v-subheader v-else>
+                      Local Transcripts
+                    </v-subheader>
+                    <template v-for="(transcript) in filteredTranscriptList">
+                      <v-divider :key="'dk' + transcript.pk" />
+                      <v-list-tile
+                        :key="transcript.pk"
+                        :disabled="loadingTranscriptId !== null || transcript.locked === true"
+                        @click="openTranscript(transcript)">
+                        <v-list-tile-avatar>
+                          <f-icon v-if="transcript.locked" value="lock" />
+                          <v-progress-circular
+                            v-else-if="loadingTranscriptId === transcript.pk"
+                            class="mb-2"
+                            size="20"
+                            width="2"
+                            indeterminate />
+                          <f-icon
+                            v-else-if="settings.backEndUrl !== null"
+                            value="cloud_queue"
+                            style="opacity: .5"
+                          />
+                          <f-icon
+                            v-else-if="settings.backEndUrl === null"
+                            value="mdi-file-document-outline"
+                            style="opacity: .5"
+                          />
+                        </v-list-tile-avatar>
+                        <v-list-tile-content>
+                          <v-list-tile-title>
+                            {{ transcript.n }}
+                          </v-list-tile-title>
+                          <v-list-tile-sub-title>
+                            {{ transcript.ut }}
+                          </v-list-tile-sub-title>
+                        </v-list-tile-content>
+                        <v-list-tile-action>
+                          <v-chip style="max-width: 120px;" small v-for="(user, i) in transcript.users" :key="i">
+                            {{ user }}
+                          </v-chip>
+                        </v-list-tile-action>
+                      </v-list-tile>
+                    </template>
+                    <div class="caption text-xs-center grey--text" v-if="filteredTranscriptList.length === 0">
+                      no matching transcripts found
+                    </div>
+                  </v-list>
+                </div>
               </v-flex>
             </v-layout>
           </v-flex>
@@ -192,6 +193,8 @@ import {
 import FIcon from './helper/FIcon.vue'
 import Transcript from '@/classes/transcript.class'
 
+const SEARCH_TERM_PREFIX = 'transcribe_app_search_term'
+
 @Component({
   components: {
     editor,
@@ -232,13 +235,18 @@ export default class App extends Vue {
     }
   ]
 
-  searchTerm = ''
+  searchTerm = localStorage.getItem(this.searchTermStorageKey) || ''
   importingLocalFile = false
   loadingTranscriptId: number|null = null
   loggedIn: boolean = false
   importableExmaraldaFile: ParsedExmaraldaXML|null = null
   errorMessage: string|null = null
   isLoadingBackendUrl = false
+
+  @Watch('searchTerm')
+  onChangeSearchTerm(v: string|null) {
+    localStorage.setItem(this.searchTermStorageKey, v || '')
+  }
 
   @Watch('settings.backEndUrl', { immediate: true })
   async onUpdateBackEndUrl(url: string|null) {
@@ -247,6 +255,11 @@ export default class App extends Vue {
     } else {
       this.useLocalTranscripts()
     }
+    this.searchTerm = localStorage.getItem(this.searchTermStorageKey) || ''
+  }
+
+  get searchTermStorageKey(): string {
+    return SEARCH_TERM_PREFIX + '__' + (settings.backEndUrl || '')
   }
 
   useLocalTranscripts() {
@@ -326,9 +339,13 @@ export default class App extends Vue {
 
   get filteredTranscriptList(): ServerTranscriptListItem[] {
     if (store.allTranscripts !== null) {
-      return store.allTranscripts.filter(v => {
-        return v.n.toLowerCase().indexOf(this.searchTerm.toLowerCase()) > -1
-      })
+      if (this.searchTerm !== null) {
+        return store.allTranscripts.filter(v => {
+          return v.n.toLowerCase().indexOf(this.searchTerm.toLowerCase()) > -1
+        })
+      } else {
+        return store.allTranscripts
+      }
     } else {
       return []
     }
@@ -373,6 +390,7 @@ export default class App extends Vue {
 
   initializeEmptyTranscript() {
     store.status = 'new'
+    store.transcript = new Transcript()
   }
 
   async openTranscript(t: LocalTranscriptListItem|ServerTranscriptListItem) {

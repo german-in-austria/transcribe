@@ -58,6 +58,9 @@ export async function drawWavePathAsync(
   mono = false
 ): Promise<string> {
   const buf = TranscriptAudio.getBufferFromAudioBuffer(buffer, channel, mono)
+  // We encode the options object to a buffer, because then we can use a shared buffer,
+  // and don’t have to copy any data to the other threads.
+  // However, this optimization is likely to prove unnecessary in the future.
   const options = textEncoder.encode(JSON.stringify({ width, height, offsetLeft })).buffer
   if (channel === 0) {
     return await waveformWorker1.postMessage({ buffer: buf, options }, [ buf, options ])
@@ -66,8 +69,15 @@ export async function drawWavePathAsync(
   }
 }
 
+/**
+ * The synchronous version of drawWavePath. Might block the
+ * UI for larger SVGs or Buffers. Use the async version if possible.
+ */
 export function drawWavePath(buffer: AudioBuffer, width: number, height: number, channel = 0, offsetLeft = 0) {
-  // based on drawWave.js
+  /** This algo is adapted from DrawWave.js (https://github.com/meandavejustice/draw-wave)
+   * The main difference is that this is _WAY_ faster (like 30 times), because it doesn’t
+   * manipulate in-memory DOM Elements, but instead only concatenates a string.
+  */
   let upperHalf = ''
   let lowerHalf = ''
   const chanData = buffer.getChannelData(channel)
@@ -102,9 +112,8 @@ export async function drawWaveSvg(
   mono = false
 ) {
   return (
-    // tslint:disable-next-line:max-line-length
     `<svg viewBox="0 0 ${ width.toFixed(0) } ${ height }" height="${ height }" width="${ width.toFixed(0) }"><path fill="${ color }" d="`
     + await drawWavePathAsync(buffer, width, height, channel, 0, mono)
-    + `" /></svg>`
+    + '" /></svg>'
   )
 }

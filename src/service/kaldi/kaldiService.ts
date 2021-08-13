@@ -1,6 +1,5 @@
 
 import { sumChannels } from '@/util'
-import TranscriptAudio from '../../classes/transcript-audio.class'
 import trackedDownload from './utils/downloadModel.js'
 import AsrHandler from './workerWrappers/asrHandler.js'
 import ResamplerHandler from './workerWrappers/resamplerHandler.js'
@@ -31,7 +30,5 @@ export default {
     onUpdate('DONE')
     console.log('x.text', x.text)
     return x.text
-    // asrHandler.
-    // const resampledAudio = resampleAudio(audioData, 4096)
   }
 }

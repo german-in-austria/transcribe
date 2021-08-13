@@ -26,7 +26,7 @@ type SerializableSettings = Omit<Settings, 'keyboardShortcuts'> & {
   }
 }
 
-export type SidebarItem = null|'edit'|'history'|'warnings'|'search'|'bookmarks'
+export type SidebarItem = null|'edit'|'history'|'warnings'|'search'|'tags'
 
 export interface Settings {
   backEndUrl: string|null

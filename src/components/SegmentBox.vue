@@ -74,7 +74,7 @@ export default class SegmentBox extends Vue {
   }
 
   isEventSelected(id: number) {
-    return this.transcript.isEventSelected
+    return this.transcript.isEventSelected(id)
   }
 
   get hasOverlap() {

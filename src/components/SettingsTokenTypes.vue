@@ -1,6 +1,27 @@
 <template>
   <v-list subheader>
-    <v-layout class="settings-header">
+    <v-layout class="sticky-header">
+      <v-flex xs12>
+        <v-subheader>Project Preset</v-subheader>
+        <v-divider />
+      </v-flex>
+    </v-layout>
+    <v-layout row class="ml-3 mr-3 pt-2">
+      <v-flex>
+        <v-select
+          solo
+          flat
+          hide-details
+          class="rounded-lg mb-2"
+          background-color="rgba(0,0,0,.07)"
+          label="Preset"
+          color="primary"
+          v-model="settings.projectPreset"
+          :items="projectPresetNames">
+        </v-select>
+      </v-flex>
+    </v-layout>
+    <v-layout class="sticky-header">
       <v-flex xs12>
         <v-subheader>Editing</v-subheader>
         <v-divider />
@@ -15,19 +36,10 @@
         <v-switch v-model="presets[settings.projectPreset].autoCorrectDelimiterSpace" />
       </v-list-tile-action>
     </v-list-tile>
-    <v-layout class="settings-header">
+    <v-layout class="sticky-header mt-3">
       <v-flex xs12>
         <v-subheader>Token Types</v-subheader>
         <v-divider />
-      </v-flex>
-    </v-layout>
-    <v-layout row class="ml-4 mr-5 pr-1 pt-3">
-      <v-flex>
-        <v-select
-          label="Preset"
-          v-model="settings.projectPreset"
-          :items="projectPresetNames">
-        </v-select>
       </v-flex>
     </v-layout>
     <v-layout

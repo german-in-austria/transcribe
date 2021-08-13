@@ -80,7 +80,7 @@ export default class Settings extends Vue {
       const slicedBuffer = await TranscriptAudio.decodeBufferTimeSlice(
         this.event.startTime,
         this.event.endTime,
-        this.transcript.audio?.buffer
+        this.transcript.audio?.buffer.buffer
       )
       const width = 1200
       const height = 250

@@ -105,6 +105,11 @@ export const specialKeys: KeyDescriber[] = [
     name: 'plus',
     jsName: '+',
     displayName: '＋'
+  },
+  {
+    name: 'minus',
+    jsName: '-',
+    displayName: '﹣'
   }
 ]
 
@@ -129,7 +134,7 @@ function isInputElement(t: EventTarget|null): boolean {
 }
 
 function normalizeKey(key: string) {
-  // it’s a mac thing
+  // it’s a mac thing.
   if (key === '±') {
     return '+'
   } else if (key === '–') {
@@ -485,7 +490,7 @@ export const keyboardShortcuts: KeyboardShortcuts = {
         ev.preventDefault()
         const e = transcript.getSelectedEvent()
         if (e !== undefined) {
-          const buffer = await TranscriptAudio.decodeBufferTimeSlice(e.startTime, e.endTime, transcript.audio.buffer)
+          const buffer = await TranscriptAudio.decodeBufferTimeSlice(e.startTime, e.endTime, transcript.audio.buffer.buffer)
           const result = await kaldiService.transcribeAudio(
             window.location.origin + '/kaldi-models/german.zip',
             buffer,
@@ -660,23 +665,23 @@ export const keyboardShortcuts: KeyboardShortcuts = {
       }
     },
   },
-  showBookmarks: {
+  showTags: {
     group: 'Navigation',
     greedy: false,
     showInMenu: true,
     ignoreInTextField: false,
     modifier: ['ctrlOrCmd', 'shift'],
     key: 'b',
-    name: 'Show Bookmarks',
-    description: 'Show Bookmarks in the Sidebar',
+    name: 'Show Tags',
+    description: 'Show Tags in the Sidebar',
     icon: 'bookmark_border',
     disabled: () => false,
     action: async () => {
-      if (settings.showDrawer === true && settings.activeSidebarItem === 'bookmarks') {
+      if (settings.showDrawer === true && settings.activeSidebarItem === 'tags') {
         settings.showDrawer = false
       } else {
         settings.showDrawer = true
-        settings.activeSidebarItem = 'bookmarks'
+        settings.activeSidebarItem = 'tags'
       }
     }
   },

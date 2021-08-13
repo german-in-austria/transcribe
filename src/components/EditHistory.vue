@@ -1,6 +1,6 @@
 <template>
   <div style="height: 100%">
-    <v-list v-if="history.actions.length > 0" dense>
+    <v-list dense>
       <v-subheader>
         <small>History</small>
       </v-subheader>
@@ -11,6 +11,7 @@
         </v-list-tile-content>
       </v-list-tile>
       <RecycleScroller
+        v-if="history.actions.length > 0"
         class="scroller"
         :items="groupedHistoryActions"
         :item-size="40">
@@ -115,15 +116,13 @@
 
 <script lang="ts">
 
-import { Vue, Component } from 'vue-property-decorator'
+import { Vue, Component, Prop } from 'vue-property-decorator'
 import SegmentTranscript from './SegmentTranscript.vue'
 import { groupConsecutiveBy, timeFromSeconds } from '../util'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import _ from 'lodash'
 
-import {
-  TranscriptEvent,
-} from '@/types/transcript'
+import { TranscriptEvent } from '@/types/transcript'
 
 import {
   history,
@@ -133,6 +132,7 @@ import {
 } from '../store/history.store'
 import store from '@/store'
 import EventService from '@/classes/event.class'
+import Transcript from '@/classes/transcript.class'
 
 @Component({
   components: {
@@ -142,13 +142,14 @@ import EventService from '@/classes/event.class'
 })
 export default class EditHistory extends Vue {
 
+  @Prop({ required: true }) transcript!: Transcript
+
   history = history
   toTime = timeFromSeconds
   goToInitialState = goToInitialState
   hoveredEvent: HistoryEventAction|null = null
   menuX = 0
   menuY = 0
-  transcript = store.transcript!
 
   playEvent(e: TranscriptEvent) {
     if (this.transcript.audio !== null) {
@@ -157,7 +158,7 @@ export default class EditHistory extends Vue {
   }
 
   get defaultTier() {
-    return store.transcript?.meta.defaultTier || 'text'
+    return this.transcript.meta.defaultTier || 'text'
   }
 
   get groupedHistoryActions(): HistoryEventAction[] {
@@ -173,21 +174,21 @@ export default class EditHistory extends Vue {
   }
 
   showEventIfExists(e: TranscriptEvent) {
-    if (store.transcript !== null) {
-      const i = store.transcript.findEventIndexById(e.eventId)
+    if (this.transcript !== null) {
+      const i = this.transcript.findEventIndexById(e.eventId)
       if (i > -1) {
-        store.transcript.selectEvent(e)
-        store.transcript.scrollToAudioEvent(e)
-        store.transcript.scrollToTranscriptEvent(e)
+        this.transcript.selectEvent(e)
+        this.transcript.scrollToAudioEvent(e)
+        this.transcript.scrollToTranscriptEvent(e)
       }
     }
   }
 
   undoOrRedoUntil(action: HistoryEventAction) {
-    if (action.after[0] && store.transcript !== null) {
-      store.transcript.selectEvent(action.after[0])
-      store.transcript.scrollToAudioEvent(action.after[0])
-      store.transcript.scrollToTranscriptEvent(action.after[0])
+    if (action.after[0] && this.transcript !== null) {
+      this.transcript.selectEvent(action.after[0])
+      this.transcript.scrollToAudioEvent(action.after[0])
+      this.transcript.scrollToTranscriptEvent(action.after[0])
     }
     jumpToState(action, true)
   }

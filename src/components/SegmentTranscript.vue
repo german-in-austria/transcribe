@@ -37,13 +37,10 @@ import { Vue, Component, Prop } from 'vue-property-decorator'
 import SpeakerSegmentTranscript from './SpeakerSegmentTranscript.vue'
 import _ from 'lodash'
 
-import {
-  TranscriptEvent
-} from '@/types/transcript'
-
 import settings from '../store/settings.store'
 import { timeFromSeconds } from '@/util'
 import store from '@/store'
+import { TranscriptEvent } from '@/types/transcript'
 
 @Component({
   components: {
@@ -57,11 +54,10 @@ export default class SegmentTranscript extends Vue {
 
   transcript = store.transcript!
   offsetWidth = 0
-  selectOrDeselectEvent = this.transcript.selectOrDeselectEvent
-  playEvent = this.transcript.audio?.playEvent
+
+
   toTime = timeFromSeconds
   settings = settings
-  selectEventRange = this.transcript.selectEventRange
 
   get speakerHeight() {
     return this.transcript.meta.tiers.filter(t => t.show === true).length * 25 + 'px'
@@ -87,6 +83,21 @@ export default class SegmentTranscript extends Vue {
     }
     this.transcript.selectEvent(e)
   }
+
+  selectOrDeselectEvent(e: TranscriptEvent) {
+    this.transcript.selectOrDeselectEvent(e)
+  }
+
+  playEvent(e: TranscriptEvent) {
+    if (this.transcript.audio) {
+      this.transcript.audio.playEvent(e)
+    }
+  }
+
+  selectEventRange(e: TranscriptEvent) {
+    this.transcript.selectEventRange(e)
+  }
+
 }
 </script>
 <style lang="stylus" scoped>

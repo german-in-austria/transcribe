@@ -1,6 +1,6 @@
 
 import { ProjectPreset, TokenTypePresetBase } from '@/presets'
-import { TranscriptEvent, LocalTranscriptIndexedToken, TranscriptSpeakerEvent, TranscriptToken, TokenTierType } from '@/types/transcript'
+import { TranscriptEvent, TranscriptIndexedToken, TranscriptSpeakerEvent, TranscriptToken, TokenTierType } from '@/types/transcript'
 import _ from 'lodash'
 
 /**
@@ -94,10 +94,10 @@ export default class EventService {
   }
 
   /** Generate a Token Hashmap from the Events, to process or look up tokens more quickly */
-  static getIndexedTokens(es: TranscriptEvent[]): { [id: number]: LocalTranscriptIndexedToken } {
+  static getIndexedTokens(es: TranscriptEvent[]): { [id: number]: TranscriptIndexedToken } {
     // this could be achieved with a reduce function,
     // but this version is currently faster (which matters at this point).
-    const indexedTokens: { [id: number]: LocalTranscriptIndexedToken } = {}
+    const indexedTokens: { [id: number]: TranscriptIndexedToken } = {}
     es.forEach((e, i) => {
       _(e.speakerEvents).forEach((se, speakerId) => {
         se.tokens.forEach(t => {

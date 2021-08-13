@@ -88,11 +88,14 @@
     <wave-form
       v-if="transcript.audio !== null"
       :transcript="transcript"
+      :audio="transcript.audio"
       tabindex="-1"
       class="no-outline"
-      @show-menu="doShowMenu"
+      @show-menu="showMenu"
+      @mousedown.shift="startSelection"
       :height="300">
       <play-head />
+      <time-selection :transcript="transcript" />
       <div
         v-if="settings.showSegmentBoxes"
         class="absolute">
@@ -100,12 +103,12 @@
           min-width="150"
           lazy
           :transition="false"
-          v-model="showMenu"
+          v-model="isMenuVisible"
           :position-x="menuX"
           :position-y="menuY"
           absolute
           offset-y>
-          <v-list v-if="showMenu" class="context-menu-list" dense>
+          <v-list v-if="isMenuVisible" class="context-menu-list" dense>
             <v-list-tile
               @click="keyboardShortcuts.playPause.action">
               <v-list-tile-content>
@@ -198,6 +201,7 @@
         </div>
         <div class="search-overview-container">
           <search-results-inline />
+          <warnings-inline />
         </div>
       </div>
     </wave-form>
@@ -212,43 +216,39 @@
 </template>
 <script lang="ts">
 
-import { Vue, Component, Prop } from 'vue-property-decorator'
+import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import { saveAs } from 'file-saver'
 import * as Sentry from '@sentry/browser'
+import _ from 'lodash'
 
-import playerBar from './PlayerBar.vue'
-import waveForm from './Waveform.vue'
-import settingsView from './Settings.vue'
-import eventInspector from './EventInspector.vue'
-import searchResultsInline from './SearchResultsInline.vue'
-import transcriptEditor from './TranscriptEditor.vue'
-import playHead from './PlayHead.vue'
-import dropAudioFile from './DropAudioFile.vue'
+import PlayerBar from './PlayerBar.vue'
+import WaveForm from './Waveform.vue'
+import SettingsView from './Settings.vue'
+import EventInspector from './EventInspector.vue'
+import SearchResultsInline from './SearchResultsInline.vue'
+import WarningsInline from './WarningsInline.vue'
+import TranscriptEditor from './TranscriptEditor.vue'
+import PlayHead from './PlayHead.vue'
+import DropAudioFile from './DropAudioFile.vue'
 import transcriptSettings from './TranscriptSettings.vue'
 import KeyboardShortcut from './helper/KeyboardShortcut.vue'
+import TimeSelection from './TimeSelection.vue'
 
 import { TranscriptEvent } from '@/types/transcript'
 import { saveChangesToServer } from '../service/backend-server.service'
 import { handleGlobalShortcut, keyboardShortcuts, displayKeyboardAction } from '../service/keyboard.service'
-
 import kaldiService from '../service/kaldi/kaldiService'
-
-import {
-  isCmdOrCtrl
-} from '../util'
-
+import { isCmdOrCtrl } from '../util'
 import {
   history,
   mutation,
   startListening as startUndoListener,
   stopListening as stopUndoListener
 } from '../store/history.store'
-
 import {
   isWaveformEventVisible,
   getScrollLeftAudio
 } from '../service/dom.service'
-
 import settings from '../store/settings.store'
 import fileService from '../service/disk.service'
 import bus from '../service/bus'
@@ -256,19 +256,22 @@ import store from '@/store'
 import Transcript from '@/classes/transcript.class'
 import TranscriptAudio from '@/classes/transcript-audio.class'
 import EventService from '@/classes/event.class'
+import { getWarnings } from '@/service/warnings.service'
 
 @Component({
   components: {
-    waveForm,
-    transcriptEditor,
-    settingsView,
-    eventInspector,
+    WaveForm,
+    TranscriptEditor,
+    SettingsView,
+    EventInspector,
     transcriptSettings,
-    playHead,
-    searchResultsInline,
-    dropAudioFile,
-    playerBar,
-    KeyboardShortcut
+    PlayHead,
+    SearchResultsInline,
+    DropAudioFile,
+    PlayerBar,
+    KeyboardShortcut,
+    WarningsInline,
+    TimeSelection
   }
 })
 
@@ -279,11 +282,9 @@ export default class Editor extends Vue {
   errors: TranscriptEvent[] = []
   store = store
   history = history
-  playEvent = this.transcript.audio?.playEvent
-  getSelectedEvent = this.transcript.getSelectedEvent
-  isEventSelected = this.transcript.isEventSelected
   keyboardShortcuts = keyboardShortcuts
   displayKeyboardAction = displayKeyboardAction
+  settings = settings
 
   snackbar: {
     show: boolean
@@ -302,13 +303,44 @@ export default class Editor extends Vue {
   scrollTranscriptIndex: number = 0
   scrollTranscriptTime: number = 0
 
-  settings = settings
   showSearch = false
-  showMenu = false
+  isMenuVisible = false
   isSaving = false
   menuX = 0
   menuY = 0
   layerX = 0 // this is used for splitting
+
+  startSelection(e: MouseEvent) {
+    this.transcript.deselectEvents()
+    this.transcript.uiState.timeSpanSelection.start = e.offsetX / settings.pixelsPerSecond
+    document.addEventListener('mousemove', this.dragSelection)
+    document.addEventListener('mouseup', this.endSelection)
+  }
+
+  dragSelection(e: MouseEvent) {
+    // console.log(e.offsetX / settings.pixelsPerSecond, e)
+    this.transcript.uiState.timeSpanSelection.end = e.offsetX / settings.pixelsPerSecond
+  }
+
+  endSelection(e: MouseEvent) {
+    this.transcript.uiState.timeSpanSelection.end = e.offsetX / settings.pixelsPerSecond
+    document.removeEventListener('mousemove', this.dragSelection)
+    document.removeEventListener('mouseup', this.endSelection)
+  }
+
+  playEvent(e: TranscriptEvent) {
+    if (this.transcript.audio !== null) {
+      this.transcript.audio.playEvent(e)
+    }
+  }
+
+  getSelectedEvent() {
+    this.transcript.getSelectedEvent()
+  }
+
+  isEventSelected(id: number) {
+    this.transcript.isEventSelected(id)
+  }
 
   get duration() {
     return this.transcript.audio?.duration || 0
@@ -322,8 +354,8 @@ export default class Editor extends Vue {
     window.location.reload()
   }
 
-  async exportAudio(ids: number[]) {
-    const es = ids.map(this.transcript.getEventById).filter((e): e is TranscriptEvent => e !== undefined)
+  async exportAudio() {
+    const es = this.transcript.uiState.selectedEventIds.map((id) => this.transcript.getEventById(id)).filter((e): e is TranscriptEvent => e !== undefined)
     if (this.transcript.audio !== null) {
       await this.transcript.audio.exportEventAudio(es, this.transcript.meta.transcriptName || 'untitled_transcript')
     }
@@ -351,7 +383,7 @@ export default class Editor extends Vue {
 
   async transcribeEvent(e?: TranscriptEvent) {
     if (e !== undefined && this.transcript.audio !== null) {
-      const buffer = await TranscriptAudio.decodeBufferTimeSlice(e.startTime, e.endTime, this.transcript.audio.buffer)
+      const buffer = await TranscriptAudio.decodeBufferTimeSlice(e.startTime, e.endTime, this.transcript.audio.buffer.buffer)
       const result = await kaldiService.transcribeAudio(
         window.location.origin + '/kaldi-models/german.zip',
         buffer,
@@ -414,7 +446,7 @@ export default class Editor extends Vue {
     this.isSaving = false
   }
 
-  async doShowMenu(e: MouseEvent) {
+  async showMenu(e: MouseEvent) {
     // this is used for splitting
     this.layerX = e.offsetX
     const ev = this.transcript.findEventAt(((await getScrollLeftAudio()) + e.x) / settings.pixelsPerSecond)
@@ -429,7 +461,7 @@ export default class Editor extends Vue {
     }
     this.menuX = e.x
     this.menuY = e.y
-    this.showMenu = true
+    this.isMenuVisible = true
   }
 
   splitEventFromMenu(event?: TranscriptEvent) {
@@ -474,17 +506,47 @@ export default class Editor extends Vue {
   }
 
   hideMenu() {
-    if (this.showMenu === true) {
-      this.showMenu = false
+    if (this.isMenuVisible === true) {
+      this.isMenuVisible = false
     }
   }
 
+  @Watch('settings.showWarnings', { deep: true })
+  onWarningsSettingsUpdate() {
+    this.getWarnings()
+  }
+
+  @Watch('settings.maxEventGap')
+  onGapSettingsUpdate() {
+    this.getWarnings()
+  }
+
+  @Watch('transcript.events')
+  onEventsUpdate() {
+    this.debouncedGetWarnings()
+  }
+
+  @Watch('settings.projectPreset')
+  onPresetUpdate() {
+    this.getWarnings()
+  }
+
+  async getWarnings() {
+    await this.$nextTick()
+    window.requestIdleCallback(() => {
+      store.warnings = getWarnings(this.transcript.events)
+    })
+  }
+
+  debouncedGetWarnings = _.debounce(this.getWarnings, 500)
 }
+
 </script>
 <style lang="stylus" scoped>
 .transcript-title
   font-weight 300
   opacity .5
+
 .tracks
   white-space nowrap
   overflow-x hidden

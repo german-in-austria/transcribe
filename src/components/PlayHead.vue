@@ -9,26 +9,12 @@
     />
     <div
       @mousedown.exact="startDrag"
-      @mousedown.shift="startSelection"
       ref="stage"
       class="play-head-stage"
       :style="{
         zIndex: inFront ? 1 : 'auto'
       }"
     />
-    <div
-      v-if="
-        transcript.uiState.timeSpanSelection.start !== null &&
-        transcript.uiState.timeSpanSelection.end !== null"
-      :style="{
-        left: getSelectionLeft() * settings.pixelsPerSecond + 'px',
-        width: getSelectionLength() * settings.pixelsPerSecond + 'px'
-      }"
-      class="selection">
-      <div class="selection-length">
-        {{ getSelectionLength().toFixed(2) }} sec
-      </div>
-    </div>
   </div>
 </template>
 <script lang="ts">
@@ -128,37 +114,6 @@ export default class PlayHead extends Vue {
       document.addEventListener('mousemove', this.drag)
       document.addEventListener('mouseup', this.endDrag)
     }
-  }
-
-  getSelectionLeft() {
-    return Math.min(this.transcript.uiState.timeSpanSelection.start || 0, this.transcript.uiState.timeSpanSelection.end || 0)
-  }
-
-  getSelectionLength() {
-    return Math.abs(
-      (this.transcript.uiState.timeSpanSelection.end || 0) -
-      (this.transcript.uiState.timeSpanSelection.start || 0)
-    )
-  }
-
-  startSelection(e: MouseEvent) {
-    this.transcript.deselectEvents()
-    this.inFront = true
-    this.transcript.uiState.timeSpanSelection.start = e.offsetX / settings.pixelsPerSecond
-    document.addEventListener('mousemove', this.dragSelection)
-    document.addEventListener('mouseup', this.endSelection)
-  }
-
-  dragSelection(e: MouseEvent) {
-    // console.log(e.offsetX / settings.pixelsPerSecond, e)
-    this.transcript.uiState.timeSpanSelection.end = e.offsetX / settings.pixelsPerSecond
-  }
-
-  endSelection(e: MouseEvent) {
-    this.inFront = false
-    this.transcript.uiState.timeSpanSelection.end = e.offsetX / settings.pixelsPerSecond
-    document.removeEventListener('mousemove', this.dragSelection)
-    document.removeEventListener('mouseup', this.endSelection)
   }
 
   drag(e: MouseEvent) {

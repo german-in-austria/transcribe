@@ -2,7 +2,7 @@
   <v-layout column>
     <!-- <v-flex shrink>
       <v-subheader>
-        <small>Bookmarks and Gaps ({{ gaps.length }})</small>
+        <small>Tags</small>
       </v-subheader>
     </v-flex>
     <v-flex grow>
@@ -46,9 +46,9 @@ import { timeFromSeconds } from '@/util'
     RecycleScroller
   }
 })
-export default class Bookmarks extends Vue {
+export default class Tags extends Vue {
 
-  bookmarks: any = []
+  tags: any = []
   transcript = store.transcript!
   toTime = timeFromSeconds
 

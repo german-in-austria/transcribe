@@ -61,12 +61,12 @@
         </div>
       </div>
     </div>
-    <v-layout row style="margin-top: -40px; padding-bottom: 20px;">
+    <v-layout row style="margin-top: -40px; padding-bottom: 10px;">
       <v-flex xs12 style="position: relative" class="ml-3">
         <scrollbar
           class="scrollbar"
           update-on="updateWaveformScrollbar"
-          :max-time="duration"
+          :max-time="audio.duration"
           @scroll="scrollFromScrollbar"
         />
         <div
@@ -128,6 +128,7 @@ import { TranscriptEvent } from '@/types/transcript'
 
 import store from '@/store'
 import Transcript from '@/classes/transcript.class'
+import TranscriptAudio from '@/classes/transcript-audio.class'
 
 const queue = new Queue({
   concurrency: 2,
@@ -151,6 +152,7 @@ export default class Waveform extends Vue {
 
   @Prop({ default: 300 }) height!: number
   @Prop({ required: true }) transcript!: Transcript
+  @Prop({ required: true }) audio!: TranscriptAudio
 
   // config
   drawDistance = 5000 // pixels in both directions from the center of the viewport (left and right)
@@ -171,9 +173,7 @@ export default class Waveform extends Vue {
   overviewHeight = 60
   visibleSeconds: number[] = []
   visibleEvents: TranscriptEvent[] = []
-  audioLength = 0
   renderedWaveFormPieces: number[] = []
-  totalWidth = this.audioLength * settings.pixelsPerSecond
   scrollTimeout = null
 
   temporaryZoomOrigin = 0
@@ -189,8 +189,8 @@ export default class Waveform extends Vue {
     this.initWithAudio()
   }
 
-  get duration(): number {
-    return this.transcript.audio?.duration || 0
+  get totalWidth(): number {
+    return this.audio.duration * settings.pixelsPerSecond
   }
 
   beforeDestroy() {
@@ -296,7 +296,6 @@ export default class Waveform extends Vue {
       if (this.temporaryPixelsPerSecond !== settings.pixelsPerSecond) {
         // set actual pixel per second value
         settings.pixelsPerSecond = Math.round(this.temporaryPixelsPerSecond)
-        this.totalWidth = this.audioLength * settings.pixelsPerSecond
         // scroll to the target time (scrollLeft)
         this.scrollToSecond(oldTargetTime - e.x / settings.pixelsPerSecond)
         // rerender
@@ -392,7 +391,7 @@ export default class Waveform extends Vue {
       Math.floor(left / settings.pixelsPerSecond),
       Math.floor(right / settings.pixelsPerSecond)]
     const visibleSeconds = util
-      .range(Math.max(startSecond, 0), Math.min(endSecond, this.audioLength))
+      .range(Math.max(startSecond, 0), Math.min(endSecond, this.audio.duration))
       .filter(s => settings.pixelsPerSecond > 60 || s % 2 === 0)
     await util.requestFrameAsync()
     const el = this.$el.querySelector('.second-marker-row') as HTMLElement
@@ -411,7 +410,7 @@ export default class Waveform extends Vue {
       const isLast = i + 1 === this.amountDrawSegments
       const secondsPerDrawWidth = this.drawWidth / settings.pixelsPerSecond
       const from = i * secondsPerDrawWidth
-      const to = isLast ? this.audioLength : from + secondsPerDrawWidth
+      const to = isLast ? this.audio.duration : from + secondsPerDrawWidth
       const buffer = await this.transcript.audio.getOrFetchAudioBuffer(
         from,
         to,
@@ -663,7 +662,7 @@ export default class Waveform extends Vue {
   }
 
   get amountDrawSegments() {
-    return Math.ceil(this.audioLength * settings.pixelsPerSecond / this.drawWidth)
+    return Math.ceil(this.audio.duration * settings.pixelsPerSecond / this.drawWidth)
   }
 
   async getRenderBoundaries(distance = this.drawDistance): Promise<number[]> {
@@ -689,9 +688,8 @@ export default class Waveform extends Vue {
 
   async drawOverviewWaveformPiece(startTime: number, endTime: number, audioBuffer: AudioBuffer) {
     if (this.transcript.audio) {
-      const totalDuration = this.audioLength
-      const width = Math.ceil((endTime - startTime) * (this.overviewSvgWidth / totalDuration)) + 1
-      const left = Math.floor((startTime) * (this.overviewSvgWidth / totalDuration))
+      const width = Math.ceil((endTime - startTime) * (this.overviewSvgWidth / this.audio.duration)) + 1
+      const left = Math.floor((startTime) * (this.overviewSvgWidth / this.audio.duration))
       const [svg1, svg2] = await Promise.all([
         drawWavePathAsync(audioBuffer, width, this.overviewHeight, 0, left),
         drawWavePathAsync(audioBuffer, width, this.overviewHeight, 1, left)
@@ -721,15 +719,6 @@ export default class Waveform extends Vue {
         this.transcript.audio.duration,
         this.transcript.audio.url
       )
-      // console.log({
-      //   from,
-      //   to,
-      //   duration: to - from,
-      //   drawWidth: this.drawWidth,
-      //   secondsPerDrawWidth,
-      //   bufferDuration: buffer.duration,
-      //   pixelsPerSecond: settings.pixelsPerSecond
-      // })
       const svg = await (async () => {
         if (settings.useMonoWaveForm === true) {
           if (this.transcript.audio !== null) {
