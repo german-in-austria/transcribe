@@ -610,55 +610,6 @@ export default class Waveform extends Vue {
         }
       }
     }
-    // if (eventStore.audioElement !== null && !isNaN(eventStore.audioElement.duration)) {
-    //   this.loading = true
-    //   this.audioLength = eventStore.audioElement.duration
-    //   this.totalWidth = this.audioLength * settings.pixelsPerSecond
-    //   if (audio.store.isLocalFile === true) {
-    //     this.loading = false
-    //     await audio.decodeAudioBufferProgressively({
-    //       buffer: audio.store.uint8Buffer,
-    //       onProgress: async (chunk: AudioBuffer, from: number, to: number) => {
-    //         await this.drawOverviewWaveformPiece(from, to, chunk)
-    //       }
-    //     })
-    //   } else {
-    //     if (await this.hasOverviewCache()) {
-    //       await audio.downloadAudioStream({
-    //         url: eventStore.audioElement.src,
-    //         onStart: (metadata) => {
-    //           if (metadata !== null) {
-    //             eventStore.metadata.audioUrl = metadata.url
-    //             eventStore.audioMetadata.fileSize = metadata.fileSize
-    //             eventStore.audioMetadata.length = eventStore.audioElement.duration
-    //           }
-    //           this.initWithCache()
-    //           this.doMaybeRerender()
-    //         }
-    //       })
-    //     } else {
-    //       await audio.downloadAndDecodeAudioStream({
-    //         url: eventStore.audioElement.src,
-    //         onStart: (metadata) => {
-    //           if (metadata !== null) {
-    //             eventStore.metadata.audioUrl = metadata.url
-    //             eventStore.audioMetadata.fileSize = metadata.fileSize
-    //             eventStore.audioMetadata.length = eventStore.audioElement.duration
-    //           }
-    //           this.initWithCache()
-    //           this.doMaybeRerender()
-    //         },
-    //         onProgress: async (chunk: AudioBuffer, from: number, to: number) => {
-    //           if (!(await this.hasOverviewCache())) {
-    //             await this.drawOverviewWaveformPiece(from, to, chunk)
-    //           }
-    //         }
-    //       })
-    //       this.cacheOverviewWaveform()
-    //     }
-    //     console.log('download done.')
-    //   }
-    // }
   }
 
   get amountDrawSegments() {

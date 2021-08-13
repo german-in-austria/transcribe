@@ -10,7 +10,7 @@ import {
   TokenTierType
 } from '../types/transcript'
 import { clone, timeToSeconds } from '../util'
-import ServerTranscriptDiff from './backend-server-transcript-diff.worker'
+import ServerTranscriptDiff from '../workers/backend-server-transcript-diff.worker'
 import Transcript from '../classes/transcript.class'
 // import EventService from './event-service'
 import store from '@/store'

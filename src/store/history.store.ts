@@ -4,7 +4,6 @@ import { isUndoOrRedo } from '../util'
 import { isWaveformEventVisible } from '../service/dom.service'
 import { sendMessage } from '../service/socket'
 import store from '@/store'
-import Transcript from '@/classes/transcript.class'
 
 type HistoryApplicationType = 'UNDO'|'REDO'|'DO'|'JUMPTOSTATE'
 

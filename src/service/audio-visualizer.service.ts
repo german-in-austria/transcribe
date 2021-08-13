@@ -2,9 +2,9 @@ import settings from '@/store/settings.store'
 import { sumChannels } from '@/util'
 import * as PromiseWorker from 'promise-worker-transferable'
 
-import GetFrequenciesWorker from './get-frequencies.worker'
+import GetFrequenciesWorker from '../workers/get-frequencies.worker'
 import TranscriptAudio from '../classes/transcript-audio.class'
-import WaveformWorker from './waveform.worker'
+import WaveformWorker from '../workers/waveform.worker'
 
 const textEncoder = new TextEncoder()
 

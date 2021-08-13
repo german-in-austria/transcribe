@@ -136,11 +136,11 @@ export default class SpeakerSegmentTranscript extends Vue {
 
   mounted() {
     // tslint:disable-next-line:max-line-length
-    bus.$on('updateSpeakerEventText', this.updateTextFromEventBus)
+    bus.$on('updateSpeakerEventText', this.updateTextViaBus)
   }
 
   destroyed() {
-    bus.$off('updateSpeakerEventText', this.updateTextFromEventBus)
+    bus.$off('updateSpeakerEventText', this.updateTextViaBus)
   }
 
   playEvent(e: TranscriptEvent) {
@@ -149,7 +149,7 @@ export default class SpeakerSegmentTranscript extends Vue {
     }
   }
 
-  updateTextFromEventBus({ eventId, speakerId, text }: { eventId: string, speakerId: string, text: string }) {
+  updateTextViaBus({ eventId, speakerId, text }: { eventId: string, speakerId: string, text: string }) {
     if (Number(eventId) === this.event.eventId && speakerId === this.speaker) {
       this.segmentText = text.replace(/\s/g, ' ')
       this.updateDefaultTier(this.segmentText)

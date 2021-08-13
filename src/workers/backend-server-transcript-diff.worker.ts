@@ -12,7 +12,7 @@ import {
   ServerTranscript,
   ServerTranscriptSaveRequest,
   SaveRequest
-} from './backend-server.service'
+} from '../service/backend-server.service'
 
 const registerPromiseWorker = require('promise-worker-transferable/register')
 const textDecoder = new TextDecoder('utf-8')

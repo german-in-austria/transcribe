@@ -1,5 +1,5 @@
 import * as PromiseWorker from 'promise-worker-transferable'
-import Worker from '../service/buffer-concat.worker'
+import Worker from '../workers/buffer-concat.worker'
 const worker = new Worker('')
 const concatWorker = new PromiseWorker(worker)
 
