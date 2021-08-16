@@ -9,10 +9,10 @@
     </v-dialog>
     <v-layout row>
       <v-flex xs4 text-xs-right>
-        <player-bar-button @click="playStart" :size="height">
+        <player-bar-button @click="playEventStart" :size="height">
           <f-icon value="mdi-contain-start" />
         </player-bar-button>
-        <player-bar-button @click="playEnd" :size="height">
+        <player-bar-button @click="playEventEnd" :size="height">
           <f-icon value="mdi-contain-end" />
         </player-bar-button>
       </v-flex>
@@ -36,10 +36,10 @@
       <v-flex xs4>
         <v-layout>
           <v-flex text-xs-left>
-            <player-bar-button :size="height">
+            <player-bar-button @click="rewind(-1)" :size="height">
               <f-icon value="mdi-replay" />
             </player-bar-button>
-            <player-bar-button :size="height">
+            <player-bar-button @click="rewind(1)" :size="height">
               <f-icon value="mdi-replay" class="mirror" />
             </player-bar-button>
           </v-flex>
@@ -134,6 +134,16 @@ export default class PlayerBar extends Vue {
     return this.transcript.audio ? this.transcript.audio.currentTime : 0
   }
 
+  rewind(by: number) {
+    if (this.transcript.audio !== null) {
+      if (by < 0) {
+        this.transcript.audio.scrubAudio(Math.ceil(this.transcript.audio.currentTime + by))
+      } else {
+        this.transcript.audio.scrubAudio(Math.floor(this.transcript.audio.currentTime + by))
+      }
+    }
+  }
+
   isTimeSpanSelectionEmpty() {
     return this.transcript.isTimeSpanSelectionEmpty()
   }
@@ -173,7 +183,7 @@ export default class PlayerBar extends Vue {
     }
   }
 
-  playStart() {
+  playEventStart() {
     if (this.transcript.audio) {
       if (this.transcript.audio.isPaused === true) {
         const es = this.transcript.getSelectedEvents()
@@ -186,7 +196,7 @@ export default class PlayerBar extends Vue {
     }
   }
 
-  playEnd() {
+  playEventEnd() {
     if (this.transcript.audio) {
       if (this.transcript.audio.isPaused === true) {
         const es = this.transcript.getSelectedEvents()

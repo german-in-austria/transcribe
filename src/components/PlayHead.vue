@@ -9,6 +9,7 @@
     />
     <div
       @mousedown.exact="startDrag"
+      @dblclick="startPlaying"
       ref="stage"
       class="play-head-stage"
       :style="{
@@ -127,6 +128,13 @@ export default class PlayHead extends Vue {
     this.left = e.offsetX
     document.removeEventListener('mousemove', this.drag)
     document.removeEventListener('mouseup', this.endDrag)
+  }
+
+  startPlaying(e: MouseEvent) {
+    if (this.transcript.audio !== null) {
+      const t = e.offsetX / settings.pixelsPerSecond
+      this.transcript.audio.playAllFrom(t)
+    }
   }
 
 }
