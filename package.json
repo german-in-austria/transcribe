@@ -9,7 +9,7 @@
     "lint": "vue-cli-service lint",
     "start": "ts-node -P server/tsconfig.json server/index.ts",
     "test:interactive": "npx cypress open",
-    "test": "start-server-and-test start https://localhost:8080 npx cypress run",
+    "test": "env-cmd -f env-test.env npm run start & npx cypress run",
     "vue-type-check": "vue-type-check --workspace . --srcDir ./src --onlyTemplate"
   },
   "dependencies": {
@@ -95,6 +95,7 @@
     "chai": "^4.1.2",
     "circular-dependency-plugin": "^5.2.2",
     "cypress": "^7.7.0",
+    "env-cmd": "^10.1.0",
     "eslint": "^6.8.0",
     "eslint-config-prettier": "^6.15.0",
     "eslint-plugin-import": "^2.20.2",

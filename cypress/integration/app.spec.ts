@@ -5,7 +5,7 @@ const testBackend = 'dioedb.demo.dioe.at'
 
 describe('My App', () => {
   it('loads without immediately crashing', () => {
-    cy.visit('https://localhost:8080')
+    cy.visit('http://localhost:8080')
   })
   it('can select a private server', () => {
     cy.get('[data-cy=select-backend]').click()

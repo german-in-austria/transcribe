@@ -18,6 +18,7 @@ A browser based audio transcription tool.
 ## Setup
 
 clone the repo and run
+
 `npm i && npm run dev`
 
 or
