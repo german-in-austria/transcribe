@@ -54,13 +54,20 @@
               </template>
             </v-btn>
             <v-list dense class="context-menu-list">
+              <v-list-tile v-if="transcript.uiState.lastSaved !== null" disabled>
+                  <v-list-tile-content>
+                    <v-list-tile-title>
+                      <force-refresh :interval="60" :display="() => 'Saved ' + distance(transcript.uiState.lastSaved)" />
+                    </v-list-tile-title>
+                  </v-list-tile-content>
+              </v-list-tile>
               <v-list-tile @click="exportProject">
                 <v-list-tile-content>
                   <v-list-tile-title>Download Project</v-list-tile-title>
                 </v-list-tile-content>
               </v-list-tile>
               <v-divider />
-              <v-list-tile @click="saveTranscript">
+              <v-list-tile :disabled="settings.backEndUrl === null" @click="saveTranscript">
                 <v-list-tile-content>
                   <v-list-tile-title>Save To Server</v-list-tile-title>
                 </v-list-tile-content>
@@ -236,6 +243,7 @@ import DropAudioFile from './DropAudioFile.vue'
 import transcriptSettings from './TranscriptSettings.vue'
 import KeyboardShortcut from './helper/KeyboardShortcut.vue'
 import TimeSelection from './TimeSelection.vue'
+import ForceRefresh from './helper/ForceRefresh.vue'
 
 import { TranscriptEvent } from '@/types/transcript'
 import { saveChangesToServer } from '../service/backend-server.service'
@@ -260,6 +268,7 @@ import Transcript from '@/classes/transcript.class'
 import TranscriptAudio from '@/classes/transcript-audio.class'
 import EventService from '@/classes/event.class'
 import { getWarnings } from '@/service/warnings.service'
+import { distanceInWordsToNow as distance } from 'date-fns'
 
 @Component({
   components: {
@@ -275,7 +284,8 @@ import { getWarnings } from '@/service/warnings.service'
     PlayerBar,
     KeyboardShortcut,
     WarningsInline,
-    TimeSelection
+    TimeSelection,
+    ForceRefresh
   }
 })
 
@@ -313,6 +323,14 @@ export default class Editor extends Vue {
   menuX = 0
   menuY = 0
   layerX = 0 // this is used for splitting
+
+  distance(d: Date|null): string|null {
+    if (d !== null) {
+      return distance(d, { addSuffix: true })
+    } else {
+      return null
+    }
+  }
 
   startSelection(e: MouseEvent) {
     this.transcript.deselectEvents()

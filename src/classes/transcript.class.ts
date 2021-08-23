@@ -49,6 +49,7 @@ export interface TranscriptUiState {
   downloadProgress: number|null
   isInitializing: boolean
   isSaving: boolean
+  lastSaved: Date|null,
   showTranscriptMetaSettings: boolean
   timeSpanSelection: {
     start: null|number
@@ -113,6 +114,7 @@ export default class Transcript extends EventService {
     /** Number between 0 and 1. "null" means that the transcript is not currently loading." */
     downloadProgress: null,
     isSaving: false,
+    lastSaved: null,
     showTranscriptMetaSettings: false,
     timeSpanSelection: {
       start: null,
@@ -134,6 +136,7 @@ export default class Transcript extends EventService {
     history.actions = pf.historyActions
     history.autoSaver = async () => {
       this.uiState.isSaving = true
+      this.uiState.lastSaved = new Date()
       await diskService.saveFile(this, history.actions)
       this.uiState.isSaving = false
       console.log('auto saving done.')

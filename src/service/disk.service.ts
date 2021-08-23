@@ -5,7 +5,6 @@ import JSZip from 'jszip'
 import _ from 'lodash'
 
 import { convertToServerTranscript, ServerTranscript, ServerTranscriptListItem } from './backend-server.service'
-import { Settings } from '@/store/settings.store'
 import { HistoryEventAction } from '@/store/history.store'
 import Transcript, { TranscriptMetaData } from '@/classes/transcript.class'
 import { TranscriptEvent } from '@/types/transcript'
@@ -20,7 +19,6 @@ interface ProjectFile {
   meta: TranscriptMetaData,
   overviewSvg: string
   historyActions: HistoryEventAction[]
-  settings: Settings
 }
 
 export interface LocalTranscriptListItem extends ServerTranscriptListItem {
@@ -110,7 +108,6 @@ class FileService {
     const events = await this.zipFile.file('events.json')?.async('text')
     const uiState = await this.zipFile.file('uiState.json')?.async('text')
     const meta = await this.zipFile.file('meta.json')?.async('text')
-    const settings = await this.zipFile.file('settings.json')?.async('text')
     const historyActions = await this.zipFile.file('history.json')?.async('text')
     const overviewSvg = await this.zipFile.file('overview.svg')?.async('text')
     const version = await this.zipFile.file('VERSION')?.async('text')
@@ -119,7 +116,6 @@ class FileService {
       events !== undefined &&
       uiState !== undefined &&
       meta !== undefined &&
-      settings !== undefined &&
       historyActions !== undefined &&
       overviewSvg !== undefined &&
       version === FILE_FORMAT_VERSION
@@ -130,7 +126,6 @@ class FileService {
         uiState: JSON.parse(uiState),
         meta: JSON.parse(meta),
         historyActions: JSON.parse(historyActions),
-        settings: JSON.parse(settings),
         audioBuffer,
         overviewSvg
       }
@@ -144,10 +139,12 @@ class FileService {
     historyActions: HistoryEventAction[]
   ) {
     // we’re only updating the files in the zipFile here.
+    const newServerTranscript = await convertToServerTranscript(transcript.events)
     this.zipFile.file('events.json', JSON.stringify(transcript.events))
     this.zipFile.file('uiState.json', JSON.stringify(transcript.uiState))
     this.zipFile.file('meta.json', JSON.stringify(transcript.meta))
     this.zipFile.file('history.json', JSON.stringify(historyActions))
+    this.zipFile.file('transcript.json', JSON.stringify(newServerTranscript))
     this.zipFile.file('VERSION', '2')
     // write to disk
     if (this.fileHandle !== null) {
