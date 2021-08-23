@@ -24,6 +24,7 @@
           @finish="loadImportedTranscript"
         />
         <v-layout
+          @dragstart="$event.dataTransfer.effectAllowed = 'all'; $event.dataTransfer.dropEffect = 'move'"
           @dragover.prevent=""
           @drop.stop.prevent="onDropFile"
           v-if="store.transcript === null"
@@ -320,8 +321,12 @@ export default class App extends Vue {
 
   async onDropFile(e: DragEvent) {
     if (e instanceof DragEvent && e.dataTransfer !== null) {
-      if (e.dataTransfer.files !== null && e.dataTransfer.files.length === 1) {
-        const fh = await e.dataTransfer.items.item(0).getAsFileSystemHandle()
+      if (
+        e.dataTransfer.files !== null &&
+        e.dataTransfer.files.length === 1
+      ) {
+        console.log(e.dataTransfer.items)
+        const fh = await e.dataTransfer.items[0].getAsFileSystemHandle()
         if (fh?.kind === 'file') {
           this.openFile(fh)
         }
