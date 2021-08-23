@@ -22,7 +22,7 @@
     </div>
     <v-toolbar class="elevation-0" fixed app>
       <v-flex xs4>
-        <v-btn icon @click="reload"><f-icon value="chevron_left" /></v-btn>
+        <v-btn icon @click="store.transcript = null"><f-icon value="chevron_left" /></v-btn>
       </v-flex>
       <v-flex xs4 class="text-xs-center">
         <div style="opacity: .7; font-size: small">{{ transcript.meta.transcriptName || 'Untitled Transcript' }}</div>
@@ -39,7 +39,7 @@
             <v-btn
               slot="activator"
               @click="saveTranscript"
-              :loading="store.status === 'loading' || isSaving"
+              :loading="(transcript.uiState.downloadProgress !== null && transcript.uiState.downloadProgress !== 1) || isSaving"
               :disabled="store.status === 'loading' || isSaving"
               icon flat>
               <f-icon value="save_alt" />
@@ -85,8 +85,15 @@
       @close="transcript.uiState.inspectedEventId = null"
       :event="transcript.getEventById(transcript.uiState.inspectedEventId)"
     />
+    <wave-form-loading-placeholder
+      v-if="transcript.uiState.isInitializing" />
+    <drop-audio-file
+      v-if="transcript.audio === null && transcript.uiState.isInitializing === false"
+      format="ogg"
+      @update="loadAudioFromFile"
+    />
     <wave-form
-      v-if="transcript.audio !== null"
+      v-if="transcript.uiState.isInitializing === false && transcript.audio !== null"
       :transcript="transcript"
       :audio="transcript.audio"
       tabindex="-1"
@@ -169,7 +176,7 @@
                 <keyboard-shortcut :value="keyboardShortcuts.inspectEvent" />
               </v-list-tile-action>
             </v-list-tile>
-            <v-list-tile @click="transcribeEvent(getSelectedEvent())">
+            <v-list-tile @click="keyboardShortcuts.autoTranscribeEvent.action($event, transcript)">
               <v-list-tile-content>
                 <v-list-tile-title>Auto-Transcribe Event…</v-list-tile-title>
               </v-list-tile-content>
@@ -180,7 +187,7 @@
             <v-divider />
             <v-list-tile
               :disabled="keyboardShortcuts.deleteEvents.disabled(transcript)"
-              @click="keyboardShortcuts.deleteEvents.action">
+              @click="keyboardShortcuts.deleteEvents.action($event, transcript)">
               <v-list-tile-content>
                 <v-list-tile-title>Delete</v-list-tile-title>
               </v-list-tile-content>
@@ -205,11 +212,6 @@
         </div>
       </div>
     </wave-form>
-    <drop-audio-file
-      v-else
-      format="ogg"
-      @update="loadAudioFromFile"
-    />
     <player-bar :transcript="transcript" />
     <transcript-editor :transcript="transcript" />
   </div>
@@ -219,6 +221,7 @@
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
 import { saveAs } from 'file-saver'
 import * as Sentry from '@sentry/browser'
+import WaveFormLoadingPlaceholder from './WaveFormLoadingPlaceholder.vue'
 import _ from 'lodash'
 
 import PlayerBar from './PlayerBar.vue'
@@ -261,6 +264,7 @@ import { getWarnings } from '@/service/warnings.service'
 @Component({
   components: {
     WaveForm,
+    WaveFormLoadingPlaceholder,
     TranscriptEditor,
     SettingsView,
     EventInspector,
@@ -376,7 +380,7 @@ export default class Editor extends Vue {
       const name = (prompt('Please enter a name for the transcript', 'untitled_transcript') || 'untitled_transcript') + '.transcript'
       saveAs(f, name)
     } else {
-      saveAs(f, this.transcript.meta.transcriptName)
+      saveAs(f, this.transcript.meta.transcriptName + '.transcript')
     }
     this.isSaving = false
   }
