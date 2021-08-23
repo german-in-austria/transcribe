@@ -57,7 +57,10 @@
               <v-list-tile v-if="transcript.uiState.lastSaved !== null" disabled>
                   <v-list-tile-content>
                     <v-list-tile-title>
-                      <force-refresh :interval="60" :display="() => 'Saved ' + distance(transcript.uiState.lastSaved)" />
+                      <force-refresh
+                        :key="transcript.uiState.lastSaved.toString()"
+                        :interval="60"
+                        :display="() => 'Saved ' + distance(transcript.uiState.lastSaved)" />
                     </v-list-tile-title>
                   </v-list-tile-content>
               </v-list-tile>
