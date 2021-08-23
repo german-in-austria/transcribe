@@ -15,7 +15,7 @@
       :item-disabled="(i) => i.id_transcript !== null"
       :items="surveys || []"
       :loading="surveys === null"
-      :rules="[ selectedSurvey === null && 'Select a Survey' ]"
+      :rules="[ (selectedSurvey === null && settings.backEndUrl !== null) && 'Select a Survey' ]"
       @input="onUpdateSurvey"
       item-text="Audiofile"
       item-value="pk"
@@ -109,6 +109,7 @@ export default class ServerTranscriptInfoForm extends Vue {
     } else {
       this.surveys = []
     }
+    this.emitUpdateIfValid()
   }
 
   get projectPresetNames(): string[] {
