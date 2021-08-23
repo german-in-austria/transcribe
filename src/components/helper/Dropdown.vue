@@ -4,7 +4,7 @@
       v-for="(item, i) in items"
       :value="item"
       :key="i">
-      {{ stringify(item) }}
+      {{ stringify ? stringify(item) : item }}
     </option>
   </select>
 </template>

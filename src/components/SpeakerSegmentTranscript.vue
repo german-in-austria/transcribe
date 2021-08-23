@@ -239,7 +239,7 @@ export default class SpeakerSegmentTranscript extends Vue {
     }
   }
 
-  focusNextFrom(e: KeyboardEvent, tier: TokenTierType) {
+  focusNextFrom(e: KeyboardEvent, tier: TokenTierType|string) {
     e.preventDefault()
     const i = this.transcript.findEventIndexById(this.event.eventId)
     const nextE = this.transcript.events[i > -1 ? i + 1 : 0]
