@@ -127,7 +127,7 @@
                         return-object
                         item-value="pk"
                         item-text="Kuerzel"
-                        :items="surveySpeakers">
+                        :items="possibleSpeakers">
                         <template slot="item" slot-scope="item">
                           <v-list-tile-content>
                             <v-list-tile-title>
@@ -399,9 +399,17 @@ export default class ExmaraldaImporter extends Vue {
     this.audioFileName = file === null ? null : file.name
   }
 
-  get surveySpeakers() {
+  get possibleSpeakers(): ServerInformant[] {
     if (this.selectedSurvey !== null) {
       return this.selectedSurvey.FX_Informanten
+    } else {
+      return Object.keys(this.importable.speakers).map(s => ({
+        Kuerzel: s,
+        Vorname: null,
+        Kuerzel_anonym: null,
+        Name: null,
+        pk: Number(_.uniqueId()) * -1
+      }))
     }
   }
 
@@ -519,7 +527,7 @@ export default class ExmaraldaImporter extends Vue {
     } else if (this.step === 3) {
       if (
         this.transcriptName !== null &&
-        this.selectedSurvey !== null &&
+        (settings.backEndUrl !== null && this.selectedSurvey !== null) &&
         this.globalDefaultTier !== null
       ) {
         this.$emit(
