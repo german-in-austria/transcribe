@@ -36,6 +36,10 @@ or
 
 - The application includes a small static web server, which serves double-duty as a WebSocket-based event bus for distributing transactions. This is used to enable real time synching between the clients.
 
+- For Visual Studio Code, the [Vetur plugin](https://github.com/vuejs/vetur) is highly recommended.
+
+- The the code base does not have many automatic (unit) tests, but heavily emphasizes type safety and static integrity. Running `npm run vue-type-check` periodically, to check templates for type errors is recommended. However it is probably not reliable enough to integrate in the CI/CD pipeline.
+
 ## Testing
 
 - The app only includes e2e tests. They can be run in headless mode with `npm run test` and in interactive mode with `npm run test:interactive`
