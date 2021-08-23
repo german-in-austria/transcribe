@@ -67,7 +67,7 @@ export default class DropAudioFile extends Vue {
       ffmpeg.FS('writeFile', name, await fetchFile(f))
       await ffmpeg.run('-i', name, 'output.ogg')
       const data = ffmpeg.FS('readFile', 'output.ogg') as Uint8Array
-      this.transcript.audio = new TranscriptAudio(data)
+      this.transcript.audio = new TranscriptAudio(data.buffer)
     }
   }
 }
