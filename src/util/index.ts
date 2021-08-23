@@ -240,14 +240,14 @@ export function findAllNotIn<T = PrimitiveOrNone>(base: T[], find: T[]): T[] {
   return b
 }
 
-/** Convert a time string like '01:05:12' to a time offset in seconds */
+/** Convert a time string like '01:05:12' to a time offset in seconds like '3912.' */
 export function timeToSeconds(time: string): number {
   const a = time.split(':') // split it at the colons
   // minutes are worth 60 seconds. Hours are worth 60 minutes.
   return (+a[0]) * 60 * 60 + (+a[1] || 0) * 60 + (+a[2] || 0)
 }
 
-/** Convert a time offset in seconds to a string like '01:05:12' */
+/** Convert a time offset in seconds like '3912' to a time display string like '01:05:12' */
 export function timeFromSeconds(seconds: number, decimalPlaces = 0): string {
   return new Date(seconds * 1000).toISOString().substr(11, 8 + (decimalPlaces > 0 ? decimalPlaces + 1 : 0))
 }

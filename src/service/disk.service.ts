@@ -5,9 +5,9 @@ import JSZip from 'jszip'
 import _ from 'lodash'
 
 import { convertToServerTranscript, ServerTranscript, ServerTranscriptListItem } from './backend-server.service'
-import { Settings } from '../store/settings.store'
-import { HistoryEventAction } from '../store/history.store'
-import Transcript, { TranscriptMetaData } from '../classes/transcript.class'
+import { Settings } from '@/store/settings.store'
+import { HistoryEventAction } from '@/store/history.store'
+import Transcript, { TranscriptMetaData } from '@/classes/transcript.class'
 import { TranscriptEvent } from '@/types/transcript'
 
 const FILE_FORMAT_VERSION = '2'
@@ -148,6 +148,7 @@ class FileService {
     this.zipFile.file('uiState.json', JSON.stringify(transcript.uiState))
     this.zipFile.file('meta.json', JSON.stringify(transcript.meta))
     this.zipFile.file('history.json', JSON.stringify(historyActions))
+    this.zipFile.file('VERSION', '2')
     // write to disk
     if (this.fileHandle !== null) {
       const writable = await this.fileHandle.createWritable()
