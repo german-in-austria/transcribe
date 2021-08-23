@@ -4,7 +4,10 @@
       <v-window class="window" v-model="settings.activeSidebarItem" vertical>
         <v-window-item value="edit" class="sidebar-scrollable">
           <!-- we always put the extra "if" here, because otherwise the component stays active even if invisible -->
-          <actions v-if="settings.activeSidebarItem === 'edit'" />
+          <actions
+            :transcript="transcript"
+            v-if="settings.activeSidebarItem === 'edit'"
+          />
         </v-window-item>
         <v-window-item value="history" class="sidebar-scrollable">
           <edit-history
