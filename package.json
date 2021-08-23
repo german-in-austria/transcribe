@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "test:unit": "vue-cli-service test:unit",
-    "test": "exit 0",
+    "test": "npx cypress run",
+    "test:interactive": "npx cypress open",
     "lint": "vue-cli-service lint",
     "start": "ts-node -P server/tsconfig.json server/index.ts",
     "dev-server": "nodemon --watch 'server/**/*.ts' --ignore 'server/**/*.spec.ts' --exec 'ts-node' --project server/tsconfig.json server/index.ts"
