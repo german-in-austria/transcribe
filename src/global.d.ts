@@ -1,4 +1,3 @@
-
 declare interface process {
   env : {
     [key: string]: string
@@ -65,7 +64,12 @@ declare module '@rgrove/parse-xml'
 declare module 'audiobuffer-slice'
 declare module 'simple-promise-queue'
 declare module 'vue-scroll'
-declare module 'array-buffer-concat'
-declare module 'audiobuffer-to-wav'
+declare module 'array-buffer-concat' {
+  export = function x(a: ArrayBuffer|null, b: ArrayBuffer): ArrayBuffer
+}
+declare module 'audiobuffer-to-wav' {
+  export = function x(b: AudioBuffer): ArrayBuffer
+}
+
 declare module 'vue-color'
 declare module 'list-diff2'
