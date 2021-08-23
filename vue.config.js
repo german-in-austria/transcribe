@@ -76,6 +76,11 @@ module.exports = {
     disableHostCheck: true,
     host: 'localhost',
     port: '8080',
+    // this is required to use SharedArrayBuffers on the client.
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp'
+    },
     watchOptions: {
       poll: false
     }
