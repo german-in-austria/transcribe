@@ -65,10 +65,12 @@ declare module 'audiobuffer-slice'
 declare module 'simple-promise-queue'
 declare module 'vue-scroll'
 declare module 'array-buffer-concat' {
-  export = function x(a: ArrayBuffer|null, b: ArrayBuffer): ArrayBuffer
+  function x(a: ArrayBuffer|null, b: ArrayBuffer): ArrayBuffer;
+  export = x
 }
 declare module 'audiobuffer-to-wav' {
-  export = function x(b: AudioBuffer): ArrayBuffer
+  function x(b: AudioBuffer): ArrayBuffer;
+  export = x
 }
 
 declare module 'vue-color'
