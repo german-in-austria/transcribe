@@ -47,6 +47,7 @@ export interface TranscriptUiState {
   searchTerm: string
   /** Number between 0 and 1. "null" means that the transcript is not currently loading." */
   downloadProgress: number|null
+  isInitializing: boolean
   isSaving: boolean
   showTranscriptMetaSettings: boolean
   timeSpanSelection: {
@@ -108,6 +109,7 @@ export default class Transcript extends EventService {
     inspectedEventId: null,
     searchResults: [],
     searchTerm: '',
+    isInitializing: false,
     /** Number between 0 and 1. "null" means that the transcript is not currently loading." */
     downloadProgress: null,
     isSaving: false,
@@ -138,28 +140,37 @@ export default class Transcript extends EventService {
     }
     this.initTranscriptWithData(
       pf.events,
-      pf.audioBuffer,
+      pf.audioBuffer.buffer,
       pf.meta,
       pf.uiState
     )
   }
 
   async initTranscriptWithBackend(id: number, backEndUrl: string) {
+    this.key = String(id)
+    this.uiState.isInitializing = true
     await fetchTranscript(id, backEndUrl, this, (p, es, res) => {
-      this.uiState.downloadProgress = p
-      this.key = String(id)
-      if (
-        this.audio === null &&
-        settings.backEndUrl !== null &&
-        res.aEinzelErhebung?.af !== undefined
-      ) {
-        const audioUrl = getAudioUrlFromServerNames(res.aEinzelErhebung.af, res.aEinzelErhebung.dp, settings.backEndUrl)
-        if (audioUrl !== null) {
-          this.audio = new TranscriptAudio(audioUrl)
+      // Only continue, if we’re still trying to
+      // load the same transcript from the same server.
+      if (String(id) === this.key && backEndUrl === settings.backEndUrl) {
+        this.uiState.isInitializing = false
+        this.uiState.downloadProgress = p
+        this.key = String(id)
+        if (
+          this.audio === null &&
+          settings.backEndUrl !== null &&
+          res.aEinzelErhebung?.af !== undefined
+        ) {
+          const audioUrl = getAudioUrlFromServerNames(res.aEinzelErhebung.af, res.aEinzelErhebung.dp, settings.backEndUrl)
+          if (audioUrl !== null) {
+            this.audio = new TranscriptAudio(audioUrl)
+          }
         }
+      } else {
+        // Otherwise, the recursive operation stops here.
       }
     })
-    store.status = 'finished'
+    this.uiState.downloadProgress = null
   }
 
   initTranscriptWithData(
