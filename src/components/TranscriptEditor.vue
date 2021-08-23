@@ -1,6 +1,9 @@
 <template>
+  <v-layout v-if="transcript.uiState.isInitializing" class="text-center">
+    …
+  </v-layout>
   <v-layout
-    v-if="transcriptHasSpeakers"
+    v-else-if="transcriptHasSpeakers"
     class="transcript-editor-outer"
     style="height: auto">
     <speaker-panel />
