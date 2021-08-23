@@ -8,6 +8,7 @@
     "test": "npx cypress run",
     "test:interactive": "npx cypress open",
     "lint": "vue-cli-service lint",
+    "vue-type-check": "vue-type-check --workspace . --srcDir ./src --onlyTemplate",
     "start": "ts-node -P server/tsconfig.json server/index.ts",
     "dev-server": "nodemon --watch 'server/**/*.ts' --ignore 'server/**/*.spec.ts' --exec 'ts-node' --project server/tsconfig.json server/index.ts"
   },
