@@ -11,6 +11,10 @@ A browser based audio transcription tool.
 - included phonetic analysis tools.
 - compatibility with [exmaralda](https://exmaralda.org/) file formats.
 
+## Limitations
+
+- Transcribe will (for the forseeable future) only work in evergreen, Chromium-based browsers. This is because it uses APIs currently only provided by those, like the File System Access API.
+
 ## Setup
 
 clone the repo and run
@@ -24,13 +28,23 @@ or
 
 `docker build -t transcribe . && docker run transcribe -p 8080:80`
 
-If you want to connect to a remote back end that requires HTTPS-enabled clients, use `sudo npm run dev` to run it on port 443.
+## Development
+
+- The `dev` command starts a HTTPS server with a self-signed certificate. That means you must instruct your browser to accept that certificate. In Chrome 92, this can be done by typing `thisisunsafe`, when the browser displays the warning.
+
+- The main application state is primarily stored and manipulated in class instances, such as `transcript.class.ts` and `transcript-audio.class.ts`. Most methods are static, and implemented as quasi-reducers.
+
+- The application includes a small static web server, which serves double-duty as a WebSocket-based event bus for distributing transactions. This is used to enable real time synching between the clients.
+
+## Testing
+
+- The app only includes e2e tests. They can be run in headless mode with `npm run test` and in interactive mode with `npm run test:interactive`
 
 ## Spin-Offs (Work-In-Progress)
 
 ### JavaScript Ogg Bitstream Parser
 
-Parses Ogg Headers and Ogg Pages in JS. Useful for working with large OGG files that are impractical to decode all at once. More Info here: <https://www.xiph.org/ogg/doc/framing.html>
+Parses Ogg Headers and Ogg Pages in JS. Useful for working with large OGG files that are impractical to decode all at once. More Info here: <https://www.xiph.org/ogg/doc/framing.html>.
 
 ### AudioBuffer to SVG Waveform conversion library
 
