@@ -6,11 +6,14 @@ const path = require('path')
 
 const app = express()
 
+
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config({
     path: './env-dev.env'
   })
 }
+
+console.log('process.env.NODE_ENV', process.env.NODE_ENV, process.env.NODE_PORT)
 
 // This app runs behind an
 // application load balancer
