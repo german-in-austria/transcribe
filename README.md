@@ -15,6 +15,8 @@ A browser based audio transcription tool.
 
 - Transcribe will (for the forseeable future) only work in evergreen, Chromium-based browsers. This is because it uses APIs currently only provided by those, like the File System Access API.
 
+- This Project relies on jszip version _3.1.5_ — all versions after that have a regression that causes them to be unusably slow for our use-case. See [this issue](https://github.com/Stuk/jszip/issues/617) for more info.
+
 ## Setup
 
 clone the repo and run
@@ -44,6 +46,8 @@ or
 ## Testing
 
 - The app only includes e2e tests. They can be run in headless mode with `npm run test` and in interactive mode with `npm run test:interactive`
+
+- The tests can also be run on a bundled container image with `docker run transcribe test`.
 
 ## Spin-Offs (Work-In-Progress)
 
