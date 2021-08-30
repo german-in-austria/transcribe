@@ -27,6 +27,7 @@
     "localforage",
     "oggindex",
     "peerjs",
+    "printenv",
     "resample",
     "resampled",
     "undoable",

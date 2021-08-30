@@ -9,7 +9,7 @@
     "lint": "vue-cli-service lint",
     "start": "ts-node -P server/tsconfig.json server/index.ts",
     "test:interactive": "npx cypress open",
-    "test": "env-cmd -f env-test.env npm run start & npx cypress run",
+    "test": "env-cmd -f env-test.env --use-shell \"npm run start & printenv NODE_ENV & npx cypress run\"",
     "vue-type-check": "vue-type-check --workspace . --srcDir ./src --onlyTemplate"
   },
   "dependencies": {
