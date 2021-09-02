@@ -4,12 +4,12 @@
   "private": true,
   "scripts": {
     "build": "vue-cli-service build",
-    "dev:server": "nodemon --watch 'server/**/*.ts' --ignore 'server/**/*.spec.ts' --exec 'ts-node' --project server/tsconfig.json server/index.ts",
+    "dev:server": "env-cmd -f env-dev.env --use-shell \"nodemon --watch 'server/**/*.ts' --ignore 'server/**/*.spec.ts' --exec 'ts-node' --project server/tsconfig.json server/index.ts\"",
     "dev": "vue-cli-service serve",
     "lint": "vue-cli-service lint",
     "start": "ts-node -P server/tsconfig.json server/index.ts",
     "test:interactive": "npx cypress open",
-    "test": "env-cmd -f env-test.env --use-shell \"npm run start & printenv NODE_ENV & npx cypress run\"",
+    "test": "env-cmd -f env-test.env --use-shell \"npm run start & npx cypress run\"",
     "vue-type-check": "vue-type-check --workspace . --srcDir ./src --onlyTemplate"
   },
   "dependencies": {
@@ -94,6 +94,7 @@
     "arraybuffer-loader": "^1.0.6",
     "chai": "^4.1.2",
     "circular-dependency-plugin": "^5.2.2",
+    "concurrently": "^6.2.1",
     "cypress": "^8.3.0",
     "env-cmd": "^10.1.0",
     "eslint": "^6.8.0",
