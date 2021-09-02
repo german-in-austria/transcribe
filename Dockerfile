@@ -11,6 +11,7 @@ COPY package-lock.json /usr/src/app
 
 # DEPENDENCIES FOR CYPRESS
 RUN apt-get update && apt-get install -y \
+  openssl \
   libgtk2.0-0 \
   libgtk-3-0 \
   libgbm-dev \
@@ -31,6 +32,9 @@ RUN npm install
 COPY . /usr/src/app
 
 ENV NODE_ENV production
+
+# Create certificates that are used during testing
+RUN chmod +x ./make-ssl-keys.sh && ./make-ssl-keys.sh
 
 RUN npm run build
 

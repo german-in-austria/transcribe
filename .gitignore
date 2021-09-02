@@ -5,3 +5,7 @@ static/test-files/
 credentials*
 .nova
 kaldi-models/
+# THESE ARE USED FOR TESTING ONLY
+certs/server.*
+certs/ssl.*
+certs/passphrase.*

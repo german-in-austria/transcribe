@@ -2,18 +2,11 @@ const express = require('express')
 // const cookieSession = require('cookie-session')
 const compression = require('compression')
 const path = require('path')
-// import { readFileSync } from 'fs'
+const fs = require('fs')
+const http = require('http')
+const https = require('https')
 
 const app = express()
-
-
-if (process.env.NODE_ENV !== 'production') {
-  require('dotenv').config({
-    path: './env-dev.env'
-  })
-}
-
-console.log('process.env.NODE_ENV', process.env.NODE_ENV, process.env.NODE_PORT)
 
 // This app runs behind an
 // application load balancer
@@ -38,6 +31,18 @@ app.use(compression())
 
 app.use('/', express.static(path.join(__dirname, '../dist')))
 
-app.listen(process.env.NODE_PORT || 3333, () => {
-  console.log(`Started server on port ${process.env.NODE_PORT}`)
-})
+// We need to server HTTPS requests when the test runs.
+if (process.env.NODE_ENV === 'test') {
+  const privateKey = fs.readFileSync('./certs/ssl.key', 'utf8')
+  const certificate = fs.readFileSync('./certs/ssl.crt', 'utf8')
+  const credentials = { key: privateKey, cert: certificate }
+  const httpsServer = https.createServer(credentials, app)
+  httpsServer.listen(process.env.NODE_PORT, () => {
+    console.log(`Started HTTTPS server on port ${process.env.NODE_PORT}`)
+  })
+} else {
+  const httpServer = http.createServer(app)
+  httpServer.listen(process.env.NODE_PORT, () => {
+    console.log(`Started HTTP server on port ${process.env.NODE_PORT}`)
+  })
+}
