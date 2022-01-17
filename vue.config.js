@@ -43,7 +43,7 @@ module.exports = {
     })
     config.module.rules.unshift(
       {
-        test: /workers\/.*\.js$/,
+        test: /workers[\/\\].*\.js$/,
         loader: 'worker-loader',
         options: {
           filename: '[name].[contenthash].js'
