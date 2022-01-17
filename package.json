@@ -58,7 +58,7 @@
     "vuex": "^3.4.0",
     "vuex-class": "^0.3.0",
     "webfontloader": "^1.6.28",
-    "xlsx": "^0.15.4"
+    "xlsx": "^0.17.0"
   },
   "devDependencies": {
     "@ffmpeg/core": "^0.8.4",
