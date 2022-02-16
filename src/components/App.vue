@@ -88,7 +88,7 @@
                     <v-flex class="pr-1" xs6>
                       <v-btn
                         :loading="importingLocalFile" @click="openFileDialog" class="mb-2 elevation-0" style="height: 40px;" block>
-                        Open/Import File …
+                        {{ settings.backEndUrl === null ? 'Open' : 'Open/Import' }} File …
                       </v-btn>
                     </v-flex>
                     <v-flex class="pl-1" xs6>
@@ -399,11 +399,14 @@ export default class App extends Vue {
   }
 
   async openFileDialog() {
-    const f = await diskService.openFile({
+    let availableFileTypes = {
       'application/zip': '.transcript',
-      'text/xml': '.exb',
       'audio/ogg': '.ogg'
-    })
+    } as any
+    if (settings.backEndUrl !== null) {
+      availableFileTypes['text/xml'] = '.exb'
+    }
+    const f = await diskService.openFile(availableFileTypes)
     this.openFile(f)
   }
 

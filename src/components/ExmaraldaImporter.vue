@@ -417,7 +417,12 @@ export default class ExmaraldaImporter extends Vue {
     return (
       (this.step === 1 && this.isBasicInfoValid === true) ||
       (this.step === 2 && this.areTiersValid === true && this.isAnythingOrAllSelected !== false) ||
-      (this.step === 3 && this.audioFileName !== null)
+      (this.step === 3 &&
+        this.audioFileName !== null &&
+        this.transcriptName !== null &&
+        (settings.backEndUrl !== null && this.selectedSurvey !== null) &&
+        this.globalDefaultTier !== null
+      )
     )
   }
 
