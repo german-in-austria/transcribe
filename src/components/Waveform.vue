@@ -494,7 +494,7 @@ export default class Waveform extends Vue {
   }
 
   scrollTranscriptFromOverview() {
-    console.log('scrollTranscriptFromOverview')
+    // console.log('scrollTranscriptFromOverview')
     const c = this.$refs.svgContainer as HTMLElement
     const currentSeconds = c.scrollLeft / settings.pixelsPerSecond
     const e = this.transcript.findEventAt(currentSeconds)
@@ -647,7 +647,7 @@ export default class Waveform extends Vue {
       ])
       await util.requestFrameAsync()
       const el = this.$el.querySelector('.overview-waveform svg') as HTMLElement
-      console.log('drawing overview from to', util.timeFromSeconds(startTime), util.timeFromSeconds(endTime))
+      // console.log('drawing overview from to', util.timeFromSeconds(startTime), util.timeFromSeconds(endTime))
       el.insertAdjacentHTML(
         'beforeend',
         `<path fill="${ settings.waveFormColors[0] }" d="${ svg1 }" />

@@ -159,6 +159,7 @@ export function importableToServerTranscript(
   defaultTier: TokenTierType
 ): ServerTranscript {
 
+  console.log('importableToServerTranscript', importable, name, selectedSurvey, defaultTier)
   const tiersBySpeakers = _(importable.speakerTiers)
     .filter(st => st.selectForImport === true)
     .map(st => {
@@ -218,8 +219,8 @@ export function importableToServerTranscript(
 
                 return {
                   pk: eventId,
-                  e: padEnd(timeFromSeconds(Number(e.endTime)), 14, '0'),
-                  s: padEnd(timeFromSeconds(Number(e.startTime)), 14, '0'),
+                  e: padEnd(timeFromSeconds(Number(e.endTime), 3), 14, '0'),
+                  s: padEnd(timeFromSeconds(Number(e.startTime), 3), 14, '0'),
                   l: 0 as 0,
                   tid: {},
                   event_tiers: {
@@ -274,8 +275,8 @@ export function importableToServerTranscript(
 
                 return {
                   pk: eventId,
-                  e: padEnd(timeFromSeconds(Number(e.endTime)), 14, '0'),
-                  s: padEnd(timeFromSeconds(Number(e.startTime)), 14, '0'),
+                  e: padEnd(timeFromSeconds(Number(e.endTime), 3), 14, '0'),
+                  s: padEnd(timeFromSeconds(Number(e.startTime), 3), 14, '0'),
                   l: 0,
                   tid: {
                     [ speakerTier.toSpeaker!.pk ]: eventTokenIds

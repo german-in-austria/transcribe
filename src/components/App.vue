@@ -389,6 +389,8 @@ export default class App extends Vue {
     const defaultTier = meta.defaultTier || 'text'
     const events = serverTranscriptToLocal(t, defaultTier)
     store.transcript = new Transcript({ events, meta: { ...meta, lockedTokens: [] } }, audioData || audioUrl)
+    // ToDo: Fehler bei Survey Auswahl und Transkript Name usw. beheben!
+    console.log('loadImportedTranscript', {t, audioData, audioUrl, meta, defaultTier, events, 'store.transcript': store.transcript})
   }
 
   async openExmaraldaFile(f: File) {

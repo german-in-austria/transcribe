@@ -249,7 +249,7 @@ export function timeToSeconds(time: string): number {
 
 /** Convert a time offset in seconds like '3912' to a time display string like '01:05:12' */
 export function timeFromSeconds(seconds: number, decimalPlaces = 0): string {
-  return new Date(seconds * 1000).toISOString().substr(11, 8 + (decimalPlaces > 0 ? decimalPlaces + 1 : 0))
+  return new Date(seconds * 1000).toISOString().substr(11, 8 + (decimalPlaces > 0 ? decimalPlaces + 1 : 0)).replace('Z','')
 }
 
 export function allInArray<T extends PrimitiveOrNone>(base: T[], find: T[]): boolean {

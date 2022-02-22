@@ -78,15 +78,22 @@ export default class Transcript extends EventService {
   ) {
     super()
     if (init === undefined) {
+      console.log('init - initEmptyTranscript')
       this.initEmptyTranscript()
     } else if (init instanceof FileSystemFileHandle) {
+      console.log('init - initTranscriptFromFile')
       this.initTranscriptFromFile(init)
     } else if (init instanceof File && init.type === 'audio/ogg') {
+      console.log('init - initTranscriptFromAudio')
       this.initTranscriptFromAudio(init)
     } else if ('backEndUrl' in init) {
+      console.log('init - initTranscriptWithBackend')
       this.initTranscriptWithBackend(init.id, init.backEndUrl)
     } else if ('events' in init) {
+      console.log('init - initTranscriptWithData')
       this.initTranscriptWithData(init.events, audio)
+    } else {
+      console.log('init - unknown', init, audio)
     }
   }
 
@@ -183,6 +190,7 @@ export default class Transcript extends EventService {
     uiState?: TranscriptUiState,
     overviewSvg?: string
   ) {
+    console.log('initTranscriptWithData', {es, audio, meta, uiState, overviewSvg})
     if (audio !== undefined) {
       this.audio = new TranscriptAudio(audio, overviewSvg)
     }
@@ -202,6 +210,7 @@ export default class Transcript extends EventService {
         )
       )
     )
+    console.log('fixedEvents', {es, fixedEvents, t: this})
     this.events = fixedEvents
   }
 

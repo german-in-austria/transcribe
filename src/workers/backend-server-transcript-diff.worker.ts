@@ -38,7 +38,7 @@ function padEnd(string: string, targetLength: number, padString: string) {
 }
 
 function timeFromSeconds(seconds: number) {
-  return new Date(1000 * seconds).toISOString().substr(12, 11)
+  return new Date(1000 * seconds).toISOString().substr(12, 11).replace('Z','')
 }
 
 function tokenHasFragment(text: string): boolean {

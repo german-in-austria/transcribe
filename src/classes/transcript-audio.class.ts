@@ -203,9 +203,9 @@ export default class TranscriptAudio {
     if (mono === true) {
       return sumChannels(buffer.getChannelData(0), buffer.getChannelData(1)).buffer
     } else {
-      console.time('extracting buffer from channel ' + channel)
+      // console.time('extracting buffer from channel ' + channel)
       const x = buffer.getChannelData(channel).buffer
-      console.timeEnd('extracting buffer from channel ' + channel)
+      // console.timeEnd('extracting buffer from channel ' + channel)
       return x
     }
   }
@@ -402,7 +402,7 @@ export default class TranscriptAudio {
   ) {
     const sortedEvents = EventService.sortEvents(events)
     const [firstEvent, lastEvent] = [_(sortedEvents).first(), _(sortedEvents).last()]
-    console.log({ firstEvent, lastEvent })
+    // console.log({ firstEvent, lastEvent })
     if (firstEvent !== undefined && lastEvent !== undefined) {
       const buffer = await TranscriptAudio.decodeBufferTimeSlice(
         firstEvent.startTime,
@@ -575,7 +575,7 @@ export default class TranscriptAudio {
     const startPage = pages.startPage
     const endPage = pages.endPage
     if (startPage === null || endPage === null) {
-      console.log({ startPage, endPage })
+      // console.log({ startPage, endPage })
       throw new Error('Could not find all required pages')
     } else {
       const decodedBuffer = await TranscriptAudio.decodeBufferByteRange(startPage.byteOffset, endPage.byteOffset, b)
@@ -607,7 +607,7 @@ export default class TranscriptAudio {
 
   /** finds the first and last Ogg-Page for a given time range. */
   private static findOggPages(from: number, to: number, pages: OggIndex['pages']): { startPage: OggPage|null, endPage: OggPage|null } {
-    console.time('find pages')
+    // console.time('find pages')
     // some timestamps are just too big.
     // checking for them counts as a kind of
     // rudimentary error correction.
@@ -637,8 +637,8 @@ export default class TranscriptAudio {
       }
       i++
     }
-    console.timeEnd('find pages')
-    console.log({ startPage, endPage })
+    // console.timeEnd('find pages')
+    // console.log({ startPage, endPage })
     return { startPage, endPage }
   }
 }
