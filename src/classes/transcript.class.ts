@@ -90,8 +90,8 @@ export default class Transcript extends EventService {
       console.log('init - initTranscriptWithBackend')
       this.initTranscriptWithBackend(init.id, init.backEndUrl)
     } else if ('events' in init) {
-      console.log('init - initTranscriptWithData')
-      this.initTranscriptWithData(init.events, audio)
+      console.log('init - initTranscriptWithData', init)
+      this.initTranscriptWithData(init.events, audio, init.meta)
     } else {
       console.log('init - unknown', init, audio)
     }

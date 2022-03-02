@@ -83,7 +83,7 @@ export default class TranscriptAudio {
       bufferSrc.stop()
       bufferSrc.disconnect()
     } catch (e) {
-      console.log(e)
+      // console.log(e)
     }
   }
 
