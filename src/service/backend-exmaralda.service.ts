@@ -292,7 +292,7 @@ export function importableToServerTranscript(
     .flatten()
     .value()
 
-
+  console.log('importableToServerTranscript return', {tiers, tokens, events})
   return {
     aTiers: tiers,
     aEinzelErhebung: surveyToServerTranscriptSurvey(selectedSurvey),

@@ -619,7 +619,8 @@ function maybeReplaceFragments(base: string, next?: string) {
 }
 
 export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenTierType): LocalTranscript {
-  return _(s.aEvents)
+  let sTTLd:any = {}
+  let sTTL = _(s.aEvents)
     .uniqBy(e => e.pk)
     // sort, so the grouped events are in the correct order.
     .sortBy(e => timeToSeconds(e.s))
@@ -698,6 +699,29 @@ export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenT
                   }
                 })
             }
+            if (!sTTLd[eG[0].pk]) {
+              sTTLd[eG[0].pk] = {}
+            }
+            if (!sTTLd[eG[0].pk][speakerKey]) {
+              sTTLd[eG[0].pk][speakerKey] = m[speakerKey]
+            } else {
+              if (eG[0].pk === se.pk) {
+                sTTLd[eG[0].pk][speakerKey].speakerEventId = se.pk
+              }
+              Object.keys(m[speakerKey].speakerEventTiers).forEach(sET => {
+                if (!sTTLd[eG[0].pk][speakerKey].speakerEventTiers[sET]) {
+                  sTTLd[eG[0].pk][speakerKey].speakerEventTiers[sET] = m[speakerKey].speakerEventTiers[sET]
+                }
+              })
+              m[speakerKey].tokens.forEach(aT => {
+                let afT = sTTLd[eG[0].pk][speakerKey].tokens.filter((xT:any) => xT.id === aT.id)
+                if (afT.length === 0) {
+                  sTTLd[eG[0].pk][speakerKey].tokens.push(aT)
+                }
+              })
+              m[speakerKey] = sTTLd[eG[0].pk][speakerKey]
+            }
+            // console.log(eG[0].pk, se.pk, speakerKey, {eG, m: m[speakerKey], se, seTid: se.tid[speakerKey], seTidFiltered: (se.tid[speakerKey] || []).filter(tokenId => s.aTokens[tokenId] !== undefined)})
           })
           return m
         }, {} as TranscriptEvent['speakerEvents'])
@@ -706,6 +730,8 @@ export function serverTranscriptToLocal(s: ServerTranscript, defaultTier: TokenT
     .orderBy(e => e.startTime)
     .uniqBy(e => e.eventId)
     .value()
+  // console.log('sTTL', sTTL)
+  return sTTL
 }
 
 export async function getSurveys(host: string): Promise<ServerSurvey[]> {
