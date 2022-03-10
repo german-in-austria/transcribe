@@ -18,9 +18,9 @@ docker_builder:
     - "docker build --build-arg SENTRY_TOKEN=$SENTRY_TOKEN --build-arg BUILD_ID=$CIRRUS_BUILD_ID --cache-from dioe/transcribe --tag dioe/transcribe ."
     # success notification via Mattermost
     - "curl -i -X POST -H \"Content-Type: application/json\" -d '{\"text\": \"Cirrus CI successfully *built* dioe/transcribe\\n details: https://cirrus-ci.com/task/'$CIRRUS_TASK_ID'\"}' $MATTERMOST_HOOK_URL"
-  test_script:
-    # run the tests on the image
-    - "docker run dioe/transcribe test"
+  # test_script:
+  #   # run the tests on the image
+  #   - "docker run dioe/transcribe test"
   login_script:
     # login to the docker hub registry.
     - "docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD"
