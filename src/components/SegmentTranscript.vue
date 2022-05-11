@@ -21,7 +21,7 @@
     </div>
     <div
       class="speaker-segment"
-      :style="{ height: speakerHeight }"
+      :style="{ height: speakerHeight[speakerKey] }"
       v-for="(speaker, speakerKey) in this.transcript.meta.speakers"
       :key="speakerKey">
       <speaker-segment-transcript
@@ -60,7 +60,11 @@ export default class SegmentTranscript extends Vue {
   settings = settings
 
   get speakerHeight() {
-    return this.transcript.meta.tiers.filter(t => t.show === true).length * 25 + 'px'
+    var r:any = {}
+    Object.keys(this.transcript.meta.speakers).forEach(sId => {
+      r[sId] = (25 + (this.transcript.meta.tiers.filter(t => t.id === this.transcript.meta.defaultTier || t.show[sId] === true).length - 1) * 25.8) + 'px'
+    })
+    return r
   }
 
   get hasFragmentOfInAnyFirstToken(): boolean {

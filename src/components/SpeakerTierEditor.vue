@@ -131,7 +131,7 @@ export default class SpeakerTierEditor extends Vue {
       name,
       id: String(Transcript.makeEventTierId()),
       type: 'freeText',
-      show: true,
+      show: {},
       searchInTier: true
     }
   }

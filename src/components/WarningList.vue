@@ -79,28 +79,10 @@ export default class WarningList extends Vue {
   toTime = timeFromSeconds
   selectedWarning: WarningEvent|null = null
   settings = settings
-  eventGapOptions = [
-    .1,
-    .25,
-    .5,
-    1,
-    1.5,
-    2,
-    2.5,
-    3,
-    3.5,
-    4,
-    4.5,
-    5,
-    5.5,
-    6,
-    6.5,
-    7,
-    7.5,
-    10
-  ]
+  eventGapOptions = [.1, .25, .5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 10]
 
   showEventIfExists(e: WarningEvent) {
+    console.log('WarningEvent', JSON.parse(JSON.stringify(e)))
     const i = this.transcript.findEventIndexById(e.event.eventId)
     this.selectedWarning = e
     if (i > -1) {

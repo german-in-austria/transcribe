@@ -88,7 +88,7 @@ export interface SearchResult {
 interface TranscriptTierBasic {
   name: string
   searchInTier: boolean
-  show: boolean
+  show: any
 }
 
 interface TranscriptTierToken extends TranscriptTierBasic {

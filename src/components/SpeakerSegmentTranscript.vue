@@ -20,7 +20,11 @@
             transcript.meta.lockedTokens.indexOf(token.id) > -1 && 'locked-token'
           ]"
           :style="{ backgroundColor: colorFromTokenType(token.tiers[defaultTier].type) }">
-        </span><span v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer" /><span :class="['secondary-token-tier', settings.darkMode === true && 'theme--dark']" v-for="(tier, tierIndex) in secondaryTiers" :key="tier.id">
+        </span><span
+         v-if="!(i === localTokens.length - 1 && isMarkedWithFragment)" class="token-spacer"
+        /><span
+          :class="['secondary-token-tier', settings.darkMode === true && 'theme--dark']" v-for="(tier, tierIndex) in secondaryTiers" :key="tier.id"
+        >
           <contenteditable
             v-rt-ipa="{show: tier.id === 'phon'}"
             v-if="tier.type === 'token'"
@@ -386,7 +390,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   }
 
   get secondaryTiers() {
-    return this.transcript.meta.tiers.filter(t => t.id !== this.defaultTier && t.show === true)
+    return this.transcript.meta.tiers.filter(t => t.id !== this.defaultTier && t.show[this.speaker] === true)
   }
 
   get tokens() {
@@ -674,7 +678,7 @@ export default class SpeakerSegmentTranscript extends Vue {
       outline 0
       border-radius 2px
       transform scale(1.1)
-      transition transfrom .2s
+      transition transform .2s
       z-index 1
       min-width 100%
       width auto

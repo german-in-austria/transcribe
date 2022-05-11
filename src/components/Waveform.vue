@@ -299,8 +299,7 @@ export default class Waveform extends Vue {
         // scroll to the target time (scrollLeft)
         this.scrollToSecond(oldTargetTime - e.x / settings.pixelsPerSecond)
         // rerender
-        this.clearRenderCache()
-        this.doMaybeRerender()
+        this.resetView()
       }
     }
   }
@@ -475,6 +474,7 @@ export default class Waveform extends Vue {
   }
 
   resetView() {
+    console.log('resetView')
     this.clearRenderCache()
     this.doMaybeRerender()
   }
@@ -607,6 +607,7 @@ export default class Waveform extends Vue {
       } else {
         this.transcript.audio.onChunkAvailable = async (start, end, ab) => {
           await this.drawOverviewWaveformPiece(start, end, ab)
+          this.doMaybeRerender()
         }
       }
     }

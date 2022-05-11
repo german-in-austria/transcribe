@@ -2,8 +2,8 @@
   <v-flex :style="theme" class="speaker-panel">
     <div
       :style="{ height: speakerHeight + 1 }"
-      :key="i"
-      v-for="(speaker, i) in transcript.meta.speakers"
+      :key="sId"
+      v-for="(speaker, sId) in transcript.meta.speakers"
       class="speaker">
       <v-menu
         lazy
@@ -15,34 +15,56 @@
         nudge-top="5">
         <div slot="activator" class="speaker-name">
           <span class="speaker-triangle">▶</span> {{ speaker.k }}
-          <div
-            class="secondary-tiers"
-            :style="{ lineHeight: tierHeight + 1 + 'px' }"
-            v-for="tier in secondaryVisibleTiers" :key="tier.id">
-            {{ tier.name }}
-          </div>
+          <template v-for="tier in secondaryVisibleTiers[sId]">
+            <div
+              class="secondary-tiers"
+              :style="{ lineHeight: tierHeight + 1 + 'px' }"
+              v-if="tier.show[sId]"
+              :key="tier.id">
+              {{ tier.name }}
+            </div>
+          </template>
         </div>
         <v-list class="context-menu-list" dense>
-          <v-list-tile @click="expandOrCollapse">
+          <v-list-tile @click="expandAll" v-if="!areAllExpanded || !areAllExpandedSpeaker[sId]">
             <v-list-tile-avatar>
             </v-list-tile-avatar>
             <v-list-tile-content>
-              <v-list-tile-title v-if="!areAllExpanded">Expand all</v-list-tile-title>
-              <v-list-tile-title v-else>Collapse all</v-list-tile-title>
+              <v-list-tile-title>Expand all</v-list-tile-title>
             </v-list-tile-content>
+            <v-list-tile-action>
+              <v-btn icon ripple :title="speaker.k"
+              @click.stop="expandSpeaker(sId)"><v-icon :color="'grey ' + (areAllExpandedSpeaker[sId] ? 'darken-3' : 'lighten-2')">mdi-account</v-icon></v-btn>
+            </v-list-tile-action>
+          </v-list-tile>
+          <v-list-tile @click="collapseAll" v-if="!areAllCollapsed || !areAllCollapsedSpeaker[sId]">
+            <v-list-tile-avatar>
+            </v-list-tile-avatar>
+            <v-list-tile-content>
+              <v-list-tile-title>Collapse all</v-list-tile-title>
+            </v-list-tile-content>
+            <v-list-tile-action>
+              <v-btn icon ripple :title="speaker.k"
+                @click.stop="collapseSpeaker(sId)"><v-icon :color="'grey ' + (areAllCollapsedSpeaker[sId] ? 'darken-3' : 'lighten-2')">mdi-account</v-icon></v-btn>
+            </v-list-tile-action>
           </v-list-tile>
           <v-divider />
           <v-list-tile
             v-for="(tier, i) in transcript.meta.tiers"
             :key="i"
             :disabled="tier.id === transcript.meta.defaultTier"
-            @click="tier.show = !tier.show">
+            @click="toggleTier(tier)">
             <v-list-tile-avatar>
-              <v-icon v-if="tier.show === true || tier.id === transcript.meta.defaultTier">check</v-icon>
+              <v-icon v-if="tier.id === transcript.meta.defaultTier || Object.keys(transcript.meta.speakers).every(s => tier.show[s] === true)">check</v-icon>
             </v-list-tile-avatar>
             <v-list-tile-content>
               <v-list-tile-title>{{ tier.name }}</v-list-tile-title>
             </v-list-tile-content>
+            <v-list-tile-action>
+              <v-btn icon ripple :title="speaker.k"
+                :disabled="tier.id === transcript.meta.defaultTier"
+                @click.stop="toggleSpeakerTier(tier, sId)"><v-icon :color="'grey ' + (tier.id === transcript.meta.defaultTier || tier.show[sId] ? 'darken-3' : 'lighten-2')">mdi-account</v-icon></v-btn>
+            </v-list-tile-action>
           </v-list-tile>
           <!-- <v-divider />
           <v-list-tile @click="openSpeakerAndTierSettings">
@@ -76,11 +98,46 @@ export default class SpeakerPanel extends Vue {
   }
 
   get secondaryVisibleTiers(): TranscriptTier[] {
-    return this.transcript.meta.tiers.filter(t => t.id !== this.transcript.meta.defaultTier && t.show === true)
+    var r:any = {}
+    Object.keys(this.transcript.meta.speakers).forEach(sId => {
+      r[sId] = this.transcript.meta.tiers.filter(t => t.id !== this.transcript.meta.defaultTier && t.show[sId] === true)
+    })
+    return r
   }
 
   get areAllExpanded(): boolean {
-    return this.transcript.meta.tiers.every(t => t.id === this.transcript.meta.defaultTier || t.show === true)
+    return this.transcript.meta.tiers.every(t => t.id === this.transcript.meta.defaultTier || (t.show === Object.keys(this.transcript.meta.speakers).forEach(sId => t.show[sId] === true)))
+  }
+
+  get areAllExpandedSpeaker(): boolean {
+    var r:any = {}
+    Object.keys(this.transcript.meta.speakers).forEach(sId => {
+      r[sId] = this.transcript.meta.tiers.every(t => t.id === this.transcript.meta.defaultTier || t.show[sId] === true)
+    })
+    return r
+  }
+
+  get areAllCollapsed(): boolean {
+    return this.transcript.meta.tiers.every(t => t.id === this.transcript.meta.defaultTier || (t.show === Object.keys(this.transcript.meta.speakers).forEach(sId => !t.show[sId])))
+  }
+
+  get areAllCollapsedSpeaker(): boolean {
+    var r:any = {}
+    Object.keys(this.transcript.meta.speakers).forEach(sId => {
+      r[sId] = this.transcript.meta.tiers.every(t => t.id === this.transcript.meta.defaultTier || !t.show[sId])
+    })
+    return r
+  }
+
+  toggleTier(tier:TranscriptTier) {
+    var stat:boolean = Object.keys(this.transcript.meta.speakers).every(s => tier.show[s] === true)
+    Object.keys(this.transcript.meta.speakers).forEach(sId => {
+      this.$set(tier.show, sId, !stat)
+    })
+  }
+
+  toggleSpeakerTier(tier:TranscriptTier, sId:any) {
+    this.$set(tier.show, sId, !tier.show[sId])
   }
 
   expandOrCollapse() {
@@ -96,14 +153,30 @@ export default class SpeakerPanel extends Vue {
   }
 
   expandAll() {
-    this.transcript.meta.tiers = this.transcript.meta.tiers.map((t) => {
-      return { ...t, show: true }
+    this.$set(this.transcript.meta, 'tiers', this.transcript.meta.tiers.map((t) => {
+      var r:any = {}
+      Object.keys(this.transcript.meta.speakers).forEach(sId => {
+        r[sId] = true
+      })
+      return { ...t, show: r }
+    }))
+  }
+
+  expandSpeaker(sId:any) {
+    this.transcript.meta.tiers.forEach(t => {
+      this.$set(t.show, sId, true)
     })
   }
 
   collapseAll() {
-    this.transcript.meta.tiers = this.transcript.meta.tiers.map((t) => {
-      return { ...t, show: t.id === this.transcript.meta.defaultTier }
+    this.$set(this.transcript.meta, 'tiers', this.transcript.meta.tiers.map((t) => {
+      return { ...t, show: {} }
+    }))
+  }
+
+  collapseSpeaker(sId:any) {
+    this.transcript.meta.tiers.forEach(t => {
+      this.$set(t.show, sId, false)
     })
   }
 

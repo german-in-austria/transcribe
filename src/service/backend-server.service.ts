@@ -323,28 +323,28 @@ export function getMetadataFromServerTranscript(res: ServerTranscript) {
         searchInTier: true,
         type: 'token',
         name: 'eye dialect',
-        show: defaultTier === 'text',
+        show: {}, // defaultTier === 'text',
         id: 'text'
       },
       {
         searchInTier: true,
         type: 'token',
         name: 'ortho',
-        show: defaultTier === 'ortho',
+        show: {}, // defaultTier === 'ortho',
         id: 'ortho'
       },
       {
         searchInTier: true,
         type: 'token',
         name: 'phon',
-        show: defaultTier === 'phon',
+        show: {}, // defaultTier === 'phon'
         id: 'phon'
       }
     ].concat(_(res.aTiers).map((t, tid) => ({
       searchInTier: true,
       type: 'freeText',
       name: t.tier_name,
-      show: false,
+      show: {},
       id: tid
     })).value()) as TranscriptTier[]
   }

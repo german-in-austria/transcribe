@@ -127,7 +127,7 @@
           offset-y>
           <v-list v-if="isMenuVisible" class="context-menu-list" dense>
             <v-list-tile
-              @click="keyboardShortcuts.playPause.action">
+              @click="keyboardShortcuts.playPause.action($event, transcript)">
               <v-list-tile-content>
                 <v-list-tile-title>Play</v-list-tile-title>
               </v-list-tile-content>
@@ -169,7 +169,7 @@
               </v-list-tile-content>
             </v-list-tile>
             <v-list-tile
-              @click="keyboardShortcuts.scrollToEvent.action">
+              @click="keyboardShortcuts.scrollToEvent.action($event, transcript)">
               <v-list-tile-content>
                 <v-list-tile-title>Show Transcript</v-list-tile-title>
               </v-list-tile-content>
