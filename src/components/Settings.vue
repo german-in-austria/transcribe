@@ -116,6 +116,11 @@
                       :value="settings.waveFormColors[i]" />
                   </v-menu>
                 </div>
+                <div>
+                  <div class="ml-auto">
+                    <v-btn small @click="devInfos">DEV Info</v-btn>
+                  </div>
+                </div>
               </v-list>
             </v-tab-item>
             <v-tab-item lazy>
@@ -138,6 +143,7 @@ import SettingsKeyboardShortcuts from './SettingsKeyboardShortcuts.vue'
 import SettingsTokenTypes from './SettingsTokenTypes.vue'
 import { makeGradient } from '../lib/gradient'
 import { Chrome as ColorPicker } from 'vue-color'
+import TranscriptAudio from '@/classes/transcript-audio.class'
 
 @Component({
   components: {
@@ -149,8 +155,30 @@ import { Chrome as ColorPicker } from 'vue-color'
 export default class Settings extends Vue {
 
   @Prop({ default: false }) show!: boolean
+  @Prop({ default: null }) audio!: TranscriptAudio
   settings = settings
   activeTab = null
+
+  devInfos() {
+    var devData = {
+      settings: settings,
+      audio: this.audio ? JSON.parse(JSON.stringify({
+        currentTime: this.audio.currentTime,
+        duration: this.audio.duration,
+        fileSize: this.audio.fileSize,
+        isPaused: this.audio.isPaused,
+        playAllFromTime: this.audio.playAllFromTime,
+        url: this.audio.url
+      })) : null
+    }
+    console.log(devData)
+    navigator.clipboard.writeText(JSON.stringify(devData, null, 2)).then(function() {
+      alert('Copy DevData to Clipboard!')
+    }, function(err) {
+      alert('Can\'t copy DevData to clipboard!\nThe DevData are available in the console.')
+      console.error('Async: Could not copy: ', err)
+    })
+  }
 
   updateGradient(i: number, c: any) {
     this.settings.spectrogramColors[i].c = [c.rgba.r, c.rgba.g, c.rgba.b, c.rgba.a]

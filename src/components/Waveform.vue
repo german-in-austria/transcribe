@@ -191,6 +191,7 @@ export default class Waveform extends Vue {
   }
 
   get totalWidth(): number {
+    console.log('totalWidth', this.audio.duration, settings.pixelsPerSecond, this.audio.duration * settings.pixelsPerSecond)
     return this.audio.duration * settings.pixelsPerSecond
   }
 
