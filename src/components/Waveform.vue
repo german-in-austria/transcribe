@@ -4,6 +4,7 @@
     @keydown.right="emitScroll"
     class="waveform-outer"
     @mousewheel="debouncedZoom"
+    @mousedown="$emit('mousedown', $event)"
     :style="containerStyle"
     :class="{
       disabled,

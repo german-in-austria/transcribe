@@ -335,20 +335,38 @@ export default class Editor extends Vue {
     }
   }
 
+  getWfScrollLeft(e: MouseEvent) {
+    if (!(e.target as HTMLElement).classList.contains('wave-form-inner')) {
+      const wf = document.querySelector('.wave-form')
+      if (wf instanceof HTMLElement) {
+        return wf.scrollLeft
+      }
+    }
+    return 0
+  }
+
   startSelection(e: MouseEvent) {
     this.transcript.deselectEvents()
-    this.transcript.uiState.timeSpanSelection.start = e.offsetX / settings.pixelsPerSecond
+    this.transcript.uiState.timeSpanSelection.start = (this.getWfScrollLeft(e) + e.clientX) / settings.pixelsPerSecond
+    this.transcript.uiState.timeSpanSelection.end = this.transcript.uiState.timeSpanSelection.start
     document.addEventListener('mousemove', this.dragSelection)
     document.addEventListener('mouseup', this.endSelection)
   }
 
   dragSelection(e: MouseEvent) {
-    // console.log(e.offsetX / settings.pixelsPerSecond, e)
-    this.transcript.uiState.timeSpanSelection.end = e.offsetX / settings.pixelsPerSecond
+    this.transcript.uiState.timeSpanSelection.end = (this.getWfScrollLeft(e) + e.clientX) / settings.pixelsPerSecond
+    const sel = window.getSelection()
+    if (sel) {
+      sel.removeAllRanges()
+    }
   }
 
   endSelection(e: MouseEvent) {
-    this.transcript.uiState.timeSpanSelection.end = e.offsetX / settings.pixelsPerSecond
+    this.transcript.uiState.timeSpanSelection.end = (this.getWfScrollLeft(e) + e.clientX) / settings.pixelsPerSecond
+    if (Math.abs((this.transcript.uiState.timeSpanSelection.end || 0) - (this.transcript.uiState.timeSpanSelection.start || 0)) < 0.01) {
+      this.transcript.uiState.timeSpanSelection.start = 0
+      this.transcript.uiState.timeSpanSelection.end = 0
+    }
     document.removeEventListener('mousemove', this.dragSelection)
     document.removeEventListener('mouseup', this.endSelection)
   }

@@ -9,10 +9,10 @@
     </v-dialog>
     <v-layout row>
       <v-flex xs4 text-xs-right>
-        <player-bar-button @click="playEventStart" :size="height">
+        <player-bar-button @click="playEventStart" :size="height" title="Play start of Event" :disabled="transcript.uiState.selectedEventIds.length === 0">
           <f-icon value="mdi-contain-start" />
         </player-bar-button>
-        <player-bar-button @click="playEventEnd" :size="height">
+        <player-bar-button @click="playEventEnd" :size="height" title="Play end of Event" :disabled="transcript.uiState.selectedEventIds.length === 0">
           <f-icon value="mdi-contain-end" />
         </player-bar-button>
       </v-flex>
@@ -23,7 +23,7 @@
         ]"
         xs4
         align-content-center>
-        <player-bar-button @click="playPause" :size="height">
+        <player-bar-button @click="playPause" :size="height" title="Play/Pause" :disabled="!transcript.audio">
           <f-icon v-if="transcript.audio && transcript.audio.isPaused && isTimeSpanSelectionEmpty()" value="play_arrow" />
           <f-icon v-if="transcript.audio && transcript.audio.isPaused && !isTimeSpanSelectionEmpty()" value="mdi-play-outline" />
           <f-icon v-if="transcript.audio && !transcript.audio.isPaused" value="pause" />
@@ -36,10 +36,10 @@
       <v-flex xs4>
         <v-layout>
           <v-flex text-xs-left>
-            <player-bar-button @click="rewind(-1)" :size="height">
+            <player-bar-button @click="rewind(-1)" :size="height" title="-1 sec" :disabled="!transcript.audio">
               <f-icon value="mdi-replay" />
             </player-bar-button>
-            <player-bar-button @click="rewind(1)" :size="height">
+            <player-bar-button @click="rewind(1)" :size="height" title="+1 sec" :disabled="!transcript.audio">
               <f-icon value="mdi-replay" class="mirror" />
             </player-bar-button>
           </v-flex>

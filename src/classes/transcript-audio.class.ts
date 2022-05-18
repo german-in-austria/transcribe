@@ -575,7 +575,7 @@ export default class TranscriptAudio {
     const startPage = pages.startPage
     const endPage = pages.endPage
     if (startPage === null || endPage === null) {
-      // console.log({ startPage, endPage })
+      console.log({ startPage, endPage })
       throw new Error('Could not find all required pages')
     } else {
       const decodedBuffer = await TranscriptAudio.decodeBufferByteRange(startPage.byteOffset, endPage.byteOffset, b)

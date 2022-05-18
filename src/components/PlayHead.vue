@@ -159,30 +159,4 @@ export default class PlayHead extends Vue {
   top 0
   height 300px
 
-.selection
-  overflow hidden
-  top 50px
-  bottom 60px
-  position absolute
-  background rgba(100, 149, 237, 0.2)
-  border 1px solid cornflowerblue
-  border-radius 8px
-  opacity 1
-  z-index 2
-  pointer-events none
-
-.selection-length
-  background cornflowerblue
-  color white
-  font-size 85%
-  text-align center
-  line-height 22px
-  height 22px
-  user-select none
-  overflow hidden
-  position absolute
-  top 0
-  border-bottom-right-radius 8px
-  margin 0 auto
-  padding 0 10px
 </style>
