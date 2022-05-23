@@ -32,6 +32,7 @@ interface DownloadChunk {
 
 export default class TranscriptAudio {
   constructor(a: AudioFileOrUrl, overviewWaveformSvg?: string) {
+    this.speed = settings.playbackSpeed || 1
     if (a instanceof File || a instanceof ArrayBuffer) {
       this.initWithLocalAudio(a)
     } else if (isUrl(a)) {
@@ -46,6 +47,7 @@ export default class TranscriptAudio {
   fileSize = 0 // bytes
   currentTime = 0 // seconds
   isPaused: boolean = true
+  speed = 1 // playback rate
   onChunkAvailable: null|((startTime: number, endTime: number, audioBuffer: AudioBuffer) => any) = null
   buffer = new Uint8Array(0)
   playAllFromTime: number|null = null
@@ -57,7 +59,10 @@ export default class TranscriptAudio {
     this.url = this.audioElement.src
     this.fileSize = this.buffer.byteLength
     this.audioElement.addEventListener('durationchange', () => {
-      this.duration = this.audioElement.duration
+      if (this.audioElement.currentSrc.substring(this.audioElement.currentSrc.length - 4) === '.ogg') {
+        this.duration = this.audioElement.duration
+      }
+      // console.log('initWithLocalAudio', this.duration)
     })
     this.decodeBufferProgressively(this.buffer)
   }
@@ -91,6 +96,12 @@ export default class TranscriptAudio {
     if (this.isPaused === false) {
       this.pause()
     }
+    // console.log('playAllFrom', this.url, this.audioElement.currentSrc)
+    if (this.url !== this.audioElement.currentSrc) {
+      this.audioElement.crossOrigin = null
+      this.audioElement.src = this.url
+    }
+    this.audioElement.playbackRate = this.speed
     this.playAllFromTime = t
     this.audioElement.currentTime = t
     this.audioElement.play().then(() => {
@@ -149,6 +160,7 @@ export default class TranscriptAudio {
    * Advisable to keep between .25 and 4.0
    * (see also https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/playbackRate) */
   public setPlaybackSpeed(v: number) {
+    this.speed = v
     this.audioElement.playbackRate = v
   }
 
@@ -230,6 +242,8 @@ export default class TranscriptAudio {
   }
 
   public playBuffer(buffer: AudioBuffer, speed = 1, start = 0, offset?: number, duration?: number) {
+    console.log('playBuffer', speed)
+    this.speed = speed
     if (speed !== 1) {
       const wav = audioBufferToWav(buffer)
       const blob = new Blob([ new Uint8Array(wav) ])
@@ -313,8 +327,12 @@ export default class TranscriptAudio {
 
   private async downloadAndDecodeBufferProgressively(url: string, chunkSize: number) {
     this.fileSize = await this.getRemoteFileSize(url)
+    // console.log('downloadAndDecodeBufferProgressively', url, this.fileSize)
     this.audioElement.addEventListener('durationchange', () => {
-      this.duration = this.audioElement.duration
+      if (this.audioElement.currentSrc.substring(this.audioElement.currentSrc.length - 4) === '.ogg') {
+        this.duration = this.audioElement.duration
+      }
+      // console.log('downloadAndDecodeBufferProgressively', this.duration, this.audioElement, this.audioElement.currentSrc)
     })
     this.audioElement.src = url
     // eslint-disable-next-line no-async-promise-executor

@@ -193,7 +193,6 @@ export default class Settings extends Vue {
   .tabs__items
     overflow-y scroll
 </style>
-
 <style lang="stylus" scoped>
 select
   cursor pointer
