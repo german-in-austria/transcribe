@@ -60,6 +60,7 @@ export interface Settings {
   scrollSpeed: 1
   showWarnings: {
     eventGaps: boolean
+    emptyTokens: boolean
     unknownTokenTypes: boolean
     eventOverlaps: boolean
   }
@@ -248,6 +249,7 @@ const settings: Settings = {
   scrollSpeed: 1,
   showWarnings: {
     eventGaps: true,
+    emptyTokens: true,
     unknownTokenTypes: true,
     eventOverlaps: true
   }

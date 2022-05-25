@@ -20,14 +20,17 @@
             :class="[
               'event-warning',
               selectedWarning !== null && item.event.eventId === selectedWarning.event.eventId ? 'selected' : ''
-            ]">
+            ]"
+            :title="'Event ID: ' + item.event.eventId">
             <v-list-tile-avatar>
               <v-icon v-if="item.warning_type === 'event_overlap'">mdi-checkbox-multiple-blank-outline</v-icon>
+              <v-icon v-if="item.warning_type === 'empty_token'">mdi-rhombus-outline</v-icon>
               <v-icon v-if="item.warning_type === 'unknown_token'">mdi-help-rhombus-outline</v-icon>
               <v-icon v-if="item.warning_type === 'event_gap'">mdi-arrow-expand-horizontal</v-icon>
             </v-list-tile-avatar>
             <v-list-tile-content>
               <v-list-tile-title v-if="item.warning_type === 'event_overlap'" class="sidebar-title">Event Overlap</v-list-tile-title>
+              <v-list-tile-title v-if="item.warning_type === 'empty_token'" class="sidebar-title">Empty Token (Default Tier)</v-list-tile-title>
               <v-list-tile-title v-if="item.warning_type === 'unknown_token'" class="sidebar-title">Unknown Token Type</v-list-tile-title>
               <v-list-tile-title v-if="item.warning_type === 'event_gap'" class="sidebar-title">Event Gap</v-list-tile-title>
               <v-list-tile-sub-title class="subtitle">
@@ -43,6 +46,7 @@
       <checkbox v-model="settings.showWarnings.eventGaps">
         Event Gaps longer than <dropdown v-model="settings.maxEventGap" :items="eventGapOptions" :stringify="(e) => e + ' sec'" />
       </checkbox>
+      <checkbox v-model="settings.showWarnings.emptyTokens" label="Empty Token Types" />
       <checkbox v-model="settings.showWarnings.unknownTokenTypes" label="Unknown Token Types" />
       <checkbox v-model="settings.showWarnings.eventOverlaps" label="Event Overlaps" />
     </v-flex>

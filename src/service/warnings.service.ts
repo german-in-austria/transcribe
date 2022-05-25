@@ -14,7 +14,7 @@ type UnknownTokenMetadata = null
 
 export interface WarningEvent {
   warning_id: string
-  warning_type: 'event_overlap'|'unknown_token'|'event_gap'
+  warning_type: 'event_overlap'|'empty_token'|'unknown_token'|'event_gap'
   event: TranscriptEvent
   metadata: GapMetadata|OverlapMetadata|UnknownTokenMetadata|null
 }
@@ -37,13 +37,28 @@ export function getWarnings(es: TranscriptEvent[]): WarningEvent[] {
             metadata: null
           } as WarningEvent))
     )
-    // find events with unknown types
+    // find events with empty tokens
+    .concat(
+      settings.showWarnings.emptyTokens === false
+        ? []
+        : events.filter((e) => {
+          return _(e.speakerEvents).some((se) => {
+            return _(se.tokens).some((t) => t.tiers[ defaultTier ].text.length === 0)
+          })
+        })
+          .map(e => ({
+            warning_id: 'empty_' + e.eventId,
+            warning_type: 'empty_token',
+            event: e,
+            metadata: null
+          } as WarningEvent))
+    )    // find events with unknown types
     .concat(
       settings.showWarnings.unknownTokenTypes === false
         ? []
         : events.filter((e) => {
           return _(e.speakerEvents).some((se) => {
-            return _(se.tokens).some((t) => t.tiers[ defaultTier ].type === -1)
+            return _(se.tokens).some((t) => t.tiers[ defaultTier ].type === -1 && t.tiers[ defaultTier ].text.length > 0)
           })
         })
           .map(e => ({

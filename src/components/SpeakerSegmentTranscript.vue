@@ -201,7 +201,7 @@ export default class SpeakerSegmentTranscript extends Vue {
           ...t.tiers,
           [this.defaultTier]: {
             text: t.tiers[this.defaultTier].text,
-            type: e.speakerEvents[this.speaker].tokens[i].tiers[this.defaultTier].type
+            type: e.speakerEvents[this.speaker] ? e.speakerEvents[this.speaker].tokens[i].tiers[this.defaultTier].type : 0
           }
         }
       }
