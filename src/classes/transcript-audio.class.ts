@@ -372,10 +372,15 @@ export default class TranscriptAudio {
   }
 
   private async getRemoteFileSize(url: string): Promise<number> {
-    return Number((await fetch(url, {
+    var f = await fetch(url, {
       credentials: 'include',
       method: 'HEAD'
-    })).headers.get('Content-Length'))
+    })
+    if (f.status !== 200) {
+      alert('Status: ' + f.status + '\n' + f.statusText + '\nUrl: ' + url)
+      console.log('getRemoteFileSize', url, f)
+    }
+    return Number(f.headers.get('Content-Length'))
   }
 
   private async processAndStoreAudioDownloadChunk(
