@@ -20,7 +20,8 @@ export type AutoSaver = () => Promise<any>
 
 export const history = {
   actions: [] as HistoryEventAction[],
-  autoSaver: (async () => console.log('fake auto-saved.')) as AutoSaver
+  autoSaver: (async () => console.log('fake auto-saved.')) as AutoSaver,
+  undoRedo: false
 }
 
 export function handleRemotePeerEvent(data: [string, HistoryEventAction|HistoryEventAction[]|number]) {
@@ -47,12 +48,12 @@ export function handleRemotePeerEvent(data: [string, HistoryEventAction|HistoryE
       // }
       undo()
     } else if (t === 'REDO') {
-      redo()
       // if (_.isArray(p)) {
       //   p.forEach(redoAction)
       // } else {
       //   redoAction(p)
       // }
+      redo()
     }
   }
 }
@@ -71,6 +72,7 @@ async function undoRedoHandler(e: KeyboardEvent) {
         store.transcript?.scrollToTranscriptEvent(action.before[0])
       }
     }
+    history.undoRedo = true
   } else if (d.redo === true) {
     e.stopPropagation()
     e.preventDefault()
@@ -83,6 +85,7 @@ async function undoRedoHandler(e: KeyboardEvent) {
         store.transcript?.scrollToTranscriptEvent(action.after[0])
       }
     }
+    history.undoRedo = true
   }
 }
 

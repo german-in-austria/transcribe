@@ -103,7 +103,7 @@ import {
 
 import contenteditable from './helper/Contenteditable.vue'
 import * as copyPaste from '@/service/copy-paste.service'
-import { mutation } from '@/store/history.store'
+import { history, mutation } from '@/store/history.store'
 import _ from 'lodash'
 import * as jsdiff from 'diff'
 import bus from '@/service/bus'
@@ -121,6 +121,7 @@ export default class SpeakerSegmentTranscript extends Vue {
   @Prop({ required: true }) event!: TranscriptEvent
   @Prop({ required: true }) speaker!: string
 
+  history = history
   transcript = store.transcript!
   tierHeight = 25
   localEvent = clone(this.event)
@@ -265,6 +266,15 @@ export default class SpeakerSegmentTranscript extends Vue {
       : []
     this.segmentText = this.localTokens ? this.localTokens.map(t => t.tiers[this.defaultTier].text).join(' ') : ''
     // don’t update if focused
+  }
+
+  @Watch('history.undoRedo')
+  onUpdateHistory(v: any) {
+    if (v) {
+      // console.log('history', v, this.history)
+      this.history.undoRedo = false
+      this.updateAllTokenTypes()
+    }
   }
 
   async cutTokens(e: ClipboardEvent) {
