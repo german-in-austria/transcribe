@@ -813,7 +813,9 @@ async function performSaveRequest(
   id: number,
   t: ServerTranscriptSaveRequest
 ): Promise<ServerTranscriptSaveResponse> {
-  console.log('performSaveRequest', `${ host }/routes/transcript/save/${ id }`)
+  var currentDate = new Date()
+  var dateTime = currentDate.getDate() + '/' + (currentDate.getMonth()+1) + '/' + currentDate.getFullYear() + ' @ ' + currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds()
+  console.log('performSaveRequest', `${ host }/routes/transcript/save/${ id }`, dateTime)
   return await (
     await fetch(`${ host }/routes/transcript/save/${ id }`, {
       credentials: 'include',
