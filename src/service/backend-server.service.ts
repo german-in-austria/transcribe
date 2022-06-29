@@ -813,6 +813,7 @@ async function performSaveRequest(
   id: number,
   t: ServerTranscriptSaveRequest
 ): Promise<ServerTranscriptSaveResponse> {
+  console.log('performSaveRequest', `${ host }/routes/transcript/save/${ id }`)
   return await (
     await fetch(`${ host }/routes/transcript/save/${ id }`, {
       credentials: 'include',
