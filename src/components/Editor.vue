@@ -22,7 +22,7 @@
     </div>
     <v-toolbar class="elevation-0" fixed app>
       <v-flex xs4>
-        <v-btn icon @click="store.transcript = null"><f-icon value="chevron_left" /></v-btn>
+        <v-btn icon @click="btnBack"><f-icon value="chevron_left" /></v-btn>
       </v-flex>
       <v-flex xs4 class="text-xs-center">
         <div style="opacity: .7; font-size: small">{{ transcript.meta.transcriptName || 'Untitled Transcript' }}</div>
@@ -251,7 +251,7 @@ import TimeSelection from './TimeSelection.vue'
 import ForceRefresh from './helper/ForceRefresh.vue'
 
 import { TranscriptEvent } from '@/types/transcript'
-import { saveChangesToServer } from '../service/backend-server.service'
+import { saveChangesToServer, resetServerTranscript } from '../service/backend-server.service'
 import { handleGlobalShortcut, keyboardShortcuts, displayKeyboardAction } from '../service/keyboard.service'
 import kaldiService from '../service/kaldi/kaldiService'
 import { isCmdOrCtrl } from '../util'
@@ -335,6 +335,15 @@ export default class Editor extends Vue {
     } else {
       return null
     }
+  }
+
+  btnBack() {
+    this.store.transcript = null
+    this.store.status = 'empty'
+    this.store.warnings = []
+    this.history.actions = []
+    this.history.undoRedo = false
+    resetServerTranscript()
   }
 
   getWfScrollLeft(e: MouseEvent) {
@@ -477,6 +486,7 @@ export default class Editor extends Vue {
     if (settings.backEndUrl !== null) {
       try {
         this.transcript.events = EventService.removeBrokenFragmentLinks(this.transcript.events)
+        console.log(this.transcript)
         this.transcript.events = await saveChangesToServer(this.transcript)
       } catch (e) {
         Sentry.captureException(e)

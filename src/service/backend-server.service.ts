@@ -870,6 +870,7 @@ export async function saveChangesToServer(
   } else {
     // it’s already on the server
     if (serverTranscript.aTranskript.pk > -1 && settings.backEndUrl !== null) {
+      console.log(serverTranscript)
       const t = await localTranscriptToServerSaveRequest(serverTranscript, transcript.events)
       console.log({ ServerTranscriptSaveRequest: t })
       const serverChanges = await performSaveRequest(settings.backEndUrl, serverTranscript.aTranskript.pk, t)
@@ -920,6 +921,12 @@ export async function saveChangesToServer(
       return updatedLocalTranscript
     }
   }
+}
+
+export function resetServerTranscript() {
+  console.log('resetServerTranscript', serverTranscript)
+  serverTranscript = null
+  console.log('resetServerTranscript', serverTranscript)
 }
 
 function appendTranscriptEventChunk(a: TranscriptEvent[], b: TranscriptEvent[]): TranscriptEvent[] {
