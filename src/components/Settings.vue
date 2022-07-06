@@ -116,9 +116,12 @@
                       :value="settings.waveFormColors[i]" />
                   </v-menu>
                 </div>
+                <v-subheader>Dev</v-subheader>
+                <v-divider />
                 <div>
-                  <div class="ml-auto">
-                    <v-btn small @click="devInfos">DEV Info</v-btn>
+                  <div class="ml-auto pt-3 pb-3 pl-3 pr-5">
+                    <v-btn small @click="audioInfos">Audio Info</v-btn>
+                    <v-btn small @click="transcriptInfos">Transcript Info</v-btn>
                   </div>
                 </div>
               </v-list>
@@ -144,6 +147,7 @@ import SettingsTokenTypes from './SettingsTokenTypes.vue'
 import { makeGradient } from '../lib/gradient'
 import { Chrome as ColorPicker } from 'vue-color'
 import TranscriptAudio from '@/classes/transcript-audio.class'
+import Transcript from '@/classes/transcript.class'
 
 @Component({
   components: {
@@ -156,10 +160,11 @@ export default class Settings extends Vue {
 
   @Prop({ default: false }) show!: boolean
   @Prop({ default: null }) audio!: TranscriptAudio
+  @Prop({ default: null }) transcript!: Transcript
   settings = settings
   activeTab = null
 
-  devInfos() {
+  audioInfos() {
     var devData = {
       settings: settings,
       audio: this.audio ? JSON.parse(JSON.stringify({
@@ -176,6 +181,22 @@ export default class Settings extends Vue {
       alert('Copy DevData to Clipboard!')
     }, function(err) {
       alert('Can\'t copy DevData to clipboard!\nThe DevData are available in the console.')
+      console.error('Async: Could not copy: ', err)
+    })
+  }
+
+  transcriptInfos() {
+    var transcriptData = JSON.parse(JSON.stringify({
+      key: this.transcript.key,
+      meta: this.transcript.meta,
+      uiState: this.transcript.uiState,
+      events: this.transcript.events
+    }))
+    console.log(transcriptData, this.transcript)
+    navigator.clipboard.writeText(JSON.stringify(transcriptData, null, 2)).then(function() {
+      alert('Copy TranscriptData to Clipboard!')
+    }, function(err) {
+      alert('Can\'t copy TranscriptData to clipboard!\nThe TranscriptData are available in the console.')
       console.error('Async: Could not copy: ', err)
     })
   }

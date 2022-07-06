@@ -88,6 +88,7 @@
       v-if="settings.showSettings"
       @close="settings.showSettings = false"
       :show="settings.showSettings"
+      :transcript="transcript"
       :audio="transcript.audio" />
     <event-inspector
       :transcript="transcript"
