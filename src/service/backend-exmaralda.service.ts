@@ -306,7 +306,8 @@ export function importableToServerTranscript(
       ut: 'now' // TODO:
     },
     aNr: 0,
-    nNr: 0
+    nNr: 0,
+    aPk: '-1'
   }
 }
 

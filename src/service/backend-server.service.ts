@@ -192,6 +192,7 @@ export interface ServerTranscript {
   aEvents: ServerEvent[]
   nNr: number
   aNr: number
+  aPk: any
   aTmNr?: number
 }
 
@@ -972,37 +973,43 @@ export async function fetchTranscript(
       credentials: 'include'
     })).json() as ServerTranscript
 
-    // merge the chunk
-    mergeServerTranscript(res)
+    const rightScript = store.transcript && store.transcript.key && parseInt(store.transcript.key) === parseInt(res['aPk'])
+    console.log('fetchTranscript', rightScript, { storePk: store.transcript ? store.transcript.key : null, aNr: res['aNr'], aPk: res['aPk'], sPk: serverTranscript ? serverTranscript['aPk'] : null, tPk: transcript.key })
+    if (rightScript) {
+      // merge the chunk
+      mergeServerTranscript(res)
 
-    // when it’s the first page, get its metadata
-    if (res.aNr === 0) {
-      transcript.meta = {
-        ...getMetadataFromServerTranscript(res),
-        lockedTokens: getLockedTokensFromServerTranscript(res)
+      // when it’s the first page, get its metadata
+      if (res.aNr === 0) {
+        transcript.meta = {
+          ...getMetadataFromServerTranscript(res),
+          lockedTokens: getLockedTokensFromServerTranscript(res)
+        }
       }
-    }
 
-    // get and concatenate the locked tokens
-    transcript.meta.lockedTokens = transcript.meta.lockedTokens.concat(getLockedTokensFromServerTranscript(res))
+      // get and concatenate the locked tokens
+      transcript.meta.lockedTokens = transcript.meta.lockedTokens.concat(getLockedTokensFromServerTranscript(res))
 
-    const eventChunk = serverTranscriptToLocal(res, transcript.meta.defaultTier || 'text')
-    // update the store
-    transcript.events = appendTranscriptEventChunk(transcript.events, eventChunk)
-    // progress callback with data
-    if (onProgress !== undefined) {
-      onProgress(res.aNr / (totalSteps || res.aTmNr || 10), transcript.events, res)
-    }
-    // get next (recursion) or finish
-    if (res.nNr > res.aNr) {
-      return fetchTranscript(
-        id,
-        backEndUrl,
-        transcript,
-        onProgress,
-        chunk + 1,
-        totalSteps || res.aTmNr
-      )
+      const eventChunk = serverTranscriptToLocal(res, transcript.meta.defaultTier || 'text')
+      // update the store
+      transcript.events = appendTranscriptEventChunk(transcript.events, eventChunk)
+      // progress callback with data
+      if (onProgress !== undefined) {
+        onProgress(res.aNr / (totalSteps || res.aTmNr || 10), transcript.events, res)
+      }
+      // get next (recursion) or finish
+      if (res.nNr > res.aNr) {
+        return fetchTranscript(
+          id,
+          backEndUrl,
+          transcript,
+          onProgress,
+          chunk + 1,
+          totalSteps || res.aTmNr
+        )
+      } else {
+        return transcript
+      }
     } else {
       return transcript
     }

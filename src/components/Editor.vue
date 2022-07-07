@@ -25,7 +25,7 @@
         <v-btn icon @click="btnBack"><f-icon value="chevron_left" /></v-btn>
       </v-flex>
       <v-flex xs4 class="text-xs-center">
-        <div style="opacity: .7; font-size: small">{{ transcript.meta.transcriptName || 'Untitled Transcript' }}</div>
+        <div style="opacity: .7; font-size: small">{{ transcript.meta.transcriptName || 'Untitled Transcript' }} (Id: {{ transcript.key }})</div>
       </v-flex>
       <v-flex xs4 class="text-xs-right">
         <div style="display: inline-block">

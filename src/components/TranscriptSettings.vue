@@ -139,6 +139,7 @@ export default class TranscriptSettings extends Vue {
       return {
         aNr: 0,
         nNr: 0,
+        aPk: '-1',
         aEinzelErhebung: args.selectedSurvey === null ? undefined : surveyToServerTranscriptSurvey(args.selectedSurvey),
         aInformanten: args.selectedSurvey === null
           ? this.transcript.meta.speakers
