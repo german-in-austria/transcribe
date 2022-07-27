@@ -21,7 +21,7 @@
               'event-warning',
               selectedWarning !== null && item.event.eventId === selectedWarning.event.eventId ? 'selected' : ''
             ]"
-            :title="'Event ID: ' + item.event.eventId">
+            :title="'Event ID: ' + item.event.eventId + (item.warning_type === 'empty_token' && item.metadata ? '\nToken ID: ' + item.metadata.join(', ') : '')">
             <v-list-tile-avatar>
               <v-icon v-if="item.warning_type === 'event_overlap'">mdi-checkbox-multiple-blank-outline</v-icon>
               <v-icon v-if="item.warning_type === 'empty_token'">mdi-rhombus-outline</v-icon>
@@ -34,7 +34,8 @@
               <v-list-tile-title v-if="item.warning_type === 'unknown_token'" class="sidebar-title">Unknown Token Type</v-list-tile-title>
               <v-list-tile-title v-if="item.warning_type === 'event_gap'" class="sidebar-title">Event Gap</v-list-tile-title>
               <v-list-tile-sub-title class="subtitle">
-                {{ toTime(item.event.startTime) }} - {{ toTime(item.event.endTime) }} {{ item.warning_type === 'event_gap' ? ' / ' + item.metadata.duration.toFixed(1) + ' sec' : '' }}
+                {{ toTime(item.event.startTime) }} - {{ toTime(item.event.endTime) }}
+                {{ item.warning_type === 'event_gap' ? ' / ' + item.metadata.duration.toFixed(1) + ' sec' : '' }}
               </v-list-tile-sub-title>
             </v-list-tile-content>
           </v-list-tile>
