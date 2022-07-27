@@ -144,7 +144,7 @@
                             {{ transcript.n }}
                           </v-list-tile-title>
                           <v-list-tile-sub-title>
-                            {{ transcript.ut }}
+                            {{ transcript.ut }} <span v-if="transcript.ce || transcript.ct">(Events: {{ transcript.ce || 0 }}, Tokens: {{ transcript.ct || 0 }})</span>
                           </v-list-tile-sub-title>
                         </v-list-tile-content>
                         <v-list-tile-action>
