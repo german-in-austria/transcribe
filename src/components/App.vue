@@ -114,10 +114,10 @@
                     <v-subheader v-else>
                       Local Transcripts
                     </v-subheader>
-                    <template v-for="(transcript) in filteredTranscriptList">
-                      <v-divider :key="'dk' + transcript.pk" />
+                    <template v-for="(transcript, k) in filteredTranscriptList">
+                      <v-divider :key="'dk' + transcript.pk + '-' + k" />
                       <v-list-tile
-                        :key="transcript.pk"
+                        :key="transcript.pk + '-' + k"
                         :disabled="loadingTranscriptId !== null || transcript.locked === true"
                         @click="openTranscript(transcript)">
                         <v-list-tile-avatar>
@@ -416,6 +416,7 @@ export default class App extends Vue {
     if (f.name.endsWith('.transcript')) {
       this.importingLocalFile = true
       store.transcript = new Transcript(f)
+      this.importingLocalFile = false
     } else if (f.name.endsWith('.exb')) {
       this.openExmaraldaFile(await f.getFile())
     } else if (f.name.endsWith('.ogg')) {

@@ -62,11 +62,14 @@ export async function drawWavePathAsync(
   // and don’t have to copy any data to the other threads.
   // However, this optimization is likely to prove unnecessary in the future.
   const options = textEncoder.encode(JSON.stringify({ width, height, offsetLeft })).buffer
+  let path = ''
   if (channel === 0) {
-    return await waveformWorker1.postMessage({ buffer: buf, options }, [ buf, options ])
+    path = await waveformWorker1.postMessage({ buffer: buf, options }, [ buf, options ])
   } else {
-    return await waveformWorker2.postMessage({ buffer: buf, options }, [ buf, options ])
+    path = await waveformWorker2.postMessage({ buffer: buf, options }, [ buf, options ])
   }
+  // console.log('drawWavePathAsync', path)
+  return path && path.length > 2 ? path : ''
 }
 
 /**
