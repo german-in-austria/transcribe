@@ -61,9 +61,13 @@ export default class DropFile extends Vue {
       e.dataTransfer.files[0] !== undefined
     ) {
       this.unhighlight(e)
-      this.file = e.dataTransfer.files[0]
-      this.fileName = this.file.name
-      this.$emit('update', this.file)
+      if (e.dataTransfer.files[0].name.substr(-4).toLowerCase() === '.ogg') {
+        this.file = e.dataTransfer.files[0]
+        this.fileName = this.file.name
+        this.$emit('update', this.file)
+      } else {
+        alert('File type has to be OGG!')
+      }
     }
   }
 
@@ -76,12 +80,16 @@ export default class DropFile extends Vue {
   openFileDialog() {
     const x = document.createElement('input')
     x.type = 'file'
-    // x.accept = '.ogg'
+    x.accept = '.ogg'
     x.addEventListener('change', async (e) => {
       if (x.files !== null) {
-        this.file = x.files[0]
-        this.fileName = this.file.name
-        this.$emit('update', this.file)
+        if (x.files[0].name.substr(-4).toLowerCase() === '.ogg') {
+          this.file = x.files[0]
+          this.fileName = this.file.name
+          this.$emit('update', this.file)
+        } else {
+          alert('File type has to be OGG!')
+        }
       }
     })
     x.click()
