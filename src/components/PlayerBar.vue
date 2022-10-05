@@ -167,14 +167,18 @@ export default class PlayerBar extends Vue {
   }
 
   playPause() {
+    // console.log(this.transcript.audio)
     if (this.transcript.audio !== null) {
       if (this.transcript.audio.isPaused === true) {
         const es = this.transcript.getSelectedEvents()
         if (!this.isTimeSpanSelectionEmpty()) {
+          console.log('playPause - isTimeSpanSelectionEmpty')
           this.transcript.audio.playRange(this.transcript.uiState.timeSpanSelection.start || 0, this.transcript.uiState.timeSpanSelection.end || 0)
         } else if (es.length > 0) {
+          console.log('playPause - length')
           this.transcript.audio.playEvents(es)
         } else {
+          console.log('playPause - else')
           this.transcript.audio.playAllFrom(this.currentTime)
         }
       } else {

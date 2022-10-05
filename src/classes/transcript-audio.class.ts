@@ -34,8 +34,10 @@ export default class TranscriptAudio {
   constructor(a: AudioFileOrUrl, overviewWaveformSvg?: string) {
     this.speed = settings.playbackSpeed || 1
     if (a instanceof File || a instanceof ArrayBuffer) {
+      console.log('TranscriptAudio - initWithLocalAudio')
       this.initWithLocalAudio(a)
     } else if (isUrl(a)) {
+      console.log('TranscriptAudio - initWithRemoteAudio')
       this.initWithRemoteAudio(a)
     }
   }
@@ -58,16 +60,17 @@ export default class TranscriptAudio {
     this.audioElement.src = URL.createObjectURL(new Blob([ this.buffer ]))
     this.url = this.audioElement.src
     this.fileSize = this.buffer.byteLength
+    // this.audioElement.preload = 'auto'
     this.audioElement.addEventListener('durationchange', () => {
-      if (this.audioElement.currentSrc.substring(this.audioElement.currentSrc.length - 4) === '.ogg') {
-        this.duration = this.audioElement.duration
-      }
-      // console.log('initWithLocalAudio', this.duration)
-    })
+      // if (this.audioElement.currentSrc.substring(this.audioElement.currentSrc.length - 4) === '.ogg') {
+      this.duration = this.audioElement.duration
+  })
     this.decodeBufferProgressively(this.buffer)
   }
 
   private async initWithRemoteAudio(a: string) {
+    console.log('initWithRemoteAudio', this.url, a)
+    // this.audioElement.preload = 'metadata'
     this.url = a
     this.downloadAndDecodeBufferProgressively(a, 2048 * 1024)
   }
@@ -93,18 +96,22 @@ export default class TranscriptAudio {
   }
 
   public playAllFrom(t: number) {
+    console.log('playAllFrom', t)
     if (this.isPaused === false) {
       this.pause()
     }
-    // console.log('playAllFrom', this.url, this.audioElement.currentSrc)
+    console.log('playAllFrom', this.url !== this.audioElement.currentSrc, this.url, this.audioElement.currentSrc)
     if (this.url !== this.audioElement.currentSrc) {
       this.audioElement.crossOrigin = null
       this.audioElement.src = this.url
     }
     this.audioElement.playbackRate = this.speed
+    // this.playRange(t, this.duration)
+    console.log(this.audioElement)
     this.playAllFromTime = t
     this.audioElement.currentTime = t
     this.audioElement.play().then(() => {
+      console.log('playAllFrom -> play().then()')
       this.isPaused = false
       bus.$emit('playAudio', t)
       this.emitUpdateTimeUntilPaused(
@@ -242,7 +249,7 @@ export default class TranscriptAudio {
   }
 
   public playBuffer(buffer: AudioBuffer, speed = 1, start = 0, offset?: number, duration?: number) {
-    console.log('playBuffer', speed)
+    console.log('playBuffer', speed, start, offset, duration)
     this.speed = speed
     if (speed !== 1) {
       const wav = audioBufferToWav(buffer)
@@ -326,6 +333,7 @@ export default class TranscriptAudio {
   }
 
   private async downloadAndDecodeBufferProgressively(url: string, chunkSize: number) {
+    console.log('downloadAndDecodeBufferProgressively')
     this.fileSize = await this.getRemoteFileSize(url)
     // console.log('downloadAndDecodeBufferProgressively', url, this.fileSize)
     this.audioElement.addEventListener('durationchange', () => {
@@ -475,6 +483,7 @@ export default class TranscriptAudio {
   }
 
   private async decodeBufferProgressively(b: Uint8Array) {
+    console.log('decodeBufferProgressively')
     const { pages } = await TranscriptAudio.getOggIndexAsync(b.buffer)
     const chunks = _.chunk(pages, 250)
     for (const chunk of chunks) {
