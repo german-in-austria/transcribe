@@ -94,6 +94,7 @@
         </v-layout>
       </v-flex>
     </v-layout>
+    <div class="seeking" v-if="seeking">Seeking ...</div>
   </div>
 </template>
 
@@ -129,6 +130,8 @@ export default class PlayerBar extends Vue {
 
   cachedVolume = settings.playbackVolume
   cachedSpeed = .5
+
+  seeking = false
 
   get currentTime() {
     return this.transcript.audio ? this.transcript.audio.currentTime : 0
@@ -229,15 +232,22 @@ export default class PlayerBar extends Vue {
     })
   }
 
+  onChangeSeeking(s: boolean) {
+    this.seeking = s
+    console.log('onChangeSeeking', s)
+  }
+
   mounted() {
     console.log('this.transcript.uiState', this.transcript.uiState)
     bus.$on('updateTime', this.onChangeTime)
     bus.$on('scrubAudio', this.onChangeTime)
+    bus.$on('updateSeeking', this.onChangeSeeking)
     this.onChangeTime(this.currentTime)
   }
 }
 </script>
 <style lang="stylus">
+
 .playerbar
   .current-time
     will-change contents
@@ -251,6 +261,7 @@ export default class PlayerBar extends Vue {
       background rgba(255,255,255,.1)
     span:nth-last-child(-n+4)
       opacity .5
+
 </style>
 
 <style lang="stylus" scoped>
@@ -259,8 +270,19 @@ export default class PlayerBar extends Vue {
   z-index 3
   text-align center
   background #efefef
+  position relative
   &.theme--dark
     background #1d1d1d
 
+.seeking
+  position absolute
+  z-index 99
+  left 0
+  bottom 100%
+  width 100%
+  background rgba(0,0,0,0.5)
+  color #fff
+  font-size 1rem
+  padding 0.5rem
 </style>
 

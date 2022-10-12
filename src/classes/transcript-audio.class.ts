@@ -50,6 +50,9 @@ export default class TranscriptAudio {
   currentTime = 0 // seconds
   isPaused: boolean = true
   speed = 1 // playback rate
+  seeking = false
+  seekCheckTimer: any = null
+  lastPlayAllFromTime = -1
   onChunkAvailable: null|((startTime: number, endTime: number, audioBuffer: AudioBuffer) => any) = null
   buffer = new Uint8Array(0)
   playAllFromTime: number|null = null
@@ -64,7 +67,31 @@ export default class TranscriptAudio {
     this.audioElement.addEventListener('durationchange', () => {
       // if (this.audioElement.currentSrc.substring(this.audioElement.currentSrc.length - 4) === '.ogg') {
       this.duration = this.audioElement.duration
-  })
+    })
+    this.audioElement.addEventListener('seeking', (e) => {
+      this.seeking = true
+      this.seekCheckTimer = setTimeout(() => {
+        if (this.seeking && this.lastPlayAllFromTime >= 0) {
+          this.playAllFrom(this.lastPlayAllFromTime)
+        }
+      }, 1000)
+      bus.$emit('updateSeeking', true)
+    })
+    this.audioElement.addEventListener('seeked', (e) => {
+      this.seeking = false
+      this.lastPlayAllFromTime = -1
+      if (this.seekCheckTimer) {
+        clearTimeout(this.seekCheckTimer)
+        this.seekCheckTimer = null
+      }
+      bus.$emit('updateSeeking', false)
+    })
+    this.audioElement.addEventListener('error', (e) => {
+      console.log('error', e)
+      if (e && this.seeking && this.lastPlayAllFromTime >= 0) {
+        this.playAllFrom(this.lastPlayAllFromTime)
+      }
+    })
     this.decodeBufferProgressively(this.buffer)
   }
 
@@ -97,6 +124,7 @@ export default class TranscriptAudio {
 
   public playAllFrom(t: number) {
     console.log('playAllFrom', t)
+    this.lastPlayAllFromTime = t
     if (this.isPaused === false) {
       this.pause()
     }
@@ -104,6 +132,13 @@ export default class TranscriptAudio {
     if (this.url !== this.audioElement.currentSrc) {
       this.audioElement.crossOrigin = null
       this.audioElement.src = this.url
+    }
+    if (this.audioElement.error || this.seeking) {
+      console.log(this.audioElement.error ? 'Audio Error!' : 'Seeking ...', this.audioElement.error)
+      this.audioElement.src = URL.createObjectURL(new Blob([ this.buffer ]))
+      this.url = this.audioElement.src
+      this.fileSize = this.buffer.byteLength  
+      this.decodeBufferProgressively(this.buffer)
     }
     this.audioElement.playbackRate = this.speed
     // this.playRange(t, this.duration)
@@ -342,6 +377,14 @@ export default class TranscriptAudio {
       }
       // console.log('downloadAndDecodeBufferProgressively', this.duration, this.audioElement, this.audioElement.currentSrc)
     })
+    // this.audioElement.addEventListener('seeking', (e) => {
+    //   this.seeking = true
+    //   bus.$emit('updateSeeking', true)
+    // })
+    // this.audioElement.addEventListener('seeked', (e) => {
+    //   this.seeking = false
+    //   bus.$emit('updateSeeking', false)
+    // })
     this.audioElement.src = url
     // eslint-disable-next-line no-async-promise-executor
     return new Promise(async (resolve, reject) => {

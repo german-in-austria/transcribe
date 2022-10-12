@@ -13,7 +13,8 @@ export type BusEvent =
   'scrubAudio'|
   'updateTime'|
   'focusSearch'|
-  'updateSpeakerEventText'
+  'updateSpeakerEventText'|
+  'updateSeeking'
 
 export default bus as {
   $on: (e: BusEvent|BusEvent[], fn: (e: any, opts?: any) => any) => void
