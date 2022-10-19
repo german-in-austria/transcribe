@@ -45,7 +45,15 @@ class FileService {
 
   async loadTranscriptList(): Promise<LocalTranscriptListItem[]> {
     const lts: any[] = await localForage.getItem(this.indexKeyLocalTranscripts) || []
-    this._localTranscripts.push(...lts)
+    const ltsM: any[] = []
+    const ltsMId: any[] = []
+    lts.forEach(t => {
+      if (ltsMId.indexOf(t.pk) < 0) {
+        ltsMId.push(t.pk)
+        ltsM.push(t)
+      }
+    })
+    this._localTranscripts.push(...ltsM)
     return this._localTranscripts
   }
 
