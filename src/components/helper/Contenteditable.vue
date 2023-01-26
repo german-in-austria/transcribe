@@ -3,6 +3,7 @@
     ref="input"
     v-text="value"
     contenteditable="true"
+    spellcheck="false"
     v-on="$listeners"
   />
 </template>

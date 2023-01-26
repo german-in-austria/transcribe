@@ -70,6 +70,7 @@
         v-if="tier.type === 'freeText'"
         v-text="getTierFreeTextText(tier.id)"
         contenteditable="true"
+        spellcheck="false"
         :id="`speaker_event_tier_${speaker}__${tier.id}`"
         :class="['secondary-free-text-tier-text', settings.darkMode === true && 'theme--dark']"
         :data-speaker-id="speaker"
