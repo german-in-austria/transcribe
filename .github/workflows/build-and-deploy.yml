@@ -1,0 +1,123 @@
+name: Deploy
+run-name: Build and deploy transcribe
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  release:
+  workflow_dispatch:
+
+env:
+  REGISTRY: dioe
+  IMAGE_NAME: transcribe
+
+jobs:
+  setup_workflow_env:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.get_environment_from_git_ref.outputs.environment }}
+      environment_short: ${{ steps.get_environment_from_git_ref.outputs.environment_short }}
+      image_name: transcribe
+      registry_root: ghcr.io/${{ github.repository }}/
+      default_port: "5000"
+# Usually you don't deal with all commits since the repository was created.
+# Increase if you e.g don't find a tag you want to display in the application
+      fetch-depth: 10
+      submodules: "true"
+#      herokuish_base_image: ghcr.io/acdh-oeaw/herokuish-for-cypress/main:latest-22
+      APP_NAME: transcribe
+# This together with the branch name is also used as the namespace to deploy to
+      APP_ROOT: "/"
+# You should not need to have to change anything below this line
+#-----------------------------------------------------------------------------------------------------
+    steps:
+      - name: Get environment from git ref
+        id: get_environment_from_git_ref
+        run: |
+          echo "Running on branch ${{ github.ref_name }}"
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "environment=production"
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "environment_short=prod" >> $GITHUB_OUTPUT
+          else
+            echo "environment=review/${{ github.ref_name }}"
+            echo "environment=review/${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "environment_short=$(echo -n ${{ github.ref_name }} | sed 's/feat\(ure\)\{0,1\}[_/]//' | tr '_' '-' | tr '[:upper:]' '[:lower:]' )" >> $GITHUB_OUTPUT
+          fi
+  generate_workflow_vars:
+    needs: [setup_workflow_env]
+    environment:
+      name: ${{ needs.setup_workflow_env.outputs.environment }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate PUBLIC_URL if not set
+        id: generate_public_url
+        run: |
+          kube_ingress_base_domain="${{ vars.KUBE_INGRESS_BASE_DOMAIN }}"
+          public_url="${{ needs.setup_workflow_env.outputs.PUBLIC_URL || vars.PUBLIC_URL }}"
+          if [ "${public_url}x" == 'x' ]
+          then public_url=https://${{ needs.setup_workflow_env.outputs.environment_short }}.${kube_ingress_base_domain}
+          fi
+          echo "public_url=$public_url" >> $GITHUB_OUTPUT
+    outputs:
+      PUBLIC_URL: ${{ steps.generate_public_url.outputs.public_url }}
+  build-and-push-image:
+    needs: [setup_workflow_env, generate_workflow_vars]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to the GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}      
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository }}
+          flavor: |
+            latest=auto
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value={{sha}}
+
+      - name: Build and push the Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+  _3:
+    needs: [setup_workflow_env, generate_workflow_vars, build-and-push-image]
+    uses: german-in-austria/gl-autodevops-minimal-port/.github/workflows/deploy.yml@main
+    secrets: inherit
+    with:
+      environment: ${{ needs.setup_workflow_env.outputs.environment}}
+      fetch-depth: ${{ fromJson(needs.setup_workflow_env.outputs.fetch-depth) }}
+      DOCKER_TAG: ${{ needs.setup_workflow_env.outputs.registry_root }}${{ needs.setup_workflow_env.outputs.image_name }}
+      APP_NAME: ${{ needs.setup_workflow_env.outputs.APP_NAME }}-${{ needs.setup_workflow_env.outputs.environment_short }}
+      APP_ROOT: ${{ needs.setup_workflow_env.outputs.APP_ROOT }}
+      SERVICE_ID: ${{ needs.setup_workflow_env.outputs.SERVICE_ID }}
+      PUBLIC_URL: ${{ needs.generate_workflow_vars.outputs.PUBLIC_URL }}
+      POSTGRES_ENABLED: ${{ needs.setup_workflow_env.outputs.POSTGRES_ENABLED == 'true'}}
+      default_port: "${{ needs.setup_workflow_env.outputs.default_port}}"
+      submodules: ${{ needs.setup_workflow_env.outputs.submodules }}
