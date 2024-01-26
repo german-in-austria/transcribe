@@ -1,5 +1,5 @@
 # NODE AND NPM LTS
-FROM node:14
+FROM node:10
 
 # CREATE APP DIR
 RUN mkdir -p /usr/src/app
