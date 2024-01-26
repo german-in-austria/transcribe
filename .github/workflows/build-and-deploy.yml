@@ -21,7 +21,7 @@ jobs:
       environment_short: ${{ steps.get_environment_from_git_ref.outputs.environment_short }}
       image_name: ""
       registry_root: ghcr.io/${{ github.repository }}
-      default_port: "5000"
+      default_port: "80"
 # Usually you don't deal with all commits since the repository was created.
 # Increase if you e.g don't find a tag you want to display in the application
       fetch-depth: 10
