@@ -19,7 +19,7 @@ jobs:
     outputs:
       environment: ${{ steps.get_environment_from_git_ref.outputs.environment }}
       environment_short: ${{ steps.get_environment_from_git_ref.outputs.environment_short }}
-      image_name: transcribe
+      image_name: ""
       registry_root: ghcr.io/${{ github.repository }}/
       default_port: "5000"
 # Usually you don't deal with all commits since the repository was created.
