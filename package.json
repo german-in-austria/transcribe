@@ -35,7 +35,7 @@
     "dotenv": "^4.0.0",
     "file-saver": "^2.0.2",
     "human-size": "^1.1.0",
-    "jszip": "3.1.5",
+    "jszip": "3.8.0",
     "localforage": "^1.9.0",
     "lodash": "^4.17.21",
     "material-icons": "^0.3.1",
